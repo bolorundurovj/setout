@@ -1,6 +1,18 @@
 {
   "name": "setout",
+  "version": "0.1.0",
   "private": true,
+  "description": "Self-hosted tracker for construction spend on personal building projects.",
+  "author": "Bolorunduro Valiant-Joshua (https://github.com/bolorundurovj)",
+  "license": "AGPL-3.0-or-later",
+  "homepage": "https://github.com/bolorundurovj/setout",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bolorundurovj/setout.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bolorundurovj/setout/issues"
+  },
   "workspaces": [
     "apps/web",
     "packages/api-client"
