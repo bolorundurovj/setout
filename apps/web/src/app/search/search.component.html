@@ -1,0 +1,39 @@
+<app-topbar title="Search" [subtitle]="line()">
+  <app-button variant="secondary" (pressed)="clear()">Clear</app-button>
+</app-topbar>
+
+<div class="page">
+  @if (results.error(); as trouble) {
+    <p class="banner warn t-small">{{ trouble }}</p>
+  }
+
+  @if (results.looking()) {
+    <p class="t-small muted">Looking…</p>
+  }
+
+  @if (empty()) {
+    <div class="card">
+      <p class="t-body">Nothing matches "{{ q() }}".</p>
+      <p class="t-small">
+        Search reads what a thing is called, the trade or role it carries, and the words written on
+        an expense.
+      </p>
+    </div>
+  }
+
+  @for (group of results.results()?.groups ?? []; track group.kind) {
+    <section class="group">
+      <h2 class="t-micro">{{ heading(group) }}</h2>
+      @for (hit of group.hits; track hit.id) {
+        <button type="button" class="hit" (click)="open(group, hit)">
+          <span class="hit-text">
+            <span class="t-body">{{ hit.title }}</span>
+            <span class="t-small muted">{{ hit.detail }}</span>
+          </span>
+          <span class="t-mono when">{{ day(hit) }}</span>
+          <span class="t-mono figure">{{ money(hit) }}</span>
+        </button>
+      }
+    </section>
+  }
+</div>
