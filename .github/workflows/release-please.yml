@@ -64,7 +64,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit --allow-empty -m "chore: release $wanted" -m "Release-As: $wanted"
-          git push origin "HEAD:$GITHUB_REF_NAME"
+          if ! git push origin "HEAD:$GITHUB_REF_NAME"; then
+            echo "::error::Could not push the Release-As commit to $GITHUB_REF_NAME."
+            echo "::error::github-actions[bot] needs to be on the bypass list of the ruleset protecting this branch, or VERSION cannot force a version."
+            echo "::error::Settings, then Rules, then Rulesets, then the ruleset for this branch, then Bypass list."
+            exit 1
+          fi
           echo "Asked for $wanted with a Release-As footer."
 
       - uses: googleapis/release-please-action@v4
