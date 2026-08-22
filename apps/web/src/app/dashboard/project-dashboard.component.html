@@ -1,0 +1,115 @@
+<div class="dashboard">
+  <div class="stats">
+    <div class="stat">
+      <span class="t-micro">Budget {{ symbol() }}</span>
+      <span class="stat-value t-mono">{{ bare(planned()) }}</span>
+      <span class="t-small note">{{ budgetNote() }}</span>
+    </div>
+
+    <div class="stat">
+      <span class="t-micro">Spent {{ symbol() }}</span>
+      <span class="stat-value t-mono">{{ bare(spent()) }}</span>
+      <span class="t-small note">{{ spentNote() }}</span>
+    </div>
+
+    <div class="stat" [class.over]="isOver()">
+      <span class="t-micro">{{ varianceLabel() }} {{ symbol() }}</span>
+      <span class="stat-value t-mono" [class.over-ink]="isOver()">
+        {{ varianceAmount() === null ? '—' : bare(varianceAmount()!) }}
+      </span>
+      <span class="t-small note">{{ varianceNote() }}</span>
+    </div>
+
+    <div class="stat">
+      <span class="t-micro">Used</span>
+      <span class="stat-value t-mono">{{ usedLabel() }}</span>
+      <span class="meter">
+        <span class="meter-used" [style.width.%]="usedPercent()"></span>
+        <span class="meter-over" [style.width.%]="overPercent()"></span>
+      </span>
+    </div>
+  </div>
+
+  <div class="by-scope">
+    <div class="by-scope-head">
+      <h2 class="scope-title">Spend by Scope</h2>
+      <span class="t-micro">Spent {{ symbol() }} / budget {{ symbol() }}</span>
+    </div>
+
+    @if (rows().length === 0) {
+      <div class="card">
+        <p class="t-body">Nothing to compare yet.</p>
+        <p class="t-small">Set a budget against a scope, or record what has been spent.</p>
+      </div>
+    } @else {
+      <div class="scopes">
+        @for (scope of rows(); track scope.id) {
+          <button
+            type="button"
+            class="scope-row"
+            [attr.aria-label]="'Open ' + scope.name + ' in the budget versus spend table'"
+            (click)="openScope.emit(scope.id)"
+          >
+            <span class="scope-name" [class.over-ink]="scopeOver(scope)">
+              <span
+                class="swatch"
+                [style.background]="tint(scope)"
+                [style.border-color]="tintEdge(scope)"
+              ></span>
+              {{ scope.name }}
+            </span>
+            <span class="bar">
+              <span
+                class="bar-fill"
+                [style.background]="tint(scope)"
+                [style.width.%]="fillPercent(scope)"
+              ></span>
+              @if (scopeOver(scope)) {
+                <span
+                  class="bar-over"
+                  [style.left.%]="fillPercent(scope)"
+                  [style.width.%]="scopeOverPercent(scope)"
+                ></span>
+              }
+              @if (budgetMarkPercent(scope) !== null) {
+                <span class="bar-mark" [style.left.%]="budgetMarkPercent(scope)"></span>
+              }
+            </span>
+            <span class="scope-figures t-mono" [class.over-ink]="scopeOver(scope)">
+              {{ scopeNote(scope) }}
+            </span>
+          </button>
+        }
+      </div>
+
+      @if (unfiled() > 0) {
+        <p class="t-small note">
+          {{ bare(unfiled()) }} of the spend is filed to no scope, so it is in none of the bars
+          above.
+        </p>
+      }
+    }
+  </div>
+
+  @if (alerts().length > 0) {
+    <div class="attention">
+      <h2 class="scope-title">Needs Attention</h2>
+      <div class="alerts">
+        @for (alert of alerts(); track alert.key) {
+          <button
+            type="button"
+            class="alert"
+            [class.urgent]="alert.urgent"
+            (click)="openTab.emit(alert.tab)"
+          >
+            <span class="alert-text">
+              <span class="alert-title">{{ alert.title }}</span>
+              <span class="alert-detail">{{ alert.detail }}</span>
+            </span>
+            <span class="alert-amount t-mono">{{ symbol() }}{{ alert.amount }}</span>
+          </button>
+        }
+      </div>
+    </div>
+  }
+</div>

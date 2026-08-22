@@ -1,0 +1,166 @@
+<app-topbar title="Home" [subtitle]="today">
+  <app-button variant="secondary" (pressed)="allProjects()">All projects</app-button>
+  <app-button (pressed)="newProject()">New project</app-button>
+</app-topbar>
+
+<div class="page">
+  <div class="intro">
+    <h1 class="t-display">{{ greeting() }}</h1>
+    <p class="prose">{{ standing() }}</p>
+  </div>
+
+  @if (home.error(); as trouble) {
+    <p class="banner warn t-small">{{ trouble }}</p>
+  }
+
+  @if (home.summary(); as found) {
+    @if (found.projects) {
+      @if (found.currency_code) {
+        <div class="totals">
+          @if (split()) {
+            <div class="pills" role="group" aria-label="Which currency to read">
+              @for (choice of choices(); track choice.currency_code) {
+                <button
+                  type="button"
+                  class="pill t-micro"
+                  [class.showing]="showingPill(choice)"
+                  [attr.aria-pressed]="showingPill(choice)"
+                  (click)="showCurrency(choice)"
+                >
+                  {{ pillLabel(choice) }}
+                </button>
+              }
+            </div>
+          }
+          <div class="stats">
+            <div class="stat">
+              <span class="t-micro">Budget {{ found.currency_code }}</span>
+              <span class="stat-value t-mono">{{ bare(planned()) }}</span>
+            </div>
+            <div class="stat">
+              <span class="t-micro">Spent {{ found.currency_code }}</span>
+              <span class="stat-value t-mono">{{ bare(spent()) }}</span>
+            </div>
+            <div class="stat" [class.over]="over()">
+              <span class="t-micro">{{ leftLabel() }} {{ found.currency_code }}</span>
+              <span class="stat-value t-mono" [class.over-ink]="over()">{{ bare(left()) }}</span>
+            </div>
+            <div class="stat">
+              <span class="t-micro">Used</span>
+              <span class="stat-value t-mono">{{ usedLabel() }}</span>
+              <span class="meter">
+                <span class="meter-used" [style.width.%]="usedPercent()"></span>
+              </span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <p class="t-small note">{{ currencyNote() }}</p>
+
+      @if (rows().length) {
+        <section class="block">
+          <h2 class="t-heading">Projects</h2>
+          @for (row of rows(); track row.id) {
+            <div class="project">
+              <button type="button" class="project-open" (click)="open(row)">
+                <span class="badge t-mono">{{ initials(row.name) }}</span>
+                <span class="project-text">
+                  <span class="project-name">{{ row.name }}</span>
+                  <span class="bar">
+                    <span class="bar-fill" [style.width.%]="rowFill(row)"></span>
+                    @if (rowOver(row)) {
+                      <span
+                        class="bar-over"
+                        [style.left.%]="rowFill(row)"
+                        [style.width.%]="rowOverFill(row)"
+                      ></span>
+                    }
+                  </span>
+                  <span class="t-small muted">{{ countLabel(row) }}</span>
+                </span>
+              </button>
+              <span class="project-figures">
+                <span class="figure t-mono">{{ rowMoney(row, row.spent_amount) }}</span>
+                <span class="t-small" [class.over-ink]="rowOver(row)">{{ rowStanding(row) }}</span>
+              </span>
+              <app-button variant="secondary" (pressed)="addExpense(row)">Add expense</app-button>
+            </div>
+          }
+        </section>
+      }
+
+      @if (bars().length) {
+        <section class="block">
+          <h2 class="t-heading">Spend by Month, {{ found.currency_code }}</h2>
+          <div class="chart" role="img" [attr.aria-label]="heaviest()">
+            @for (bar of bars(); track bar.month) {
+              <span class="column" [title]="barTitle(bar)">
+                <span class="column-figure t-mono">{{ bar.figure }}</span>
+                <span class="column-track">
+                  <span
+                    class="column-fill"
+                    [class.busiest]="bar.busiest"
+                    [style.height.%]="bar.height"
+                  ></span>
+                </span>
+                <span class="column-label t-micro">{{ bar.label }}</span>
+              </span>
+            }
+          </div>
+          <p class="t-small note">{{ heaviest() }}</p>
+        </section>
+      }
+
+      @if (alerts().length) {
+        <section class="block">
+          <h2 class="t-heading">Needs Attention {{ alerts().length }}</h2>
+          <div class="alerts">
+            @for (alert of alerts(); track alert.kind) {
+              <button
+                type="button"
+                class="alert"
+                [class.urgent]="alert.urgent"
+                (click)="openAlert(alert)"
+              >
+                <span class="alert-text">
+                  <span class="alert-title">{{ alert.title }}</span>
+                  <span class="alert-detail">{{ alert.detail }}</span>
+                </span>
+                <span class="alert-amount t-mono">{{ alertMoney(alert) }}</span>
+              </button>
+            }
+          </div>
+        </section>
+      }
+
+      @if (recent().length) {
+        <section class="block">
+          <h2 class="t-heading">Latest Spend</h2>
+          <div class="latest">
+            @for (row of recent(); track row.id) {
+              <button type="button" class="spend" (click)="openSpend(row)">
+                <span class="t-mono when">{{ day(row) }}</span>
+                <span class="spend-text">
+                  <span class="t-body">{{ row.description }}</span>
+                  <span class="t-small muted">{{ where(row) }}</span>
+                </span>
+                <span class="figure t-mono">{{ rowMoney(row, row.amount) }}</span>
+              </button>
+            }
+          </div>
+        </section>
+      }
+    } @else {
+      <div class="card">
+        <p class="t-body">Nothing recorded yet.</p>
+        <p class="t-small">
+          A project takes a name, a currency and its scopes, then the plan, then what you spend.
+        </p>
+        <div class="actions">
+          <app-button (pressed)="newProject()">New project</app-button>
+        </div>
+      </div>
+    }
+  }
+</div>

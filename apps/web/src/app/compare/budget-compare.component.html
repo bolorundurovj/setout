@@ -1,0 +1,104 @@
+<div class="compare">
+  <div class="intro">
+    <h2 class="title">Budget versus Spend</h2>
+    <p class="hint">Click a scope to see what was spent on it</p>
+  </div>
+
+  <div class="head row">
+    <span class="col">Scope</span>
+    <span class="col right">Budget {{ symbol() }}</span>
+    <span class="col right">Spent {{ symbol() }}</span>
+    <span class="col right">Left {{ symbol() }}</span>
+    <span class="col right">Used</span>
+  </div>
+
+  @for (row of rows(); track row.id) {
+    <div class="line">
+      <button
+        type="button"
+        class="row body"
+        [class.open]="isOpen(row)"
+        [class.unfiled]="row.isUnfiled"
+        [class.over]="over(row)"
+        [attr.aria-expanded]="isOpen(row)"
+        (click)="toggle(row)"
+      >
+        <span class="scope">
+          <span
+            class="swatch"
+            [style.background]="tint(row)"
+            [style.border-color]="tintEdge(row)"
+          ></span>
+          <span class="scope-name" [class.over]="over(row)">{{ row.name }}</span>
+          <span class="scope-count">{{ rowCount(row) }}</span>
+        </span>
+        <span class="figure right">{{ budgetCell(row) }}</span>
+        <span class="figure right" [class.over]="over(row)">{{ bare(row.spent) }}</span>
+        <span class="figure right" [class.over]="over(row)">{{ left(row) }}</span>
+        <span class="figure right" [class.over]="over(row)">{{ used(row) }}</span>
+      </button>
+
+      @if (isOpen(row)) {
+        @let filed = rowExpenses(row);
+        <div class="expenses">
+          @if (filed === undefined) {
+            <p class="empty">Loading…</p>
+          } @else if (filed.total === 0) {
+            <p class="empty">Nothing has been spent on this yet.</p>
+          } @else {
+            @for (expense of filed.rows; track expense.id) {
+              <div class="row expense">
+                <span class="detail">
+                  <span class="description">
+                    {{ expense.description }}
+                    @if (expense.attachment_count > 0) {
+                      <span class="photo t-mono">photo</span>
+                    }
+                  </span>
+                  @if (meta(expense)) {
+                    <span class="expense-meta">{{ meta(expense) }}</span>
+                  }
+                </span>
+                <span></span>
+                <span class="figure right">{{ bare(expense.amount) }}</span>
+                <span></span>
+                <span class="when right">{{ when(expense) }}</span>
+              </div>
+            }
+            <div class="expense-pager">
+              <app-pagination
+                [total]="filed.total"
+                [page]="filed.page"
+                noun="expenses"
+                (pageChange)="goTo(row, $event)"
+              />
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  @if (rows().length === 0) {
+    <p class="empty">No scopes yet. Set a budget and what you spend will line up against it.</p>
+  }
+
+  <div class="row total">
+    <span class="total-label">Project total · {{ countLabel() }}</span>
+    <span class="figure right">{{ plannedTotal() ? bare(plannedTotal()) : '—' }}</span>
+    <span class="figure right">{{ bare(spentTotal()) }}</span>
+    <span class="figure right" [class.over]="totalOver()">{{
+      plannedTotal() ? bare(totalLeft()) : '—'
+    }}</span>
+    <span class="figure right" [class.over]="totalOver()">{{ totalUsed() }}</span>
+  </div>
+
+  <p class="footer-note">
+    Left is what remains of the budget. A scope with no budget set shows a dash rather than a
+    number.
+  </p>
+
+  @if (removedNote()) {
+    <p class="footer-note">{{ removedNote() }}</p>
+  }
+</div>

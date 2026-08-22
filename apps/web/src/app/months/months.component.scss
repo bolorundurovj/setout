@@ -1,0 +1,260 @@
+.months {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.table {
+  border: 1.5px solid var(--rule);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.line + .line {
+  border-top: 1px solid var(--hairline);
+}
+
+.line + .total {
+  border-top: 2px solid var(--ink);
+}
+
+.row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 110px 1fr 150px 90px;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 18px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--sidebar);
+  }
+
+  &.open {
+    background: var(--sidebar);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+}
+
+.label {
+  font:
+    400 13px/1.2 'DM Mono',
+    monospace;
+  color: var(--ink-2);
+}
+
+.track {
+  height: 14px;
+  border-radius: 4px;
+  background: var(--field);
+  overflow: hidden;
+}
+
+.fill {
+  height: 14px;
+  display: flex;
+}
+
+.segment {
+  height: 14px;
+}
+
+.figure {
+  font:
+    400 16px/1.2 'DM Mono',
+    monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.count {
+  font:
+    400 13px/1.2 'DM Mono',
+    monospace;
+  color: var(--ink-3);
+}
+
+.right {
+  text-align: right;
+}
+
+.detail {
+  background: var(--sidebar);
+  border-top: 1px solid var(--hairline);
+  padding: 12px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.legend-row {
+  display: grid;
+  grid-template-columns: 14px 1fr 140px;
+  align-items: center;
+  gap: 10px;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.legend-name {
+  font:
+    400 13px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entries {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--hairline);
+  padding-top: 10px;
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 9px;
+}
+
+.entry-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.description {
+  font:
+    400 13px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--ink);
+}
+
+.entry-scope {
+  font:
+    400 13px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--ink-3);
+}
+
+.total {
+  background: var(--field);
+  cursor: default;
+}
+
+.total-label {
+  font:
+    500 13px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--ink);
+}
+
+.total .figure {
+  font-weight: 500;
+}
+
+.empty {
+  margin: 0;
+  padding: 16px 18px;
+  font:
+    400 13px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--ink-2);
+}
+
+.footer-note {
+  margin: 0;
+  font:
+    400 13px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--ink-3);
+  max-width: 80ch;
+}
+
+.error {
+  margin: 0;
+  font:
+    400 13px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--over);
+}
+
+.tint-1 {
+  background: var(--tint-1);
+  border: 1px solid var(--tint-1-ink);
+}
+
+.tint-2 {
+  background: var(--tint-2);
+  border: 1px solid var(--tint-2-ink);
+}
+
+.tint-3 {
+  background: var(--tint-3);
+  border: 1px solid var(--tint-3-ink);
+}
+
+.tint-4 {
+  background: var(--tint-4);
+  border: 1px solid var(--tint-4-ink);
+}
+
+.tint-5 {
+  background: var(--tint-5);
+  border: 1px solid var(--tint-5-ink);
+}
+
+.tint-unfiled {
+  background: var(--tint-unfiled);
+  border: 1px solid var(--tint-unfiled-ink);
+}
+
+// Bar segments sit edge to edge, so only the legend swatches carry an outline.
+.segment {
+  border: none;
+}
+
+@media (max-width: 899px) {
+  .row {
+    grid-template-columns: 92px 1fr 120px;
+  }
+
+  .row > .count,
+  .total > *:last-child {
+    display: none;
+  }
+}

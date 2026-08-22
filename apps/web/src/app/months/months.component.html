@@ -1,0 +1,88 @@
+<div class="months">
+  <div class="intro">
+    <h2 class="t-heading">Month by Month</h2>
+    <p class="prose">
+      Where the money went, in the order it went. Each bar is split by scope, in the same tints as
+      everywhere else.
+    </p>
+  </div>
+
+  @if (expenses.error()) {
+    <p class="error">{{ expenses.error() }}</p>
+  }
+
+  <div class="table">
+    @for (row of rows(); track row.month) {
+      <div class="line">
+        <button
+          type="button"
+          class="row"
+          [class.open]="isOpen(row)"
+          [attr.aria-expanded]="isOpen(row)"
+          (click)="toggle(row)"
+        >
+          <span class="label">{{ row.label }}</span>
+          <span class="track">
+            <span class="fill" [style.width]="row.barWidth">
+              @for (part of row.parts; track part.scopeId) {
+                <span class="segment" [class]="part.tint" [style.width]="part.width"></span>
+              }
+            </span>
+          </span>
+          <span class="figure right">{{ bare(row.amount) }}</span>
+          <span class="count right">{{ countLabel(row) }}</span>
+        </button>
+
+        @if (isOpen(row)) {
+          @let filed = monthExpenses(row);
+          <div class="detail">
+            <div class="legend">
+              @for (part of row.parts; track part.scopeId) {
+                <div class="legend-row">
+                  <span class="swatch" [class]="part.tint"></span>
+                  <span class="legend-name">{{ part.name }}</span>
+                  <span class="figure right">{{ bare(part.amount) }}</span>
+                </div>
+              }
+            </div>
+
+            @if (filed === undefined) {
+              <p class="empty">Loading…</p>
+            } @else if (filed.total > 0) {
+              <div class="entries">
+                @for (expense of filed.rows; track expense.id) {
+                  <div class="entry">
+                    <span class="entry-text">
+                      <span class="description">{{ expense.description }}</span>
+                      <span class="entry-scope">{{ scopeName(expense) }}</span>
+                    </span>
+                    <span class="figure right">{{ bare(expense.amount) }}</span>
+                  </div>
+                }
+                <app-pagination
+                  [total]="filed.total"
+                  [page]="filed.page"
+                  noun="expenses"
+                  (pageChange)="goTo(row, $event)"
+                />
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    @if (rows().length === 0) {
+      <p class="empty">Nothing recorded yet.</p>
+    }
+
+    <div class="row total">
+      <span class="total-label">Total</span>
+      <span></span>
+      <span class="figure right">{{ bare(total()) }}</span>
+      <span></span>
+    </div>
+  </div>
+
+  <p class="footer-note">{{ note() }}</p>
+</div>
