@@ -18,9 +18,24 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      - name: Check the release token is there
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          # GITHUB_TOKEN cannot be used here. github-actions[bot] cannot be added
+          # to a ruleset bypass list, so its pushes to a protected branch are
+          # refused and it is barred from opening pull requests. RELEASE_TOKEN
+          # acts as a repository admin, who is on the bypass list.
+          if [ -z "$RELEASE_TOKEN" ]; then
+            echo "::error::RELEASE_TOKEN is not set."
+            echo "::error::Create a fine-grained token for this repository with Contents and Pull requests set to read and write, then add it under Settings, Secrets and variables, Actions."
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Ask for an exact version when VERSION runs ahead of the last release
         run: |
@@ -66,8 +81,7 @@ jobs:
           git commit --allow-empty -m "chore: release $wanted" -m "Release-As: $wanted"
           if ! git push origin "HEAD:$GITHUB_REF_NAME"; then
             echo "::error::Could not push the Release-As commit to $GITHUB_REF_NAME."
-            echo "::error::github-actions[bot] needs to be on the bypass list of the ruleset protecting this branch, or VERSION cannot force a version."
-            echo "::error::Settings, then Rules, then Rulesets, then the ruleset for this branch, then Bypass list."
+            echo "::error::RELEASE_TOKEN must belong to someone on the bypass list of the ruleset protecting this branch."
             exit 1
           fi
           echo "Asked for $wanted with a Release-As footer."
@@ -76,3 +90,4 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          token: ${{ secrets.RELEASE_TOKEN }}

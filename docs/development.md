@@ -90,6 +90,19 @@ carrying a `Release-As` footer, which is how release-please accepts an exact
 version when it is driven by a manifest. The footer applies to that release
 alone, so there is nothing to unset afterwards.
 
+### The release token
+
+The release workflow needs a `RELEASE_TOKEN` secret: a fine-grained token for
+this repository with Contents and Pull requests set to read and write.
+
+The built-in `GITHUB_TOKEN` cannot do this job. `master` is protected, and
+`github-actions[bot]` cannot be added to a ruleset bypass list, so its pushes are
+refused; it is separately barred from opening pull requests. A token belonging to
+a repository admin inherits the admin bypass and can do both.
+
+It expires. When it does, the release workflow fails on its first step with a
+message saying so, and nothing is released until it is replaced.
+
 One version number lives in six files: `VERSION`, the three `package.json`
 files, `apps/api/pyproject.toml` and `apps/api/src/setout/__init__.py`, which is
 what `/healthz` reports. Never bump them by hand. `release-please-config.json`
