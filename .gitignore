@@ -46,7 +46,6 @@ build/
 .DS_Store
 Thumbs.db
 
-docs/
 prototype/
 
 # Exported transcripts, wherever /export drops them.

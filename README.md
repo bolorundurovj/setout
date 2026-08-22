@@ -1,5 +1,8 @@
 # Setout
 
+[![CI](https://github.com/bolorundurovj/setout/actions/workflows/ci.yml/badge.svg)](https://github.com/bolorundurovj/setout/actions/workflows/ci.yml)
+[![Licence: AGPL v3](https://img.shields.io/badge/licence-AGPL--3.0-blue.svg)](LICENSE)
+
 Setout is a self-hosted web app for tracking construction spend on personal
 building projects. It replaces a spreadsheet whose budget numbers were typed in
 after the money was spent. In Setout a budget belongs to a scope and is set
@@ -10,40 +13,32 @@ deliberately; an expense records spend and can never write a budget value.
 - Database: SQLite by default, Postgres optional.
 - Deployment: one container, one port, SQLite by default.
 
-## Repository layout
-
-```
-apps/api           FastAPI service (uv, pyproject.toml)
-apps/web           Angular application
-packages/api-client  generated TypeScript SDK, committed to the repo
-scripts            SDK generation, seed, backup, restore
-docker             single-image Dockerfile and compose files
-docs               feature list, testing spec, plan
-```
-
-## Requirements
-
-- uv (Python dependency manager)
-- Node 22.22.3 or later, or 24.15.0 or later (Angular 22 requires this)
-- Yarn (via `corepack enable`)
-- Docker (only for the container image)
-- GNU Make
-
 ## Quick start
+
+With Docker:
+
+```bash
+docker compose -f docker/docker-compose.yml up --build
+```
+
+That brings up the app on 8474, Postgres for the record, and MinIO for the
+attachments. From a checkout instead:
 
 ```bash
 make setup    # install backend and frontend
 make dev      # run the API and the web app together
 ```
 
-On Windows these work from cmd.exe, Cmder and Git Bash. Git for Windows is
-required: the Makefile runs its recipes through Git's bash, because the other
-`bash` on the PATH, `C:\Windows\System32\bash.exe`, starts WSL. Do not drive the
-same checkout from WSL as well. Its Linux yarn installs native binaries that
-Windows tools cannot load, and the Makefile stops with an explanation if it
-finds a `node_modules` built by the other platform.
+Open the web app. The first run guides you through setting up the local admin
+account with a passphrase. There are no roles and no email is required: one
+person, one passphrase, and a session cookie on your device.
 
-Open the web app; on the first run you will be guided through setting up the local admin account with a secure passphrase. There are no roles or emails required: just one person and one passphrase. This will set a session cookie on your device.
+Windows works from cmd.exe, Cmder and Git Bash, with one constraint about WSL
+covered in [installation](docs/installation.md).
+
+Before putting Setout anywhere other people can reach, read
+[deployment](docs/deployment.md). The defaults exist so the stack comes up on one
+command, not because they are safe.
 
 ## Recording spend
 
@@ -84,166 +79,48 @@ together.
 - A **person** is someone who spends your money for you. Recording who paid is
   what makes it possible to work out what you owe them.
 
+## Documentation
+
+| Guide | What it covers |
+| --- | --- |
+| [Installation](docs/installation.md) | Docker, bare metal, the first run |
+| [Configuration](docs/configuration.md) | Every environment variable, app and compose |
+| [Deployment](docs/deployment.md) | Postgres, S3 or MinIO, HTTPS, upgrades |
+| [Backup and restore](docs/backup-and-restore.md) | The two kinds of copy, and when each applies |
+| [Troubleshooting](docs/troubleshooting.md) | The failures that come up more than once |
+| [Architecture](docs/architecture.md) | How a request travels, and why the SDK is generated |
+| [Development](docs/development.md) | The Makefile, the test layers, migrations, the SDK |
+| [Roadmap](docs/roadmap.md) | What is designed but not built |
+
+## Repository layout
+
+```
+apps/api             FastAPI service (uv, pyproject.toml)
+apps/web             Angular application
+packages/api-client  generated TypeScript SDK, committed to the repository
+scripts              SDK generation, seed, backup, restore
+docker               Dockerfile and the compose stack
+docs                 documentation
+```
+
 ## The Makefile is the interface
 
-```
-make setup        install everything, backend and frontend
-make dev          run API and web together with reload
-make api          run the API alone
-make web          run the web app alone
-make lint         ruff, mypy, eslint, prettier, all in check mode
-make format       write mode for the same tools
-make test         all backend tests and the frontend unit tests
-make test-unit    unit tests only, fast
-make test-int     integration tests against a real database
-make test-contract  schema and SDK contract tests
-make sdk          regenerate the API client
-make migration    tortoise makemigrations, accepting name=<name>
-make migrate      tortoise migrate
-make downgrade    roll back one migration
-make seed         load the sample data
-make backup       write the database and files into one dated archive
-make restore      read a backup archive back (file=<archive>)
-make check        lint, typecheck, all tests, coverage floor, SDK drift
-make build        production build of both apps
-make docker-build build the single deployment image
-make clean        remove build artefacts and caches
-```
+`make setup`, `make dev`, `make check`. That last one is the gate: lint, types,
+the whole test suite against a coverage floor, and a check that the committed
+SDK still matches the schema. The full list of targets is in
+[development](docs/development.md), or run `make help`.
 
-## Configuration
+## Contributing
 
-Every backend variable uses the `SETOUT_` prefix. Copy `.env.example` to `.env`
-and adjust. Local development defaults to `./data`.
+Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers
+setup, the rules that matter, and what the checklist is asking for. The project
+follows the [Contributor Covenant](CODE_OF_CONDUCT.md).
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `SETOUT_PORT` | `8474` | Port the API listens on |
-| `SETOUT_DATA_DIR` | `/var/lib/setout` (`./data` locally) | Database and uploaded files |
-| `SETOUT_DATABASE_URL` | SQLite under the data dir | `sqlite://...` or `postgres://...` |
-| `SETOUT_SECRET_KEY` | `change-me` | Session signing key; set a long random value |
-| `SETOUT_LOG_LEVEL` | `info` | `debug`, `info`, `warning`, `error` |
-| `SETOUT_CORS_ORIGINS` | `http://localhost:4200` | Comma separated origins allowed to call the API |
-| `SETOUT_COOKIE_SECURE` | `false` | Send the session cookie over HTTPS only; turn on when not on localhost |
-| `SETOUT_STORAGE_BACKEND` | `local` | Where attached files live: `local` or `s3` |
-| `SETOUT_S3_BUCKET` | empty | Bucket name when the backend is `s3` |
-| `SETOUT_S3_ENDPOINT_URL` | empty | Leave unset for Amazon; set it for MinIO, R2, B2, Spaces |
-| `SETOUT_S3_REGION` | empty | Region, where the provider wants one |
-| `SETOUT_S3_ACCESS_KEY_ID` | empty | Access key |
-| `SETOUT_S3_SECRET_ACCESS_KEY` | empty | Secret key |
-| `SETOUT_S3_PREFIX` | `attachments` | Folder inside the bucket |
-| `SETOUT_S3_USE_PATH_STYLE` | `false` | Turn on for MinIO and anything else wanting the bucket in the path |
-| `SETOUT_S3_LINK_SECONDS` | `300` | How long a link straight to the bucket stays good |
-| `SETOUT_MAX_ATTACHMENT_BYTES` | `26214400` | Largest file that can be attached |
+Found a security problem? Please report it privately: see
+[SECURITY.md](SECURITY.md).
 
-Attached files are named after the hash of their contents, so the same receipt
-attached twice is stored once. They go on the disk under `SETOUT_DATA_DIR` by
-default, which the backup archive already carries. Point
-`SETOUT_STORAGE_BACKEND` at `s3` and they go to any S3 compatible bucket
-instead: Amazon, MinIO, R2, B2, Spaces and the rest all speak it. A bucket is
-outside the backup archive, so back the bucket up where it lives.
+## Licence
 
-The frontend reads `apiBaseUrl` from its environment files. It defaults to a
-relative path in production so the single container works with no configuration.
-
-## Running with Docker
-
-```bash
-docker compose -f docker/docker-compose.yml up --build
-```
-
-One command brings up everything Setout needs: the app on 8474, Postgres for
-the record, and MinIO for the attachments, with the bucket made before the app
-starts. The MinIO console is on 9001.
-
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `SETOUT_PORT` | `8474` | Port the app is published on |
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `setout` | Database credentials |
-| `MINIO_ROOT_USER` | `setout` | Bucket access key |
-| `MINIO_ROOT_PASSWORD` | `setout-secret` | Bucket secret key |
-| `MINIO_BUCKET` | `setout` | Bucket the attachments go in |
-| `MINIO_PORT` / `MINIO_CONSOLE_PORT` | `9000` / `9001` | Published MinIO ports |
-| `POSTGRES_PORT` | `5433` | Host port for Postgres, kept off 5432 so it does not fight a Postgres already installed |
-| `SETOUT_SECRET_KEY` | `change-me` | Session signing key |
-
-Put any of them in a `.env` file beside the compose file. **Change
-`SETOUT_SECRET_KEY` and the MinIO password before putting this anywhere other
-people can reach.** The defaults exist so the stack comes up on one command,
-not because they are safe.
-
-The image runs as a non-root user, persists `SETOUT_DATA_DIR` on a volume, and
-applies migrations on start. The API answers `/healthz` with the version and
-database status.
-
-To run against SQLite and local files instead, unset `SETOUT_DATABASE_URL` and
-set `SETOUT_STORAGE_BACKEND=local` on the `setout` service; the database and
-the attachments then both live under `SETOUT_DATA_DIR`.
-
-## Migrations
-
-Setout uses the migration tool built into Tortoise ORM (not Aerich, not
-Alembic). The config is resolved from `[tool.tortoise]` in
-`apps/api/pyproject.toml`.
-
-```bash
-make migration name=add_projects   # create a migration
-make migrate                        # apply pending migrations
-make downgrade                      # roll back the last step
-```
-
-Migrations are also applied automatically when the app starts. The startup log
-reports clearly when the database is behind.
-
-## Backup and restore
-
-There are two kinds of copy, and they are not interchangeable.
-
-### The whole install, from the shell
-
-```bash
-make backup                                   # writes backups/setout-backup-<engine>-<stamp>.tar.gz
-make restore file=backups/setout-backup-<engine>-<stamp>.tar.gz
-```
-
-The archive holds the database, everything else under `SETOUT_DATA_DIR`, and a
-manifest naming the engine it came from. How the database is captured depends
-on `SETOUT_DATABASE_URL`:
-
-| Engine | Captured with | Needs |
-| --- | --- | --- |
-| SQLite | `sqlite3 .backup`, falling back to a file copy | `sqlite3` for a copy that is safe while running |
-| Postgres | `pg_dump --format=custom` | `pg_dump` and `pg_restore` on the machine |
-
-Stop the app before restoring. The restore asks before overwriting anything;
-set `SETOUT_ASSUME_YES=1` for an unattended run, such as cron.
-
-A restore refuses if the archive and the running configuration disagree about
-the engine, because a Postgres dump cannot be poured into SQLite. To move
-between engines, use the record export below, which carries rows rather than a
-database file. Archives written before this split have no manifest and are read
-as SQLite.
-
-### The record, from the app
-
-Settings → Backup writes a `.json` holding every row of the record, and takes
-one back. It works against either engine and needs no shell access, but it is
-rows only: no uploaded files, and no sessions, so everyone signs in again.
-
-The restore inserts into whatever schema the server is running now, so it asks
-you to confirm when the file came from a different version, and refuses a file
-holding tables it does not know. It runs in one transaction: either every row
-lands or the record is left exactly as it was. `GET /install/export` and
-`POST /install/restore` are the same thing over the API.
-
-Use the shell archive to protect the install, and the record export to move the
-data somewhere else.
-
-## The SDK
-
-The frontend never handwrites an HTTP call. It imports a TypeScript SDK from
-`packages/api-client` by path alias, and an ESLint rule forbids importing
-`HttpClient` outside that layer. The SDK is generated from the backend OpenAPI
-schema and committed to the repo. `make check` regenerates it and fails if the
-committed output drifts.
-
-See `docs/` for the feature list and the testing spec.
+[GNU Affero General Public License v3.0 or later](LICENSE). You may run, study,
+change and share it. If you offer a modified version to other people over a
+network, you must publish your source too.
