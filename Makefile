@@ -119,7 +119,7 @@ test-unit: require-uv ## Unit tests only, fast.
 test-int: require-uv ## Integration tests against a real database.
 	cd $(API_DIR) && uv run pytest tests/integration -m integration
 
-test-contract: require-uv ## Schema and SDK contract tests.
+test-contract: require-uv sdk ## Schema and SDK contract tests.
 	cd $(API_DIR) && uv run pytest tests/contract -m contract
 
 sdk: require-uv require-yarn ## Regenerate the API client.
@@ -143,12 +143,12 @@ backup: ## Write the database and uploaded files into one dated archive.
 restore: ## Read a backup archive back, after asking. Pass file=<archive>.
 	$(BASH) scripts/restore.sh $(file)
 
-check: ## Lint, typecheck, all tests, coverage floor.
+check: sdk ## Lint, typecheck, all tests, coverage floor.
 	$(MAKE) lint
 	cd $(API_DIR) && uv run pytest --cov=setout --cov-report=term-missing --cov-fail-under=80
 	cd $(WEB_DIR) && yarn test --watch=false
 
-build: require-uv require-yarn ## Production build of both apps.
+build: require-uv require-yarn sdk ## Production build of both apps.
 	cd $(API_DIR) && uv build
 	cd $(WEB_DIR) && yarn build
 
