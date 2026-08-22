@@ -1,0 +1,145 @@
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.aside {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.fields.three {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.masked {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 48px;
+  padding: 0 14px;
+  background: var(--field);
+  border: 1.5px solid var(--rule);
+  border-radius: 10px;
+}
+
+.dots {
+  font-size: 16px;
+  color: var(--ink-3);
+}
+
+.change {
+  flex: none;
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.passphrase {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  background: var(--sidebar);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+}
+
+.strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  background: var(--field);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+
+.note {
+  margin: 0;
+  color: var(--ink-3);
+  max-width: 80ch;
+}
+
+@media (max-width: 599px) {
+  .fields,
+  .fields.three {
+    grid-template-columns: 1fr;
+  }
+
+  .strip {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.offscreen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.danger {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 15px 17px;
+  background: var(--over-surface);
+  border: 1px solid var(--over-edge);
+  border-radius: 12px;
+}
+
+.danger-file {
+  font-size: 13px;
+  color: var(--over-ink);
+  overflow-wrap: anywhere;
+}
+
+.danger-body {
+  margin: 0;
+  font:
+    400 16px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--over-ink);
+  max-width: 70ch;
+}
+
+.danger-body.warning {
+  font-size: 13px;
+}

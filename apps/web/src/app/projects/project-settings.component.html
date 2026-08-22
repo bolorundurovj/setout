@@ -1,0 +1,184 @@
+<div class="settings">
+  <div class="intro">
+    <h2 class="t-heading">Project Settings</h2>
+    <p class="prose">
+      For {{ project().name }} only. Currency belongs to the project, and nothing is ever converted
+      between projects.
+    </p>
+  </div>
+
+  <section class="card block">
+    <span class="t-micro">This project</span>
+
+    <div class="fields">
+      <label class="field">
+        <span class="t-micro">Name</span>
+        <input
+          class="input-field"
+          type="text"
+          autocomplete="off"
+          [value]="name()"
+          (input)="name.set(value($event))"
+        />
+      </label>
+
+      <label class="field">
+        <span class="t-micro">Status</span>
+        <select class="input-field" [value]="status()" (change)="setStatus($event)">
+          @for (choice of statuses; track choice.value) {
+            <option [value]="choice.value">{{ choice.name }}</option>
+          }
+        </select>
+      </label>
+    </div>
+
+    <label class="field">
+      <span class="t-micro">Notes</span>
+      <input
+        class="input-field"
+        type="text"
+        autocomplete="off"
+        placeholder="What this build is"
+        [value]="notes()"
+        (input)="notes.set(value($event))"
+      />
+    </label>
+
+    <div class="actions">
+      <app-button [disabled]="!canSave()" [loading]="saving()" (pressed)="save()">
+        Save Changes
+      </app-button>
+      @if (dirty()) {
+        <span class="t-small unsaved">Not saved yet.</span>
+      }
+    </div>
+  </section>
+
+  <section class="card block">
+    <div class="block-head">
+      <span class="t-micro">Currency</span>
+      <span class="t-mono aside">This project only</span>
+    </div>
+
+    <div class="facts">
+      <div class="fact">
+        <span class="t-micro">Currency</span>
+        <span class="fact-value t-mono">{{ project().currency_code }}</span>
+      </div>
+      <div class="fact">
+        <span class="t-micro">Symbol</span>
+        <span class="fact-value t-mono">{{ shape().symbol }}</span>
+      </div>
+      <div class="fact">
+        <span class="t-micro">Position</span>
+        <span class="fact-value t-mono">{{ shape().position }}</span>
+      </div>
+      <div class="fact">
+        <span class="t-micro">Decimals</span>
+        <span class="fact-value t-mono">{{ shape().decimals }}</span>
+      </div>
+      <div class="fact">
+        <span class="t-micro">Separators</span>
+        <span class="fact-value t-mono">{{ shape().separators }}</span>
+      </div>
+    </div>
+
+    <div class="preview">
+      <span class="t-small">Same stored number, printed for this project</span>
+      <span class="preview-figure t-mono">{{ preview() }}</span>
+    </div>
+
+    <p class="t-small note">
+      The currency is fixed when the project is created. Every amount is stored in its minor units,
+      so changing it would reprint what was already spent as a different number rather than convert
+      it. Start another project instead.
+    </p>
+  </section>
+
+  <section class="card block">
+    <span class="t-micro">Scopes</span>
+
+    @if (budget.scopes().length === 0) {
+      <p class="t-small note">No scopes yet. The budget tab is where they are added.</p>
+    } @else {
+      <div class="scopes">
+        @for (scope of budget.scopes(); track scope.id) {
+          <div class="scope" [class.child]="scope.parent_id">
+            @if (renaming() === scope.id) {
+              <input
+                class="input-field rename"
+                type="text"
+                autocomplete="off"
+                [attr.aria-label]="'Rename ' + scope.name"
+                [value]="newName()"
+                (input)="newName.set(value($event))"
+                (keyup.enter)="rename(scope)"
+                (keyup.escape)="cancelRename()"
+              />
+              <button type="button" class="link-action" (click)="rename(scope)">Save</button>
+              <button type="button" class="link-action" (click)="cancelRename()">Cancel</button>
+            } @else if (removing() === scope.id) {
+              <span class="swatch" [class]="tint(scope)"></span>
+              <span class="scope-name">{{ scope.name }}</span>
+              <span class="t-small confirm">Remove this scope?</span>
+              <button type="button" class="link-action destructive" (click)="remove(scope)">
+                Yes, remove
+              </button>
+              <button type="button" class="link-action" (click)="cancelRemove()">Cancel</button>
+            } @else {
+              <span class="swatch" [class]="tint(scope)"></span>
+              <span class="scope-name">{{ scope.name }}</span>
+              <span class="scope-count t-mono">{{ countLabel(scope) }}</span>
+              <button
+                type="button"
+                class="link-action"
+                [attr.aria-label]="'Rename ' + scope.name"
+                (click)="startRename(scope)"
+              >
+                Rename
+              </button>
+              @if (canRemove(scope)) {
+                <button
+                  type="button"
+                  class="link-action destructive"
+                  [attr.aria-label]="'Remove ' + scope.name"
+                  (click)="ask(scope)"
+                >
+                  Remove
+                </button>
+              }
+            }
+          </div>
+        }
+      </div>
+
+      @if (justRemoved(); as gone) {
+        <p class="t-small note">
+          {{ gone.name }} was removed.
+          <button type="button" class="link-action" (click)="putScopeBack()">Put It Back</button>
+        </p>
+      }
+
+      <p class="t-small note">A scope with expenses cannot be deleted, only renamed.</p>
+    }
+  </section>
+
+  <section class="card block">
+    <span class="t-micro">The spreadsheet</span>
+
+    <div class="actions">
+      <app-button variant="secondary" (pressed)="importSheet()">Import a Sheet</app-button>
+      <app-button variant="secondary" (pressed)="exportSheet()">Export a workbook</app-button>
+    </div>
+
+    <p class="t-small note">
+      Import reads a whole workbook into {{ project().name }}. Rows already here, by date, amount
+      and description, are recognised, so a second import does not double the spend.
+    </p>
+
+    <p class="t-small note">
+      Export writes {{ project().name }} back out in the shape it came from, and that workbook reads
+      into Setout again. Attached files are listed in it by name, not carried in it.
+    </p>
+  </section>
+</div>

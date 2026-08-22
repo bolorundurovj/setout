@@ -1,0 +1,231 @@
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.aside {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.unsaved {
+  color: var(--ink-3);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.fact-value {
+  padding: 11px 12px;
+  font-size: 16px;
+  color: var(--ink);
+  background: var(--field);
+  border: 1px solid var(--rule);
+  border-radius: 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  background: var(--field);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+
+.preview-figure {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.note {
+  margin: 0;
+  color: var(--ink-3);
+  max-width: 80ch;
+}
+
+.scopes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scope {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background: var(--field);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+
+.scope.child {
+  margin-left: 22px;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.scope-name {
+  font:
+    400 13px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope-count {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.confirm {
+  margin-left: auto;
+  color: var(--ink-2);
+}
+
+.rename {
+  height: 38px;
+  flex: 1;
+  min-width: 0;
+}
+
+.link-action {
+  flex: none;
+  background: none;
+  border: none;
+  padding: 4px 2px;
+  font:
+    400 13px/1.2 'DM Mono',
+    monospace;
+  color: var(--ink-3);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--ink);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--field),
+      0 0 0 4px var(--accent);
+    border-radius: 6px;
+  }
+}
+
+.link-action.destructive:hover {
+  color: var(--over);
+}
+
+.tint-1 {
+  background: var(--tint-1);
+  border: 1px solid var(--tint-1-ink);
+}
+
+.tint-2 {
+  background: var(--tint-2);
+  border: 1px solid var(--tint-2-ink);
+}
+
+.tint-3 {
+  background: var(--tint-3);
+  border: 1px solid var(--tint-3-ink);
+}
+
+.tint-4 {
+  background: var(--tint-4);
+  border: 1px solid var(--tint-4-ink);
+}
+
+.tint-5 {
+  background: var(--tint-5);
+  border: 1px solid var(--tint-5-ink);
+}
+
+.tint-unfiled {
+  background: var(--tint-unfiled);
+  border: 1px solid var(--tint-unfiled-ink);
+}
+
+@media (max-width: 899px) {
+  .fields,
+  .facts {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 599px) {
+  .fields,
+  .facts {
+    grid-template-columns: 1fr;
+  }
+
+  .scope {
+    flex-wrap: wrap;
+  }
+}

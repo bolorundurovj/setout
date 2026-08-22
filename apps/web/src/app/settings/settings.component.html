@@ -1,0 +1,202 @@
+<app-topbar title="Settings" subtitle="This whole install" />
+
+<div class="page">
+  <div class="intro">
+    <p class="prose">
+      Settings for the whole install. Anything that belongs to one house — its currency, its scopes
+      — lives under Project Settings.
+    </p>
+  </div>
+
+  <section class="card block">
+    <span class="t-micro">Appearance</span>
+    <app-chip-group
+      [chips]="appearanceChips"
+      [value]="theme.choice()"
+      label="Appearance"
+      (valueChange)="pickAppearance($event)"
+    />
+    <p class="t-small note">{{ appearanceNote() }}</p>
+  </section>
+
+  @if (currencyChips().length) {
+    <section class="card block">
+      <span class="t-micro">Currency Home Opens On</span>
+      <app-chip-group
+        [chips]="currencyChips()"
+        [value]="baseCurrency()"
+        label="Currency Home opens on"
+        (valueChange)="pickBaseCurrency($event)"
+      />
+      <p class="t-small note">{{ currencyNote() }}</p>
+    </section>
+  }
+
+  <section class="card block">
+    <div class="block-head">
+      <span class="t-micro">Account and Sign In</span>
+      <span class="t-mono aside">On this server</span>
+    </div>
+
+    <div class="fields">
+      <label class="field">
+        <span class="t-micro">Account Name</span>
+        <input
+          class="input-field"
+          type="text"
+          autocomplete="off"
+          placeholder="Your name, or this device"
+          [value]="name()"
+          (input)="name.set(value($event))"
+          (keyup.enter)="saveName()"
+        />
+      </label>
+
+      <div class="field">
+        <span class="t-micro">Passphrase</span>
+        @if (!changingPassphrase()) {
+          <div class="masked">
+            <span class="t-mono dots">••••••••••</span>
+            <button type="button" class="link t-mono change" (click)="startPassphrase()">
+              Change
+            </button>
+          </div>
+        } @else {
+          <span class="t-small note">Below.</span>
+        }
+      </div>
+    </div>
+
+    @if (nameChanged()) {
+      <div class="actions">
+        <app-button [loading]="savingName()" (pressed)="saveName()">Save the Name</app-button>
+      </div>
+    }
+
+    @if (changingPassphrase()) {
+      <div class="passphrase">
+        <div class="fields three">
+          <label class="field">
+            <span class="t-micro">Passphrase in use</span>
+            <input
+              class="input-field"
+              type="password"
+              autocomplete="current-password"
+              [value]="current()"
+              (input)="current.set(value($event))"
+            />
+          </label>
+          <label class="field">
+            <span class="t-micro">New passphrase</span>
+            <input
+              class="input-field"
+              type="password"
+              autocomplete="new-password"
+              [value]="next()"
+              (input)="next.set(value($event))"
+            />
+          </label>
+          <label class="field">
+            <span class="t-micro">New passphrase again</span>
+            <input
+              class="input-field"
+              type="password"
+              autocomplete="new-password"
+              [value]="again()"
+              (input)="again.set(value($event))"
+              (keyup.enter)="savePassphrase()"
+            />
+          </label>
+        </div>
+
+        <p class="t-small note">
+          Changing it signs out every other device. This one stays signed in.
+        </p>
+
+        <div class="actions">
+          <app-button
+            [disabled]="!!passphraseProblem()"
+            [loading]="savingPassphrase()"
+            (pressed)="savePassphrase()"
+          >
+            Change the Passphrase
+          </app-button>
+          <app-button variant="secondary" (pressed)="cancelPassphrase()">Cancel</app-button>
+          @if (passphraseProblem()) {
+            <span class="t-small note">{{ passphraseProblem() }}</span>
+          }
+        </div>
+      </div>
+    }
+
+    <p class="t-small note">
+      One passphrase unlocks this server. Setout keeps no accounts on anybody else's machine, and
+      signs in through nobody else's service.
+    </p>
+  </section>
+
+  <section class="card block">
+    <div class="block-head">
+      <span class="t-micro">Server and Backup</span>
+      <span class="t-mono aside">{{ server.install()?.version ?? notSet }}</span>
+    </div>
+
+    <p class="prose">
+      One file holds the whole record — every project, expense, vendor and photo. A copy on the same
+      machine is not a backup.
+    </p>
+
+    <div class="strip">
+      <span class="t-small">The record, and when it last changed</span>
+      <span class="t-small aside">{{ recordSize() }} &middot; {{ lastChanged() }}</span>
+    </div>
+
+    @if (!picked()) {
+      <div class="actions">
+        <app-button [loading]="server.writing()" (pressed)="writeCopy()">
+          Download a Copy
+        </app-button>
+        <app-button variant="secondary" [loading]="readingFile()" (pressed)="chooseFile()">
+          Restore from a File
+        </app-button>
+        <input
+          #file
+          class="offscreen"
+          type="file"
+          accept="application/json,.json"
+          aria-hidden="true"
+          tabindex="-1"
+          (change)="pickFile($event)"
+        />
+      </div>
+    } @else {
+      <div class="danger">
+        <span class="t-mono danger-file">{{ pickedLine() }}</span>
+        <span class="t-small danger-file">{{ pickedRows() }}</span>
+
+        <p class="danger-body">
+          Restoring replaces everything on this server with the contents of that file. Anything
+          recorded since it was written goes, including whatever you have added in this session.
+        </p>
+
+        @if (versionWarning()) {
+          <p class="danger-body warning">{{ versionWarning() }}</p>
+        }
+
+        <div class="actions">
+          <app-button variant="danger" [loading]="server.restoring()" (pressed)="doRestore()">
+            Replace Everything
+          </app-button>
+          <app-button variant="secondary" (pressed)="cancelRestore()">
+            Keep What Is Here
+          </app-button>
+        </div>
+      </div>
+    }
+
+    <p class="t-small note">
+      A copy is one JSON file, stamped with the Setout and the schema that wrote it. Restoring signs
+      every device out, because the accounts come out of the file too.
+    </p>
+  </section>
+</div>
