@@ -1,0 +1,273 @@
+// Fonts are listed in angular.json so they are bundled rather than fetched
+// from a CDN, which keeps a self-hosted Setout working offline.
+
+:root {
+  --canvas: #e9ebee; // App background
+  --surface: #fbfcfd; // Card background
+  --field: #f1f3f6; // Input at rest
+  --hairline: #dfe3e8; // 1px structural lines
+  --rule: #c6cbd3; // 1.5px borders (cards, inputs)
+  --ink: #1e2226; // Primary text
+  --ink-2: #5c646d; // Secondary text
+  --ink-3: #666e77; // Tertiary / uppercase labels
+  --accent: #22797b; // Primary buttons, links, focus rings
+  --over: #c0614c; // Destructive / over-budget red
+  --over-ink: #8b503c; // Text on destructive surfaces
+  --over-surface: #f7ece7; // Destructive surface
+  --over-edge: #dfbcaf; // Destructive borders
+  --tile-ink: #38614d; // Icon/tile text
+  --on-accent: #f6fbfb; // Text on accent surfaces
+  --sidebar: #f7f9fb; // Navigation panel
+  --ok-surface: #dae7e1; // Confirmation banner
+  --ok-edge: #a9c7b6;
+  --ok-ink: #2f5c45;
+  --warn-surface: #faf6ea; // Needs attention banner
+  --warn-edge: #e6dfc8;
+  --warn-ink: #766333;
+
+  // Scope tints. Five of them, handed out in budget order and cycled, so a
+  // scope keeps its colour everywhere it is drawn.
+  --tint-1: #dde2f2;
+  --tint-1-ink: #4e5a86;
+  --tint-2: #e7dff0;
+  --tint-2-ink: #6a5188;
+  --tint-3: #d8e5ef;
+  --tint-3-ink: #3d6480;
+  --tint-4: #f0ded7;
+  --tint-4-ink: #8b503c;
+  --tint-5: #dbe8de;
+  --tint-5-ink: #416b55;
+  --tint-unfiled: #e3e7ec;
+  --tint-unfiled-ink: #666e77;
+
+  // Content column. The topbar caps its own row to the same width so a title
+  // sits above the content it names.
+  --page-max: 1440px;
+}
+
+// index.html sets data-theme before first paint, so the dark palette is not
+// repeated under a prefers-color-scheme query.
+[data-theme='dark'] {
+  --canvas: #16191c;
+  --surface: #1d2124;
+  --field: #232830;
+  --hairline: #2a3038;
+  --rule: #3d444c;
+  --ink: #eef1f4;
+  --ink-2: #a3abb4;
+  --ink-3: #8b939c;
+  --accent: #2f9a9c;
+  --over: #e9927a;
+  --over-ink: #e9927a;
+  --over-surface: #2a1e1a;
+  --over-edge: #4a2d24;
+  --tile-ink: #7ac1a3;
+  --sidebar: #1a1e21;
+  --ok-surface: #16261d;
+  --ok-edge: #2c4a38;
+  --ok-ink: #7ac1a3;
+  --warn-surface: #2a2415;
+  --warn-edge: #4a4026;
+  --warn-ink: #d8c48a;
+  --tint-1: #262b3d;
+  --tint-1-ink: #9aa6d4;
+  --tint-2: #2e2739;
+  --tint-2-ink: #bda6d6;
+  --tint-3: #202e3a;
+  --tint-3-ink: #9dc0d8;
+  --tint-4: #382722;
+  --tint-4-ink: #d9a793;
+  --tint-5: #1f2e26;
+  --tint-5-ink: #9ccbb0;
+  --tint-unfiled: #2a3038;
+  --tint-unfiled-ink: #8b939c;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--canvas);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+}
+
+.t-micro {
+  font:
+    500 11px/1.2 'DM Sans',
+    sans-serif;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.t-small {
+  font:
+    400 13px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--ink-2);
+}
+
+.t-body {
+  font:
+    400 16px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--ink);
+}
+
+.t-heading {
+  font:
+    500 21px/1.2 'DM Sans',
+    sans-serif;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.t-display {
+  font:
+    500 26px/1.2 'DM Sans',
+    sans-serif;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+.t-mono {
+  font-family: 'DM Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+// Amounts only line up when they are right aligned in a column.
+.t-amount {
+  font:
+    400 16px/1.2 'DM Mono',
+    monospace;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.page {
+  width: 100%;
+  // 760px is the floor, then take whatever room there is up to a width that
+  // still scans. min() keeps the floor from forcing a scrollbar on a phone.
+  min-width: min(100%, 760px);
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding: 26px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.prose {
+  font:
+    400 16px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--ink-2);
+  max-width: 70ch;
+  text-wrap: pretty;
+  margin: 0;
+}
+
+.summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--field);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  font:
+    400 13px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--ink-2);
+}
+
+.summary-figure {
+  color: var(--ink);
+}
+
+// Cards hold one thing, panels hold a whole screen.
+.card {
+  background: var(--surface);
+  border: 1.5px solid var(--rule);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1.5px solid var(--rule);
+  border-radius: 18px;
+  padding: 24px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input-field {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  font:
+    400 16px/1.2 'DM Sans',
+    sans-serif;
+  color: var(--ink);
+  background: var(--field);
+  border: 1.5px solid var(--rule);
+  border-radius: 10px;
+  transition: all 0.2s;
+
+  &:focus {
+    background: #ffffff;
+    border-color: var(--rule);
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--surface),
+      0 0 0 4px var(--accent);
+  }
+
+  [data-theme='dark'] &:focus {
+    background: var(--field); // Dark inputs don't turn white on focus
+  }
+}
+
+.link {
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  border-radius: 4px;
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--surface),
+      0 0 0 4px var(--accent);
+  }
+}
+
+// Desktop is the default. Phones still have to work: the expense screen must
+// be usable one handed at 360px.
+@media (max-width: 599px) {
+  .page {
+    padding: 20px 16px;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  .panel {
+    padding: 20px 16px;
+  }
+}

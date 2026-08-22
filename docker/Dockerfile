@@ -1,0 +1,41 @@
+# Setout single image: the API serves both the JSON API and the built web app.
+
+FROM node:24-bookworm-slim AS web
+WORKDIR /build
+RUN corepack enable
+# The web app consumes the committed SDK by path alias, so bring both in.
+COPY package.json yarn.lock* ./
+COPY packages/api-client ./packages/api-client
+COPY apps/web ./apps/web
+RUN yarn install --frozen-lockfile || yarn install
+WORKDIR /build/apps/web
+RUN yarn build
+
+FROM python:3.12-slim-bookworm AS runtime
+COPY --from=ghcr.io/astral-sh/uv:0.9.17 /uv /bin/uv
+
+ENV PYTHONUNBUFFERED=1 \
+	UV_COMPILE_BYTECODE=1 \
+	UV_LINK_MODE=copy \
+	SETOUT_PORT=8474 \
+	SETOUT_DATA_DIR=/var/lib/setout \
+	SETOUT_STATIC_DIR=/app/web
+
+WORKDIR /app/api
+COPY apps/api/pyproject.toml apps/api/uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+COPY apps/api ./
+RUN uv sync --frozen --no-dev
+
+COPY --from=web /build/apps/web/dist/*/browser /app/web
+
+RUN useradd --system --create-home --uid 10001 setout \
+	&& mkdir -p "$SETOUT_DATA_DIR" \
+	&& chown -R setout:setout "$SETOUT_DATA_DIR" /app
+USER setout
+
+VOLUME ["/var/lib/setout"]
+EXPOSE 8474
+
+# The app applies migrations on start through its lifespan.
+CMD ["sh", "-c", "uv run uvicorn setout.main:app --host 0.0.0.0 --port ${SETOUT_PORT}"]

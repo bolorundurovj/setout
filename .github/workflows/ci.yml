@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.17"
+          enable-cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: yarn
+          cache-dependency-path: apps/web/yarn.lock
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install
+        run: make setup
+
+      - name: Check (lint, typecheck, tests, coverage floor, SDK drift)
+        run: make check
+
+  integration-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: setout
+          POSTGRES_PASSWORD: setout
+          POSTGRES_DB: setout
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U setout -d setout"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SETOUT_DATABASE_URL: postgres://setout:setout@localhost:5432/setout
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.17"
+          enable-cache: true
+
+      - name: Install backend
+        run: cd apps/api && uv sync
+
+      - name: Integration tests against Postgres
+        run: cd apps/api && uv run pytest tests/integration -m integration
+
+  migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.17"
+          enable-cache: true
+
+      - name: Install backend
+        run: cd apps/api && uv sync
+
+      - name: Migrate from an empty database
+        run: cd apps/api && uv run tortoise migrate
+
+      - name: Seed, then migrate again from the seeded database
+        run: |
+          make seed
+          cd apps/api && uv run tortoise migrate
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [check]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the single deployment image
+        run: make docker-build
+
+      - name: Answer /healthz with no configuration
+        run: |
+          docker run -d --name setout -p 8474:8474 setout:latest
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8474/healthz; then echo; exit 0; fi
+            sleep 2
+          done
+          echo "Server did not become healthy"
+          docker logs setout
+          exit 1

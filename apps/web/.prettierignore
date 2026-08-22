@@ -1,0 +1,5 @@
+.angular
+dist
+coverage
+node_modules
+.yarn

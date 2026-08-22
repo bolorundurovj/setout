@@ -1,0 +1,17 @@
+{
+  "name": "@setout/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Generated TypeScript SDK for the Setout API. Do not edit src by hand; run make sdk.",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "generate": "ng-openapi-gen --config ng-openapi-gen.json",
+    "format": "prettier --write \"src/**/*.ts\""
+  },
+  "devDependencies": {
+    "ng-openapi-gen": "1.0.5",
+    "prettier": "3.9.6"
+  }
+}

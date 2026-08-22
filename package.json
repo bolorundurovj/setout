@@ -1,0 +1,14 @@
+{
+  "name": "setout",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "packages/api-client"
+  ],
+  "engines": {
+    "node": ">=24.15.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.6"
+  }
+}

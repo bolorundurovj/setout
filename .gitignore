@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# uv
+apps/api/.venv/
+
+# Node / Angular
+node_modules/
+apps/web/node_modules/
+apps/web/dist/
+apps/web/.angular/
+apps/web/out-tsc/
+packages/api-client/node_modules/
+.yarn/
+*.tsbuildinfo
+
+# Backups (archives are ignored; keep the dir out of git)
+backups/
+
+# Local data and secrets
+data/
+*.sqlite3
+*.db
+.env
+.env.*
+!.env.example
+
+# Build artefacts
+dist/
+build/
+*.tar.gz
+
+# Editors and OS
+.idea/
+.DS_Store
+Thumbs.db
+
+docs/
+prototype/
+
+# Exported transcripts, wherever /export drops them.
+*-local-command-caveat*.txt
+2???-??-??-??????-*.txt

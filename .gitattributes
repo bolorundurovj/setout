@@ -1,0 +1,4 @@
+# Keep line endings the same on every platform. Windows checkouts default to
+# CRLF, which fails the Prettier check and breaks the shell scripts, so store
+# and check out text files with LF everywhere.
+* text=auto eol=lf

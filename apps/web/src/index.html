@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Setout</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      // Resolve the theme before the first paint, otherwise a dark theme user
+      // sees a flash of the light palette while Angular boots.
+      (function () {
+        var theme = null;
+        try {
+          theme = localStorage.getItem('setout-theme');
+        } catch (e) {
+          // Storage can be unavailable in private mode. Fall back to the
+          // system preference.
+        }
+        if (theme !== 'light' && theme !== 'dark') {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
+  </head>
+  <body>
+    <app-root></app-root>
+  </body>
+</html>

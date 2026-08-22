@@ -1,0 +1,85 @@
+@if (auth.isAuthenticated()) {
+  <div class="shell">
+    <button
+      type="button"
+      class="sidebar-toggle btn-minor"
+      [attr.aria-expanded]="navOpen()"
+      aria-controls="app-sidebar"
+      (click)="toggleNav()"
+    >
+      Menu
+    </button>
+
+    <aside id="app-sidebar" class="sidebar" [class.open]="navOpen()">
+      <a class="brand" routerLink="/">
+        <app-logo [size]="30" />
+        <span class="brand-text">
+          <span class="brand-name">Setout</span>
+          <span class="t-micro">Set it out before you build it</span>
+        </span>
+      </a>
+
+      <input
+        class="search"
+        type="search"
+        placeholder="Search everything"
+        aria-label="Search everything"
+        [value]="query()"
+        (input)="onQuery($event)"
+        (keyup.enter)="onSearch()"
+      />
+
+      <nav class="nav-group" aria-label="Sections">
+        <div class="nav-items">
+          @for (item of appNav; track item.key) {
+            <a
+              class="nav-item"
+              [class.disabled]="!item.path"
+              [routerLink]="item.path"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+              (click)="closeNav()"
+            >
+              <span class="nav-name">
+                <app-icon [name]="item.icon" />
+                {{ item.name }}
+              </span>
+              <span class="nav-badge t-mono">{{ item.badge() }}</span>
+            </a>
+          }
+        </div>
+      </nav>
+
+      <div class="sidebar-foot">
+        <button type="button" class="foot-action t-mono" (click)="logout()">Lock the server</button>
+        <span class="foot-note">Self-hosted &middot; {{ host }}</span>
+      </div>
+    </aside>
+
+    <div class="content">
+      @if (toast.message()) {
+        <div class="global-banner" role="status" [class]="'global-banner ' + toast.type()">
+          {{ toast.message() }}
+          <button type="button" class="banner-close" aria-label="Dismiss" (click)="toast.dismiss()">
+            &times;
+          </button>
+        </div>
+      }
+      <main class="app-main">
+        <router-outlet></router-outlet>
+      </main>
+    </div>
+  </div>
+} @else {
+  @if (toast.message()) {
+    <div class="global-banner" role="status" [class]="'global-banner ' + toast.type()">
+      {{ toast.message() }}
+      <button type="button" class="banner-close" aria-label="Dismiss" (click)="toast.dismiss()">
+        &times;
+      </button>
+    </div>
+  }
+  <main class="app-main">
+    <router-outlet></router-outlet>
+  </main>
+}

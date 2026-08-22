@@ -1,0 +1,17 @@
+.git
+**/node_modules
+**/.venv
+**/dist
+**/.angular
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/htmlcov
+**/.coverage
+data/
+backups/
+*.sqlite3
+*.db
+*.tar.gz
+.env
