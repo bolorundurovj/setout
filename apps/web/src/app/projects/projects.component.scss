@@ -1,0 +1,149 @@
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.project-card {
+  border: 1.5px solid var(--rule);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+
+  &.deleted {
+    opacity: 0.6;
+  }
+}
+
+.project-body {
+  padding: 16px 18px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.initials {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--field);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink-2);
+  flex: none;
+}
+
+.project-main {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+}
+
+.project-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.project-name {
+  margin: 0;
+  font:
+    500 21px/1.2 'DM Sans',
+    sans-serif;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.figure-value {
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.meter {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--field);
+  display: flex;
+  overflow: hidden;
+}
+
+.meter-used {
+  background: var(--ink-2);
+}
+
+.meter-over {
+  background: var(--over);
+}
+
+.project-status {
+  margin: 0;
+}
+
+.project-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 18px 16px 72px;
+  flex-wrap: wrap;
+}
+
+.confirm {
+  align-self: center;
+  margin-right: 4px;
+}
+
+.sentinel {
+  padding: 4px 0 12px;
+  text-align: center;
+}
+
+.figure-value.over {
+  color: var(--over);
+}
+
+.error {
+  color: var(--over);
+}
+
+@media (max-width: 599px) {
+  .project-body {
+    padding: 14px;
+  }
+
+  .project-actions {
+    padding: 0 14px 14px;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+}

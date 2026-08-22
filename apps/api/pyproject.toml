@@ -1,0 +1,98 @@
+[project]
+name = "setout"
+version = "0.1.0"
+description = "Setout: self-hosted construction spend tracker"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.141.1",
+    "tortoise-orm==1.1.8",
+    "aiosqlite==0.22.1",
+    "asyncpg==0.31.0",
+    "uvicorn[standard]==0.52.3",
+    "pydantic==2.13.4",
+    "pydantic-settings==2.15.0",
+    "tzdata==2026.3",
+    "bcrypt==4.3.0",
+    "email-validator==2.2.0",
+    "python-multipart==0.0.20",
+    "boto3==1.42.14",
+    "openpyxl==3.1.5",
+]
+
+[dependency-groups]
+dev = [
+    "ruff==0.16.3",
+    "mypy==2.3.1",
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "pytest-cov==7.1.0",
+    "httpx==0.28.1",
+    "schemathesis==4.24.3",
+    "watchfiles==1.2.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/setout"]
+
+# Tortoise built-in migration CLI resolves config from here.
+[tool.tortoise]
+tortoise_orm = "setout.db.TORTOISE_ORM"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+extend-exclude = ["src/setout/migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W", "C4", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "src"
+packages = ["setout"]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "setout.migrations.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+# boto3 ships no type information. Only the S3 backend touches it, and it is
+# kept to the few calls the storage interface needs.
+[[tool.mypy.overrides]]
+module = ["boto3.*", "botocore.*", "openpyxl.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+markers = [
+    "unit: fast pure logic tests with no I/O",
+    "integration: tests through the real app against a real database",
+    "contract: OpenAPI schema and SDK contract tests",
+]
+
+[tool.coverage.run]
+source = ["setout"]
+branch = true
+omit = ["*/migrations/*"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]

@@ -1,0 +1,58 @@
+@if (project(); as p) {
+  <div class="project-bar">
+    <div class="identity">
+      <span class="initials t-mono">{{ initials(p.name) }}</span>
+      <h1 class="project-name">{{ p.name }}</h1>
+      <app-currency-pill [code]="p.currency_code" tone="surface" />
+      <a class="home-link t-mono" routerLink="/projects">&#8592; All Projects</a>
+    </div>
+    <app-button (pressed)="selectTab('expense')">Add Expense</app-button>
+  </div>
+
+  <div class="tabs" role="tablist">
+    @for (tab of tabs; track tab.key) {
+      <button
+        type="button"
+        role="tab"
+        class="tab"
+        [class.active]="tab.key === activeTab()"
+        [disabled]="!tab.ready"
+        [attr.aria-selected]="tab.key === activeTab()"
+        (click)="selectTab(tab.key)"
+      >
+        <span class="tab-name">{{ tab.name }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="page">
+    @if (activeTab() === 'table') {
+      <app-budget-compare [project]="p" [openScope]="scope()" />
+    } @else if (activeTab() === 'budget') {
+      <app-budget [project]="p" />
+    } @else if (activeTab() === 'expense') {
+      <app-expenses [project]="p" />
+    } @else if (activeTab() === 'agreements') {
+      <app-agreements [project]="p" />
+    } @else if (activeTab() === 'deliveries') {
+      <app-deliveries [project]="p" />
+    } @else if (activeTab() === 'months') {
+      <app-months [project]="p" />
+    } @else if (activeTab() === 'psettings') {
+      <app-project-settings [project]="p" (changed)="load()" />
+    } @else {
+      <app-project-dashboard
+        [project]="p"
+        (openTab)="selectTab($event)"
+        (openScope)="openScope($event)"
+      />
+    }
+  </div>
+} @else {
+  <div class="page">
+    <div class="card">
+      <p class="t-body">{{ projects.error() ?? 'Loading the project…' }}</p>
+      <p class="t-small"><a class="link" routerLink="/projects">Back to all projects</a></p>
+    </div>
+  </div>
+}

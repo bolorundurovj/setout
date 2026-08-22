@@ -1,0 +1,148 @@
+<app-topbar title="All Projects" [subtitle]="subtitle()">
+  <app-toggle [checked]="includeDeleted()" (toggled)="setIncludeDeleted($event)">
+    Show Deleted
+  </app-toggle>
+  <app-button variant="secondary" (pressed)="importSheet()">Import a Sheet</app-button>
+  @if (!showForm()) {
+    <app-button (pressed)="openForm()">New Project</app-button>
+  }
+</app-topbar>
+
+<div class="page">
+  <div class="intro">
+    <h1 class="t-heading">Choose a Project</h1>
+    <p class="prose">
+      A purchase can only be filed from inside a project you opened on purpose. A new project takes
+      a name, a currency and the six scopes, then the plan, before any spending.
+    </p>
+  </div>
+
+  @if (projects.summary(); as summary) {
+    <div class="summary">
+      <span>{{ summaryLine() }}</span>
+      <span class="summary-figure">{{ summaryFigure() }}</span>
+    </div>
+  }
+
+  @if (showForm()) {
+    <div class="panel stack">
+      <h2 class="t-heading">New Project</h2>
+      <div class="field">
+        <label class="t-micro" for="project-name">Name</label>
+        <input
+          id="project-name"
+          class="input-field"
+          type="text"
+          [(ngModel)]="name"
+          placeholder="Where you are building"
+        />
+      </div>
+      <div class="field">
+        <label class="t-micro" for="project-currency">Currency</label>
+        <select id="project-currency" class="input-field" [(ngModel)]="currencyCode">
+          @for (currency of projects.currencies(); track currency.code) {
+            <option [value]="currency.code">{{ currency.code }} - {{ currency.name }}</option>
+          }
+        </select>
+        <span class="t-small">Fixed once the project is created.</span>
+      </div>
+      <div class="field">
+        <label class="t-micro" for="project-notes">Notes</label>
+        <input id="project-notes" class="input-field" type="text" [(ngModel)]="notes" />
+      </div>
+      <div class="form-actions">
+        <app-button variant="secondary" (pressed)="cancel()">Cancel</app-button>
+        <app-button [disabled]="!isValid()" [loading]="projects.loading()" (pressed)="save()">
+          Create Project
+        </app-button>
+      </div>
+    </div>
+  }
+
+  @if (projects.error()) {
+    <p class="t-small error">{{ projects.error() }}</p>
+  }
+
+  @if (projects.projects().length === 0) {
+    <div class="card">
+      <p class="t-body">No projects yet.</p>
+      <p class="t-small">Create one to start tracking what it costs to build.</p>
+    </div>
+  } @else {
+    @for (project of projects.projects(); track project.id) {
+      <article class="project-card" [class.deleted]="project.deleted_at">
+        <div class="project-body">
+          <div class="initials t-mono">{{ initials(project.name) }}</div>
+          <div class="project-main">
+            <div class="project-head">
+              <h2 class="project-name">{{ project.name }}</h2>
+              <app-currency-pill [code]="project.currency_code" />
+            </div>
+
+            <div class="figures">
+              <div class="figure">
+                <span class="t-micro">Budget</span>
+                <span class="figure-value t-mono">{{ budget(project) }}</span>
+              </div>
+              <div class="figure">
+                <span class="t-micro">Spent</span>
+                <span class="figure-value t-mono">{{ spent(project) }}</span>
+              </div>
+              <div class="figure">
+                <span class="t-micro">{{ varianceLabel(project) }}</span>
+                <span class="figure-value t-mono" [class.over]="isOver(project)">
+                  {{ variance(project) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="meter">
+              <span class="meter-used" [style.width.%]="usedPercent(project)"></span>
+              <span class="meter-over" [style.width.%]="overPercent(project)"></span>
+            </div>
+
+            <p class="project-status t-small">{{ statusLine(project) }}</p>
+          </div>
+        </div>
+
+        <div class="project-actions">
+          @if (isPending(project.id, 'archive')) {
+            <span class="confirm t-small">Archive this project?</span>
+            <app-button (pressed)="archive(project.id)">Yes, Archive</app-button>
+            <app-button variant="secondary" (pressed)="cancelPending()">Cancel</app-button>
+          } @else if (isPending(project.id, 'delete')) {
+            <span class="confirm t-small">Delete this project? It can be restored.</span>
+            <app-button variant="danger" (pressed)="remove(project.id)">Yes, Delete</app-button>
+            <app-button variant="secondary" (pressed)="cancelPending()">Cancel</app-button>
+          } @else if (project.deleted_at) {
+            <app-button variant="secondary" (pressed)="restore(project.id)">Restore</app-button>
+          } @else if (project.status === 'archived') {
+            <app-button (pressed)="open(project.id)">Open</app-button>
+            <app-button variant="secondary" (pressed)="unarchive(project.id)">Unarchive</app-button>
+            <app-button variant="danger" (pressed)="ask(project.id, 'delete')">Delete</app-button>
+          } @else {
+            <app-button (pressed)="open(project.id)">Open</app-button>
+            <app-button variant="secondary" (pressed)="addExpense(project.id)">
+              Add Expense
+            </app-button>
+            <app-button variant="secondary" (pressed)="ask(project.id, 'archive')">
+              Archive
+            </app-button>
+          }
+        </div>
+      </article>
+    }
+
+    <div
+      class="sentinel"
+      [appInfiniteScrollDisabled]="!projects.hasMore()"
+      (appInfiniteScroll)="loadMore()"
+    >
+      @if (projects.hasMore()) {
+        <span class="t-small">Loading more…</span>
+      } @else {
+        <span class="t-small">That is all {{ projects.total() }} of them.</span>
+      }
+    </div>
+  }
+</div>
