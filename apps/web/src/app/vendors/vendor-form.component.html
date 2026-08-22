@@ -1,0 +1,95 @@
+<div class="page">
+  <a class="link t-mono back" routerLink="/vendors">&#8592; Back</a>
+
+  <div class="head">
+    <h1 class="t-display">{{ title() }}</h1>
+    <p class="t-small">{{ subtitle() }}</p>
+  </div>
+
+  <div class="card form">
+    <label class="field">
+      <span class="t-micro">Name &middot; required</span>
+      <input
+        class="input-field"
+        type="text"
+        autocomplete="off"
+        placeholder="Name of the business or person you buy from"
+        [value]="name()"
+        (input)="name.set(value($event))"
+        (keyup.enter)="save()"
+      />
+    </label>
+
+    <div class="pair">
+      <label class="field">
+        <span class="t-micro">Trade</span>
+        <input
+          class="input-field"
+          type="text"
+          autocomplete="off"
+          placeholder="What they sell or do"
+          [value]="trade()"
+          (input)="trade.set(value($event))"
+        />
+      </label>
+      <label class="field">
+        <span class="t-micro">Person to ask for</span>
+        <input
+          class="input-field"
+          type="text"
+          autocomplete="off"
+          placeholder="Who to ask for when you get there"
+          [value]="contactName()"
+          (input)="contactName.set(value($event))"
+        />
+      </label>
+    </div>
+
+    <div class="pair">
+      <label class="field">
+        <span class="t-micro">Phone</span>
+        <input
+          class="input-field"
+          type="tel"
+          autocomplete="off"
+          placeholder="Phone number"
+          [value]="phone()"
+          (input)="phone.set(value($event))"
+        />
+      </label>
+      <label class="field">
+        <span class="t-micro">Email</span>
+        <input
+          class="input-field"
+          type="email"
+          autocomplete="off"
+          placeholder="Where invoices come from"
+          [value]="email()"
+          (input)="email.set(value($event))"
+        />
+      </label>
+      <label class="field">
+        <span class="t-micro">Notes</span>
+        <input
+          class="input-field"
+          type="text"
+          autocomplete="off"
+          placeholder="Anything worth remembering"
+          [value]="notes()"
+          (input)="notes.set(value($event))"
+        />
+      </label>
+    </div>
+
+    <div class="form-actions">
+      <app-button [disabled]="!isValid()" [loading]="vendors.saving()" (pressed)="save()">
+        Save vendor
+      </app-button>
+      <app-button variant="secondary" (pressed)="cancel()">Cancel</app-button>
+    </div>
+
+    <p class="t-small muted">
+      Vendors are shared across every project, so this one will come up on any of them.
+    </p>
+  </div>
+</div>

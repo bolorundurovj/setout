@@ -1,0 +1,170 @@
+.expenses {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.intro-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.summary .over {
+  color: var(--over);
+}
+
+.table {
+  border: 1.5px solid var(--rule);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 150px 150px 110px 150px;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+}
+
+.row.head {
+  padding: 11px 18px;
+  background: var(--field);
+  border-bottom: 1.5px solid var(--rule);
+}
+
+.row:not(.head) + .row {
+  border-top: 1px solid var(--hairline);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.desc {
+  font:
+    400 13px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--ink);
+}
+
+.chip {
+  justify-self: start;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--ok-surface);
+  border: 1px solid var(--ok-edge);
+  color: var(--ok-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.chip.photo {
+  margin-left: 8px;
+  padding: 3px 8px;
+  font-size: 10px;
+  background: var(--field);
+  border-color: var(--hairline);
+  color: var(--ink-3);
+}
+
+.chip.unfiled {
+  background: var(--warn-surface);
+  border-color: var(--warn-edge);
+  color: var(--warn-ink);
+}
+
+.right {
+  text-align: right;
+}
+
+.muted {
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.figure {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+// Same treatment as the sidebar nav items, so a row action reads as part of
+// the same system rather than as bare text.
+.link-action {
+  background: none;
+  border: 1px solid transparent;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font:
+    400 13px/1.2 'DM Sans',
+    sans-serif;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+
+  &:hover {
+    background: var(--field);
+    border-color: var(--rule);
+    color: var(--ink);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--surface),
+      0 0 0 4px var(--accent);
+  }
+
+  &.destructive:hover {
+    background: var(--over-surface);
+    border-color: var(--over-edge);
+    color: var(--over-ink);
+  }
+}
+
+.sentinel {
+  padding: 8px 0;
+  text-align: center;
+}
+
+.error {
+  color: var(--over);
+}
+
+@media (max-width: 899px) {
+  .row,
+  .row.head {
+    grid-template-columns: 1fr 120px 140px;
+  }
+
+  .row > *:nth-child(2),
+  .row > *:nth-child(4),
+  .row.head > *:nth-child(2),
+  .row.head > *:nth-child(4) {
+    display: none;
+  }
+}

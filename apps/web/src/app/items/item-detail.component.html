@@ -1,0 +1,89 @@
+<div class="page">
+  <a class="link t-mono back" routerLink="/items">&#8592; Items</a>
+
+  @if (loading()) {
+    <div class="card"><p class="t-body">Loading the price history…</p></div>
+  } @else if (prices(); as detail) {
+    <div class="head">
+      <h1 class="t-display">{{ detail.name }}</h1>
+      <p class="t-small">{{ unitLabel() }}</p>
+    </div>
+
+    @if (series().length === 0) {
+      <div class="card">
+        <p class="t-body">Nothing bought yet.</p>
+        <p class="t-small">
+          File a purchase against this item with a rate and its price history starts here.
+        </p>
+      </div>
+    }
+
+    @for (s of series(); track s.currency_code) {
+      <section class="series">
+        <div class="series-head">
+          <h2 class="t-heading">Price Paid over Time &middot; {{ s.currency_code }}</h2>
+          <span class="t-micro">{{ countLabel(s) }}</span>
+        </div>
+
+        <div class="tiles">
+          <div class="tile">
+            <span class="t-micro">Last paid</span>
+            <span class="tile-figure t-mono">{{ money(s.last_price, s) }}</span>
+            <span class="t-small muted">{{ s.last_paid_on }}</span>
+          </div>
+          <div class="tile">
+            <span class="t-micro">Lowest</span>
+            <span class="tile-figure t-mono">{{ money(s.lowest_price, s) }}</span>
+          </div>
+          <div class="tile">
+            <span class="t-micro">Highest</span>
+            <span class="tile-figure t-mono">{{ money(s.highest_price, s) }}</span>
+          </div>
+          <div class="tile">
+            <span class="t-micro">Change</span>
+            <span class="tile-figure t-mono" [class.over]="hasRisen(s)">{{ changeLabel(s) }}</span>
+            <span class="t-small muted">{{ changeSince(s) }}</span>
+          </div>
+        </div>
+
+        <div class="table">
+          <div class="row head-row">
+            <span class="t-micro">Date</span>
+            <span class="t-micro">Vendor</span>
+            <span class="t-micro">Project</span>
+            <span class="t-micro right">Quantity</span>
+            <span class="t-micro right">Price {{ s.currency_code }}</span>
+          </div>
+
+          @for (point of newestFirst(s); track point.expense_id) {
+            <div class="row">
+              <span class="t-mono muted">{{ point.spent_on }}</span>
+              <span class="t-small">{{ point.vendor_name ?? notSet }}</span>
+              <span class="t-small muted">{{ point.project_name }}</span>
+              <span class="right t-mono muted">{{ quantityLabel(point) }}</span>
+              <span class="right t-mono figure">{{ money(point.unit_rate, s) }}</span>
+            </div>
+          }
+        </div>
+
+        <app-pagination
+          [total]="s.points.length"
+          [page]="pageOn(s)"
+          noun="prices"
+          (pageChange)="goTo(s, $event)"
+        />
+      </section>
+    }
+
+    @if (series().length > 1) {
+      <p class="t-small muted">
+        Each currency is listed on its own. Prices from two currencies are never compared.
+      </p>
+    }
+  } @else {
+    <div class="card">
+      <p class="t-body">That item is not here.</p>
+      <p class="t-small"><a class="link" routerLink="/items">Back to the catalogue</a></p>
+    </div>
+  }
+</div>

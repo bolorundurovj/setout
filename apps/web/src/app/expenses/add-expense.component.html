@@ -1,0 +1,357 @@
+<form class="entry" (submit)="onSubmit($event)">
+  <p class="t-small muted">Filing to {{ project().name }} &middot; records spend only</p>
+
+  <div class="field">
+    <span class="t-micro">Scope</span>
+    <app-chip-group
+      label="Scope"
+      [chips]="scopeChips()"
+      [value]="scopeId()"
+      (valueChange)="scopeId.set($event)"
+    />
+    <span class="t-small muted">{{ scopeNote() }}</span>
+  </div>
+
+  <label class="field">
+    <span class="t-micro">Description &middot; Required</span>
+    <input
+      class="input-field"
+      type="text"
+      name="description"
+      autocomplete="off"
+      placeholder="What you bought"
+      [value]="description()"
+      (input)="description.set(value($event))"
+    />
+  </label>
+
+  <div class="field">
+    <span class="t-micro">Date of the Purchase</span>
+    <app-chip-group
+      label="Date of the Purchase"
+      [chips]="dateChips()"
+      [value]="spentOn()"
+      (valueChange)="spentOn.set($event)"
+    />
+    <input
+      class="input-field t-mono day"
+      type="date"
+      name="spent_on"
+      aria-label="Another date"
+      [value]="spentOn()"
+      (input)="spentOn.set(value($event))"
+    />
+    <span class="t-small muted">{{ dateNote() }}</span>
+  </div>
+
+  <div class="field">
+    <span class="t-micro">Cost Type</span>
+    <app-chip-group
+      label="Cost Type"
+      [chips]="costTypeChips"
+      [value]="costType()"
+      [clearable]="true"
+      (valueChange)="costType.set($event)"
+    />
+    <span class="t-small muted">{{ costTypeNote() }}</span>
+  </div>
+
+  <div class="field">
+    <span class="t-micro">Amount &middot; Required</span>
+    @if (derived() !== null) {
+      <span class="amount derived">
+        <span class="amount-prefix t-mono">{{ symbol() }}</span>
+        <output class="amount-input t-mono" aria-label="Amount spent">
+          {{ money(derived() ?? 0) }}
+        </output>
+      </span>
+    } @else {
+      <label class="amount">
+        <span class="amount-prefix t-mono">{{ symbol() }}</span>
+        <input
+          class="amount-input t-mono"
+          inputmode="decimal"
+          name="amount"
+          aria-label="Amount spent"
+          [value]="amount()"
+          (input)="amount.set(value($event))"
+        />
+      </label>
+    }
+    <span class="t-small muted">{{ calcLine() }}</span>
+  </div>
+
+  <div class="pair">
+    <label class="field">
+      <span class="t-micro">Quantity</span>
+      <input
+        class="input-field t-mono"
+        inputmode="decimal"
+        name="quantity"
+        placeholder="How many"
+        [value]="quantity()"
+        (input)="quantity.set(value($event))"
+      />
+    </label>
+    <label class="field">
+      <span class="t-micro">Unit Rate {{ symbol() }}</span>
+      <input
+        class="input-field t-mono"
+        inputmode="decimal"
+        name="unit_rate"
+        [value]="unitRate()"
+        (input)="unitRate.set(value($event))"
+      />
+    </label>
+  </div>
+
+  @if (warnLine()) {
+    <p class="banner warn t-small">{{ warnLine() }}</p>
+  }
+
+  <div class="field">
+    <span class="t-micro">Item</span>
+    <app-chip-group
+      label="Item"
+      [chips]="itemChips()"
+      [value]="itemId()"
+      (valueChange)="pickItem($event)"
+    />
+
+    @if (addingItem()) {
+      <div class="inline-add">
+        <input
+          class="input-field"
+          type="text"
+          autocomplete="off"
+          placeholder="Name of the item"
+          aria-label="Name of the new item"
+          [value]="newItemName()"
+          (input)="newItemName.set(value($event))"
+        />
+        <input
+          class="input-field"
+          type="text"
+          autocomplete="off"
+          placeholder="Unit"
+          aria-label="Unit for the new item"
+          [value]="newItemUnit()"
+          (input)="newItemUnit.set(value($event))"
+        />
+        <app-button [disabled]="!newItemName().trim()" (pressed)="addItem()">
+          Add to the Catalogue
+        </app-button>
+        <app-button variant="secondary" (pressed)="addingItem.set(false)">Cancel</app-button>
+      </div>
+      <span class="t-small muted">
+        The unit is what the price is quoted in. Every future purchase of this item builds its price
+        history.
+      </span>
+    } @else {
+      <button type="button" class="disclose t-mono" (click)="addingItem.set(true)">
+        + New Item
+      </button>
+    }
+
+    @if (lastPrice(); as last) {
+      <div class="last-price">
+        <span class="t-micro">Last price paid</span>
+        <span class="last-price-figure t-mono">{{ money(last.unit_rate) }}</span>
+        <span class="t-small muted">{{ lastPriceWhere() }}</span>
+      </div>
+    } @else if (itemId()) {
+      <span class="t-small muted">
+        Nothing bought yet in {{ project().currency_code }}. This purchase starts its price history.
+      </span>
+    }
+  </div>
+
+  <div class="field">
+    <span class="t-micro">Vendor</span>
+    <app-chip-group
+      label="Vendor"
+      [chips]="vendorChips()"
+      [value]="vendorId()"
+      (valueChange)="vendorId.set($event)"
+    />
+
+    @if (addingVendor()) {
+      <div class="inline-add">
+        <input
+          class="input-field"
+          type="text"
+          autocomplete="off"
+          placeholder="Name of the vendor"
+          aria-label="Name of the new vendor"
+          [value]="newVendorName()"
+          (input)="newVendorName.set(value($event))"
+        />
+        <app-button [disabled]="!newVendorName().trim()" (pressed)="addVendor()">Add</app-button>
+        <app-button variant="secondary" (pressed)="addingVendor.set(false)">Cancel</app-button>
+      </div>
+      <span class="t-small muted">
+        The name is enough for now. Add the trade and a phone number later.
+      </span>
+    } @else {
+      <button type="button" class="disclose t-mono" (click)="addingVendor.set(true)">
+        + New Vendor
+      </button>
+    }
+  </div>
+
+  @if (agreementChips().length > 1) {
+    <div class="field">
+      <span class="t-micro">Against an agreement</span>
+      <app-chip-group
+        label="Against an agreement"
+        [chips]="agreementChips()"
+        [value]="agreementId()"
+        (valueChange)="agreementId.set($event)"
+      />
+      @if (agreementNote()) {
+        <span class="t-small muted">{{ agreementNote() }}</span>
+      }
+    </div>
+  }
+
+  <div class="field">
+    <span class="t-micro">Paid By</span>
+    <app-chip-group
+      label="Paid By"
+      [chips]="payerChips()"
+      [value]="paidById()"
+      (valueChange)="paidById.set($event)"
+    />
+    <span class="t-small muted">{{ payerNote() }}</span>
+  </div>
+
+  <label class="field">
+    <span class="t-micro">Notes</span>
+    <input
+      class="input-field"
+      type="text"
+      name="notes"
+      autocomplete="off"
+      placeholder="Anything worth remembering"
+      [value]="notes()"
+      (input)="notes.set(value($event))"
+    />
+  </label>
+
+  @if (!isEditing()) {
+    <div class="owed" [class.on]="owed()">
+      <button type="button" class="owed-toggle" [attr.aria-pressed]="owed()" (click)="toggleOwed()">
+        <span class="owed-box" [class.ticked]="owed()"></span>
+        <span class="owed-label">Paid for, not delivered yet</span>
+      </button>
+
+      @if (owed()) {
+        <div class="owed-fields">
+          <label class="field">
+            <span class="t-micro">What is owed</span>
+            <input
+              class="input-field"
+              type="text"
+              name="owed-what"
+              maxlength="255"
+              placeholder="17 bags of cement"
+              [value]="owedWhat()"
+              (input)="owedWhat.set(value($event))"
+            />
+          </label>
+          <label class="field">
+            <span class="t-micro">Promised</span>
+            <input
+              class="input-field"
+              type="text"
+              name="owed-when"
+              maxlength="255"
+              placeholder="this week"
+              [value]="owedWhen()"
+              (input)="owedWhen.set(value($event))"
+            />
+          </label>
+        </div>
+        <p class="t-small muted">
+          The money counts as spent now. What is owed shows on the vendor and on the dashboard until
+          you mark it delivered.
+        </p>
+      }
+    </div>
+  }
+
+  <div class="receipt">
+    @if (isEditing()) {
+      @for (file of attached(); track file.id) {
+        <div class="receipt-held">
+          <a class="receipt-thumb" [href]="fileUrl(file)" target="_blank" rel="noopener">
+            @if (isImage(file)) {
+              <img [src]="fileUrl(file)" [alt]="file.filename" />
+            } @else {
+              <span class="t-mono thumb-kind">PDF</span>
+            }
+          </a>
+          <span class="receipt-text">
+            <span class="t-body">{{ file.filename }}</span>
+            <span class="t-small muted">{{ fileNote(file) }}</span>
+            <button type="button" class="receipt-drop t-mono" (click)="removeFile(file)">
+              Remove the photo
+            </button>
+          </span>
+        </div>
+      }
+      @if (justRemoved(); as gone) {
+        <p class="t-small muted">
+          {{ gone.filename }} was removed.
+          <button type="button" class="receipt-drop t-mono" (click)="putPhotoBack()">
+            Put It Back
+          </button>
+        </p>
+      }
+      @if (attached().length === 0) {
+        <button type="button" class="receipt-empty" (click)="pick()">
+          <span class="t-body">No photo of the receipt on this one</span>
+          <span class="t-mono receipt-add">Add One</span>
+        </button>
+      }
+    } @else {
+      <button type="button" class="receipt-tile" (click)="pick()">
+        <span class="receipt-thumb blank"></span>
+        <span class="receipt-text">
+          <span class="t-body">Photo of the Receipt</span>
+          <span class="t-small muted">{{ photoLabel() }}</span>
+        </span>
+        @if (chosen()) {
+          <span class="receipt-chip t-mono">attached</span>
+        }
+      </button>
+    }
+
+    <input
+      #photo
+      type="file"
+      class="offscreen"
+      accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
+      (change)="onPicked($event)"
+    />
+  </div>
+
+  <div class="actions">
+    <app-button type="submit" size="major" [disabled]="!canSave()" [loading]="expenses.saving()">
+      {{ isEditing() ? 'Save Changes' : 'Save Expense' }}
+    </app-button>
+    @if (!isEditing()) {
+      <app-button
+        variant="secondary"
+        size="major"
+        [disabled]="!canSave()"
+        [loading]="expenses.saving()"
+        (pressed)="save(true)"
+      >
+        Save and Add Another
+      </app-button>
+    }
+  </div>
+
+  <p class="t-small muted">{{ saveHint() }}</p>
+</form>

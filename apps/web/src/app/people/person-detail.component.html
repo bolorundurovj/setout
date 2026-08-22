@@ -1,0 +1,109 @@
+<div class="page">
+  <a class="link t-mono back" routerLink="/people">&#8592; People</a>
+
+  @if (loading()) {
+    <div class="card"><p class="t-body">Loading…</p></div>
+  } @else if (person(); as p) {
+    @if (p.deleted_at) {
+      <p class="banner warn t-small">
+        Archived. Everything they paid for still counts; they no longer come up as a payer on the
+        expense form.
+      </p>
+    }
+
+    <div class="head">
+      <div class="identity">
+        <h1 class="t-display">{{ p.name }}</h1>
+        <p class="t-small">{{ p.role ?? notSet }} &middot; {{ countLabel(p) }}</p>
+      </div>
+      <div class="head-actions">
+        @if (!p.deleted_at) {
+          <app-button variant="secondary" (pressed)="edit()">Edit</app-button>
+          <app-button variant="danger" (pressed)="archive()">Archive</app-button>
+        } @else {
+          <app-button (pressed)="restore()">Take out of the archive</app-button>
+        }
+      </div>
+    </div>
+
+    <div class="facts">
+      <div class="fact">
+        <span class="t-micro">Given</span>
+        <span class="fact-figure t-mono">{{ notSet }}</span>
+      </div>
+      <div class="fact">
+        <span class="t-micro">Spent</span>
+        @if (spend(); as s) {
+          @if (spentTotals(s).length === 0) {
+            <span class="fact-figure t-mono">{{ notSet }}</span>
+          } @else {
+            @for (t of spentTotals(s); track t.currency_code) {
+              <span class="fact-figure t-mono">{{ total(t) }}</span>
+            }
+          }
+        } @else {
+          <span class="fact-figure t-mono">{{ notSet }}</span>
+        }
+      </div>
+      <div class="fact">
+        <span class="t-micro">Balance</span>
+        <span class="fact-figure t-mono">{{ notSet }}</span>
+      </div>
+    </div>
+
+    <p class="t-small muted">
+      A balance belongs to a project, because a total must never cross two currencies. Open a
+      project and look under Agreements to see what someone was given and what they still hold.
+    </p>
+
+    <section class="block">
+      <h2 class="t-heading">What They Bought</h2>
+
+      @if (spend(); as s) {
+        @if (s.projects.length === 0) {
+          <div class="card"><p class="t-body">Nothing paid for yet.</p></div>
+        } @else {
+          <div class="table">
+            <div class="row head-row">
+              <span class="t-micro">Project</span>
+              <span class="t-micro right">Purchases</span>
+              <span class="t-micro right">Spent</span>
+            </div>
+            @for (row of s.projects; track row.project_id) {
+              <div class="row">
+                <span class="t-small">{{ row.project_name }}</span>
+                <span class="right t-mono muted">{{ row.expense_count }}</span>
+                <span class="right t-mono figure">{{ money(row) }}</span>
+              </div>
+            }
+            @for (t of spentTotals(s); track t.currency_code) {
+              <div class="row total">
+                <span class="total-label">Total {{ t.currency_code }}</span>
+                <span class="right t-mono muted">{{ t.expense_count }}</span>
+                <span class="right t-mono total-figure">{{ total(t) }}</span>
+              </div>
+            }
+          </div>
+          <p class="t-small muted">
+            Projects are listed separately. Two currencies would never be added together. Every
+            purchase they made is listed under them, so a balance can always be taken apart.
+          </p>
+        }
+      } @else {
+        <p class="t-small muted">Could not read what they spent.</p>
+      }
+    </section>
+
+    @if (p.notes) {
+      <section class="block">
+        <h2 class="t-heading">Notes</h2>
+        <p class="t-body">{{ p.notes }}</p>
+      </section>
+    }
+  } @else {
+    <div class="card">
+      <p class="t-body">That person is not here.</p>
+      <p class="t-small"><a class="link" routerLink="/people">Back to all people</a></p>
+    </div>
+  }
+</div>

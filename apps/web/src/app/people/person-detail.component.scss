@@ -1,0 +1,163 @@
+.back {
+  align-self: flex-start;
+  font-size: 13px;
+}
+
+.banner {
+  padding: 10px 14px;
+  border-radius: 9px;
+  margin: 0;
+}
+
+.banner.warn {
+  background: var(--warn-surface);
+  border: 1px solid var(--warn-edge);
+  color: var(--warn-ink);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.head-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  max-width: 700px;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  background: var(--field);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+
+.fact-figure {
+  font-size: 21px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 620px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.table {
+  border: 1.5px solid var(--rule);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 200px 150px;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 18px;
+}
+
+.row.head-row {
+  background: var(--field);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.row:not(.head-row) + .row {
+  border-top: 1px solid var(--hairline);
+}
+
+.right {
+  text-align: right;
+}
+
+.muted {
+  color: var(--ink-3);
+}
+
+.figure {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.row.total {
+  background: var(--field);
+  border-top: 1px solid var(--rule);
+}
+
+.total-label {
+  font:
+    500 13px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--ink);
+}
+
+.total-figure {
+  font-size: 16px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+@media (max-width: 899px) {
+  .facts,
+  .pair {
+    grid-template-columns: 1fr;
+  }
+
+  .row,
+  .row.head-row {
+    grid-template-columns: 1fr 130px;
+  }
+
+  .row > *:nth-child(2),
+  .row.head-row > *:nth-child(2) {
+    display: none;
+  }
+}

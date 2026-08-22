@@ -1,0 +1,86 @@
+<app-topbar title="Vendors" [subtitle]="countLabel()">
+  <app-button (pressed)="newVendor()">New Vendor</app-button>
+</app-topbar>
+
+<div class="page">
+  <div class="controls">
+    <input
+      class="input-field search"
+      type="search"
+      placeholder="Find a vendor"
+      aria-label="Find a vendor"
+      [value]="search()"
+      (input)="onSearch($event)"
+    />
+    <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
+      {{ archivedLabel() }}
+    </app-toggle>
+  </div>
+
+  @if (vendors.error()) {
+    <p class="t-small error">{{ vendors.error() }}</p>
+  }
+
+  @if (vendors.vendors().length === 0) {
+    <div class="card">
+      <p class="t-body">{{ search() ? 'Nobody matches that.' : 'No vendors yet.' }}</p>
+      <p class="t-small">You can also add one straight from the expense form, with just a name.</p>
+    </div>
+  } @else {
+    <div class="table">
+      <div class="row head">
+        <span class="t-micro">Vendor</span>
+        <span class="t-micro">Contact</span>
+        <span class="t-micro right">Total spent</span>
+        <span class="t-micro right">Open</span>
+      </div>
+
+      @for (vendor of vendors.vendors(); track vendor.id) {
+        <button
+          type="button"
+          class="row"
+          [class.archived]="vendor.deleted_at"
+          (click)="open(vendor.id)"
+        >
+          <span class="name-cell">
+            <span class="vendor-name">{{ vendor.name }}</span>
+            <span class="t-micro">
+              {{ vendor.trade ?? notSet }}
+              @if (vendor.deleted_at) {
+                &middot; archived
+              }
+            </span>
+          </span>
+
+          <span class="contact-cell">
+            <span class="t-small">{{ contactLabel(vendor) }}</span>
+            <span class="t-micro">{{ phoneLabel(vendor) }}</span>
+          </span>
+
+          <span class="totals">
+            @if (vendor.totals.length === 0) {
+              <span class="t-mono muted">{{ notSet }}</span>
+            } @else {
+              @for (total of vendor.totals; track total.currency_code) {
+                <span class="t-mono figure">{{ money(total) }}</span>
+              }
+            }
+          </span>
+
+          <span class="right t-mono muted">{{ notSet }}</span>
+        </button>
+      }
+    </div>
+
+    <app-pagination
+      [total]="vendors.total()"
+      [page]="vendors.page()"
+      noun="vendors"
+      (pageChange)="goTo($event)"
+    />
+
+    <p class="t-small muted">
+      Open is what is still owed on an agreed price. It fills in with agreements.
+    </p>
+  }
+</div>

@@ -1,0 +1,157 @@
+<div class="page">
+  <a class="link t-mono back" routerLink="/vendors">&#8592; Vendors</a>
+
+  @if (loading()) {
+    <div class="card"><p class="t-body">Loading the vendor…</p></div>
+  } @else if (vendor(); as v) {
+    @if (v.deleted_at) {
+      <p class="banner warn t-small">
+        Archived. Everything filed against them still counts; they no longer come up when you pick a
+        vendor on the expense form.
+      </p>
+    } @else if (needsFillingIn(v)) {
+      <p class="banner warn t-small">
+        Added with the name only. Add the trade and a phone number while you still remember them.
+      </p>
+    }
+
+    <div class="head">
+      <div class="identity">
+        <h1 class="t-display">{{ v.name }}</h1>
+        <p class="t-small">{{ v.trade ?? notSet }}</p>
+      </div>
+      <div class="head-actions">
+        @if (!v.deleted_at) {
+          <app-button variant="secondary" (pressed)="edit()">Edit vendor</app-button>
+          <app-button variant="danger" (pressed)="archive()">Archive</app-button>
+        } @else {
+          <app-button (pressed)="restore()">Take out of the archive</app-button>
+        }
+      </div>
+    </div>
+
+    <div class="facts">
+      <div class="fact">
+        <span class="t-micro">Person to ask for</span>
+        <span class="t-body">{{ v.contact_name ?? notSet }}</span>
+      </div>
+      <div class="fact">
+        <span class="t-micro">Phone</span>
+        <span class="t-body t-mono">{{ v.phone ?? 'no phone' }}</span>
+      </div>
+      <div class="fact">
+        <span class="t-micro">Email</span>
+        <span class="t-body t-mono">{{ v.email ?? 'no email' }}</span>
+      </div>
+      <div class="fact">
+        <span class="t-micro">Expenses filed</span>
+        <span class="t-body t-mono">{{ v.expense_count }}</span>
+      </div>
+    </div>
+
+    @if (owedHere().length > 0) {
+      <section class="block">
+        <h2 class="t-heading">Paid for, Not Delivered</h2>
+        @for (owed of owedHere(); track owed.id) {
+          <div class="owed">
+            <span class="owed-text">
+              <span class="owed-what">{{ owed.description }}</span>
+              <span class="owed-when">{{ owedWhen(owed) }}</span>
+            </span>
+            <span class="owed-right">
+              <span class="owed-amount t-mono">{{ owedMoney(owed) }}</span>
+              <app-button (pressed)="markDelivered(owed)">Mark Delivered</app-button>
+            </span>
+          </div>
+        }
+      </section>
+    }
+
+    <section class="block">
+      <h2 class="t-heading">Spent with This Vendor</h2>
+
+      @if (spend(); as s) {
+        @if (s.projects.length === 0) {
+          <div class="card"><p class="t-body">Nothing filed against them yet.</p></div>
+        } @else {
+          <div class="table">
+            <div class="row head-row">
+              <span class="t-micro">Project</span>
+              <span class="t-micro right">Expenses</span>
+              <span class="t-micro right">Spent</span>
+            </div>
+            @for (row of s.projects; track row.project_id) {
+              <div class="row">
+                <span class="t-small">{{ row.project_name }}</span>
+                <span class="right t-mono muted">{{ row.expense_count }}</span>
+                <span class="right t-mono figure">{{ money(row) }}</span>
+              </div>
+            }
+            @for (t of totalsByCurrency(s); track t.currency_code) {
+              <div class="row total">
+                <span class="total-label">Total {{ t.currency_code }}</span>
+                <span class="right t-mono muted">{{ t.expense_count }}</span>
+                <span class="right t-mono total-figure">{{ total(t) }}</span>
+              </div>
+            }
+          </div>
+          <p class="t-small muted">
+            Projects are listed separately. Two currencies would never be added together.
+          </p>
+        }
+      } @else {
+        <p class="t-small muted">Could not read what was spent with them.</p>
+      }
+    </section>
+
+    <section class="block">
+      <h2 class="t-heading">Agreements</h2>
+      @if (agreements().length === 0) {
+        <div class="card">
+          <p class="t-body">No agreements with them.</p>
+          <p class="t-small">
+            An agreed price is set on a project, under Agreements. Every one with this vendor shows
+            here.
+          </p>
+        </div>
+      } @else {
+        <div class="table">
+          <div class="row agreement head-row">
+            <span class="t-micro">What was agreed</span>
+            <span class="t-micro right">Agreed</span>
+            <span class="t-micro right">Paid</span>
+            <span class="t-micro right">Left</span>
+          </div>
+          @for (a of agreements(); track a.id) {
+            <div class="row agreement">
+              <span class="main">
+                <span class="t-small">{{ a.description }}</span>
+                <span class="t-small muted">{{ a.project_name }}</span>
+              </span>
+              <span class="right t-mono figure">{{ agreementMoney(a, a.agreed_amount) }}</span>
+              <span class="right t-mono muted">{{ agreementMoney(a, a.paid_amount) }}</span>
+              <span class="right t-mono figure" [class.owed]="a.balance_amount > 0">
+                {{ agreementMoney(a, a.balance_amount) }}
+              </span>
+            </div>
+          }
+        </div>
+        <p class="t-small muted">
+          Projects are listed separately. Two currencies would never be added together.
+        </p>
+      }
+    </section>
+
+    @if (v.notes) {
+      <section class="block">
+        <h2 class="t-heading">Notes</h2>
+        <p class="t-body">{{ v.notes }}</p>
+      </section>
+    }
+  } @else {
+    <div class="card">
+      <p class="t-body">That vendor is not here.</p>
+      <p class="t-small"><a class="link" routerLink="/vendors">Back to all vendors</a></p>
+    </div>
+  }
+</div>

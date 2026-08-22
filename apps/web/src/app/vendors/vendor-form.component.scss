@@ -1,0 +1,45 @@
+.back {
+  align-self: flex-start;
+  font-size: 13px;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 720px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.muted {
+  color: var(--ink-3);
+}
+
+@media (max-width: 719px) {
+  .pair {
+    grid-template-columns: 1fr;
+  }
+}

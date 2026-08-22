@@ -1,0 +1,91 @@
+<app-topbar title="People" [subtitle]="peopleCountLabel()">
+  <app-button (pressed)="addSomeone()">Add Someone</app-button>
+</app-topbar>
+
+<div class="page">
+  <p class="prose">
+    Anyone who spends your money for you. Balances run across every project, because the same person
+    buys for more than one house.
+  </p>
+
+  <div class="controls">
+    <input
+      class="input-field search"
+      type="search"
+      placeholder="Find somebody"
+      aria-label="Find somebody"
+      [value]="search()"
+      (input)="onSearch($event)"
+    />
+    <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
+      {{ archivedLabel() }}
+    </app-toggle>
+  </div>
+
+  @if (people.error()) {
+    <p class="t-small error">{{ people.error() }}</p>
+  }
+
+  @if (people.people().length === 0) {
+    <div class="card">
+      <p class="t-body">{{ search() ? 'Nobody matches that.' : 'Nobody added yet.' }}</p>
+      <p class="t-small">
+        Add whoever buys on your behalf, then record them as the payer on an expense.
+      </p>
+    </div>
+  } @else {
+    <div class="table">
+      <div class="row head">
+        <span class="t-micro">Person</span>
+        <span class="t-micro right">Given</span>
+        <span class="t-micro right">Spent</span>
+        <span class="t-micro right">Balance</span>
+      </div>
+
+      @for (person of people.people(); track person.id) {
+        <button
+          type="button"
+          class="row"
+          [class.archived]="person.deleted_at"
+          (click)="open(person.id)"
+        >
+          <span class="name-cell">
+            <span class="person-name">{{ person.name }}</span>
+            <span class="t-micro">
+              {{ person.role ?? notSet }} &middot; {{ countLabel(person) }}
+              @if (person.deleted_at) {
+                &middot; archived
+              }
+            </span>
+          </span>
+
+          <span class="right t-mono muted">{{ notSet }}</span>
+
+          <span class="totals">
+            @if (person.totals.length === 0) {
+              <span class="t-mono muted">{{ notSet }}</span>
+            } @else {
+              @for (total of person.totals; track total.currency_code) {
+                <span class="t-mono figure">{{ money(total) }}</span>
+              }
+            }
+          </span>
+
+          <span class="right t-mono muted">{{ notSet }}</span>
+        </button>
+      }
+    </div>
+
+    <app-pagination
+      [total]="people.total()"
+      [page]="people.page()"
+      noun="people"
+      (pageChange)="goTo($event)"
+    />
+
+    <p class="t-small muted">
+      A minus balance is money you owe the person. A plus balance is money of yours still in their
+      hand. Given and Balance fill in with advances; only what they spent is on the record so far.
+    </p>
+  }
+</div>

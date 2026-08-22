@@ -1,0 +1,114 @@
+<div class="expenses">
+  <div class="intro">
+    <div class="intro-text">
+      <h2 class="t-heading">Expenses</h2>
+      <p class="prose">
+        Everything spent on {{ project().name }}, newest first. Recording a purchase is never
+        blocked by a missing budget.
+      </p>
+    </div>
+    <app-button (pressed)="openDrawer()">Add Expense</app-button>
+  </div>
+
+  @if (expenses.spend(); as spend) {
+    <div class="summary">
+      <span class="t-micro">Spent</span>
+      <span class="summary-figure t-mono">{{ money(spend.spent_amount) }}</span>
+      <span class="t-micro">Planned</span>
+      <span class="summary-figure t-mono">{{ money(spend.planned_amount) }}</span>
+      @if (spend.unfiled_amount > 0) {
+        <span class="t-micro">Unfiled</span>
+        <span class="summary-figure t-mono">{{ money(spend.unfiled_amount) }}</span>
+      }
+      @if (spend.variance_percent !== null) {
+        <span class="t-micro">Against plan</span>
+        <span class="summary-figure t-mono" [class.over]="spend.variance_percent > 0">
+          {{ variance(spend.variance_percent) }}
+        </span>
+      }
+    </div>
+  }
+
+  @if (expenses.error()) {
+    <p class="t-small error">{{ expenses.error() }}</p>
+  }
+
+  @if (expenses.expenses().length === 0) {
+    <div class="card">
+      <p class="t-body">Nothing recorded yet.</p>
+      <p class="t-small">The first expense you add shows up here.</p>
+    </div>
+  } @else {
+    <div class="table">
+      <div class="row head">
+        <span class="t-micro">What It Was</span>
+        <span class="t-micro">Scope</span>
+        <span class="t-micro right">Amount</span>
+        <span class="t-micro right">Date</span>
+        <span></span>
+      </div>
+
+      @for (expense of expenses.expenses(); track expense.id) {
+        <div class="row">
+          <span class="main">
+            <span class="desc">
+              {{ expense.description }}
+              @if (expense.attachment_count > 0) {
+                <span class="chip photo t-mono" [title]="photoTitle(expense)">photo</span>
+              }
+            </span>
+            @if (meta(expense)) {
+              <span class="t-micro">{{ meta(expense) }}</span>
+            }
+          </span>
+          <span class="chip t-micro" [class.unfiled]="!expense.scope_id">
+            {{ scopeName(expense) }}
+          </span>
+          <span class="right t-mono figure">{{ money(expense.amount) }}</span>
+          <span class="right t-mono muted">{{ expense.spent_on }}</span>
+          <span class="row-actions">
+            <button
+              type="button"
+              class="link-action"
+              [attr.aria-label]="'Change ' + expense.description"
+              (click)="edit(expense)"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              class="link-action destructive"
+              [attr.aria-label]="'Take ' + expense.description + ' off the record'"
+              (click)="remove(expense.id)"
+            >
+              Remove
+            </button>
+          </span>
+        </div>
+      }
+    </div>
+
+    <app-pagination
+      [total]="expenses.total()"
+      [page]="expenses.page()"
+      noun="expenses"
+      (pageChange)="goTo($event)"
+    />
+  }
+</div>
+
+<app-drawer
+  [open]="adding()"
+  [title]="editingExpense() ? 'Change Expense' : 'Add Expense'"
+  [subtitle]="'Filing to ' + project().name"
+  (closed)="closeDrawer()"
+>
+  @if (adding()) {
+    <app-add-expense
+      [project]="project()"
+      [editing]="editingExpense()"
+      (saved)="onSaved()"
+      (done)="closeDrawer()"
+    />
+  }
+</app-drawer>

@@ -1,0 +1,133 @@
+<app-topbar title="Items" [subtitle]="items.total() + ' in the catalogue'">
+  <app-button (pressed)="openForm()">New Item</app-button>
+</app-topbar>
+
+<div class="page">
+  <p class="prose">
+    What things cost, and what they used to cost. An item holds no prices of its own: every purchase
+    filed against it builds its history. Shared across every project.
+  </p>
+
+  <input
+    class="input-field search"
+    type="search"
+    placeholder="Find an item"
+    aria-label="Find an item"
+    [value]="search()"
+    (input)="onSearch($event)"
+  />
+
+  @if (items.error()) {
+    <p class="t-small error">{{ items.error() }}</p>
+  }
+
+  @if (showForm()) {
+    <div class="card form">
+      <h2 class="t-heading">New Item</h2>
+      <p class="t-small">
+        The unit is what the price is quoted in. Every future purchase of this item builds its price
+        history.
+      </p>
+      <label class="field">
+        <span class="t-micro">Name &middot; required</span>
+        <input
+          class="input-field"
+          type="text"
+          autocomplete="off"
+          placeholder="Name of the item"
+          [value]="name()"
+          (input)="name.set(value($event))"
+          (keyup.enter)="save()"
+        />
+      </label>
+      <label class="field">
+        <span class="t-micro">Unit</span>
+        <input
+          class="input-field"
+          type="text"
+          autocomplete="off"
+          placeholder="each, bag, truck, sheet"
+          [value]="unit()"
+          (input)="unit.set(value($event))"
+          (keyup.enter)="save()"
+        />
+      </label>
+      <div class="form-actions">
+        <app-button [disabled]="!isValid()" [loading]="items.saving()" (pressed)="save()">
+          Add to the Catalogue
+        </app-button>
+        <app-button variant="secondary" (pressed)="cancel()">Cancel</app-button>
+      </div>
+    </div>
+  }
+
+  @if (items.items().length === 0) {
+    <div class="card">
+      <p class="t-body">
+        {{ search() ? 'Nothing matches that.' : 'Nothing in the catalogue yet.' }}
+      </p>
+      <p class="t-small">
+        Add the things you buy more than once. Filing a purchase against one starts its price
+        history.
+      </p>
+    </div>
+  } @else {
+    <div class="table">
+      <div class="row head">
+        <span class="t-micro">Item</span>
+        <span class="t-micro">Unit</span>
+        <span class="t-micro right">First price</span>
+        <span class="t-micro right">Last price</span>
+        <span class="t-micro right">Change</span>
+        <span></span>
+      </div>
+
+      @for (item of items.items(); track item.id) {
+        <div class="row">
+          <button type="button" class="name-cell" (click)="open(item.id)">
+            <span class="item-name">{{ item.name }}</span>
+            <span class="t-micro">{{ countLabel(item) }}</span>
+          </button>
+
+          <span class="t-small muted">{{ unitLabel(item) }}</span>
+
+          @if (item.prices.length === 0) {
+            <span class="right t-mono muted">{{ notSet }}</span>
+            <span class="right t-mono muted">{{ notSet }}</span>
+            <span class="right t-mono muted">{{ notSet }}</span>
+          } @else if (item.prices.length === 1) {
+            <span class="right t-mono muted">
+              {{ money(item.prices[0].first_price, item.prices[0]) }}
+            </span>
+            <span class="right t-mono figure">
+              {{ money(item.prices[0].last_price, item.prices[0]) }}
+            </span>
+            <span class="right t-mono" [class.over]="hasRisen(item.prices[0])">
+              {{ changeLabel(item.prices[0]) }}
+            </span>
+          } @else {
+            <span class="right t-small muted">{{ item.prices.length }} currencies</span>
+            <span class="right t-small muted">open it</span>
+            <span class="right t-small muted">{{ notSet }}</span>
+          }
+
+          <button
+            type="button"
+            class="link-action t-mono"
+            [attr.aria-label]="'Archive ' + item.name"
+            (click)="archive(item.id)"
+          >
+            Archive
+          </button>
+        </div>
+      }
+    </div>
+
+    <app-pagination
+      [total]="items.total()"
+      [page]="items.page()"
+      noun="items"
+      (pageChange)="goTo($event)"
+    />
+  }
+</div>
