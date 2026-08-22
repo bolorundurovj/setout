@@ -1,6 +1,8 @@
 # Setout
 
 [![CI](https://github.com/bolorundurovj/setout/actions/workflows/ci.yml/badge.svg)](https://github.com/bolorundurovj/setout/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/bolorundurovj/setout?label=release)](https://github.com/bolorundurovj/setout/releases)
+[![Image](https://img.shields.io/badge/ghcr.io-setout-blue)](https://github.com/bolorundurovj/setout/pkgs/container/setout)
 [![Licence: AGPL v3](https://img.shields.io/badge/licence-AGPL--3.0-blue.svg)](LICENSE)
 
 Setout is a self-hosted web app for tracking construction spend on personal
@@ -18,11 +20,13 @@ deliberately; an expense records spend and can never write a budget value.
 With Docker:
 
 ```bash
-docker compose -f docker/docker-compose.yml up --build
+docker compose -f docker/docker-compose.yml pull
+docker compose -f docker/docker-compose.yml up -d
 ```
 
-That brings up the app on 8474, Postgres for the record, and MinIO for the
-attachments. From a checkout instead:
+That pulls the published image, `ghcr.io/bolorundurovj/setout` for amd64 and
+arm64, and brings up the app on 8474 with Postgres for the record and MinIO for
+the attachments. From a checkout instead:
 
 ```bash
 make setup    # install backend and frontend
@@ -91,6 +95,7 @@ together.
 | [Architecture](docs/architecture.md) | How a request travels, and why the SDK is generated |
 | [Development](docs/development.md) | The Makefile, the test layers, migrations, the SDK |
 | [Roadmap](docs/roadmap.md) | What is designed but not built |
+| [Changelog](CHANGELOG.md) | What changed in each release |
 
 ## Repository layout
 

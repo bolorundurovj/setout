@@ -47,6 +47,26 @@ Pull the new image and restart. Migrations run on start and the log reports when
 the database was behind. Take a backup first: the shell archive, not the record
 export, since that is the copy that can put the install back exactly as it was.
 
+Pin a version rather than tracking `latest`, so an upgrade is something you
+choose:
+
+```bash
+SETOUT_IMAGE_TAG=1.2.3 docker compose -f docker/docker-compose.yml up -d
+```
+
+Read [the release notes](https://github.com/bolorundurovj/setout/releases)
+before moving between versions. Every image carries
+`org.opencontainers.image.version` and `.revision` labels, so
+`docker inspect` tells you exactly which commit is running:
+
+```bash
+docker inspect ghcr.io/bolorundurovj/setout:1.2.3 \
+  --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'
+```
+
+`edge` exists for trying a fix before it is released. It is whatever last landed
+on `master`, so it is not the thing to point a household at.
+
 ## Checking on it
 
 `/healthz` answers with the version and the database status, which is the right

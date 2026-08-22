@@ -66,6 +66,33 @@ After changing routes or schemas, run `make sdk` and commit the regenerated
 client. Never edit `packages/api-client/src` by hand; it is generated output,
 and `make check` will overwrite and then reject your edit.
 
+## Cutting a release
+
+Releases are handled by release-please. It watches the commits on `master` and
+keeps a pull request open titled something like `chore(master): release 0.2.0`,
+holding the changelog entry and the version bump. Nothing is published until
+that pull request is merged.
+
+Merging it does four things: tags the commit, writes `CHANGELOG.md`, publishes a
+GitHub release with a Contributors section listing everyone whose commits are in
+it, and builds the image for amd64 and arm64 and pushes it to
+`ghcr.io/bolorundurovj/setout`.
+
+To release a specific version rather than the one the commits imply, set
+`VERSION` to it and push. The workflow releases exactly that whenever `VERSION`
+runs ahead of the last released version recorded in
+`.release-please-manifest.json`. When the two match, the commit history decides
+the bump. A `VERSION` behind the last release, or one that is not a semantic
+version, fails the run rather than releasing something surprising.
+
+One version number lives in six files: `VERSION`, the three `package.json`
+files, `apps/api/pyproject.toml` and `apps/api/src/setout/__init__.py`, which is
+what `/healthz` reports. Never bump them by hand. `release-please-config.json`
+lists them all and the release pull request rewrites them together.
+
+Every push to `master` also publishes `ghcr.io/bolorundurovj/setout:edge`, so
+the publishing path is exercised continuously rather than only at release time.
+
 ## Three things that look wrong and are not
 
 **`tzdata` is a real dependency.** Tortoise with `use_tz=True` needs it on any

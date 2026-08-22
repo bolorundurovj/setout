@@ -6,12 +6,32 @@ machine. Both give you the same application; the container is the shorter road.
 ## With Docker
 
 ```bash
-docker compose -f docker/docker-compose.yml up --build
+docker compose -f docker/docker-compose.yml pull
+docker compose -f docker/docker-compose.yml up -d
 ```
 
 That brings up the app on 8474, Postgres for the record, and MinIO for the
 attachments, with the bucket made before the app starts. The MinIO console is on
 9001.
+
+The image is published to `ghcr.io/bolorundurovj/setout` for amd64 and arm64, so
+a Raspberry Pi or an ARM server pulls the same way an ordinary one does.
+
+| Tag | What it is |
+| --- | --- |
+| `latest` | The most recent release |
+| `1.2.3` | That exact release, which is what to pin in anything you care about |
+| `1.2`, `1` | The newest patch or minor within that line |
+| `edge` | Built from the newest commit on `master`, untested by a release |
+
+Set `SETOUT_IMAGE_TAG` to pin one:
+
+```bash
+SETOUT_IMAGE_TAG=1.2.3 docker compose -f docker/docker-compose.yml up -d
+```
+
+The compose file still carries a `build:` block, so `docker compose build` gives
+you your own image from the checkout instead.
 
 Put any of the compose variables in a `.env` file beside the compose file. The
 defaults exist so the stack comes up on one command, not because they are safe:

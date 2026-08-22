@@ -60,6 +60,27 @@ Commit messages are short: a subject line is usually the whole message, with a
 body of a line or two only when the change cannot be understood without it.
 Please do not add AI tooling attribution to commits or code.
 
+## Commit messages decide the version
+
+Releases are cut from the commit history, so the prefix on a subject line is not
+decoration. It picks the next version number and the section your change appears
+under in the changelog.
+
+| Prefix | Changelog section | Version effect |
+| --- | --- | --- |
+| `feat:` | Features | Minor bump |
+| `fix:` | Bug Fixes | Patch bump |
+| `perf:` | Performance | Patch bump |
+| `refactor:`, `docs:`, `build:` | Their own sections | Patch bump |
+| `chore:`, `test:` | Hidden | None on their own |
+
+A scope goes in brackets: `feat(expenses): ...`. A breaking change takes a `!`
+before the colon, or a `BREAKING CHANGE:` footer in the body, and moves the
+major version.
+
+Merging the release pull request is what publishes. See
+[docs/development.md](docs/development.md) for the whole flow.
+
 ## Sending the change
 
 Push a branch and open a pull request against `master`. The
