@@ -1,6 +1,6 @@
 # Setout single image: the API serves both the JSON API and the built web app.
 
-FROM node:24-bookworm-slim AS web
+FROM node:26-bookworm-slim AS web
 WORKDIR /build
 RUN corepack enable
 # The web app consumes the SDK by path alias, so bring both in.
