@@ -1,9 +1,21 @@
-# Setout
+<p align="center">
+  <img src="assets/setout-icon.png" alt="Setout app icon" width="96" />
+</p>
 
-[![CI](https://github.com/bolorundurovj/setout/actions/workflows/ci.yml/badge.svg)](https://github.com/bolorundurovj/setout/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/bolorundurovj/setout?label=release)](https://github.com/bolorundurovj/setout/releases)
-[![Image](https://img.shields.io/badge/ghcr.io-setout-blue)](https://github.com/bolorundurovj/setout/pkgs/container/setout)
-[![Licence: AGPL v3](https://img.shields.io/badge/licence-AGPL--3.0-blue.svg)](LICENSE)
+<h1 align="center">Setout</h1>
+
+<p align="center">Know what the build has cost you. Today, not next month.</p>
+
+<p align="center">
+  <a href="https://github.com/bolorundurovj/setout/actions/workflows/ci.yml"><img src="https://github.com/bolorundurovj/setout/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/bolorundurovj/setout/releases"><img src="https://img.shields.io/github/v/release/bolorundurovj/setout?label=release" alt="Release" /></a>
+  <a href="https://github.com/bolorundurovj/setout/pkgs/container/setout"><img src="https://img.shields.io/badge/ghcr.io-setout-blue" alt="Container image" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-AGPL--3.0-blue.svg" alt="Licence: AGPL v3" /></a>
+</p>
+
+<p align="center">
+  <img src="assets/setout-banner.png" alt="Setout overview" width="1080" />
+</p>
 
 Setout is a self-hosted web app for tracking construction spend on personal
 building projects. It replaces a spreadsheet whose budget numbers were typed in
@@ -14,6 +26,8 @@ deliberately; an expense records spend and can never write a budget value.
 - Frontend: Angular, consuming a TypeScript SDK generated from the OpenAPI schema.
 - Database: SQLite by default, Postgres optional.
 - Deployment: one container, one port, SQLite by default.
+
+See the product in action in the [full showcase](docs/showcase.md).
 
 ## Quick start
 
@@ -85,24 +99,24 @@ together.
 
 ## Documentation
 
-| Guide | What it covers |
-| --- | --- |
-| [Installation](docs/installation.md) | Docker, bare metal, the first run |
-| [Configuration](docs/configuration.md) | Every environment variable, app and compose |
-| [Deployment](docs/deployment.md) | Postgres, S3 or MinIO, HTTPS, upgrades |
-| [Backup and restore](docs/backup-and-restore.md) | The two kinds of copy, and when each applies |
-| [Troubleshooting](docs/troubleshooting.md) | The failures that come up more than once |
-| [Architecture](docs/architecture.md) | How a request travels, and why the SDK is generated |
-| [Development](docs/development.md) | The Makefile, the test layers, migrations, the SDK |
-| [Roadmap](docs/roadmap.md) | What is designed but not built |
-| [Changelog](CHANGELOG.md) | What changed in each release |
+| Guide                                            | What it covers                                      |
+| ------------------------------------------------ | --------------------------------------------------- |
+| [Installation](docs/installation.md)             | Docker, bare metal, the first run                   |
+| [Configuration](docs/configuration.md)           | Every environment variable, app and compose         |
+| [Deployment](docs/deployment.md)                 | Postgres, S3 or MinIO, HTTPS, upgrades              |
+| [Backup and restore](docs/backup-and-restore.md) | The two kinds of copy, and when each applies        |
+| [Troubleshooting](docs/troubleshooting.md)       | The failures that come up more than once            |
+| [Architecture](docs/architecture.md)             | How a request travels, and why the SDK is generated |
+| [Development](docs/development.md)               | The Makefile, the test layers, migrations, the SDK  |
+| [Roadmap](docs/roadmap.md)                       | What is designed but not built                      |
+| [Changelog](CHANGELOG.md)                        | What changed in each release                        |
 
 ## Repository layout
 
 ```
 apps/api             FastAPI service (uv, pyproject.toml)
 apps/web             Angular application
-packages/api-client  generated TypeScript SDK, committed to the repository
+packages/api-client  generated TypeScript SDK
 scripts              SDK generation, seed, backup, restore
 docker               Dockerfile and the compose stack
 docs                 documentation
