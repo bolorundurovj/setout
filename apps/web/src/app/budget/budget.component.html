@@ -1,0 +1,138 @@
+<div class="budget">
+  <div class="intro">
+    <h2 class="t-heading">Set the Budget</h2>
+    <p class="prose">
+      The plan for {{ project().name }}. Set before work starts. Every change is stamped with the
+      day it was made, so a plan written after the spending shows itself.
+    </p>
+  </div>
+
+  @if (budget.error()) {
+    <p class="t-small error">{{ budget.error() }}</p>
+  }
+
+  <div class="add-scope">
+    <app-combobox
+      [options]="availablePresets()"
+      [value]="newScopeName()"
+      placeholder="Pick a scope or type your own"
+      (valueChange)="newScopeName.set($event)"
+      (submitted)="addScope()"
+    />
+    <app-button [disabled]="!newScopeName().trim()" (pressed)="addScope()">Add Scope</app-button>
+  </div>
+
+  @if (budget.scopes().length === 0) {
+    <div class="card">
+      <p class="t-body">No scopes yet.</p>
+      <p class="t-small">Add the parts of the build you want to plan and track against.</p>
+    </div>
+  } @else {
+    <div class="table">
+      <div class="row head">
+        <span class="t-micro">Scope</span>
+        <span class="t-micro right">Planned {{ project().currency_code }}</span>
+        <span class="t-micro right">Set on</span>
+        <span class="t-micro right">Changed</span>
+      </div>
+
+      @for (scope of budget.scopes(); track scope.id) {
+        <div class="group">
+          <div class="row">
+            <button type="button" class="scope-cell" (click)="toggleScope(scope)">
+              <span class="swatch"></span>
+              <span class="scope-name">{{ scope.name }}</span>
+              @if (scope.is_group) {
+                <span class="t-micro">group</span>
+              }
+            </button>
+
+            @if (scope.is_group) {
+              <span class="amount-readonly t-mono">{{ money(scope.planned_amount) }}</span>
+            } @else {
+              <span class="amount">
+                <span class="amount-prefix t-mono">{{ symbol() }}</span>
+                <input
+                  class="amount-input t-mono"
+                  inputmode="decimal"
+                  [value]="draftFor(scope.id)"
+                  [attr.aria-label]="'Planned amount for ' + scope.name"
+                  (input)="onAmountInput(scope.id, $event)"
+                  (blur)="commit(scope)"
+                  (keyup.enter)="commit(scope)"
+                />
+              </span>
+            }
+
+            <span class="right t-mono muted">{{ setOn(scope.id) }}</span>
+            <span class="right t-mono muted">{{ changed(scope.id) }}</span>
+          </div>
+
+          @if (openScope() === scope.id && !scope.is_group) {
+            <div class="items">
+              @for (item of itemsFor(scope.id); track item.id) {
+                <div class="item">
+                  <span class="t-small">
+                    {{ item.description }}
+                    @if (item.cost_type) {
+                      <span class="split t-mono">{{ item.cost_type }}</span>
+                    }
+                  </span>
+                  <span class="right t-mono muted">{{ money(item.planned_amount) }}</span>
+                  <button
+                    type="button"
+                    class="link-action t-mono"
+                    (click)="removeItem(scope, item.id)"
+                  >
+                    Remove
+                  </button>
+                </div>
+              }
+              @if (itemsFor(scope.id).length === 0) {
+                <p class="t-small muted">Nothing planned here yet.</p>
+              }
+
+              <div class="add-item">
+                <input
+                  class="input-field"
+                  type="text"
+                  placeholder="What is planned"
+                  [value]="itemDescription()"
+                  (input)="itemDescription.set(asValue($event))"
+                />
+                <span class="amount">
+                  <span class="amount-prefix t-mono">{{ symbol() }}</span>
+                  <input
+                    class="amount-input t-mono"
+                    inputmode="decimal"
+                    aria-label="Planned amount for this item"
+                    [value]="itemAmount()"
+                    (input)="itemAmount.set(asValue($event))"
+                    (keyup.enter)="addLineItem(scope)"
+                  />
+                </span>
+                <app-chip-group
+                  class="split-choice"
+                  [chips]="costTypes"
+                  [value]="itemCostType()"
+                  label="What kind of cost this is"
+                  (valueChange)="itemCostType.set($event)"
+                />
+                <app-button [disabled]="!canAddItem()" (pressed)="addLineItem(scope)">
+                  + Planned Item
+                </app-button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="row total">
+        <span class="total-label">Planned total</span>
+        <span class="right t-mono total-figure">{{ plannedTotal() }}</span>
+        <span class="right t-mono muted">{{ budget.scopes().length }} scopes</span>
+        <span></span>
+      </div>
+    </div>
+  }
+</div>
