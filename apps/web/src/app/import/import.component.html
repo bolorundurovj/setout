@@ -1,0 +1,309 @@
+<app-topbar title="Import a Sheet" [subtitle]="targetName()">
+  <app-button variant="secondary" (pressed)="leave()">All Projects</app-button>
+</app-topbar>
+
+<div class="page">
+  <div class="intro">
+    <h1 class="t-heading">Bring in What the Spreadsheet Already Holds</h1>
+    <p class="prose">
+      The whole workbook is read at once and each sheet recognised by its own headings. Planned
+      figures come only from a budget sheet and spending only from an invoices sheet, so a sheet of
+      spending can never write a budget.
+    </p>
+  </div>
+
+  <div class="steps">
+    @for (stage of steps; track stage.key) {
+      <div class="step" [class.on]="reached(stage.key)">
+        <span class="step-bar"></span>
+        <span class="t-micro">{{ stage.label }}</span>
+      </div>
+    }
+  </div>
+
+  @if (sheets.error()) {
+    <p class="banner warn t-small">{{ sheets.error() }}</p>
+  }
+
+  @if (at('file')) {
+    <section class="card block">
+      <span class="t-micro">Where it lands</span>
+      <div class="fields">
+        <label class="field">
+          <span class="t-micro">Project</span>
+          <select class="input-field" [value]="projectId()" (change)="projectId.set(value($event))">
+            <option value="" [selected]="intoNew()">Start a new project</option>
+            @for (option of projects.projects(); track option.id) {
+              <option [value]="option.id" [selected]="option.id === projectId()">
+                {{ option.name }}
+              </option>
+            }
+          </select>
+        </label>
+
+        @if (intoNew()) {
+          <label class="field">
+            <span class="t-micro">New Project Name</span>
+            <input
+              class="input-field"
+              type="text"
+              autocomplete="off"
+              placeholder="Jacaranda Close, Ewuru"
+              [value]="name()"
+              (input)="name.set(value($event))"
+            />
+          </label>
+
+          <label class="field">
+            <span class="t-micro">Currency</span>
+            <select
+              class="input-field"
+              [value]="currencyCode()"
+              (change)="currencyCode.set(value($event))"
+            >
+              @for (currency of projects.currencies(); track currency.code) {
+                <option [value]="currency.code">{{ currency.code }} · {{ currency.name }}</option>
+              }
+            </select>
+          </label>
+        }
+      </div>
+
+      @if (intoNew()) {
+        <p class="t-small note">
+          The sheet carries no currency of its own, so a new project needs one before any figure can
+          be read as money.
+        </p>
+      } @else {
+        <p class="t-small note">
+          Rows already in this project, by date, amount and description, are recognised so a second
+          import does not double the spend.
+        </p>
+      }
+    </section>
+
+    <section class="card block">
+      <span class="t-micro">Nothing to import yet</span>
+      <p class="t-small note">
+        Start from one of these. Each carries the headings Setout recognises and a sheet saying how
+        to fill it in, so what you send back reads first time.
+      </p>
+      <div class="samples">
+        @for (choice of samples; track choice.kind) {
+          <a class="sample" [href]="sampleUrl(choice.kind)">
+            <span class="t-body">{{ choice.name }}</span>
+            <span class="t-small muted">{{ choice.detail }}</span>
+          </a>
+        }
+      </div>
+    </section>
+
+    <section class="card block">
+      <span class="t-micro">The file</span>
+
+      @if (file(); as chosen) {
+        <div class="chosen">
+          <span class="chosen-text">
+            <span class="t-body">{{ chosen.name }}</span>
+            <span class="t-small muted">{{ fileNote() }}</span>
+          </span>
+          <button type="button" class="link-action" (click)="clearFile()">Choose Another</button>
+        </div>
+      } @else {
+        <button type="button" class="drop" (click)="pick()">
+          <span class="t-body">Choose a .xlsx or .csv</span>
+          <span class="t-small muted">
+            Nothing is uploaded anywhere. It is read where Setout runs.
+          </span>
+        </button>
+      }
+
+      <input
+        #sheet
+        type="file"
+        class="offscreen"
+        accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+        (change)="onPicked($event)"
+      />
+
+      <div class="actions">
+        <app-button [disabled]="!canRead()" [loading]="sheets.working()" (pressed)="read()">
+          Read the Sheet
+        </app-button>
+        <span class="t-small muted">Nothing is written until you have seen what it holds.</span>
+      </div>
+    </section>
+  }
+
+  @if (at('review') && report(); as found) {
+    <section class="card block">
+      <span class="t-micro">What the sheet holds</span>
+      <div class="counts">
+        <div class="count">
+          <span class="t-micro">Planned</span>
+          <span class="count-value t-mono">{{ money(found.planned_amount) }}</span>
+          <span class="t-small muted">
+            {{ found.planned_lines }} lines across {{ found.scopes.length }} scopes
+          </span>
+        </div>
+        <div class="count">
+          <span class="t-micro">Spending</span>
+          <span class="count-value t-mono">{{ money(found.spend_amount) }}</span>
+          <span class="t-small muted">{{ found.spend_rows }} rows</span>
+        </div>
+        <div class="count">
+          <span class="t-micro">Vendors</span>
+          <span class="count-value t-mono">{{ found.vendors_new }}</span>
+          <span class="t-small muted">{{ found.vendors_known }} already known</span>
+        </div>
+      </div>
+
+      <div class="sheets">
+        @for (sheet of found.read; track sheet.name) {
+          <span class="sheet">
+            <span class="t-body">{{ sheet.name }}</span>
+            <span class="t-small muted">{{ sheetNote(sheet.holds, sheet.rows) }}</span>
+          </span>
+        }
+        @for (sheet of found.skipped; track sheet.name) {
+          <span class="sheet skipped">
+            <span class="t-body">{{ sheet.name }}</span>
+            <span class="t-small muted">{{ sheet.why }}</span>
+          </span>
+        }
+      </div>
+    </section>
+
+    @if (found.scopes.length > 0) {
+      <section class="card block">
+        <span class="t-micro">Scopes found in the sheet</span>
+        <div class="scopes">
+          @for (scope of found.scopes; track scope.code) {
+            <div class="scope">
+              <span class="scope-name">
+                <span class="t-mono code">{{ scope.code }}</span>
+                {{ scope.name }}
+              </span>
+              <span class="t-small muted">{{ scopeMatch(scope.matched_to) }}</span>
+              <span class="t-mono figure">{{ money(scope.planned_amount) }}</span>
+              <span class="t-small muted">{{ scope.lines }} lines</span>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    @if (found.decisions.length > 0) {
+      <section class="card block">
+        <span class="t-micro">Rows that need a decision</span>
+        @for (decision of found.decisions; track decision.kind) {
+          <div class="decision" [class.blocking]="decision.blocking">
+            <span class="decision-text">
+              <span class="t-body">{{ decision.count }} · {{ decision.detail }}</span>
+              @if (decision.amount) {
+                <span class="t-small muted">{{ money(decision.amount) }}</span>
+              }
+            </span>
+
+            @if (hasAnswer(decision)) {
+              <app-chip-group
+                [chips]="choicesFor(decision)"
+                [value]="answerFor(decision)"
+                [label]="'What to do about ' + decision.detail"
+                (valueChange)="answer(decision, $event)"
+              />
+              <span class="t-small muted">{{ consequenceFor(decision) }}</span>
+            } @else {
+              <span class="t-small muted"
+                >Nothing to decide. It is listed so it is not a surprise.</span
+              >
+            }
+          </div>
+        }
+      </section>
+    }
+
+    @if (found.sample.length > 0) {
+      <section class="card block">
+        <span class="t-micro">First rows, as they will be filed</span>
+        <div class="rows">
+          <div class="row head">
+            <span class="t-micro">Date</span>
+            <span class="t-micro">Description</span>
+            <span class="t-micro">Scope</span>
+            <span class="t-micro right">Amount</span>
+          </div>
+          @for (row of found.sample; track $index) {
+            <div class="row">
+              <span class="t-small">{{ sampleDay(row) }}</span>
+              <span class="t-small">{{ row.description }}</span>
+              <span class="t-small muted">{{ row.scope }}</span>
+              <span class="t-mono figure right">{{ money(row.amount) }}</span>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    @if (found.left_behind.length > 0) {
+      <section class="card block">
+        <span class="t-micro">Columns Setout keeps nowhere</span>
+        <p class="t-small note">
+          {{ found.left_behind.join(', ') }}. Everything else in the sheet comes across.
+        </p>
+      </section>
+    }
+
+    <div class="actions">
+      <app-button variant="secondary" (pressed)="back()">Choose Another File</app-button>
+      <app-button [disabled]="blocking()" [loading]="sheets.working()" (pressed)="bringIn()">
+        Bring It In
+      </app-button>
+      @if (blocking()) {
+        <span class="t-small muted">
+          The rows marked above sit under no scope heading, so there is nowhere to file them. Fix
+          the sheet and read it again.
+        </span>
+      } @else {
+        <span class="t-small muted">Written all at once. If any row fails, none of it lands.</span>
+      }
+    </div>
+  }
+
+  @if (at('done') && result(); as done) {
+    <section class="card block">
+      <span class="t-micro">Brought in</span>
+      <h2 class="t-heading">{{ done.project_name }}</h2>
+      <div class="counts">
+        <div class="count">
+          <span class="t-micro">Planned</span>
+          <span class="count-value t-mono">{{ money(done.planned_amount) }}</span>
+          <span class="t-small muted">
+            {{ done.budget_items }} lines across {{ done.scopes }} scopes
+          </span>
+        </div>
+        <div class="count">
+          <span class="t-micro">Spending</span>
+          <span class="count-value t-mono">{{ money(done.spend_amount) }}</span>
+          <span class="t-small muted">{{ done.expenses }} expenses</span>
+        </div>
+        <div class="count">
+          <span class="t-micro">Names</span>
+          <span class="count-value t-mono">{{ done.vendors }}</span>
+          <span class="t-small muted">vendors, and {{ done.people }} people</span>
+        </div>
+      </div>
+
+      @if (done.skipped_duplicates > 0) {
+        <p class="t-small note">
+          {{ done.skipped_duplicates }} rows were already in the project and were left alone.
+        </p>
+      }
+
+      <div class="actions">
+        <app-button (pressed)="openProject()">Open the Project</app-button>
+        <app-button variant="secondary" (pressed)="leave()">All Projects</app-button>
+      </div>
+    </section>
+  }
+</div>
