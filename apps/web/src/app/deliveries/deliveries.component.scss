@@ -1,0 +1,136 @@
+.deliveries {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.owed,
+.done {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+}
+
+.owed {
+  border: 1px solid var(--over-edge);
+  background: var(--over-surface);
+}
+
+.done {
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+}
+
+.owed-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.owed-what {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--over-ink);
+}
+
+.owed-when {
+  font-size: 13px;
+  color: var(--over-ink);
+}
+
+.done-what {
+  font-size: 13px;
+  color: var(--ink-2);
+  text-decoration: line-through;
+}
+
+.owed-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.owed.editing {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.edit-fields {
+  display: flex;
+  gap: 12px;
+
+  .field {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  label {
+    color: var(--over-ink);
+  }
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.owed-amount,
+.done-amount {
+  font-weight: 500;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.owed-amount {
+  color: var(--over-ink);
+}
+
+.done-amount {
+  color: var(--ink-2);
+}
+
+@media (max-width: 599px) {
+  .owed,
+  .done {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .edit-fields {
+    flex-direction: column;
+  }
+}

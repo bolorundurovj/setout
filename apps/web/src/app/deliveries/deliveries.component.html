@@ -1,0 +1,121 @@
+<div class="deliveries">
+  <div class="intro">
+    <h2 class="t-heading">Deliveries</h2>
+    <p class="prose">
+      What you have paid for and not received. The money is already counted as spent, so marking
+      something delivered moves no total.
+    </p>
+  </div>
+
+  @if (deliveries.error()) {
+    <p class="banner warn t-small">{{ deliveries.error() }}</p>
+  }
+
+  @if (justRemoved(); as gone) {
+    <p class="banner t-small">
+      {{ gone.description }} is no longer owed.
+      <button type="button" class="link-action" (click)="putBackRemoved()">Put It Back</button>
+    </p>
+  }
+
+  <section class="block">
+    <div class="block-head">
+      <h3 class="t-heading">Waiting</h3>
+      <span class="t-small muted">{{ owedNote() }}</span>
+    </div>
+
+    @if (waitingRows().length === 0) {
+      <div class="card">
+        <p class="t-body">Nothing is outstanding.</p>
+        <p class="t-small">
+          Tick "Paid for, not delivered yet" when you file an expense and it will wait here.
+        </p>
+      </div>
+    } @else {
+      @for (owed of waitingRows(); track owed.id) {
+        @if (editing() === owed.id) {
+          <div class="owed editing">
+            <div class="edit-fields">
+              <div class="field">
+                <label class="t-micro" [attr.for]="'owed-what-' + owed.id">What is owed</label>
+                <input
+                  [id]="'owed-what-' + owed.id"
+                  class="input-field"
+                  type="text"
+                  [value]="editWhat()"
+                  (input)="editWhat.set(value($event))"
+                  (keyup.enter)="saveEdit(owed)"
+                />
+              </div>
+              <div class="field">
+                <label class="t-micro" [attr.for]="'owed-when-' + owed.id">Promised</label>
+                <input
+                  [id]="'owed-when-' + owed.id"
+                  class="input-field"
+                  type="text"
+                  placeholder="this week"
+                  [value]="editPromised()"
+                  (input)="editPromised.set(value($event))"
+                  (keyup.enter)="saveEdit(owed)"
+                />
+              </div>
+            </div>
+            <div class="edit-actions">
+              <app-button variant="secondary" (pressed)="cancelEdit()">Cancel</app-button>
+              <app-button [disabled]="!canSaveEdit()" (pressed)="saveEdit(owed)">Save</app-button>
+            </div>
+          </div>
+        } @else {
+          <div class="owed">
+            <span class="owed-text">
+              <span class="owed-what">{{ owed.description }}</span>
+              <span class="owed-when">{{ vendorName(owed) }} &middot; {{ waiting(owed) }}</span>
+            </span>
+            <span class="owed-right">
+              <span class="owed-amount t-mono">{{ money(owed.amount) }}</span>
+              <app-button variant="secondary" (pressed)="startEdit(owed)">Change</app-button>
+              <app-button variant="danger" (pressed)="remove(owed)">Not Owed</app-button>
+              <app-button (pressed)="markDelivered(owed)">Mark Delivered</app-button>
+            </span>
+          </div>
+        }
+      }
+
+      <app-pagination
+        [total]="waitingSet().total"
+        [page]="waitingPage()"
+        noun="waiting"
+        label="Waiting pages"
+        (pageChange)="goToWaiting($event)"
+      />
+    }
+  </section>
+
+  @if (arrivedRows().length > 0) {
+    <section class="block">
+      <h3 class="t-heading">Delivered</h3>
+      @for (owed of arrivedRows(); track owed.id) {
+        <div class="done">
+          <span class="owed-text">
+            <span class="done-what">{{ owed.description }}</span>
+            <span class="t-small muted">
+              {{ vendorName(owed) }} &middot; arrived {{ arrivedOn(owed) }}
+            </span>
+          </span>
+          <span class="owed-right">
+            <span class="done-amount t-mono">{{ money(owed.amount) }}</span>
+            <app-button variant="secondary" (pressed)="putBack(owed)">Not Yet</app-button>
+          </span>
+        </div>
+      }
+
+      <app-pagination
+        [total]="arrivedSet().total"
+        [page]="arrivedPage()"
+        noun="delivered"
+        label="Delivered pages"
+        (pageChange)="goToArrived($event)"
+      />
+    </section>
+  }
+</div>

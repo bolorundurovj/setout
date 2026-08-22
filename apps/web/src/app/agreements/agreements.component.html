@@ -1,0 +1,386 @@
+<div class="agreements">
+  <div class="intro">
+    <div class="intro-text">
+      <h2 class="t-heading">Agreements</h2>
+      <p class="prose">
+        What a vendor agreed to do for a fixed price. Paid and balance are worked out from the
+        expenses filed against each one, so a part payment is recorded once.
+      </p>
+    </div>
+    @if (!adding()) {
+      <app-button (pressed)="openForm()">New Agreement</app-button>
+    }
+  </div>
+
+  @if (agreements.error()) {
+    <p class="t-small error">{{ agreements.error() }}</p>
+  }
+
+  @if (adding()) {
+    <div class="panel">
+      <div class="field">
+        <label class="t-micro" for="agreement-vendor">Vendor</label>
+        <select
+          id="agreement-vendor"
+          class="input-field"
+          [value]="vendorId()"
+          (change)="vendorId.set(value($event))"
+        >
+          <option value="">Pick a vendor</option>
+          @for (vendor of vendors.choices(); track vendor.id) {
+            <option [value]="vendor.id">{{ vendor.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label class="t-micro" for="agreement-what">What was agreed</label>
+        <input
+          id="agreement-what"
+          class="input-field"
+          type="text"
+          placeholder="Block work"
+          [value]="description()"
+          (input)="description.set(value($event))"
+        />
+      </div>
+      <div class="field">
+        <label class="t-micro" for="agreement-amount">Agreed price</label>
+        <span class="amount">
+          <span class="amount-prefix t-mono">{{ symbol() }}</span>
+          <input
+            id="agreement-amount"
+            class="amount-input t-mono"
+            inputmode="decimal"
+            [value]="agreedAmount()"
+            (input)="agreedAmount.set(value($event))"
+            (keyup.enter)="save()"
+          />
+        </span>
+      </div>
+      <div class="form-actions">
+        <app-button variant="secondary" (pressed)="cancel()">Cancel</app-button>
+        <app-button [disabled]="!canSave()" [loading]="agreements.saving()" (pressed)="save()">
+          Save Agreement
+        </app-button>
+      </div>
+    </div>
+  }
+
+  @if (agreements.agreements().length === 0) {
+    <div class="card">
+      <p class="t-body">No agreements yet.</p>
+      <p class="t-small">
+        Record what someone agreed to do for a fixed price, then file each payment against it.
+      </p>
+    </div>
+  } @else {
+    @for (agreement of agreements.agreements(); track agreement.id) {
+      <article class="agreement">
+        <div class="agreement-head">
+          <div class="titles">
+            @if (editing() === agreement.id) {
+              <div class="edit-fields">
+                <input
+                  class="input-field"
+                  type="text"
+                  [attr.aria-label]="'What ' + agreement.vendor_name + ' agreed to do'"
+                  [value]="editDescription()"
+                  (input)="editDescription.set(value($event))"
+                />
+                <span class="amount">
+                  <span class="amount-prefix t-mono">{{ symbol() }}</span>
+                  <input
+                    class="amount-input t-mono"
+                    inputmode="decimal"
+                    aria-label="Agreed price"
+                    [value]="editAgreed()"
+                    (input)="editAgreed.set(value($event))"
+                    (keyup.enter)="saveEdit(agreement)"
+                  />
+                </span>
+                <app-button [disabled]="!canSaveEdit()" (pressed)="saveEdit(agreement)">
+                  Save
+                </app-button>
+                <app-button variant="secondary" (pressed)="cancelEdit()">Cancel</app-button>
+              </div>
+            } @else {
+              <h3 class="agreement-name">
+                {{ agreement.vendor_name }} &middot; {{ agreement.description }}
+              </h3>
+            }
+            <span class="t-mono project-name">{{ project().name }}</span>
+          </div>
+
+          <div class="figures">
+            <div class="figure">
+              <span class="t-micro">Agreed {{ symbol() }}</span>
+              <span class="figure-value t-mono">{{ bare(agreement.agreed_amount) }}</span>
+            </div>
+            <div class="figure">
+              <span class="t-micro">Paid {{ symbol() }}</span>
+              <span class="figure-value t-mono">{{ bare(agreement.paid_amount) }}</span>
+            </div>
+            <div class="figure">
+              <span class="t-micro">Balance {{ symbol() }}</span>
+              <span class="figure-value t-mono owed">{{ bare(agreement.balance_amount) }}</span>
+            </div>
+          </div>
+
+          <div class="meter">
+            <span class="meter-paid" [style.width.%]="paidPercent(agreement)"></span>
+          </div>
+        </div>
+
+        <div class="payments">
+          @for (payment of paymentsFor(agreement.id); track payment.id) {
+            <div class="payment">
+              <span class="t-mono when">{{ day(payment.spent_on) }}</span>
+              <span class="t-small note">{{ payment.description }}</span>
+              <span class="t-mono paid">{{ bare(payment.amount) }}</span>
+            </div>
+          }
+          @if (paymentsFor(agreement.id).length === 0) {
+            <div class="payment">
+              <span></span>
+              <span class="t-small note">Nothing paid yet.</span>
+              <span></span>
+            </div>
+          }
+
+          <div class="payment left-to-pay">
+            <span></span>
+            <span class="left-label">Left to Pay</span>
+            <span class="t-mono paid owed">{{ bare(agreement.balance_amount) }}</span>
+          </div>
+
+          <div class="agreement-actions">
+            @if (paying() === agreement.id) {
+              <span class="amount">
+                <span class="amount-prefix t-mono">{{ symbol() }}</span>
+                <input
+                  class="amount-input t-mono"
+                  inputmode="decimal"
+                  aria-label="How much was paid"
+                  [value]="paymentAmount()"
+                  (input)="paymentAmount.set(value($event))"
+                  (keyup.enter)="savePayment(agreement)"
+                />
+              </span>
+              <app-button
+                [disabled]="!canPay()"
+                [loading]="agreements.saving()"
+                (pressed)="savePayment(agreement)"
+              >
+                Save Payment
+              </app-button>
+              <app-button variant="secondary" (pressed)="cancelPayment()">Cancel</app-button>
+            } @else {
+              <app-button (pressed)="startPayment(agreement.id)">Record a Payment</app-button>
+              <button
+                type="button"
+                class="link-action"
+                [attr.aria-label]="'Change the agreement with ' + agreement.vendor_name"
+                (click)="startEdit(agreement)"
+              >
+                Change
+              </button>
+              <span class="t-small hint">
+                A payment writes one expense on this project and one line here.
+              </span>
+              <button
+                type="button"
+                class="link-action destructive"
+                [attr.aria-label]="'Remove the agreement with ' + agreement.vendor_name"
+                (click)="remove(agreement.id)"
+              >
+                Remove
+              </button>
+            }
+          </div>
+        </div>
+      </article>
+    }
+
+    <div
+      class="sentinel"
+      [appInfiniteScrollDisabled]="!agreements.hasMore()"
+      (appInfiniteScroll)="loadMore()"
+    >
+      @if (agreements.hasMore()) {
+        <span class="t-small muted">Loading more…</span>
+      } @else {
+        <span class="t-small muted">That is all {{ agreements.agreementTotal() }} of them.</span>
+      }
+    </div>
+  }
+
+  <section class="block">
+    <div class="intro">
+      <div class="intro-text">
+        <h2 class="t-heading">Money Held</h2>
+        <p class="prose">
+          What someone was given before they spent it. A balance is what they were handed less what
+          they have paid out, so an advance and their purchases cancel each other.
+        </p>
+      </div>
+      @if (!addingAdvance()) {
+        <app-button variant="secondary" (pressed)="addingAdvance.set(true)">
+          Give an Advance
+        </app-button>
+      }
+    </div>
+
+    @if (addingAdvance()) {
+      <div class="panel">
+        <div class="field">
+          <label class="t-micro" for="advance-person">Who</label>
+          <select
+            id="advance-person"
+            class="input-field"
+            [value]="personId()"
+            (change)="personId.set(value($event))"
+          >
+            <option value="">Pick a person</option>
+            @for (person of people.choices(); track person.id) {
+              <option [value]="person.id">{{ person.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label class="t-micro" for="advance-amount">How much</label>
+          <span class="amount">
+            <span class="amount-prefix t-mono">{{ symbol() }}</span>
+            <input
+              id="advance-amount"
+              class="amount-input t-mono"
+              inputmode="decimal"
+              [value]="advanceAmount()"
+              (input)="advanceAmount.set(value($event))"
+              (keyup.enter)="saveAdvance()"
+            />
+          </span>
+        </div>
+        <div class="form-actions">
+          <app-button variant="secondary" (pressed)="addingAdvance.set(false)">Cancel</app-button>
+          <app-button
+            [disabled]="!canSaveAdvance()"
+            [loading]="agreements.saving()"
+            (pressed)="saveAdvance()"
+          >
+            Save Advance
+          </app-button>
+        </div>
+      </div>
+    }
+
+    @if (agreements.balances().length === 0) {
+      <div class="card">
+        <p class="t-body">Nobody is holding money.</p>
+        <p class="t-small">Give an advance, or record who paid for a purchase.</p>
+      </div>
+    } @else {
+      <div class="table">
+        <div class="row head">
+          <span class="t-micro">Person</span>
+          <span class="t-micro right">Given</span>
+          <span class="t-micro right">Spent</span>
+          <span class="t-micro right">Balance</span>
+          <span></span>
+        </div>
+        @for (balance of balanceRows(); track balance.person_id) {
+          <div class="row">
+            <span class="main">
+              <span class="vendor">{{ balance.person_name }}</span>
+              <span class="t-small">
+                {{ holding(balance.balance_amount) }}
+                {{
+                  money(
+                    balance.balance_amount < 0 ? -balance.balance_amount : balance.balance_amount
+                  )
+                }}
+              </span>
+            </span>
+            <span class="right t-mono muted">{{ money(balance.advanced_amount) }}</span>
+            <span class="right t-mono muted">{{ money(balance.spent_amount) }}</span>
+            <span class="right t-mono cell-figure" [class.owed]="balance.balance_amount < 0">
+              {{ money(balance.balance_amount) }}
+            </span>
+            <span></span>
+          </div>
+        }
+      </div>
+
+      <app-pagination
+        [total]="agreements.balances().length"
+        [page]="balancePage()"
+        noun="people"
+        (pageChange)="balancePage.set($event)"
+      />
+    }
+
+    @if (agreements.advances().length > 0) {
+      <div class="table">
+        <div class="row head">
+          <span class="t-micro">Advance</span>
+          <span class="t-micro right">Amount</span>
+          <span class="t-micro right">Given on</span>
+          <span></span>
+          <span></span>
+        </div>
+        @for (advance of agreements.advances(); track advance.id) {
+          <div class="row">
+            <span class="main"
+              ><span class="vendor">{{ advance.person_name }}</span></span
+            >
+            @if (editingAdvance() === advance.id) {
+              <span class="amount right">
+                <span class="amount-prefix t-mono">{{ symbol() }}</span>
+                <input
+                  class="amount-input t-mono"
+                  inputmode="decimal"
+                  [attr.aria-label]="'How much was given to ' + advance.person_name"
+                  [value]="editAdvanceAmount()"
+                  (input)="editAdvanceAmount.set(value($event))"
+                  (keyup.enter)="saveEditAdvance(advance)"
+                />
+              </span>
+              <span class="right t-mono muted">{{ advance.given_on }}</span>
+              <button type="button" class="link-action" (click)="saveEditAdvance(advance)">
+                Save
+              </button>
+              <button type="button" class="link-action" (click)="cancelEditAdvance()">
+                Cancel
+              </button>
+            } @else {
+              <span class="right t-mono cell-figure">{{ money(advance.amount) }}</span>
+              <span class="right t-mono muted">{{ advance.given_on }}</span>
+              <button
+                type="button"
+                class="link-action"
+                [attr.aria-label]="'Change the advance to ' + advance.person_name"
+                (click)="startEditAdvance(advance)"
+              >
+                Change
+              </button>
+              <button
+                type="button"
+                class="link-action destructive"
+                [attr.aria-label]="'Remove the advance to ' + advance.person_name"
+                (click)="removeAdvance(advance.id)"
+              >
+                Remove
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <app-pagination
+        [total]="agreements.advanceTotal()"
+        [page]="agreements.advancePage()"
+        noun="advances"
+        (pageChange)="goToAdvances($event)"
+      />
+    }
+  </section>
+</div>

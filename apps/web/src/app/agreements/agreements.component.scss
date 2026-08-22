@@ -1,0 +1,339 @@
+.agreements {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.intro-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.amount {
+  display: flex;
+  align-items: stretch;
+  border: 1.5px solid var(--rule);
+  border-radius: 9px;
+  background: var(--field);
+  overflow: hidden;
+  max-width: 240px;
+
+  &:focus-within {
+    box-shadow:
+      0 0 0 2px var(--surface),
+      0 0 0 4px var(--accent);
+  }
+}
+
+.amount-prefix {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  background: var(--hairline);
+  border-right: 1px solid var(--hairline);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.amount-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  height: 40px;
+  padding: 0 10px;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.agreement {
+  border: 1.5px solid var(--rule);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.agreement-head {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.titles {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.agreement-name {
+  margin: 0;
+  font:
+    500 16px/1.2 'DM Sans',
+    sans-serif;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+}
+
+.project-name {
+  font-size: 13px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.figure-value {
+  font-size: 21px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.figure-value.owed,
+.paid.owed {
+  color: var(--over-ink);
+}
+
+.meter {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--field);
+  overflow: hidden;
+}
+
+.meter-paid {
+  display: block;
+  height: 100%;
+  background: var(--ink-2);
+}
+
+.payments {
+  border-top: 1px solid var(--hairline);
+}
+
+.payment {
+  display: grid;
+  grid-template-columns: 130px 1fr 150px;
+  align-items: center;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--field);
+}
+
+.when {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.note {
+  color: var(--ink-2);
+}
+
+.paid {
+  text-align: right;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.payment.left-to-pay {
+  padding: 13px 18px;
+  background: var(--field);
+  border-bottom: none;
+}
+
+.left-label {
+  font:
+    500 13px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--ink);
+}
+
+.payment.left-to-pay .paid {
+  font-weight: 500;
+}
+
+.agreement-actions {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hint {
+  color: var(--ink-3);
+}
+
+.link-action {
+  background: none;
+  border: 1px solid transparent;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font:
+    400 13px/1.2 'DM Sans',
+    sans-serif;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+  justify-self: end;
+  transition: all 0.15s;
+
+  &:hover {
+    background: var(--field);
+    border-color: var(--rule);
+    color: var(--ink);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--surface),
+      0 0 0 4px var(--accent);
+  }
+
+  &.destructive:hover {
+    background: var(--over-surface);
+    border-color: var(--over-edge);
+    color: var(--over-ink);
+  }
+}
+
+.agreement-actions .link-action {
+  margin-left: auto;
+}
+
+// The people tables under Money held. The agreements above are cards.
+.table {
+  border: 1.5px solid var(--rule);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 130px 130px 130px 110px;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--hairline);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.row.head {
+  padding: 11px 18px;
+  background: var(--field);
+  border-bottom: 1.5px solid var(--rule);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.vendor {
+  font:
+    400 16px/1.2 'DM Sans',
+    sans-serif;
+  color: var(--ink);
+}
+
+.right {
+  text-align: right;
+}
+
+.muted {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.cell-figure {
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.cell-figure.owed {
+  color: var(--over);
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-top: 1px solid var(--hairline);
+  padding-top: 18px;
+}
+
+.figure.owed {
+  color: var(--over);
+}
+
+.error {
+  color: var(--over);
+}
+
+@media (max-width: 899px) {
+  .intro {
+    flex-direction: column;
+  }
+
+  .row,
+  .row.head {
+    grid-template-columns: 1fr 120px 110px;
+  }
+
+  .row > *:nth-child(3),
+  .row.head > *:nth-child(3) {
+    display: none;
+  }
+}
+
+.sentinel {
+  padding: 8px 0;
+  text-align: center;
+}
