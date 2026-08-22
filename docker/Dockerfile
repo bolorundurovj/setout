@@ -3,11 +3,13 @@
 FROM node:24-bookworm-slim AS web
 WORKDIR /build
 RUN corepack enable
-# The web app consumes the committed SDK by path alias, so bring both in.
+# The web app consumes the SDK by path alias, so bring both in.
 COPY package.json yarn.lock* ./
 COPY packages/api-client ./packages/api-client
 COPY apps/web ./apps/web
 RUN yarn install --frozen-lockfile || yarn install
+# Generate the SDK from the openapi.json.
+RUN cd packages/api-client && yarn generate && yarn format
 WORKDIR /build/apps/web
 RUN yarn build
 

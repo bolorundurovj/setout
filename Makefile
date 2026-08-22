@@ -121,9 +121,6 @@ test-int: require-uv ## Integration tests against a real database.
 
 test-contract: require-uv ## Schema and SDK contract tests.
 	cd $(API_DIR) && uv run pytest tests/contract -m contract
-	$(MAKE) sdk
-	@git diff --exit-code -- $(SDK_DIR) || { \
-		echo "Error: the committed SDK is stale. Commit the regenerated client."; exit 1; }
 
 sdk: require-uv require-yarn ## Regenerate the API client.
 	$(BASH) scripts/generate_sdk.sh
@@ -146,13 +143,10 @@ backup: ## Write the database and uploaded files into one dated archive.
 restore: ## Read a backup archive back, after asking. Pass file=<archive>.
 	$(BASH) scripts/restore.sh $(file)
 
-check: ## Lint, typecheck, all tests, coverage floor, SDK drift.
+check: ## Lint, typecheck, all tests, coverage floor.
 	$(MAKE) lint
 	cd $(API_DIR) && uv run pytest --cov=setout --cov-report=term-missing --cov-fail-under=80
 	cd $(WEB_DIR) && yarn test --watch=false
-	$(MAKE) sdk
-	@git diff --exit-code -- $(SDK_DIR) || { \
-		echo "Error: the committed SDK is stale. Run make sdk and commit the result."; exit 1; }
 
 build: require-uv require-yarn ## Production build of both apps.
 	cd $(API_DIR) && uv build

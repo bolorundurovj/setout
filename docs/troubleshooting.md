@@ -16,17 +16,6 @@ Yarn workspaces link binaries into the root `node_modules/.bin`, and installing
 from inside a workspace member re-links it. Run `yarn install` at the repository
 root.
 
-## make check fails on SDK drift
-
-```
-Error: the committed SDK is stale. Run make sdk and commit the result.
-```
-
-The committed client no longer matches the schema the API produces. That is the
-check doing its job: run `make sdk` and commit what changes. If nothing changes,
-you have edited `packages/api-client/src` by hand; that directory is generated
-output.
-
 ## The startup log says the database is behind
 
 Migrations are applied on start, so this resolves itself in the normal case. If
