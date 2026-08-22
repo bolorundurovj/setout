@@ -86,7 +86,8 @@
           "options": {
             "tsConfig": "tsconfig.spec.json",
             "buildTarget": "web:build",
-            "runner": "vitest"
+            "runner": "vitest",
+            "runnerConfig": "vitest.config.ts"
           }
         },
         "lint": {
