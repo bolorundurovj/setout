@@ -1,0 +1,43 @@
+name: Feature request
+description: Suggest something Setout should do
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check [the roadmap](../blob/master/docs/roadmap.md) first. Several things
+        are already designed but not built, and saying you want one of them is
+        the fastest way to move it up.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do, and where does Setout get in the way? Describe the situation, not the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like it to do
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do today instead
+      description: The workaround, if you have one.
+
+  - type: checkboxes
+    id: fit
+    attributes:
+      label: Does it fit how Setout works
+      description: |
+        Setout keeps a budget and the spend against it apart: a budget is set
+        deliberately, and an expense can never write one. Amounts are whole
+        minor units, and a project's currency never changes.
+      options:
+        - label: This does not require an expense to change a budget figure
+        - label: I have read the roadmap and this is not already there
