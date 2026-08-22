@@ -22,8 +22,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Take the version from VERSION when it runs ahead of the last release
-        id: version
+      - name: Ask for an exact version when VERSION runs ahead of the last release
         run: |
           # VERSION ahead of the manifest means somebody set it on purpose, so
           # release exactly that. Equal means let the commits decide the bump.
@@ -38,7 +37,6 @@ jobs:
           fi
 
           if [ "$wanted" = "$released" ]; then
-            echo "release-as=" >> "$GITHUB_OUTPUT"
             echo "VERSION matches the last release ($released), letting the commits decide."
             exit 0
           fi
@@ -49,11 +47,27 @@ jobs:
             exit 1
           fi
 
-          echo "release-as=$wanted" >> "$GITHUB_OUTPUT"
-          echo "Releasing as $wanted, taken from VERSION."
+          # The action's release-as input is ignored in manifest mode, so ask for
+          # the version the way release-please always honours: a Release-As
+          # footer on a commit. It applies to this release only, so there is
+          # nothing to unset afterwards.
+          if last_tag=$(git describe --tags --abbrev=0 2>/dev/null); then
+            range="$last_tag..HEAD"
+          else
+            range="HEAD"
+          fi
+          if git log "$range" --format='%B' | grep -q "^Release-As: $wanted$"; then
+            echo "Already asked for $wanted since $range, nothing to add."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore: release $wanted" -m "Release-As: $wanted"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+          echo "Asked for $wanted with a Release-As footer."
 
       - uses: googleapis/release-please-action@v4
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          release-as: ${{ steps.version.outputs.release-as }}

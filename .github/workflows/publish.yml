@@ -56,9 +56,13 @@ jobs:
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
 
       - name: Export the digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
         run: |
+          # An artifact path cannot hold a colon, so drop the sha256: prefix.
+          # The merge job puts it back.
           mkdir -p /tmp/digests
-          touch "/tmp/digests/${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${DIGEST#sha256:}"
 
       - name: Upload the digest
         uses: actions/upload-artifact@v4

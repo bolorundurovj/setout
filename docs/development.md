@@ -85,6 +85,11 @@ runs ahead of the last released version recorded in
 the bump. A `VERSION` behind the last release, or one that is not a semantic
 version, fails the run rather than releasing something surprising.
 
+It asks for that version by adding an empty `chore: release X.Y.Z` commit
+carrying a `Release-As` footer, which is how release-please accepts an exact
+version when it is driven by a manifest. The footer applies to that release
+alone, so there is nothing to unset afterwards.
+
 One version number lives in six files: `VERSION`, the three `package.json`
 files, `apps/api/pyproject.toml` and `apps/api/src/setout/__init__.py`, which is
 what `/healthz` reports. Never bump them by hand. `release-please-config.json`
