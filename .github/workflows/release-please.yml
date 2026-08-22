@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Take the version from VERSION when it runs ahead of the last release
+        id: version
+        run: |
+          # VERSION ahead of the manifest means somebody set it on purpose, so
+          # release exactly that. Equal means let the commits decide the bump.
+          # This is deliberately not a diff of the push, so it survives a force
+          # push and a first run, where the previous commit may not be fetched.
+          released=$(jq -r '.["."]' .release-please-manifest.json)
+          wanted=$(sed 's/#.*//' VERSION | tr -d '[:space:]')
+
+          if ! printf '%s' "$wanted" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)*$'; then
+            echo "VERSION does not hold a semantic version: $wanted"
+            exit 1
+          fi
+
+          if [ "$wanted" = "$released" ]; then
+            echo "release-as=" >> "$GITHUB_OUTPUT"
+            echo "VERSION matches the last release ($released), letting the commits decide."
+            exit 0
+          fi
+
+          lowest=$(printf '%s\n%s\n' "$released" "$wanted" | sort -V | head -1)
+          if [ "$lowest" = "$wanted" ]; then
+            echo "VERSION ($wanted) is behind the last release ($released). Refusing to go backwards."
+            exit 1
+          fi
+
+          echo "release-as=$wanted" >> "$GITHUB_OUTPUT"
+          echo "Releasing as $wanted, taken from VERSION."
+
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          release-as: ${{ steps.version.outputs.release-as }}

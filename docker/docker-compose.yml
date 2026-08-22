@@ -2,10 +2,12 @@ name: setout
 
 services:
   setout:
+    # Pull the published image by default. To run your own build instead:
+    # docker compose -f docker/docker-compose.yml build
+    image: ghcr.io/bolorundurovj/setout:${SETOUT_IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: setout:latest
     ports:
       - "${SETOUT_PORT:-8474}:8474"
     environment:

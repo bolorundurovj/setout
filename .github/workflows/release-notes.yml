@@ -1,0 +1,46 @@
+name: Release notes
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  credit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Credit everyone who landed a commit in this release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          previous=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)
+          if [ -n "$previous" ]; then
+            range="$previous..$TAG"
+          else
+            range="$TAG"
+          fi
+
+          authors=$(git log --format='%an' "$range" | sort -u)
+          if [ -z "$authors" ]; then
+            echo "No commits in $range, leaving the notes alone."
+            exit 0
+          fi
+
+          {
+            gh release view "$TAG" --json body --jq .body
+            printf '\n### Contributors\n\n'
+            echo "$authors" | sed 's/^/* /'
+          } > notes.md
+
+          gh release edit "$TAG" --notes-file notes.md
+          echo "Credited:"
+          echo "$authors"
