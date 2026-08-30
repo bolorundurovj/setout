@@ -1,6 +1,6 @@
 {
   "name": "@setout/api-client",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "Generated TypeScript SDK for the Setout API. Do not edit src by hand; run make sdk.",
   "author": "Bolorunduro Valiant-Joshua (https://github.com/bolorundurovj)",
