@@ -2,7 +2,7 @@
 
 FROM node:26-bookworm-slim AS web
 WORKDIR /build
-RUN corepack enable
+RUN npm install -g corepack && corepack enable
 # The web app consumes the SDK by path alias, so bring both in.
 COPY package.json yarn.lock* ./
 COPY packages/api-client ./packages/api-client
