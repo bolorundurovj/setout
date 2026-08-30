@@ -23,7 +23,7 @@ dependencies = [
     "pydantic==2.13.4",
     "pydantic-settings==2.15.0",
     "tzdata==2026.3",
-    "bcrypt==4.3.0",
+    "bcrypt==5.0.0",
     "email-validator==2.2.0",
     "python-multipart==0.0.20",
     "boto3==1.42.14",
