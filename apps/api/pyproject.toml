@@ -19,7 +19,7 @@ dependencies = [
     "tortoise-orm==1.1.8",
     "aiosqlite==0.22.1",
     "asyncpg==0.31.0",
-    "uvicorn[standard]==0.52.3",
+    "uvicorn[standard]==0.52.4",
     "pydantic==2.13.4",
     "pydantic-settings==2.15.0",
     "tzdata==2026.3",
