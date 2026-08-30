@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/bolorundurovj/setout/compare/v1.1.0...v1.1.1) (2026-08-30)
+
+
+### Build and dependencies
+
+* **deps:** bump actions/checkout from 4 to 7 ([#5](https://github.com/bolorundurovj/setout/issues/5)) ([a7f3edd](https://github.com/bolorundurovj/setout/commit/a7f3edde34c62d03f7c60b4ca375a3d99f8a81a5))
+* **deps:** resolve Dependabot alerts and bump API version to 1.1.0 ([#19](https://github.com/bolorundurovj/setout/issues/19)) ([90b92c1](https://github.com/bolorundurovj/setout/commit/90b92c167bbe315cc919b525172af49b9974c8bd))
+
 ## [1.1.0](https://github.com/bolorundurovj/setout/compare/v1.0.0...v1.1.0) (2026-08-30)
 
 
