@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.1.0](https://github.com/bolorundurovj/setout/compare/v1.0.0...v1.1.0) (2026-08-30)
+
+
+### Features
+
+* **ui:** pick from long lists with a searchable picker ([e2dcefe](https://github.com/bolorundurovj/setout/commit/e2dcefeab355b403cec74de289217adac783b94a))
+
+
+### Bug Fixes
+
+* **docker:** serve index.html when a client route is refreshed ([3d67d6e](https://github.com/bolorundurovj/setout/commit/3d67d6e2590efeffab58e3bcac644343b9f8457c))
+* **routing:** keep inputs a route never sets at their declared defaults ([bc90147](https://github.com/bolorundurovj/setout/commit/bc9014763d3751afbe757b4054e6385bf84fc585))
+
+
+### Build and dependencies
+
+* raise the web bundle budgets above the current size ([30f06f2](https://github.com/bolorundurovj/setout/commit/30f06f21473954e00b1ded209e5471d496ed18a8))
+
 ## [1.0.0](https://github.com/bolorundurovj/setout/compare/v0.1.0...v1.0.0) (2026-08-22)
 
 
