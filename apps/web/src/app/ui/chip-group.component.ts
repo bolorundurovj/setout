@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { OptionPickerComponent } from './option-picker.component';
 
 export interface Chip {
   value: string;
@@ -6,27 +7,40 @@ export interface Chip {
   detail?: string | null;
 }
 
+// Past this many, a wrapping pill row is unreadable and the picker takes over.
+const PILL_LIMIT = 8;
+
 @Component({
   selector: 'app-chip-group',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [OptionPickerComponent],
   template: `
-    <div class="chips" role="group" [attr.aria-label]="label()">
-      @for (chip of chips(); track chip.value) {
-        <button
-          type="button"
-          class="chip"
-          [class.on]="chip.value === value()"
-          [attr.aria-pressed]="chip.value === value()"
-          (click)="pick(chip.value)"
-        >
-          <span class="chip-label">{{ chip.label }}</span>
-          @if (chip.detail) {
-            <span class="chip-detail">{{ chip.detail }}</span>
-          }
-        </button>
-      }
-    </div>
+    @if (chips().length > pillLimit) {
+      <app-option-picker
+        [chips]="chips()"
+        [value]="value()"
+        [label]="label()"
+        (valueChange)="valueChange.emit($event)"
+      />
+    } @else {
+      <div class="chips" role="group" [attr.aria-label]="label()">
+        @for (chip of chips(); track chip.value) {
+          <button
+            type="button"
+            class="chip"
+            [class.on]="chip.value === value()"
+            [attr.aria-pressed]="chip.value === value()"
+            (click)="pick(chip.value)"
+          >
+            <span class="chip-label">{{ chip.label }}</span>
+            @if (chip.detail) {
+              <span class="chip-detail">{{ chip.detail }}</span>
+            }
+          </button>
+        }
+      </div>
+    }
   `,
   styles: [
     `
@@ -104,6 +118,8 @@ export class ChipGroupComponent {
   readonly clearable = input(false);
 
   readonly valueChange = output<string>();
+
+  protected readonly pillLimit = PILL_LIMIT;
 
   pick(value: string): void {
     if (this.clearable() && value === this.value()) {
