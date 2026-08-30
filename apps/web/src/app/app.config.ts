@@ -16,11 +16,18 @@ const credentialsInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req.clone({ withCredentials: true }));
 };
 
+// The default, alwaysUndefined, writes undefined over an input's declared default
+// whenever the active route has no such param, which would leave `input('')`
+// as undefined.
+export const routeInputBinding = withComponentInputBinding({
+  unmatchedInputBehavior: 'undefinedIfStale',
+});
+
 // The only place HttpClient is wired up. The SDK layer owns all HTTP; the rest
 // of the app talks to the generated Api service, never to HttpClient.
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRouter(routes, withComponentInputBinding()),
+    provideRouter(routes, routeInputBinding),
     { provide: TitleStrategy, useClass: SetoutTitleStrategy },
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
