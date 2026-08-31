@@ -59,6 +59,23 @@ async def test_amount_is_quantity_times_unit_rate(client: AsyncClient) -> None:
     assert spend["amount"] == 150_000_00
 
 
+@pytest.mark.parametrize(
+    ("sent", "shown"),
+    [("600", "600"), ("600.000", "600"), ("2.500", "2.5"), ("0.250", "0.25"), ("1", "1")],
+)
+async def test_a_round_quantity_is_not_shown_in_scientific_notation(
+    client: AsyncClient, sent: str, shown: str
+) -> None:
+    project_id = await _project(client)
+    spend = await _spend(
+        client, project_id, description="Blocks", amount=None, quantity=sent, unit_rate=250_00
+    )
+    assert spend["quantity"] == shown
+
+    again = await client.get(f"/api/expenses/{spend['id']}")
+    assert again.json()["quantity"] == shown
+
+
 async def test_an_amount_that_contradicts_the_maths_is_refused(client: AsyncClient) -> None:
     project_id = await _project(client)
     resp = await client.post(

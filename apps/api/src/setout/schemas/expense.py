@@ -6,6 +6,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field
 
 from setout.models.expense import CostType
+from setout.schemas.decimals import PlainDecimal
 
 
 class ExpenseCreate(BaseModel):
@@ -54,7 +55,7 @@ class ExpenseRead(BaseModel):
     paid_by_id: str | None
     spent_on: date
     description: str
-    quantity: Decimal | None
+    quantity: PlainDecimal | None
     unit_rate: int | None
     amount: int
     cost_type: CostType | None

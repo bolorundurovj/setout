@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from setout.schemas.decimals import PlainDecimal
 
 
 class ItemCreate(BaseModel):
@@ -60,7 +61,7 @@ class ItemPricePoint(BaseModel):
     expense_id: str
     spent_on: date
     unit_rate: int = Field(..., description="Price for one unit, in minor units")
-    quantity: Decimal | None
+    quantity: PlainDecimal | None
     project_id: str
     project_name: str
     vendor_id: str | None
