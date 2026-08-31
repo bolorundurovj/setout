@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.3.0](https://github.com/bolorundurovj/setout/compare/v1.2.0...v1.3.0) (2026-08-31)
+
+
+### Features
+
+* auto-assign scope when history is unambiguous ([04f0e41](https://github.com/bolorundurovj/setout/commit/04f0e41062e55e3749fbe533178a6c63c5d218d5))
+* bulk-file unfiled expenses to a scope ([9256f6a](https://github.com/bolorundurovj/setout/commit/9256f6af3ffe4e081d2881b25f15aea0632f61cf))
+* suggest scope from item or vendor history ([99ade00](https://github.com/bolorundurovj/setout/commit/99ade0094e932e0179dce42d17751ca5e3762701))
+
+
+### Bug Fixes
+
+* **land:** style land name color ([5479b35](https://github.com/bolorundurovj/setout/commit/5479b35e47ba9b618ae0313f5a628405b7e4076a))
+
 ## [1.2.0](https://github.com/bolorundurovj/setout/compare/v1.1.1...v1.2.0) (2026-08-31)
 
 
