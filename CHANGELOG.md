@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0](https://github.com/bolorundurovj/setout/compare/v1.1.1...v1.2.0) (2026-08-31)
+
+
+### Features
+
+* **land:** record a plot, its papers and what is built on it ([460be57](https://github.com/bolorundurovj/setout/commit/460be57c1ee27c3bef386f51650b27443f2b730b))
+
+
+### Bug Fixes
+
+* **api:** write decimals in plain notation, not scientific ([2a103d4](https://github.com/bolorundurovj/setout/commit/2a103d405170735386973a2e42b90bb94f75298f))
+
 ## [1.1.1](https://github.com/bolorundurovj/setout/compare/v1.1.0...v1.1.1) (2026-08-30)
 
 
