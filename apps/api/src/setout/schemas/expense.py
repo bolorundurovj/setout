@@ -26,6 +26,7 @@ class ExpenseCreate(BaseModel):
     unit_rate: int | None = Field(None, ge=0, description="Minor units")
     cost_type: CostType | None = None
     notes: str | None = None
+    auto_scope: bool = Field(True, description="Let history choose the scope when none is given")
 
 
 class ExpenseUpdate(BaseModel):

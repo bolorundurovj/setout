@@ -7,7 +7,7 @@
       label="Scope"
       [chips]="scopeChips()"
       [value]="scopeId()"
-      (valueChange)="scopeId.set($event)"
+      (valueChange)="pickScope($event)"
     />
     <span class="t-small muted">{{ scopeNote() }}</span>
   </div>

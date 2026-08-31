@@ -9065,6 +9065,12 @@
               }
             ],
             "title": "Notes"
+          },
+          "auto_scope": {
+            "type": "boolean",
+            "title": "Auto Scope",
+            "description": "Let history choose the scope when none is given",
+            "default": true
           }
         },
         "type": "object",

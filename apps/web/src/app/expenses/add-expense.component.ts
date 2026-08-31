@@ -90,6 +90,7 @@ export class AddExpenseComponent {
   readonly addingVendor = signal(false);
   readonly newVendorName = signal('');
   readonly suggestedScopeId = signal<string | null>(null);
+  readonly scopeExplicitlyCleared = signal(false);
 
   private readonly photo = viewChild.required<ElementRef<HTMLInputElement>>('photo');
   readonly chosen = signal<File | null>(null);
@@ -314,6 +315,12 @@ export class AddExpenseComponent {
     }
   }
 
+  pickScope(scopeId: string): void {
+    this.scopeId.set(scopeId);
+    this.suggestedScopeId.set(null);
+    this.scopeExplicitlyCleared.set(scopeId === '');
+  }
+
   private async suggestScope(itemId: string, vendorId: string): Promise<void> {
     const suggestion: ScopeSuggestion | null = await this.expenses.suggestScope(
       this.project().id,
@@ -323,6 +330,7 @@ export class AddExpenseComponent {
     if (suggestion?.scope_id && !this.scopeId()) {
       this.scopeId.set(suggestion.scope_id);
       this.suggestedScopeId.set(suggestion.scope_id);
+      this.scopeExplicitlyCleared.set(false);
     }
   }
 
@@ -374,6 +382,7 @@ export class AddExpenseComponent {
     this.amount.set(major(expense.amount));
     this.spentOn.set(expense.spent_on);
     this.scopeId.set(expense.scope_id ?? '');
+    this.scopeExplicitlyCleared.set(expense.scope_id === null);
     this.itemId.set(expense.item_id ?? '');
     this.agreementId.set(expense.agreement_id ?? '');
     this.vendorId.set(expense.vendor_id ?? '');
@@ -473,7 +482,10 @@ export class AddExpenseComponent {
     const existing = this.editing();
     const saved = existing
       ? await this.expenses.update(this.project().id, existing.id, body)
-      : await this.expenses.add(this.project().id, body);
+      : await this.expenses.add(this.project().id, {
+          ...body,
+          auto_scope: !this.scopeExplicitlyCleared(),
+        });
 
     if (!saved) {
       this.toast.show(this.expenses.error() ?? 'Could not save that expense.', 'error');
@@ -518,6 +530,7 @@ export class AddExpenseComponent {
     this.itemId.set('');
     this.lastPrice.set(null);
     this.suggestedScopeId.set(null);
+    this.scopeExplicitlyCleared.set(false);
     this.owed.set(false);
     this.owedWhat.set('');
     this.owedWhen.set('');

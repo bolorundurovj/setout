@@ -768,3 +768,90 @@ async def test_suggestion_missing_project_404(client: AsyncClient) -> None:
     await _project(client)
     resp = await client.get("/api/projects/nope/suggest-scope")
     assert resp.status_code == 404
+
+
+async def test_auto_assigns_scope_from_strong_item_pattern(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    scope = await _scope(client, project_id, "Concrete foundation")
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+
+    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+
+    spend = await _spend(client, project_id, item_id=item["id"])
+    assert spend["scope_id"] == scope["id"]
+
+
+async def test_auto_assigns_scope_from_strong_vendor_pattern(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    scope = await _scope(client, project_id, "Blockwork")
+    vendor = (await client.post("/api/vendors", json={"name": "Segun Blocks"})).json()
+
+    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=scope["id"])
+    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=scope["id"])
+
+    spend = await _spend(client, project_id, vendor_id=vendor["id"])
+    assert spend["scope_id"] == scope["id"]
+
+
+async def test_auto_assign_prefers_item_over_vendor(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    item_scope = await _scope(client, project_id, "Concrete foundation")
+    vendor_scope = await _scope(client, project_id, "Blockwork")
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+    vendor = (await client.post("/api/vendors", json={"name": "Segun Blocks"})).json()
+
+    await _spend(
+        client,
+        project_id,
+        item_id=item["id"],
+        vendor_id=vendor["id"],
+        scope_id=item_scope["id"],
+    )
+    await _spend(
+        client,
+        project_id,
+        item_id=item["id"],
+        vendor_id=vendor["id"],
+        scope_id=item_scope["id"],
+    )
+    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=vendor_scope["id"])
+
+    spend = await _spend(client, project_id, item_id=item["id"], vendor_id=vendor["id"])
+    assert spend["scope_id"] == item_scope["id"]
+
+
+async def test_auto_assign_skips_split_history(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    first = await _scope(client, project_id, "Concrete foundation")
+    second = await _scope(client, project_id, "Blockwork")
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+
+    await _spend(client, project_id, item_id=item["id"], scope_id=first["id"])
+    await _spend(client, project_id, item_id=item["id"], scope_id=second["id"])
+
+    spend = await _spend(client, project_id, item_id=item["id"])
+    assert spend["scope_id"] is None
+
+
+async def test_auto_assign_needs_at_least_two_purchases(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    scope = await _scope(client, project_id, "Concrete foundation")
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+
+    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+
+    spend = await _spend(client, project_id, item_id=item["id"])
+    assert spend["scope_id"] is None
+
+
+async def test_auto_assign_can_be_disabled(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    scope = await _scope(client, project_id, "Concrete foundation")
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+
+    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+
+    spend = await _spend(client, project_id, item_id=item["id"], auto_scope=False)
+    assert spend["scope_id"] is None

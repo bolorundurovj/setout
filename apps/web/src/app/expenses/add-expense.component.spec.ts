@@ -357,13 +357,14 @@ describe('AddExpenseComponent', () => {
 
     expect(component.scopeId()).toBe('s1');
     expect(component.suggestedScopeId()).toBe('s1');
+    expect(component.scopeExplicitlyCleared()).toBe(false);
     expect(component.scopeNote()).toContain('Suggested from past purchases');
   });
 
   it('does not override a scope the user already chose', async () => {
     const fixture = render();
     const component = fixture.componentInstance;
-    component.scopeId.set('s2');
+    component.pickScope('s2');
 
     await component.pickItem('i1');
     fixture.detectChanges();
@@ -371,6 +372,59 @@ describe('AddExpenseComponent', () => {
 
     expect(component.scopeId()).toBe('s2');
     expect(component.suggestedScopeId()).toBeNull();
+    expect(component.scopeExplicitlyCleared()).toBe(false);
     expect(component.scopeNote()).not.toContain('Suggested');
+  });
+
+  it('remembers when the user explicitly leaves a scope unfiled', () => {
+    const component = render().componentInstance;
+    component.pickScope('');
+
+    expect(component.scopeId()).toBe('');
+    expect(component.scopeExplicitlyCleared()).toBe(true);
+    expect(component.suggestedScopeId()).toBeNull();
+  });
+
+  it('asks the backend to auto-assign when the scope was not explicitly cleared', async () => {
+    const component = render().componentInstance;
+    component.description.set('Cement');
+    component.amount.set('11000');
+    component.pickScope('');
+    component.pickScope('s1');
+
+    await component.save(false);
+
+    expect(saves[0][1]).toEqual(
+      expect.objectContaining({
+        scope_id: 's1',
+        auto_scope: true,
+      }),
+    );
+  });
+
+  it('asks the backend not to auto-assign when the scope was explicitly cleared', async () => {
+    const component = render().componentInstance;
+    component.description.set('Cement');
+    component.amount.set('11000');
+    component.pickScope('');
+
+    await component.save(false);
+
+    expect(saves[0][1]).toEqual(
+      expect.objectContaining({
+        scope_id: null,
+        auto_scope: false,
+      }),
+    );
+  });
+
+  it('does not send auto_scope when changing an existing expense', async () => {
+    const component = render(existing).componentInstance;
+    component.amount.set('12000');
+
+    await component.save(false);
+
+    expect(updates[0][1]).toBe('e1');
+    expect(updates[0][2]).not.toHaveProperty('auto_scope');
   });
 });

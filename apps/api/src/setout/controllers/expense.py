@@ -68,14 +68,15 @@ class ExpenseController:
 
     async def create(self, project_id: str, req: ExpenseCreate) -> ExpenseRead:
         await self._project_or_404(project_id)
-        if req.scope_id is not None:
-            await self._fileable_scope(req.scope_id, project_id)
+        scope_id = await self._resolve_scope(project_id, req)
+        if scope_id is not None:
+            await self._fileable_scope(scope_id, project_id)
         await self._attribution_or_404(req.item_id, req.vendor_id, req.paid_by_id)
         await self._agreement_or_404(req.agreement_id, project_id)
         amount = self._amount(req.quantity, req.unit_rate, req.amount)
         expense = await Expense.create(
             project_id=project_id,
-            scope_id=req.scope_id,
+            scope_id=scope_id,
             item_id=req.item_id,
             vendor_id=req.vendor_id,
             agreement_id=req.agreement_id,
@@ -89,6 +90,19 @@ class ExpenseController:
             notes=req.notes,
         )
         return self._read(expense, 0)
+
+    async def _resolve_scope(self, project_id: str, req: ExpenseCreate) -> str | None:
+        if req.scope_id is not None:
+            return req.scope_id
+        if not req.auto_scope:
+            return None
+        if req.item_id:
+            scope_id = await self._strong_scope(project_id, item_id=req.item_id)
+            if scope_id:
+                return scope_id
+        if req.vendor_id:
+            return await self._strong_scope(project_id, vendor_id=req.vendor_id)
+        return None
 
     async def suggest_scope(
         self, project_id: str, item_id: str | None, vendor_id: str | None
@@ -104,9 +118,9 @@ class ExpenseController:
                 return ScopeSuggestion(scope_id=scope_id, reason="Past purchases from this vendor")
         return ScopeSuggestion(scope_id=None, reason=None)
 
-    async def _most_common_scope(
+    async def _scope_counts(
         self, project_id: str, *, item_id: str | None = None, vendor_id: str | None = None
-    ) -> str | None:
+    ) -> tuple[dict[str, int], int]:
         query = Expense.filter(
             project_id=project_id, deleted_at__isnull=True, scope_id__isnull=False
         )
@@ -115,17 +129,35 @@ class ExpenseController:
         elif vendor_id is not None:
             query = query.filter(vendor_id=vendor_id)
         else:
-            return None
+            return {}, 0
         counts: dict[str, int] = {}
         for expense in await query.only("scope_id"):
             scope_id = expense.scope_id
             assert scope_id is not None
             counts[scope_id] = counts.get(scope_id, 0) + 1
+        return counts, sum(counts.values())
+
+    async def _most_common_scope(
+        self, project_id: str, *, item_id: str | None = None, vendor_id: str | None = None
+    ) -> str | None:
+        counts, _ = await self._scope_counts(project_id, item_id=item_id, vendor_id=vendor_id)
         if not counts:
             return None
         max_count = max(counts.values())
         winners = [scope_id for scope_id, count in counts.items() if count == max_count]
         return winners[0] if len(winners) == 1 else None
+
+    async def _strong_scope(
+        self, project_id: str, *, item_id: str | None = None, vendor_id: str | None = None
+    ) -> str | None:
+        counts, total = await self._scope_counts(project_id, item_id=item_id, vendor_id=vendor_id)
+        if not counts or total < 2:
+            return None
+        max_count = max(counts.values())
+        winners = [scope_id for scope_id, count in counts.items() if count == max_count]
+        if len(winners) != 1:
+            return None
+        return winners[0] if max_count == total else None
 
     async def get(self, expense_id: str) -> ExpenseRead:
         expense = await self._expense_or_404(expense_id)
