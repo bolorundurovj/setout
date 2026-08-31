@@ -8,3 +8,4 @@ class Counts(BaseModel):
     vendors: int = Field(..., description="Not counting archived ones")
     items: int = Field(..., description="Not counting archived ones")
     people: int = Field(..., description="Not counting archived ones")
+    lands: int = Field(..., description="Not counting archived ones")

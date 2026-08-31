@@ -12,6 +12,7 @@ TABLES: tuple[str, ...] = (
     "currency",
     "scope_preset",
     "user",
+    "land",
     "project",
     "scope",
     "budget_item",
@@ -23,6 +24,7 @@ TABLES: tuple[str, ...] = (
     "advance",
     "delivery",
     "attachment",
+    "land_document",
 )
 
 # Sessions are not carried: they belong to the browsers that were signed in when

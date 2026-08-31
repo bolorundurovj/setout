@@ -17,6 +17,7 @@ class ProjectCreate(BaseModel):
         description="ISO 4217 code. Fixed once the project exists",
     )
     status: ProjectStatus = ProjectStatus.ACTIVE
+    land_id: str | None = Field(None, description="The plot it is being built on")
     notes: str | None = None
 
 
@@ -25,6 +26,7 @@ class ProjectUpdate(BaseModel):
 
     name: str | None = Field(None, min_length=1, max_length=255)
     status: ProjectStatus | None = None
+    land_id: str | None = Field(None, description="Empty string clears the link")
     notes: str | None = None
 
 
@@ -47,6 +49,8 @@ class ProjectRead(BaseModel):
     planned_amount: int
     spent_amount: int
     status: ProjectStatus
+    land_id: str | None
+    land_name: str | None
     notes: str | None
     created_at: datetime
     updated_at: datetime

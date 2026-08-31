@@ -47,6 +47,16 @@
         <span class="t-small">Fixed once the project is created.</span>
       </div>
       <div class="field">
+        <span class="t-micro">Land</span>
+        <app-chip-group
+          label="Land"
+          [chips]="landChips()"
+          [value]="landId()"
+          (valueChange)="landId.set($event)"
+        />
+        <span class="t-small">Can be set later, from the project's own settings.</span>
+      </div>
+      <div class="field">
         <label class="t-micro" for="project-notes">Notes</label>
         <input id="project-notes" class="input-field" type="text" [(ngModel)]="notes" />
       </div>

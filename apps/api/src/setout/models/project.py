@@ -6,6 +6,7 @@ from tortoise import fields
 from tortoise.models import Model
 
 from setout.models.currency import Currency
+from setout.models.land import Land
 from setout.utils.ids import short_id
 
 
@@ -25,6 +26,14 @@ class Project(Model):
         on_delete=fields.RESTRICT,
     )
     currency_id: str
+    land: fields.ForeignKeyNullableRelation[Land] = fields.ForeignKeyField(
+        "models.Land",
+        related_name="projects",
+        null=True,
+        default=None,
+        on_delete=fields.SET_NULL,
+    )
+    land_id: str | None
     status = fields.CharEnumField(ProjectStatus, max_length=16, default=ProjectStatus.ACTIVE)
     notes = fields.TextField(null=True, default=None)
     created_at = fields.DatetimeField(auto_now_add=True)

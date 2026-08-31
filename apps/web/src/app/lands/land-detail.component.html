@@ -1,0 +1,150 @@
+<div class="page">
+  <a class="link t-mono back" routerLink="/lands">&#8592; Land</a>
+
+  @if (loading()) {
+    <div class="card"><p class="t-body">Loading the plot…</p></div>
+  } @else if (land(); as l) {
+    @if (l.deleted_at) {
+      <p class="banner warn t-small">
+        Archived. Its papers went with it and come back if you take it out again. Projects already
+        pointing at it still do.
+      </p>
+    }
+
+    <div class="head">
+      <div class="identity">
+        <h1 class="t-display">{{ l.name }}</h1>
+        <p class="t-small">{{ l.address ?? notSet }}</p>
+      </div>
+      <div class="head-actions">
+        @if (!l.deleted_at) {
+          <app-button variant="secondary" (pressed)="edit()">Edit land</app-button>
+          <app-button variant="danger" (pressed)="archive()">Archive</app-button>
+        } @else {
+          <app-button (pressed)="restore()">Take out of the archive</app-button>
+        }
+      </div>
+    </div>
+
+    <div class="facts">
+      <div class="fact">
+        <span class="t-micro">Town or city</span>
+        <span class="t-body">{{ l.city ?? notSet }}</span>
+      </div>
+      <div class="fact">
+        <span class="t-micro">State</span>
+        <span class="t-body">{{ l.state ?? notSet }}</span>
+      </div>
+      <div class="fact">
+        <span class="t-micro">Size</span>
+        <span class="t-body t-mono">{{ size(l) }}</span>
+      </div>
+      <div class="fact">
+        <span class="t-micro">Papers kept</span>
+        <span class="t-body t-mono">{{ l.document_count }}</span>
+      </div>
+    </div>
+
+    @if (l.notes) {
+      <p class="t-small muted">{{ l.notes }}</p>
+    }
+
+    <section class="block">
+      <h2 class="t-heading">Papers</h2>
+      <p class="t-small" [class.muted]="missing().length === 0">{{ missingLine() }}</p>
+
+      @if (!l.deleted_at) {
+        <div class="card upload">
+          <div class="field">
+            <span class="t-micro">What you are adding</span>
+            <app-chip-group
+              label="What you are adding"
+              [chips]="kindChips"
+              [value]="kind()"
+              (valueChange)="kind.set($any($event))"
+            />
+          </div>
+          <app-button [loading]="lands.saving()" (pressed)="pick()">Choose a file</app-button>
+          <span class="t-small muted">
+            A photograph or a PDF. Kept beside the record on your own server.
+          </span>
+        </div>
+      }
+
+      @if (justRemoved(); as gone) {
+        <p class="t-small muted">
+          {{ gone.filename }} was removed.
+          <button type="button" class="link t-mono" (click)="putBack()">Put It Back</button>
+        </p>
+      }
+
+      @if (documents().length === 0) {
+        <div class="card">
+          <p class="t-body">Nothing kept against this plot yet.</p>
+          <p class="t-small">
+            The Certificate of Occupancy is the one worth having before anything else.
+          </p>
+        </div>
+      } @else {
+        <div class="papers">
+          @for (document of documents(); track document.id) {
+            <div class="paper">
+              <span class="paper-what">
+                <span class="t-body">{{ kindLabel(document) }}</span>
+                <span class="t-small muted">{{ document.filename }}</span>
+                <span class="t-micro">{{ fileNote(document) }}</span>
+              </span>
+              <span class="paper-actions">
+                <a class="link t-mono" [href]="href(document)" target="_blank" rel="noopener">
+                  Open
+                </a>
+                @if (!l.deleted_at) {
+                  <button type="button" class="link t-mono" (click)="remove(document)">
+                    Remove
+                  </button>
+                }
+              </span>
+            </div>
+          }
+        </div>
+      }
+
+      <input
+        #picker
+        type="file"
+        class="offscreen"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
+        (change)="onPicked($event)"
+      />
+    </section>
+
+    <section class="block">
+      <h2 class="t-heading">Built on this land</h2>
+      @if (l.projects.length === 0) {
+        <div class="card">
+          <p class="t-body">No project points at this plot yet.</p>
+          <p class="t-small">Pick it on the New Project form, or from a project's own settings.</p>
+        </div>
+      } @else {
+        <div class="card projects">
+          @for (project of l.projects; track project.id) {
+            <a class="project" [routerLink]="['/projects', project.id]">
+              <span class="t-body">{{ project.name }}</span>
+              <span class="t-micro">
+                {{ project.status }}
+                @if (project.deleted_at) {
+                  &middot; deleted
+                }
+              </span>
+            </a>
+          }
+        </div>
+      }
+    </section>
+  } @else {
+    <div class="card">
+      <p class="t-body">That plot is not here.</p>
+      <p class="t-small"><a class="link" routerLink="/lands">Back to all land</a></p>
+    </div>
+  }
+</div>

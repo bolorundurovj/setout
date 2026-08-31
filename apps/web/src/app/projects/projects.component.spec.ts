@@ -12,6 +12,8 @@ function project(over: Partial<ProjectRead> = {}): ProjectRead {
     currency_code: 'NGN',
     currency_exponent: 2,
     status: 'active',
+    land_id: null,
+    land_name: null,
     notes: null,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',

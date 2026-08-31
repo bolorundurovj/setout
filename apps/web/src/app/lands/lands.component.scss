@@ -1,0 +1,107 @@
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.search {
+  max-width: 340px;
+}
+
+.table {
+  border: 1.5px solid var(--rule);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.row {
+  width: 100%;
+  box-sizing: border-box;
+  background: none;
+  border: none;
+  font: inherit;
+  text-align: left;
+  display: grid;
+  grid-template-columns: 1fr 180px 130px 180px;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+}
+
+button.row {
+  cursor: pointer;
+
+  &:hover {
+    background: var(--field);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--surface) inset,
+      0 0 0 4px var(--accent) inset;
+  }
+}
+
+.row.head {
+  padding: 11px 18px;
+  background: var(--field);
+  border-bottom: 1.5px solid var(--rule);
+}
+
+.row:not(.head) + .row {
+  border-top: 1px solid var(--hairline);
+}
+
+.row.archived {
+  background: var(--sidebar);
+}
+
+.row.archived .land-name {
+  color: var(--ink-3);
+}
+
+.name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.papers {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.right {
+  text-align: right;
+}
+
+.muted {
+  color: var(--ink-3);
+}
+
+.figure {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.error {
+  color: var(--over);
+}
+
+@media (max-width: 720px) {
+  .row {
+    grid-template-columns: 1fr auto;
+    row-gap: 6px;
+  }
+
+  .row.head {
+    display: none;
+  }
+}

@@ -42,6 +42,13 @@ export class App {
       badge: () => this.count(this.counts.projects()),
     },
     {
+      key: 'lands',
+      icon: 'land',
+      name: 'Land',
+      path: '/lands',
+      badge: () => this.count(this.counts.lands()),
+    },
+    {
       key: 'vendors',
       icon: 'vendors',
       name: 'Vendors',

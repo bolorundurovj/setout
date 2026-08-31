@@ -9,6 +9,9 @@ import { PersonDetailComponent } from './people/person-detail.component';
 import { ImportComponent } from './import/import.component';
 import { SearchComponent } from './search/search.component';
 import { ProjectsComponent } from './projects/projects.component';
+import { LandsComponent } from './lands/lands.component';
+import { LandDetailComponent } from './lands/land-detail.component';
+import { LandFormComponent } from './lands/land-form.component';
 import { VendorsComponent } from './vendors/vendors.component';
 import { VendorDetailComponent } from './vendors/vendor-detail.component';
 import { VendorFormComponent } from './vendors/vendor-form.component';
@@ -53,6 +56,25 @@ export const routes: Routes = [
   },
   { path: 'items', component: ItemsComponent, canActivate: [authGuard], title: 'Items' },
   { path: 'items/:id', component: ItemDetailComponent, canActivate: [authGuard], title: 'Item' },
+  { path: 'lands', component: LandsComponent, canActivate: [authGuard], title: 'Land' },
+  {
+    path: 'lands/new',
+    component: LandFormComponent,
+    canActivate: [authGuard],
+    title: 'New Land',
+  },
+  {
+    path: 'lands/:id/edit',
+    component: LandFormComponent,
+    canActivate: [authGuard],
+    title: 'Edit land',
+  },
+  {
+    path: 'lands/:id',
+    component: LandDetailComponent,
+    canActivate: [authGuard],
+    title: 'Land',
+  },
   { path: 'vendors', component: VendorsComponent, canActivate: [authGuard], title: 'Vendors' },
   {
     path: 'vendors/new',

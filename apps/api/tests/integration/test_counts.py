@@ -26,7 +26,13 @@ async def test_counts_require_authentication(client: AsyncClient) -> None:
 
 async def test_a_fresh_install_counts_nothing(client: AsyncClient) -> None:
     await _signed_in(client)
-    assert await _counts(client) == {"projects": 0, "vendors": 0, "items": 0, "people": 0}
+    assert await _counts(client) == {
+        "projects": 0,
+        "vendors": 0,
+        "items": 0,
+        "people": 0,
+        "lands": 0,
+    }
 
 
 async def test_counts_follow_what_has_been_added(client: AsyncClient) -> None:
@@ -39,7 +45,13 @@ async def test_counts_follow_what_has_been_added(client: AsyncClient) -> None:
     await client.post("/api/items", json={"name": "Cement", "unit": "bag"})
     await client.post("/api/people", json={"name": "Mum"})
 
-    assert await _counts(client) == {"projects": 2, "vendors": 1, "items": 1, "people": 1}
+    assert await _counts(client) == {
+        "projects": 2,
+        "vendors": 1,
+        "items": 1,
+        "people": 1,
+        "lands": 0,
+    }
 
 
 async def test_what_has_been_archived_is_not_counted(client: AsyncClient) -> None:

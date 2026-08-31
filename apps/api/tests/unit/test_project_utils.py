@@ -24,6 +24,8 @@ def _project(status: ProjectStatus, deleted_at: datetime | None = None) -> Proje
             currency_id="NGN",
             currency=SimpleNamespace(code="NGN", name="Nigerian Naira", exponent=2),
             status=status,
+            land_id=None,
+            land=None,
             notes=None,
             created_at=datetime(2026, 1, 1, tzinfo=UTC),
             updated_at=datetime(2026, 1, 2, tzinfo=UTC),

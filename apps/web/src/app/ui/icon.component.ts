@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-export type IconName = 'home' | 'projects' | 'vendors' | 'items' | 'people' | 'settings';
+export type IconName = 'home' | 'projects' | 'land' | 'vendors' | 'items' | 'people' | 'settings';
 
 @Component({
   selector: 'app-icon',
@@ -28,6 +28,10 @@ export type IconName = 'home' | 'projects' | 'vendors' | 'items' | 'people' | 's
           <path d="M1.6 13.6h12.8" />
           <path d="M2.6 13.6V7.6H7" />
           <path d="M7 13.6V3.4h6.4v10.2" />
+        }
+        @case ('land') {
+          <path d="M2 12.4 6 3.2l4 4.6 1.6-2 2.4 6.6Z" />
+          <path d="M1.6 12.4h12.8" />
         }
         @case ('vendors') {
           <path d="M2.2 5.6h11.6l-1 7.2a.7.7 0 0 1-.7.6H3.9a.7.7 0 0 1-.7-.6Z" />
