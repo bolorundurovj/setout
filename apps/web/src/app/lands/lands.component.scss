@@ -59,6 +59,13 @@ button.row {
   background: var(--sidebar);
 }
 
+.land-name {
+  font:
+    500 13px/1.45 'DM Sans',
+    sans-serif;
+  color: var(--ink);
+}
+
 .row.archived .land-name {
   color: var(--ink-3);
 }
