@@ -16,6 +16,8 @@ from setout.models.project import Project
 from setout.models.scope import Scope
 from setout.models.vendor import Vendor
 from setout.schemas.expense import (
+    BulkFileExpenses,
+    BulkFileResult,
     ExpenseCreate,
     ExpensePage,
     ExpenseRead,
@@ -90,6 +92,17 @@ class ExpenseController:
             notes=req.notes,
         )
         return self._read(expense, 0)
+
+    async def bulk_file(self, project_id: str, req: BulkFileExpenses) -> BulkFileResult:
+        await self._project_or_404(project_id)
+        await self._fileable_scope(req.scope_id, project_id)
+        filed = await Expense.filter(
+            project_id=project_id,
+            id__in=req.expense_ids,
+            deleted_at__isnull=True,
+            scope_id__isnull=True,
+        ).update(scope_id=req.scope_id)
+        return BulkFileResult(filed_count=filed)
 
     async def _resolve_scope(self, project_id: str, req: ExpenseCreate) -> str | None:
         if req.scope_id is not None:

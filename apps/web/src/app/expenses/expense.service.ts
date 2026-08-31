@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { detailOf } from '../api-error';
 import {
   Api,
+  BulkFileExpenses,
   ExpenseCreate,
   ExpenseUpdate,
   ExpenseRead,
@@ -10,6 +11,7 @@ import {
   ScopeSuggestion,
   addExpense,
   deleteExpense,
+  fileExpenses,
   getProjectMonths,
   getProjectSpend,
   listExpenses,
@@ -172,6 +174,22 @@ export class ExpenseService {
       return updated;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not change that expense.');
+      return null;
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async file(projectId: string, body: BulkFileExpenses): Promise<number | null> {
+    this.saving.set(true);
+    this.error.set(null);
+    try {
+      const result = await this.api.invoke(fileExpenses, { project_id: projectId, body });
+      await this.refresh(projectId);
+      await this.loadSpend(projectId);
+      return result.filed_count;
+    } catch (e: unknown) {
+      this.error.set(detailOf(e) ?? 'Could not file those expenses.');
       return null;
     } finally {
       this.saving.set(false);

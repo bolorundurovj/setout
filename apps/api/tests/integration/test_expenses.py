@@ -855,3 +855,76 @@ async def test_auto_assign_can_be_disabled(client: AsyncClient) -> None:
 
     spend = await _spend(client, project_id, item_id=item["id"], auto_scope=False)
     assert spend["scope_id"] is None
+
+
+async def test_bulk_files_unfiled_expenses_to_a_scope(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    scope = await _scope(client, project_id, "Concrete foundation")
+    first = await _spend(client, project_id, description="Cement", amount=10_000_00)
+    second = await _spend(client, project_id, description="Sand", amount=5_000_00)
+
+    resp = await client.patch(
+        f"/api/projects/{project_id}/expenses",
+        json={"expense_ids": [first["id"], second["id"]], "scope_id": scope["id"]},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["filed_count"] == 2
+
+    page = (
+        await client.get(f"/api/projects/{project_id}/expenses", params={"unfiled_only": True})
+    ).json()
+    assert page["total"] == 0
+
+    listed = (await client.get(f"/api/projects/{project_id}/expenses")).json()
+    filed = {row["id"]: row["scope_id"] for row in listed["items"]}
+    assert filed[first["id"]] == scope["id"]
+    assert filed[second["id"]] == scope["id"]
+
+
+async def test_bulk_file_ignores_expenses_already_filed_or_deleted(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    scope = await _scope(client, project_id, "Concrete foundation")
+    unfiled = await _spend(client, project_id, description="Cement", amount=10_000_00)
+    filed = await _spend(
+        client, project_id, description="Sand", amount=5_000_00, scope_id=scope["id"]
+    )
+    gone = await _spend(client, project_id, description="Wood", amount=3_000_00)
+    await client.delete(f"/api/expenses/{gone['id']}")
+
+    resp = await client.patch(
+        f"/api/projects/{project_id}/expenses",
+        json={
+            "expense_ids": [unfiled["id"], filed["id"], gone["id"], "nope"],
+            "scope_id": scope["id"],
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["filed_count"] == 1
+
+
+async def test_bulk_file_rejects_a_group_scope(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    group = await _scope(client, project_id, "Structure and exterior")
+    await _scope(client, project_id, "Blockwork", parent_id=group["id"])
+    spend = await _spend(client, project_id, description="Cement", amount=10_000_00)
+
+    resp = await client.patch(
+        f"/api/projects/{project_id}/expenses",
+        json={"expense_ids": [spend["id"]], "scope_id": group["id"]},
+    )
+    assert resp.status_code == 409
+
+
+async def test_bulk_file_rejects_a_scope_from_another_project(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    other = (
+        await client.post("/api/projects", json={"name": "Owode Bungalow", "currency_code": "NGN"})
+    ).json()
+    stranger = await _scope(client, other["id"], "Interior work")
+    spend = await _spend(client, project_id, description="Cement", amount=10_000_00)
+
+    resp = await client.patch(
+        f"/api/projects/{project_id}/expenses",
+        json={"expense_ids": [spend["id"]], "scope_id": stranger["id"]},
+    )
+    assert resp.status_code == 404

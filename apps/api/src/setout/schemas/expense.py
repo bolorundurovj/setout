@@ -51,6 +51,15 @@ class ScopeSuggestion(BaseModel):
     reason: str | None = Field(None, description="Why this scope was suggested")
 
 
+class BulkFileExpenses(BaseModel):
+    expense_ids: list[str] = Field(..., min_length=1, description="Unfiled expenses to file")
+    scope_id: str = Field(..., description="The scope they should all be filed under")
+
+
+class BulkFileResult(BaseModel):
+    filed_count: int = Field(..., description="How many unfiled expenses were filed")
+
+
 class ExpenseRead(BaseModel):
     id: str
     project_id: str

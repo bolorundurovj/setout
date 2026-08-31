@@ -2052,6 +2052,84 @@
           }
         }
       },
+      "patch": {
+        "tags": [
+          "expenses"
+        ],
+        "summary": "File Expenses",
+        "operationId": "fileExpenses",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkFileExpenses"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkFileResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Scope holds no spend of its own"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request: the body could not be parsed"
+          }
+        }
+      },
       "post": {
         "tags": [
           "expenses"
@@ -8551,6 +8629,44 @@
         "additionalProperties": false,
         "type": "object",
         "title": "BudgetItemUpdate"
+      },
+      "BulkFileExpenses": {
+        "properties": {
+          "expense_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Expense Ids",
+            "description": "Unfiled expenses to file"
+          },
+          "scope_id": {
+            "type": "string",
+            "title": "Scope Id",
+            "description": "The scope they should all be filed under"
+          }
+        },
+        "type": "object",
+        "required": [
+          "expense_ids",
+          "scope_id"
+        ],
+        "title": "BulkFileExpenses"
+      },
+      "BulkFileResult": {
+        "properties": {
+          "filed_count": {
+            "type": "integer",
+            "title": "Filed Count",
+            "description": "How many unfiled expenses were filed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filed_count"
+        ],
+        "title": "BulkFileResult"
       },
       "CostType": {
         "type": "string",

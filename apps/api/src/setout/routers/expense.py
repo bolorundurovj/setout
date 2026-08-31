@@ -8,6 +8,8 @@ from setout.controllers.expense import ExpenseController
 from setout.models.user import User
 from setout.routers.auth import get_current_user
 from setout.schemas.expense import (
+    BulkFileExpenses,
+    BulkFileResult,
     ExpenseCreate,
     ExpensePage,
     ExpenseRead,
@@ -63,6 +65,20 @@ async def list_expenses(
         limit=limit,
         offset=offset,
     )
+
+
+@router.patch(
+    "/projects/{project_id}/expenses",
+    operation_id="fileExpenses",
+    responses={
+        **NOT_FOUND,
+        status.HTTP_409_CONFLICT: {"description": "Scope holds no spend of its own"},
+    },
+)
+async def file_expenses(
+    project_id: str, req: BulkFileExpenses, user: CurrentUser
+) -> BulkFileResult:
+    return await controller.bulk_file(project_id, req)
 
 
 @router.post(
