@@ -7,12 +7,14 @@ import {
   ExpenseRead,
   ProjectMonths,
   ProjectSpend,
+  ScopeSuggestion,
   addExpense,
   deleteExpense,
   getProjectMonths,
   getProjectSpend,
   listExpenses,
   restoreExpense,
+  suggestScope,
   updateExpense,
 } from '@setout/api-client';
 import { PAGE_SIZE, offsetOf } from '../ui/paging';
@@ -122,6 +124,22 @@ export class ExpenseService {
       }));
     } catch {
       this.byMonthState.update((all) => ({ ...all, [month]: { rows: [], total: 0, page: 1 } }));
+    }
+  }
+
+  async suggestScope(
+    projectId: string,
+    itemId?: string,
+    vendorId?: string,
+  ): Promise<ScopeSuggestion | null> {
+    try {
+      return await this.api.invoke(suggestScope, {
+        project_id: projectId,
+        item_id: itemId || undefined,
+        vendor_id: vendorId || undefined,
+      });
+    } catch {
+      return null;
     }
   }
 

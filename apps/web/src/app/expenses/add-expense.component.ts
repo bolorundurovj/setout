@@ -16,6 +16,7 @@ import type {
   ExpenseRead,
   ItemLastPrice,
   ProjectRead,
+  ScopeSuggestion,
 } from '@setout/api-client';
 import { AgreementService } from '../agreements/agreement.service';
 import { AttachmentService } from '../attachments/attachment.service';
@@ -88,6 +89,7 @@ export class AddExpenseComponent {
   readonly owedWhen = signal('');
   readonly addingVendor = signal(false);
   readonly newVendorName = signal('');
+  readonly suggestedScopeId = signal<string | null>(null);
 
   private readonly photo = viewChild.required<ElementRef<HTMLInputElement>>('photo');
   readonly chosen = signal<File | null>(null);
@@ -175,6 +177,18 @@ export class AddExpenseComponent {
         void this.attachments.load(expense.id);
       }
     });
+    effect(() => {
+      if (this.isEditing() || this.budget.scopes().length === 0) {
+        return;
+      }
+      const itemId = this.itemId();
+      const vendorId = this.vendorId();
+      if (!itemId && !vendorId) {
+        this.suggestedScopeId.set(null);
+        return;
+      }
+      void this.suggestScope(itemId, vendorId);
+    });
     queueMicrotask(() => {
       void this.budget.load(this.project().id);
       void this.agreements.load(this.project().id);
@@ -217,9 +231,13 @@ export class AddExpenseComponent {
 
   scopeNote(): string {
     const scope = this.budget.scopes().find((s) => s.id === this.scopeId());
-    return scope
-      ? `Counts against the plan for ${scope.name}.`
-      : 'Files as unfiled. Nothing is blocked, and you can file it later.';
+    if (!scope) {
+      return 'Files as unfiled. Nothing is blocked, and you can file it later.';
+    }
+    if (this.scopeId() === this.suggestedScopeId()) {
+      return `Suggested from past purchases. Counts against the plan for ${scope.name}.`;
+    }
+    return `Counts against the plan for ${scope.name}.`;
   }
 
   dateNote(): string {
@@ -293,6 +311,18 @@ export class AddExpenseComponent {
     if (last && !this.unitRate().trim()) {
       const exponent = this.project().currency_exponent;
       this.unitRate.set((last.unit_rate / 10 ** exponent).toFixed(exponent));
+    }
+  }
+
+  private async suggestScope(itemId: string, vendorId: string): Promise<void> {
+    const suggestion: ScopeSuggestion | null = await this.expenses.suggestScope(
+      this.project().id,
+      itemId || undefined,
+      vendorId || undefined,
+    );
+    if (suggestion?.scope_id && !this.scopeId()) {
+      this.scopeId.set(suggestion.scope_id);
+      this.suggestedScopeId.set(suggestion.scope_id);
     }
   }
 
@@ -487,6 +517,7 @@ export class AddExpenseComponent {
     this.notes.set('');
     this.itemId.set('');
     this.lastPrice.set(null);
+    this.suggestedScopeId.set(null);
     this.owed.set(false);
     this.owedWhat.set('');
     this.owedWhen.set('');

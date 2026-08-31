@@ -671,3 +671,100 @@ async def test_restoring_an_expense_brings_its_delivery_and_files_back(
 
     assert await Delivery.filter(expense_id=spend["id"], deleted_at__isnull=True).count() == 1
     assert await Attachment.filter(expense_id=spend["id"], deleted_at__isnull=True).count() == 1
+
+
+async def test_suggestion_from_item_history(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    scope = await _scope(client, project_id, "Concrete foundation")
+    item = (await client.post("/api/items", json={"name": "Cement", "unit": "bag"})).json()
+
+    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+
+    resp = await client.get(
+        f"/api/projects/{project_id}/suggest-scope", params={"item_id": item["id"]}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["scope_id"] == scope["id"]
+    assert "item" in resp.json()["reason"].casefold()
+
+
+async def test_suggestion_from_vendor_history(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    scope = await _scope(client, project_id, "Blockwork")
+    vendor = (await client.post("/api/vendors", json={"name": "Segun Blocks"})).json()
+
+    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=scope["id"])
+    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=scope["id"])
+
+    resp = await client.get(
+        f"/api/projects/{project_id}/suggest-scope", params={"vendor_id": vendor["id"]}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["scope_id"] == scope["id"]
+    assert "vendor" in resp.json()["reason"].casefold()
+
+
+async def test_suggestion_prefers_item_over_vendor(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    item_scope = await _scope(client, project_id, "Concrete foundation")
+    vendor_scope = await _scope(client, project_id, "Blockwork")
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+    vendor = (await client.post("/api/vendors", json={"name": "Segun Blocks"})).json()
+
+    await _spend(
+        client,
+        project_id,
+        item_id=item["id"],
+        vendor_id=vendor["id"],
+        scope_id=item_scope["id"],
+    )
+    await _spend(
+        client,
+        project_id,
+        item_id=item["id"],
+        vendor_id=vendor["id"],
+        scope_id=item_scope["id"],
+    )
+    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=vendor_scope["id"])
+
+    resp = await client.get(
+        f"/api/projects/{project_id}/suggest-scope",
+        params={"item_id": item["id"], "vendor_id": vendor["id"]},
+    )
+    assert resp.json()["scope_id"] == item_scope["id"]
+
+
+async def test_suggestion_tie_returns_null(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    first = await _scope(client, project_id, "Concrete foundation")
+    second = await _scope(client, project_id, "Blockwork")
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+
+    await _spend(client, project_id, item_id=item["id"], scope_id=first["id"])
+    await _spend(client, project_id, item_id=item["id"], scope_id=second["id"])
+
+    resp = await client.get(
+        f"/api/projects/{project_id}/suggest-scope", params={"item_id": item["id"]}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["scope_id"] is None
+    assert resp.json()["reason"] is None
+
+
+async def test_suggestion_empty_returns_null(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+
+    resp = await client.get(
+        f"/api/projects/{project_id}/suggest-scope", params={"item_id": item["id"]}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["scope_id"] is None
+    assert resp.json()["reason"] is None
+
+
+async def test_suggestion_missing_project_404(client: AsyncClient) -> None:
+    await _project(client)
+    resp = await client.get("/api/projects/nope/suggest-scope")
+    assert resp.status_code == 404

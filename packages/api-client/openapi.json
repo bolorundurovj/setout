@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Setout API",
-    "version": "1.1.1"
+    "version": "1.2.0"
   },
   "paths": {
     "/healthz": {
@@ -2127,6 +2127,106 @@
           },
           "400": {
             "description": "Bad Request: the body could not be parsed"
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/suggest-scope": {
+      "get": {
+        "tags": [
+          "expenses"
+        ],
+        "summary": "Suggest Scope",
+        "operationId": "suggestScope",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "What was bought",
+              "title": "Item Id"
+            },
+            "description": "What was bought"
+          },
+          {
+            "name": "vendor_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Who it was bought from",
+              "title": "Vendor Id"
+            },
+            "description": "Who it was bought from"
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScopeSuggestion"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       }
@@ -12253,6 +12353,36 @@
           "deleted_at"
         ],
         "title": "ScopeRead"
+      },
+      "ScopeSuggestion": {
+        "properties": {
+          "scope_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Id",
+            "description": "The scope that past purchases used most often"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Why this scope was suggested"
+          }
+        },
+        "type": "object",
+        "title": "ScopeSuggestion"
       },
       "ScopeUpdate": {
         "properties": {

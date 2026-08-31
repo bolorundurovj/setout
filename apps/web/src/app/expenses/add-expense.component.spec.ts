@@ -54,6 +54,7 @@ describe('AddExpenseComponent', () => {
       error: () => null,
       load: async () => undefined,
       loadSpend: async () => undefined,
+      suggestScope: async () => ({ scope_id: 's1', reason: 'Past purchases of this item' }),
       add: async (...args: unknown[]) => {
         saves.push(args);
         return { id: 'e1', description: 'Cement' };
@@ -74,6 +75,10 @@ describe('AddExpenseComponent', () => {
       load: async () => undefined,
       loadAll: async () => undefined,
       lastPrice: () => null,
+    };
+    const budget = {
+      ...empty,
+      scopes: () => [{ id: 's1', name: 'Concrete foundation', is_group: false }],
     };
 
     TestBed.resetTestingModule();
@@ -114,7 +119,7 @@ describe('AddExpenseComponent', () => {
             },
           },
         },
-        { provide: BudgetService, useValue: empty },
+        { provide: BudgetService, useValue: budget },
         { provide: ItemService, useValue: empty },
         { provide: VendorService, useValue: empty },
         { provide: PersonService, useValue: empty },
@@ -340,5 +345,32 @@ describe('AddExpenseComponent', () => {
 
     expect(component.chosen()).toBeNull();
     expect(uploads).toEqual([]);
+  });
+
+  it('suggests a scope when an item is picked', async () => {
+    const fixture = render();
+    const component = fixture.componentInstance;
+
+    await component.pickItem('i1');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.scopeId()).toBe('s1');
+    expect(component.suggestedScopeId()).toBe('s1');
+    expect(component.scopeNote()).toContain('Suggested from past purchases');
+  });
+
+  it('does not override a scope the user already chose', async () => {
+    const fixture = render();
+    const component = fixture.componentInstance;
+    component.scopeId.set('s2');
+
+    await component.pickItem('i1');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.scopeId()).toBe('s2');
+    expect(component.suggestedScopeId()).toBeNull();
+    expect(component.scopeNote()).not.toContain('Suggested');
   });
 });

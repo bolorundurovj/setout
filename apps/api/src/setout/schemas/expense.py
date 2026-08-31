@@ -45,6 +45,11 @@ class ExpenseUpdate(BaseModel):
     notes: str | None = None
 
 
+class ScopeSuggestion(BaseModel):
+    scope_id: str | None = Field(None, description="The scope that past purchases used most often")
+    reason: str | None = Field(None, description="Why this scope was suggested")
+
+
 class ExpenseRead(BaseModel):
     id: str
     project_id: str

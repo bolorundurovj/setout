@@ -22,6 +22,7 @@ from setout.schemas.expense import (
     ExpenseUpdate,
     ProjectMonths,
     ProjectSpend,
+    ScopeSuggestion,
 )
 from setout.utils.attachments import counts_for
 from setout.utils.cascade import delete_under_expense, restore_under_expense
@@ -88,6 +89,43 @@ class ExpenseController:
             notes=req.notes,
         )
         return self._read(expense, 0)
+
+    async def suggest_scope(
+        self, project_id: str, item_id: str | None, vendor_id: str | None
+    ) -> ScopeSuggestion:
+        await self._project_or_404(project_id)
+        if item_id:
+            scope_id = await self._most_common_scope(project_id, item_id=item_id)
+            if scope_id:
+                return ScopeSuggestion(scope_id=scope_id, reason="Past purchases of this item")
+        if vendor_id:
+            scope_id = await self._most_common_scope(project_id, vendor_id=vendor_id)
+            if scope_id:
+                return ScopeSuggestion(scope_id=scope_id, reason="Past purchases from this vendor")
+        return ScopeSuggestion(scope_id=None, reason=None)
+
+    async def _most_common_scope(
+        self, project_id: str, *, item_id: str | None = None, vendor_id: str | None = None
+    ) -> str | None:
+        query = Expense.filter(
+            project_id=project_id, deleted_at__isnull=True, scope_id__isnull=False
+        )
+        if item_id is not None:
+            query = query.filter(item_id=item_id)
+        elif vendor_id is not None:
+            query = query.filter(vendor_id=vendor_id)
+        else:
+            return None
+        counts: dict[str, int] = {}
+        for expense in await query.only("scope_id"):
+            scope_id = expense.scope_id
+            assert scope_id is not None
+            counts[scope_id] = counts.get(scope_id, 0) + 1
+        if not counts:
+            return None
+        max_count = max(counts.values())
+        winners = [scope_id for scope_id, count in counts.items() if count == max_count]
+        return winners[0] if len(winners) == 1 else None
 
     async def get(self, expense_id: str) -> ExpenseRead:
         expense = await self._expense_or_404(expense_id)

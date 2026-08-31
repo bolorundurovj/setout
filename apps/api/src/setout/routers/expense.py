@@ -14,6 +14,7 @@ from setout.schemas.expense import (
     ExpenseUpdate,
     ProjectMonths,
     ProjectSpend,
+    ScopeSuggestion,
 )
 
 router = APIRouter(
@@ -75,6 +76,20 @@ async def list_expenses(
 )
 async def add_expense(project_id: str, req: ExpenseCreate, user: CurrentUser) -> ExpenseRead:
     return await controller.create(project_id, req)
+
+
+@router.get(
+    "/projects/{project_id}/suggest-scope",
+    operation_id="suggestScope",
+    responses=NOT_FOUND,
+)
+async def suggest_scope(
+    project_id: str,
+    user: CurrentUser,
+    item_id: Annotated[str | None, Query(description="What was bought")] = None,
+    vendor_id: Annotated[str | None, Query(description="Who it was bought from")] = None,
+) -> ScopeSuggestion:
+    return await controller.suggest_scope(project_id, item_id, vendor_id)
 
 
 @router.get("/projects/{project_id}/spend", operation_id="getProjectSpend", responses=NOT_FOUND)
