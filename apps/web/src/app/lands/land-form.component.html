@@ -1,0 +1,113 @@
+<div class="page">
+  <a class="link t-mono back" routerLink="/lands">&#8592; Back</a>
+
+  <div class="head">
+    <h1 class="t-display">{{ title() }}</h1>
+    <p class="t-small">{{ subtitle() }}</p>
+  </div>
+
+  <div class="card form">
+    <label class="field">
+      <span class="t-micro">Name &middot; required</span>
+      <input
+        class="input-field"
+        type="text"
+        autocomplete="off"
+        placeholder="What you call the plot"
+        [value]="name()"
+        (input)="name.set(value($event))"
+        (keyup.enter)="save()"
+      />
+    </label>
+
+    <label class="field">
+      <span class="t-micro">Address</span>
+      <input
+        class="input-field"
+        type="text"
+        autocomplete="off"
+        placeholder="Plot number, street, landmark"
+        [value]="address()"
+        (input)="address.set(value($event))"
+      />
+    </label>
+
+    <div class="pair">
+      <label class="field">
+        <span class="t-micro">Town or city</span>
+        <input
+          class="input-field"
+          type="text"
+          autocomplete="off"
+          [value]="city()"
+          (input)="city.set(value($event))"
+        />
+      </label>
+      <label class="field">
+        <span class="t-micro">State</span>
+        <input
+          class="input-field"
+          type="text"
+          autocomplete="off"
+          [value]="state()"
+          (input)="state.set(value($event))"
+        />
+      </label>
+    </div>
+
+    <label class="field">
+      <span class="t-micro">Size</span>
+      <input
+        class="input-field t-mono"
+        type="number"
+        min="0"
+        step="0.01"
+        autocomplete="off"
+        placeholder="What the survey says"
+        [value]="sizeValue()"
+        (input)="sizeValue.set(value($event))"
+      />
+    </label>
+
+    <div class="field">
+      <span class="t-micro">Measured in</span>
+      <app-chip-group
+        label="Measured in"
+        [chips]="unitChips"
+        [value]="sizeUnit()"
+        [clearable]="true"
+        (valueChange)="sizeUnit.set($event)"
+      />
+      @if (sizeNote()) {
+        <span class="t-small warn">{{ sizeNote() }}</span>
+      } @else {
+        <span class="t-small muted">Recorded the way the survey put it, not converted.</span>
+      }
+    </div>
+
+    <label class="field">
+      <span class="t-micro">Notes</span>
+      <input
+        class="input-field"
+        type="text"
+        autocomplete="off"
+        placeholder="Anything worth remembering"
+        [value]="notes()"
+        (input)="notes.set(value($event))"
+      />
+    </label>
+
+    <div class="form-actions">
+      <app-button [disabled]="!isValid()" [loading]="lands.saving()" (pressed)="save()">
+        Save
+      </app-button>
+      <app-button variant="secondary" (pressed)="cancel()">Cancel</app-button>
+    </div>
+
+    @if (!isEdit()) {
+      <p class="t-small muted">
+        The Certificate of Occupancy and the rest go on after this, from the plot's own page.
+      </p>
+    }
+  </div>
+</div>

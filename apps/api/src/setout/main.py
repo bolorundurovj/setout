@@ -15,6 +15,9 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import Response
+from starlette.types import Scope
 
 from setout import __version__
 from setout.config import Settings, get_settings
@@ -32,6 +35,7 @@ from setout.routers import (
     import_sheet,
     install,
     item,
+    land,
     person,
     project,
     scope,
@@ -40,6 +44,30 @@ from setout.routers import (
 )
 
 logger = logging.getLogger("setout")
+
+SERVER_PREFIXES = ("api", "docs", "redoc", "openapi.json", "healthz")
+
+
+class SPAStaticFiles(StaticFiles):
+    """Static files that answer unknown paths with the web app's index.
+
+    Client-side routes such as /people/new are not files, so refreshing or deep
+    linking one has to reach index.html and let the router take it from there.
+    Anything the server owns keeps its own 404.
+    """
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code != 404 or self._is_server_path(scope):
+                raise
+            return await super().get_response("index.html", scope)
+
+    @staticmethod
+    def _is_server_path(scope: Scope) -> bool:
+        head = str(scope.get("path", "")).lstrip("/").split("/")[0]
+        return head in SERVER_PREFIXES
 
 
 def _install_openapi(app: FastAPI) -> Callable[[], dict[str, Any]]:
@@ -120,6 +148,7 @@ def create_app() -> FastAPI:
     api.include_router(scope.router)
     api.include_router(expense.router)
     api.include_router(item.router)
+    api.include_router(land.router)
     api.include_router(vendor.router)
     api.include_router(person.router)
     api.include_router(agreement.router)
@@ -136,7 +165,7 @@ def create_app() -> FastAPI:
     if settings.static_dir and settings.static_dir.is_dir():
         app.mount(
             "/",
-            StaticFiles(directory=settings.static_dir, html=True),
+            SPAStaticFiles(directory=settings.static_dir, html=True),
             name="web",
         )
 

@@ -2,17 +2,21 @@ import { Injectable, inject, signal } from '@angular/core';
 import { detailOf } from '../api-error';
 import {
   Api,
+  BulkFileExpenses,
   ExpenseCreate,
   ExpenseUpdate,
   ExpenseRead,
   ProjectMonths,
   ProjectSpend,
+  ScopeSuggestion,
   addExpense,
   deleteExpense,
+  fileExpenses,
   getProjectMonths,
   getProjectSpend,
   listExpenses,
   restoreExpense,
+  suggestScope,
   updateExpense,
 } from '@setout/api-client';
 import { PAGE_SIZE, offsetOf } from '../ui/paging';
@@ -125,6 +129,22 @@ export class ExpenseService {
     }
   }
 
+  async suggestScope(
+    projectId: string,
+    itemId?: string,
+    vendorId?: string,
+  ): Promise<ScopeSuggestion | null> {
+    try {
+      return await this.api.invoke(suggestScope, {
+        project_id: projectId,
+        item_id: itemId || undefined,
+        vendor_id: vendorId || undefined,
+      });
+    } catch {
+      return null;
+    }
+  }
+
   async add(projectId: string, body: ExpenseCreate): Promise<ExpenseRead | null> {
     this.saving.set(true);
     this.error.set(null);
@@ -154,6 +174,22 @@ export class ExpenseService {
       return updated;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not change that expense.');
+      return null;
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async file(projectId: string, body: BulkFileExpenses): Promise<number | null> {
+    this.saving.set(true);
+    this.error.set(null);
+    try {
+      const result = await this.api.invoke(fileExpenses, { project_id: projectId, body });
+      await this.refresh(projectId);
+      await this.loadSpend(projectId);
+      return result.filed_count;
+    } catch (e: unknown) {
+      this.error.set(detailOf(e) ?? 'Could not file those expenses.');
       return null;
     } finally {
       this.saving.set(false);

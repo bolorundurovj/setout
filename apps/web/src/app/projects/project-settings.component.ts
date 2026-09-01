@@ -15,6 +15,9 @@ import { currencyShape } from '../budget/currency-shape';
 import { formatMoney } from '../budget/money';
 import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
+import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
+import { LandService } from '../lands/land.service';
+import { whereLabel } from '../lands/land-labels';
 import { ProjectService } from './project.service';
 
 const TINTS = 5;
@@ -30,7 +33,7 @@ interface StatusChoice {
   selector: 'app-project-settings',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent],
+  imports: [ButtonComponent, ChipGroupComponent],
   templateUrl: './project-settings.component.html',
   styleUrl: './project-settings.component.scss',
 })
@@ -43,11 +46,13 @@ export class ProjectSettingsComponent {
   private readonly router = inject(Router);
   private readonly api = inject(Api);
   readonly budget = inject(BudgetService);
+  readonly lands = inject(LandService);
   private readonly toast = inject(ToastService);
 
   readonly name = signal('');
   readonly status = signal<ProjectStatus>('active');
   readonly notes = signal('');
+  readonly landId = signal('');
   readonly saving = signal(false);
 
   readonly renaming = signal<string | null>(null);
@@ -75,11 +80,19 @@ export class ProjectSettingsComponent {
     return (
       this.name().trim() !== project.name ||
       this.status() !== project.status ||
-      this.notes() !== (project.notes ?? '')
+      this.notes() !== (project.notes ?? '') ||
+      this.landId() !== (project.land_id ?? '')
     );
   });
 
   readonly canSave = computed(() => this.dirty() && this.name().trim().length > 0);
+
+  readonly landChips = computed<Chip[]>(() => [
+    { value: '', label: 'No land' },
+    ...this.lands
+      .choices()
+      .map((land) => ({ value: land.id, label: land.name, detail: whereLabel(land) })),
+  ]);
 
   constructor() {
     queueMicrotask(() => {
@@ -87,7 +100,9 @@ export class ProjectSettingsComponent {
       this.name.set(project.name);
       this.status.set(project.status);
       this.notes.set(project.notes ?? '');
+      this.landId.set(project.land_id ?? '');
       void this.budget.load(project.id);
+      void this.lands.loadChoices();
     });
   }
 
@@ -104,6 +119,7 @@ export class ProjectSettingsComponent {
     const saved = await this.projects.update(this.project().id, {
       name: this.name().trim(),
       status: this.status(),
+      land_id: this.landId() || null,
       notes: this.notes().trim() || null,
     });
     this.saving.set(false);

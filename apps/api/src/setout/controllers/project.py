@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from fastapi import HTTPException, status
 
 from setout.models.currency import Currency
+from setout.models.land import Land
 from setout.models.project import Project, ProjectStatus
 from setout.schemas.project import (
     ProjectCreate,
@@ -29,7 +30,7 @@ class ProjectController:
             await query.order_by("-created_at")
             .offset(offset)
             .limit(limit)
-            .prefetch_related("currency")
+            .prefetch_related("currency", "land")
         )
         ids = [project.id for project in projects]
         planned = await planned_by_project(ids)
@@ -67,10 +68,11 @@ class ProjectController:
         project = await Project.create(
             name=req.name,
             currency=currency,
+            land_id=await self._land_or_422(req.land_id),
             status=req.status,
             notes=req.notes,
         )
-        await project.fetch_related("currency")
+        await project.fetch_related("currency", "land")
         return to_read(project)
 
     async def get(self, project_id: str) -> ProjectRead:
@@ -82,9 +84,12 @@ class ProjectController:
     async def update(self, project_id: str, req: ProjectUpdate) -> ProjectRead:
         project = await self._get_or_404(project_id)
         changes = req.model_dump(exclude_unset=True)
+        if "land_id" in changes:
+            changes["land_id"] = await self._land_or_422(changes["land_id"])
         if changes:
             project.update_from_dict(changes)
             await project.save()
+            await project.fetch_related("land")
         planned = await planned_by_project([project.id])
         spent = await spent_by_project([project.id])
         return to_read(project, planned.get(project.id, 0), spent.get(project.id, 0))
@@ -108,8 +113,19 @@ class ProjectController:
         spent = await spent_by_project([project.id])
         return to_read(project, planned.get(project.id, 0), spent.get(project.id, 0))
 
+    async def _land_or_422(self, land_id: str | None) -> str | None:
+        # An empty string is how a form says "no land", so treat it as clearing.
+        if not land_id:
+            return None
+        if not await Land.filter(id=land_id, deleted_at__isnull=True).exists():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=f"Unknown land: {land_id}",
+            )
+        return land_id
+
     async def _get_or_404(self, project_id: str, *, include_deleted: bool = False) -> Project:
-        project = await Project.get_or_none(id=project_id).prefetch_related("currency")
+        project = await Project.get_or_none(id=project_id).prefetch_related("currency", "land")
         if project is None or (project.deleted_at is not None and not include_deleted):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
         return project

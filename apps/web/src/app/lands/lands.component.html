@@ -1,0 +1,83 @@
+<app-topbar title="Land" [subtitle]="countLabel()">
+  <app-button (pressed)="newLand()">New Land</app-button>
+</app-topbar>
+
+<div class="page">
+  <div class="controls">
+    <input
+      class="input-field search"
+      type="search"
+      placeholder="Find a plot"
+      aria-label="Find a plot"
+      [value]="search()"
+      (input)="onSearch($event)"
+    />
+    <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
+      {{ archivedLabel() }}
+    </app-toggle>
+  </div>
+
+  @if (lands.error()) {
+    <p class="t-small error">{{ lands.error() }}</p>
+  }
+
+  @if (lands.lands().length === 0) {
+    <div class="card">
+      <p class="t-body">{{ search() ? 'No plot matches that.' : 'No land yet.' }}</p>
+      <p class="t-small">
+        Record the plot before the papers go missing. A project can point at it later.
+      </p>
+    </div>
+  } @else {
+    <div class="table">
+      <div class="row head">
+        <span class="t-micro">Plot</span>
+        <span class="t-micro">Where</span>
+        <span class="t-micro right">Size</span>
+        <span class="t-micro right">Papers</span>
+      </div>
+
+      @for (land of lands.lands(); track land.id) {
+        <button
+          type="button"
+          class="row"
+          [class.archived]="land.deleted_at"
+          (click)="open(land.id)"
+        >
+          <span class="name-cell">
+            <span class="land-name">{{ land.name }}</span>
+            <span class="t-micro">
+              {{ projectsLabel(land) }}
+              @if (land.deleted_at) {
+                &middot; archived
+              }
+            </span>
+          </span>
+
+          <span class="t-small">{{ where(land) }}</span>
+
+          <span class="right t-mono figure">{{ size(land) }}</span>
+
+          <span class="right papers">
+            <span class="t-small" [class.muted]="land.missing_kinds.length === 0">
+              {{ papersLabel(land) }}
+            </span>
+            <span class="t-micro">{{ land.document_count }} kept</span>
+          </span>
+        </button>
+      }
+    </div>
+
+    <app-pagination
+      [total]="lands.total()"
+      [page]="lands.page()"
+      noun="plots"
+      (pageChange)="goTo($event)"
+    />
+
+    <p class="t-small muted">
+      Papers counts the Certificate of Occupancy, the survey plan and the deed. Anything else you
+      keep is welcome but not chased.
+    </p>
+  }
+</div>

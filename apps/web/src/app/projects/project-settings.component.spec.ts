@@ -13,6 +13,8 @@ const project: ProjectRead = {
   currency_code: 'NGN',
   currency_exponent: 2,
   status: 'active',
+  land_id: null,
+  land_name: null,
   notes: 'A three bedroom build, part way up.',
   planned_amount: 0,
   spent_amount: 0,
@@ -165,7 +167,7 @@ describe('ProjectSettingsComponent', () => {
     expect(saved).toEqual([
       {
         id: 'p1',
-        body: { name: 'Jacaranda Close', status: 'completed', notes: 'Roof on' },
+        body: { name: 'Jacaranda Close', status: 'completed', land_id: null, notes: 'Roof on' },
       },
     ]);
     expect(changes).toBe(1);

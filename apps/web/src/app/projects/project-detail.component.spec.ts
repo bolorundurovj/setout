@@ -16,6 +16,8 @@ const project: ProjectRead = {
   name: 'Jacaranda Close, Ewuru',
   currency_code: 'NGN',
   currency_exponent: 2,
+  land_id: null,
+  land_name: null,
   planned_amount: 0,
   spent_amount: 0,
   status: 'active',

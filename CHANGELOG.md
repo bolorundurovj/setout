@@ -1,5 +1,57 @@
 # Changelog
 
+## [1.3.0](https://github.com/bolorundurovj/setout/compare/v1.2.0...v1.3.0) (2026-08-31)
+
+
+### Features
+
+* auto-assign scope when history is unambiguous ([04f0e41](https://github.com/bolorundurovj/setout/commit/04f0e41062e55e3749fbe533178a6c63c5d218d5))
+* bulk-file unfiled expenses to a scope ([9256f6a](https://github.com/bolorundurovj/setout/commit/9256f6af3ffe4e081d2881b25f15aea0632f61cf))
+* suggest scope from item or vendor history ([99ade00](https://github.com/bolorundurovj/setout/commit/99ade0094e932e0179dce42d17751ca5e3762701))
+
+
+### Bug Fixes
+
+* **land:** style land name color ([5479b35](https://github.com/bolorundurovj/setout/commit/5479b35e47ba9b618ae0313f5a628405b7e4076a))
+
+## [1.2.0](https://github.com/bolorundurovj/setout/compare/v1.1.1...v1.2.0) (2026-08-31)
+
+
+### Features
+
+* **land:** record a plot, its papers and what is built on it ([460be57](https://github.com/bolorundurovj/setout/commit/460be57c1ee27c3bef386f51650b27443f2b730b))
+
+
+### Bug Fixes
+
+* **api:** write decimals in plain notation, not scientific ([2a103d4](https://github.com/bolorundurovj/setout/commit/2a103d405170735386973a2e42b90bb94f75298f))
+
+## [1.1.1](https://github.com/bolorundurovj/setout/compare/v1.1.0...v1.1.1) (2026-08-30)
+
+
+### Build and dependencies
+
+* **deps:** bump actions/checkout from 4 to 7 ([#5](https://github.com/bolorundurovj/setout/issues/5)) ([a7f3edd](https://github.com/bolorundurovj/setout/commit/a7f3edde34c62d03f7c60b4ca375a3d99f8a81a5))
+* **deps:** resolve Dependabot alerts and bump API version to 1.1.0 ([#19](https://github.com/bolorundurovj/setout/issues/19)) ([90b92c1](https://github.com/bolorundurovj/setout/commit/90b92c167bbe315cc919b525172af49b9974c8bd))
+
+## [1.1.0](https://github.com/bolorundurovj/setout/compare/v1.0.0...v1.1.0) (2026-08-30)
+
+
+### Features
+
+* **ui:** pick from long lists with a searchable picker ([e2dcefe](https://github.com/bolorundurovj/setout/commit/e2dcefeab355b403cec74de289217adac783b94a))
+
+
+### Bug Fixes
+
+* **docker:** serve index.html when a client route is refreshed ([3d67d6e](https://github.com/bolorundurovj/setout/commit/3d67d6e2590efeffab58e3bcac644343b9f8457c))
+* **routing:** keep inputs a route never sets at their declared defaults ([bc90147](https://github.com/bolorundurovj/setout/commit/bc9014763d3751afbe757b4054e6385bf84fc585))
+
+
+### Build and dependencies
+
+* raise the web bundle budgets above the current size ([30f06f2](https://github.com/bolorundurovj/setout/commit/30f06f21473954e00b1ded209e5471d496ed18a8))
+
 ## [1.0.0](https://github.com/bolorundurovj/setout/compare/v0.1.0...v1.0.0) (2026-08-22)
 
 

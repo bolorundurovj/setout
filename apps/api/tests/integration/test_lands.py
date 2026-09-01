@@ -1,0 +1,218 @@
+"""Integration tests for land, and for the project that is built on it."""
+
+import pytest
+from httpx import AsyncClient
+
+from setout.currencies import CURRENCIES
+from setout.models.currency import Currency
+
+pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
+
+
+async def _setup(client: AsyncClient) -> None:
+    await Currency.bulk_create(
+        [Currency(code=c[0], name=c[1], exponent=c[2]) for c in CURRENCIES if c[0] == "NGN"]
+    )
+    await client.post("/api/auth/setup", json={"name": "Admin", "password": "password123"})
+
+
+async def _land(client: AsyncClient, name: str, **extra: object) -> dict:
+    resp = await client.post("/api/lands", json={"name": name, **extra})
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+async def _project(client: AsyncClient, name: str, **extra: object) -> dict:
+    resp = await client.post("/api/projects", json={"name": name, "currency_code": "NGN", **extra})
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+async def test_land_requires_authentication(client: AsyncClient) -> None:
+    assert (await client.get("/api/lands")).status_code == 401
+
+
+async def test_a_plot_is_kept_with_its_location_and_size(client: AsyncClient) -> None:
+    await _setup(client)
+    land = await _land(
+        client,
+        "Ewuru plot",
+        address="Plot 14, Jacaranda Close",
+        city="Ewuru",
+        state="Ogun",
+        size_value="648.50",
+        size_unit="sqm",
+    )
+
+    assert land["city"] == "Ewuru"
+    assert land["size_value"] == "648.5"
+    assert land["size_unit"] == "sqm"
+    assert land["document_count"] == 0
+
+
+@pytest.mark.parametrize(
+    ("sent", "shown"),
+    [
+        ("600", "600"),
+        ("600.00", "600"),
+        ("648.50", "648.5"),
+        ("648.55", "648.55"),
+        ("0.50", "0.5"),
+        ("1", "1"),
+        ("10000", "10000"),
+    ],
+)
+async def test_a_round_size_is_not_shown_in_scientific_notation(
+    client: AsyncClient, sent: str, shown: str
+) -> None:
+    await _setup(client)
+    land = await _land(client, f"Plot of {sent}", size_value=sent, size_unit="sqm")
+    assert land["size_value"] == shown
+
+    again = await client.get(f"/api/lands/{land['id']}")
+    assert again.json()["size_value"] == shown
+
+
+async def test_a_size_without_its_unit_is_refused(client: AsyncClient) -> None:
+    await _setup(client)
+    resp = await client.post("/api/lands", json={"name": "Nameless", "size_value": "500"})
+    assert resp.status_code == 422
+    assert "unit" in resp.text
+
+
+async def test_a_unit_without_a_size_is_refused(client: AsyncClient) -> None:
+    await _setup(client)
+    resp = await client.post("/api/lands", json={"name": "Nameless", "size_unit": "acre"})
+    assert resp.status_code == 422
+
+
+async def test_the_same_name_twice_is_refused(client: AsyncClient) -> None:
+    await _setup(client)
+    await _land(client, "Ewuru plot")
+    resp = await client.post("/api/lands", json={"name": "ewuru PLOT"})
+    assert resp.status_code == 409
+
+
+async def test_a_plot_says_which_papers_are_missing(client: AsyncClient) -> None:
+    await _setup(client)
+    land = await _land(client, "Ewuru plot")
+    assert land["missing_kinds"] == ["certificate_of_occupancy", "survey_plan", "deed"]
+
+
+async def test_a_project_can_be_linked_to_land_as_it_is_created(client: AsyncClient) -> None:
+    await _setup(client)
+    land = await _land(client, "Ewuru plot")
+
+    project = await _project(client, "The house", land_id=land["id"])
+
+    assert project["land_id"] == land["id"]
+    assert project["land_name"] == "Ewuru plot"
+
+
+async def test_a_project_can_be_linked_to_land_afterwards(client: AsyncClient) -> None:
+    await _setup(client)
+    land = await _land(client, "Ewuru plot")
+    project = await _project(client, "The house")
+    assert project["land_id"] is None
+
+    resp = await client.patch(f"/api/projects/{project['id']}", json={"land_id": land["id"]})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["land_name"] == "Ewuru plot"
+
+
+async def test_a_project_can_be_unlinked_from_its_land(client: AsyncClient) -> None:
+    await _setup(client)
+    land = await _land(client, "Ewuru plot")
+    project = await _project(client, "The house", land_id=land["id"])
+
+    resp = await client.patch(f"/api/projects/{project['id']}", json={"land_id": None})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["land_id"] is None
+    assert resp.json()["land_name"] is None
+
+
+async def test_linking_to_land_that_is_not_there_is_refused(client: AsyncClient) -> None:
+    await _setup(client)
+    resp = await client.post(
+        "/api/projects", json={"name": "The house", "currency_code": "NGN", "land_id": "nope"}
+    )
+    assert resp.status_code == 422
+    assert "Unknown land" in resp.text
+
+
+async def test_one_plot_carries_more_than_one_project(client: AsyncClient) -> None:
+    await _setup(client)
+    land = await _land(client, "Ewuru plot")
+    await _project(client, "The house", land_id=land["id"])
+    await _project(client, "The boundary wall", land_id=land["id"])
+
+    resp = await client.get(f"/api/lands/{land['id']}")
+    names = [project["name"] for project in resp.json()["projects"]]
+    assert names == ["The boundary wall", "The house"]
+
+
+async def test_archiving_land_leaves_the_projects_standing(client: AsyncClient) -> None:
+    await _setup(client)
+    land = await _land(client, "Ewuru plot")
+    project = await _project(client, "The house", land_id=land["id"])
+
+    assert (await client.delete(f"/api/lands/{land['id']}")).status_code == 204
+
+    still_there = await client.get(f"/api/projects/{project['id']}")
+    assert still_there.status_code == 200
+    assert still_there.json()["land_id"] == land["id"]
+
+
+async def test_archived_land_leaves_the_list_and_can_come_back(client: AsyncClient) -> None:
+    await _setup(client)
+    land = await _land(client, "Ewuru plot")
+
+    await client.delete(f"/api/lands/{land['id']}")
+    assert (await client.get("/api/lands")).json()["total"] == 0
+    assert (await client.get("/api/lands?include_archived=true")).json()["total"] == 1
+
+    resp = await client.post(f"/api/lands/{land['id']}/restore")
+    assert resp.status_code == 200
+    assert (await client.get("/api/lands")).json()["total"] == 1
+
+
+async def test_land_is_found_by_its_city(client: AsyncClient) -> None:
+    await _setup(client)
+    await _land(client, "Ewuru plot", city="Ewuru", state="Ogun")
+
+    resp = await client.get("/api/search", params={"q": "Ewuru"})
+    kinds = {group["kind"]: group for group in resp.json()["groups"]}
+    assert "lands" in kinds
+    assert kinds["lands"]["hits"][0]["title"] == "Ewuru plot"
+
+
+async def test_the_record_export_carries_land(client: AsyncClient) -> None:
+    await _setup(client)
+    await _land(client, "Ewuru plot")
+
+    resp = await client.get("/api/install/export")
+    assert resp.json()["row_counts"]["land"] == 1
+
+
+async def test_a_restore_puts_the_land_back_under_its_project(client: AsyncClient) -> None:
+    # Land has to be written before project, which references it. If the table
+    # order in the dump were wrong this restore would fail on the foreign key.
+    await _setup(client)
+    land = await _land(client, "Ewuru plot", city="Ewuru")
+    await _project(client, "The house", land_id=land["id"])
+    backup = (await client.get("/api/install/export")).json()
+
+    await client.delete(f"/api/lands/{land['id']}")
+
+    resp = await client.post(
+        "/api/install/restore", json={"backup": backup, "accept_version_change": False}
+    )
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["row_counts"]["land"] == 1
+
+    # A restore signs every device out, so sign back in before looking.
+    await client.post("/api/auth/login", json={"password": "password123"})
+    back = await client.get(f"/api/lands/{land['id']}")
+    assert back.json()["deleted_at"] is None
+    assert [project["name"] for project in back.json()["projects"]] == ["The house"]

@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import type { ExpenseRead, ProjectRead } from '@setout/api-client';
 import { BudgetService } from '../budget/budget.service';
 import { formatMoney } from '../budget/money';
@@ -7,13 +8,19 @@ import { ButtonComponent } from '../ui/button.component';
 import { DrawerComponent } from '../ui/drawer.component';
 import { PaginationComponent } from '../ui/pagination.component';
 import { AddExpenseComponent } from './add-expense.component';
-import { ExpenseService } from './expense.service';
+import { ExpenseService, UNFILED } from './expense.service';
 
 @Component({
   selector: 'app-expenses',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AddExpenseComponent, ButtonComponent, DrawerComponent, PaginationComponent],
+  imports: [
+    AddExpenseComponent,
+    ButtonComponent,
+    DrawerComponent,
+    FormsModule,
+    PaginationComponent,
+  ],
   templateUrl: './expenses.component.html',
   styleUrl: './expenses.component.scss',
 })
@@ -26,6 +33,19 @@ export class ExpensesComponent {
 
   readonly adding = signal(false);
   readonly editingExpense = signal<ExpenseRead | null>(null);
+  readonly filing = signal(false);
+  readonly selected = signal<Set<string>>(new Set());
+  readonly bulkScopeId = signal<string>('');
+
+  readonly unfiled = computed(() => this.expenses.byScope()[UNFILED]?.rows ?? []);
+  readonly unfiledTotal = computed(() => this.expenses.byScope()[UNFILED]?.total ?? 0);
+  readonly unfiledPage = computed(() => this.expenses.byScope()[UNFILED]?.page ?? 1);
+  readonly allSelected = computed(
+    () => this.unfiled().length > 0 && this.unfiled().every((e) => this.selected().has(e.id)),
+  );
+  readonly selectedCount = computed(() => this.selected().size);
+  readonly canFile = computed(() => this.selectedCount() > 0 && this.bulkScopeId() !== '');
+  readonly fileableScopes = computed(() => this.budget.scopes().filter((s) => !s.is_group));
 
   readonly notSet = '—';
 
@@ -93,6 +113,62 @@ export class ExpensesComponent {
 
   async goTo(page: number): Promise<void> {
     await this.expenses.goTo(this.project().id, page);
+  }
+
+  startFiling(): void {
+    this.filing.set(true);
+    this.selected.set(new Set());
+    this.bulkScopeId.set('');
+    void this.expenses.loadForScope(this.project().id, UNFILED);
+  }
+
+  stopFiling(): void {
+    this.filing.set(false);
+    this.selected.set(new Set());
+    this.bulkScopeId.set('');
+  }
+
+  async goToUnfiled(page: number): Promise<void> {
+    await this.expenses.loadForScope(this.project().id, UNFILED, page);
+  }
+
+  toggleAll(): void {
+    if (this.allSelected()) {
+      this.selected.set(new Set());
+    } else {
+      this.selected.set(new Set(this.unfiled().map((e) => e.id)));
+    }
+  }
+
+  toggleOne(expenseId: string): void {
+    const next = new Set(this.selected());
+    if (next.has(expenseId)) {
+      next.delete(expenseId);
+    } else {
+      next.add(expenseId);
+    }
+    this.selected.set(next);
+  }
+
+  async fileSelected(): Promise<void> {
+    if (!this.canFile()) {
+      return;
+    }
+    const count = await this.expenses.file(this.project().id, {
+      expense_ids: Array.from(this.selected()),
+      scope_id: this.bulkScopeId(),
+    });
+    if (count === null) {
+      this.toast.show(this.expenses.error() ?? 'Could not file those expenses.', 'error');
+      return;
+    }
+    this.toast.show(`${count} expense${count === 1 ? '' : 's'} filed.`, 'success');
+    this.selected.set(new Set());
+    this.bulkScopeId.set('');
+    await this.expenses.loadForScope(this.project().id, UNFILED, this.unfiledPage());
+    if (this.unfiledTotal() === 0) {
+      this.stopFiling();
+    }
   }
 
   async remove(expenseId: string): Promise<void> {

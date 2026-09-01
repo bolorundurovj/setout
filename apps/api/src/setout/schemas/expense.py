@@ -6,6 +6,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field
 
 from setout.models.expense import CostType
+from setout.schemas.decimals import PlainDecimal
 
 
 class ExpenseCreate(BaseModel):
@@ -25,6 +26,7 @@ class ExpenseCreate(BaseModel):
     unit_rate: int | None = Field(None, ge=0, description="Minor units")
     cost_type: CostType | None = None
     notes: str | None = None
+    auto_scope: bool = Field(True, description="Let history choose the scope when none is given")
 
 
 class ExpenseUpdate(BaseModel):
@@ -44,6 +46,20 @@ class ExpenseUpdate(BaseModel):
     notes: str | None = None
 
 
+class ScopeSuggestion(BaseModel):
+    scope_id: str | None = Field(None, description="The scope that past purchases used most often")
+    reason: str | None = Field(None, description="Why this scope was suggested")
+
+
+class BulkFileExpenses(BaseModel):
+    expense_ids: list[str] = Field(..., min_length=1, description="Unfiled expenses to file")
+    scope_id: str = Field(..., description="The scope they should all be filed under")
+
+
+class BulkFileResult(BaseModel):
+    filed_count: int = Field(..., description="How many unfiled expenses were filed")
+
+
 class ExpenseRead(BaseModel):
     id: str
     project_id: str
@@ -54,7 +70,7 @@ class ExpenseRead(BaseModel):
     paid_by_id: str | None
     spent_on: date
     description: str
-    quantity: Decimal | None
+    quantity: PlainDecimal | None
     unit_rate: int | None
     amount: int
     cost_type: CostType | None

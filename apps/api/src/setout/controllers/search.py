@@ -4,6 +4,7 @@ from tortoise.expressions import Q
 
 from setout.models.expense import Expense
 from setout.models.item import Item
+from setout.models.land import Land
 from setout.models.person import Person
 from setout.models.project import Project
 from setout.models.vendor import Vendor
@@ -22,6 +23,7 @@ class SearchController:
             await self._vendors(wanted, limit),
             await self._people(wanted, limit),
             await self._items(wanted, limit),
+            await self._lands(wanted, limit),
         ]
         found = [group for group in groups if group.total]
         return SearchResults(
@@ -105,6 +107,22 @@ class SearchController:
             total=await rows.count(),
             hits=[
                 Hit(id=row.id, title=row.name, detail=row.unit or "no unit")
+                for row in await rows.limit(limit)
+            ],
+        )
+
+    async def _lands(self, wanted: str, limit: int) -> HitGroup:
+        rows = Land.filter(deleted_at__isnull=True).filter(
+            Q(name__icontains=wanted)
+            | Q(address__icontains=wanted)
+            | Q(city__icontains=wanted)
+            | Q(state__icontains=wanted)
+        )
+        return HitGroup(
+            kind=SearchKind.LANDS,
+            total=await rows.count(),
+            hits=[
+                Hit(id=row.id, title=row.name, detail=row.city or row.state or "no location")
                 for row in await rows.limit(limit)
             ],
         )

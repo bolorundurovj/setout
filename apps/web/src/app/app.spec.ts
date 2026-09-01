@@ -38,6 +38,7 @@ describe('App', () => {
               vendors: () => counts?.vendors ?? 0,
               items: () => counts?.items ?? 0,
               people: () => counts?.people ?? 0,
+              lands: () => counts?.lands ?? 0,
               load: async () => {
                 loads += 1;
               },
@@ -52,22 +53,23 @@ describe('App', () => {
     }
 
     it('asks for the counts once the server is unlocked', () => {
-      render({ projects: 1, vendors: 0, items: 0, people: 0 });
+      render({ projects: 1, vendors: 0, items: 0, people: 0, lands: 0 });
       expect(loads).toBe(1);
     });
 
     it('badges every list from the one count', () => {
-      const app = render({ projects: 2, vendors: 6, items: 4, people: 3 });
+      const app = render({ projects: 2, vendors: 6, items: 4, people: 3, lands: 5 });
       const badges = new Map(app.appNav.map((item) => [item.key, item.badge()]));
       expect(badges.get('projects')).toBe('2');
       expect(badges.get('vendors')).toBe('6');
       expect(badges.get('items')).toBe('4');
       expect(badges.get('people')).toBe('3');
+      expect(badges.get('lands')).toBe('5');
     });
 
     it('leaves a badge blank rather than showing a nought', () => {
       const app = render(null);
-      expect(app.appNav.map((item) => item.badge())).toEqual(['', '', '', '', '', '']);
+      expect(app.appNav.map((item) => item.badge())).toEqual(['', '', '', '', '', '', '']);
     });
 
     it('draws an icon beside every name in the nav', () => {

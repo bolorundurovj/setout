@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from setout.models.item import Item
+from setout.models.land import Land
 from setout.models.person import Person
 from setout.models.project import Project
 from setout.models.vendor import Vendor
@@ -14,4 +15,5 @@ class CountsController:
             vendors=await Vendor.filter(deleted_at__isnull=True).count(),
             items=await Item.filter(deleted_at__isnull=True).count(),
             people=await Person.filter(deleted_at__isnull=True).count(),
+            lands=await Land.filter(deleted_at__isnull=True).count(),
         )

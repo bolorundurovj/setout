@@ -59,6 +59,23 @@ async def test_amount_is_quantity_times_unit_rate(client: AsyncClient) -> None:
     assert spend["amount"] == 150_000_00
 
 
+@pytest.mark.parametrize(
+    ("sent", "shown"),
+    [("600", "600"), ("600.000", "600"), ("2.500", "2.5"), ("0.250", "0.25"), ("1", "1")],
+)
+async def test_a_round_quantity_is_not_shown_in_scientific_notation(
+    client: AsyncClient, sent: str, shown: str
+) -> None:
+    project_id = await _project(client)
+    spend = await _spend(
+        client, project_id, description="Blocks", amount=None, quantity=sent, unit_rate=250_00
+    )
+    assert spend["quantity"] == shown
+
+    again = await client.get(f"/api/expenses/{spend['id']}")
+    assert again.json()["quantity"] == shown
+
+
 async def test_an_amount_that_contradicts_the_maths_is_refused(client: AsyncClient) -> None:
     project_id = await _project(client)
     resp = await client.post(
@@ -654,3 +671,260 @@ async def test_restoring_an_expense_brings_its_delivery_and_files_back(
 
     assert await Delivery.filter(expense_id=spend["id"], deleted_at__isnull=True).count() == 1
     assert await Attachment.filter(expense_id=spend["id"], deleted_at__isnull=True).count() == 1
+
+
+async def test_suggestion_from_item_history(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    scope = await _scope(client, project_id, "Concrete foundation")
+    item = (await client.post("/api/items", json={"name": "Cement", "unit": "bag"})).json()
+
+    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+
+    resp = await client.get(
+        f"/api/projects/{project_id}/suggest-scope", params={"item_id": item["id"]}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["scope_id"] == scope["id"]
+    assert "item" in resp.json()["reason"].casefold()
+
+
+async def test_suggestion_from_vendor_history(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    scope = await _scope(client, project_id, "Blockwork")
+    vendor = (await client.post("/api/vendors", json={"name": "Segun Blocks"})).json()
+
+    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=scope["id"])
+    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=scope["id"])
+
+    resp = await client.get(
+        f"/api/projects/{project_id}/suggest-scope", params={"vendor_id": vendor["id"]}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["scope_id"] == scope["id"]
+    assert "vendor" in resp.json()["reason"].casefold()
+
+
+async def test_suggestion_prefers_item_over_vendor(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    item_scope = await _scope(client, project_id, "Concrete foundation")
+    vendor_scope = await _scope(client, project_id, "Blockwork")
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+    vendor = (await client.post("/api/vendors", json={"name": "Segun Blocks"})).json()
+
+    await _spend(
+        client,
+        project_id,
+        item_id=item["id"],
+        vendor_id=vendor["id"],
+        scope_id=item_scope["id"],
+    )
+    await _spend(
+        client,
+        project_id,
+        item_id=item["id"],
+        vendor_id=vendor["id"],
+        scope_id=item_scope["id"],
+    )
+    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=vendor_scope["id"])
+
+    resp = await client.get(
+        f"/api/projects/{project_id}/suggest-scope",
+        params={"item_id": item["id"], "vendor_id": vendor["id"]},
+    )
+    assert resp.json()["scope_id"] == item_scope["id"]
+
+
+async def test_suggestion_tie_returns_null(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    first = await _scope(client, project_id, "Concrete foundation")
+    second = await _scope(client, project_id, "Blockwork")
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+
+    await _spend(client, project_id, item_id=item["id"], scope_id=first["id"])
+    await _spend(client, project_id, item_id=item["id"], scope_id=second["id"])
+
+    resp = await client.get(
+        f"/api/projects/{project_id}/suggest-scope", params={"item_id": item["id"]}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["scope_id"] is None
+    assert resp.json()["reason"] is None
+
+
+async def test_suggestion_empty_returns_null(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+
+    resp = await client.get(
+        f"/api/projects/{project_id}/suggest-scope", params={"item_id": item["id"]}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["scope_id"] is None
+    assert resp.json()["reason"] is None
+
+
+async def test_suggestion_missing_project_404(client: AsyncClient) -> None:
+    await _project(client)
+    resp = await client.get("/api/projects/nope/suggest-scope")
+    assert resp.status_code == 404
+
+
+async def test_auto_assigns_scope_from_strong_item_pattern(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    scope = await _scope(client, project_id, "Concrete foundation")
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+
+    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+
+    spend = await _spend(client, project_id, item_id=item["id"])
+    assert spend["scope_id"] == scope["id"]
+
+
+async def test_auto_assigns_scope_from_strong_vendor_pattern(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    scope = await _scope(client, project_id, "Blockwork")
+    vendor = (await client.post("/api/vendors", json={"name": "Segun Blocks"})).json()
+
+    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=scope["id"])
+    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=scope["id"])
+
+    spend = await _spend(client, project_id, vendor_id=vendor["id"])
+    assert spend["scope_id"] == scope["id"]
+
+
+async def test_auto_assign_prefers_item_over_vendor(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    item_scope = await _scope(client, project_id, "Concrete foundation")
+    vendor_scope = await _scope(client, project_id, "Blockwork")
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+    vendor = (await client.post("/api/vendors", json={"name": "Segun Blocks"})).json()
+
+    await _spend(
+        client,
+        project_id,
+        item_id=item["id"],
+        vendor_id=vendor["id"],
+        scope_id=item_scope["id"],
+    )
+    await _spend(
+        client,
+        project_id,
+        item_id=item["id"],
+        vendor_id=vendor["id"],
+        scope_id=item_scope["id"],
+    )
+    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=vendor_scope["id"])
+
+    spend = await _spend(client, project_id, item_id=item["id"], vendor_id=vendor["id"])
+    assert spend["scope_id"] == item_scope["id"]
+
+
+async def test_auto_assign_skips_split_history(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    first = await _scope(client, project_id, "Concrete foundation")
+    second = await _scope(client, project_id, "Blockwork")
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+
+    await _spend(client, project_id, item_id=item["id"], scope_id=first["id"])
+    await _spend(client, project_id, item_id=item["id"], scope_id=second["id"])
+
+    spend = await _spend(client, project_id, item_id=item["id"])
+    assert spend["scope_id"] is None
+
+
+async def test_auto_assign_needs_at_least_two_purchases(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    scope = await _scope(client, project_id, "Concrete foundation")
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+
+    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+
+    spend = await _spend(client, project_id, item_id=item["id"])
+    assert spend["scope_id"] is None
+
+
+async def test_auto_assign_can_be_disabled(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    scope = await _scope(client, project_id, "Concrete foundation")
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+
+    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+
+    spend = await _spend(client, project_id, item_id=item["id"], auto_scope=False)
+    assert spend["scope_id"] is None
+
+
+async def test_bulk_files_unfiled_expenses_to_a_scope(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    scope = await _scope(client, project_id, "Concrete foundation")
+    first = await _spend(client, project_id, description="Cement", amount=10_000_00)
+    second = await _spend(client, project_id, description="Sand", amount=5_000_00)
+
+    resp = await client.patch(
+        f"/api/projects/{project_id}/expenses",
+        json={"expense_ids": [first["id"], second["id"]], "scope_id": scope["id"]},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["filed_count"] == 2
+
+    page = (
+        await client.get(f"/api/projects/{project_id}/expenses", params={"unfiled_only": True})
+    ).json()
+    assert page["total"] == 0
+
+    listed = (await client.get(f"/api/projects/{project_id}/expenses")).json()
+    filed = {row["id"]: row["scope_id"] for row in listed["items"]}
+    assert filed[first["id"]] == scope["id"]
+    assert filed[second["id"]] == scope["id"]
+
+
+async def test_bulk_file_ignores_expenses_already_filed_or_deleted(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    scope = await _scope(client, project_id, "Concrete foundation")
+    unfiled = await _spend(client, project_id, description="Cement", amount=10_000_00)
+    filed = await _spend(
+        client, project_id, description="Sand", amount=5_000_00, scope_id=scope["id"]
+    )
+    gone = await _spend(client, project_id, description="Wood", amount=3_000_00)
+    await client.delete(f"/api/expenses/{gone['id']}")
+
+    resp = await client.patch(
+        f"/api/projects/{project_id}/expenses",
+        json={
+            "expense_ids": [unfiled["id"], filed["id"], gone["id"], "nope"],
+            "scope_id": scope["id"],
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["filed_count"] == 1
+
+
+async def test_bulk_file_rejects_a_group_scope(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    group = await _scope(client, project_id, "Structure and exterior")
+    await _scope(client, project_id, "Blockwork", parent_id=group["id"])
+    spend = await _spend(client, project_id, description="Cement", amount=10_000_00)
+
+    resp = await client.patch(
+        f"/api/projects/{project_id}/expenses",
+        json={"expense_ids": [spend["id"]], "scope_id": group["id"]},
+    )
+    assert resp.status_code == 409
+
+
+async def test_bulk_file_rejects_a_scope_from_another_project(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    other = (
+        await client.post("/api/projects", json={"name": "Owode Bungalow", "currency_code": "NGN"})
+    ).json()
+    stranger = await _scope(client, other["id"], "Interior work")
+    spend = await _spend(client, project_id, description="Cement", amount=10_000_00)
+
+    resp = await client.patch(
+        f"/api/projects/{project_id}/expenses",
+        json={"expense_ids": [spend["id"]], "scope_id": stranger["id"]},
+    )
+    assert resp.status_code == 404

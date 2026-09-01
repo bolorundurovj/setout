@@ -15,6 +15,7 @@ def require_archived(project: Project) -> None:
 
 
 def to_read(project: Project, planned_amount: int = 0, spent_amount: int = 0) -> ProjectRead:
+    land = project.land if project.land_id is not None else None
     return ProjectRead(
         id=project.id,
         name=project.name,
@@ -23,6 +24,8 @@ def to_read(project: Project, planned_amount: int = 0, spent_amount: int = 0) ->
         planned_amount=planned_amount,
         spent_amount=spent_amount,
         status=project.status,
+        land_id=project.land_id,
+        land_name=land.name if land is not None else None,
         notes=project.notes,
         created_at=project.created_at,
         updated_at=project.updated_at,

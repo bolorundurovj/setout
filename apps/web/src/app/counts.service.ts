@@ -20,6 +20,7 @@ export class CountsService {
   readonly vendors = computed(() => this.state()?.vendors ?? 0);
   readonly items = computed(() => this.state()?.items ?? 0);
   readonly people = computed(() => this.state()?.people ?? 0);
+  readonly lands = computed(() => this.state()?.lands ?? 0);
 
   async load(): Promise<void> {
     try {

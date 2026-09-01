@@ -28,7 +28,7 @@ describe('CountsService', () => {
   });
 
   it('reads every count from the one request', async () => {
-    const service = configure(() => ({ projects: 2, vendors: 6, items: 4, people: 3 }));
+    const service = configure(() => ({ projects: 2, vendors: 6, items: 4, people: 3, lands: 5 }));
     await service.load();
 
     expect(calls).toEqual(['getCounts']);

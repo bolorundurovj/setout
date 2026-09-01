@@ -8,12 +8,15 @@ from setout.controllers.expense import ExpenseController
 from setout.models.user import User
 from setout.routers.auth import get_current_user
 from setout.schemas.expense import (
+    BulkFileExpenses,
+    BulkFileResult,
     ExpenseCreate,
     ExpensePage,
     ExpenseRead,
     ExpenseUpdate,
     ProjectMonths,
     ProjectSpend,
+    ScopeSuggestion,
 )
 
 router = APIRouter(
@@ -64,6 +67,20 @@ async def list_expenses(
     )
 
 
+@router.patch(
+    "/projects/{project_id}/expenses",
+    operation_id="fileExpenses",
+    responses={
+        **NOT_FOUND,
+        status.HTTP_409_CONFLICT: {"description": "Scope holds no spend of its own"},
+    },
+)
+async def file_expenses(
+    project_id: str, req: BulkFileExpenses, user: CurrentUser
+) -> BulkFileResult:
+    return await controller.bulk_file(project_id, req)
+
+
 @router.post(
     "/projects/{project_id}/expenses",
     operation_id="addExpense",
@@ -75,6 +92,20 @@ async def list_expenses(
 )
 async def add_expense(project_id: str, req: ExpenseCreate, user: CurrentUser) -> ExpenseRead:
     return await controller.create(project_id, req)
+
+
+@router.get(
+    "/projects/{project_id}/suggest-scope",
+    operation_id="suggestScope",
+    responses=NOT_FOUND,
+)
+async def suggest_scope(
+    project_id: str,
+    user: CurrentUser,
+    item_id: Annotated[str | None, Query(description="What was bought")] = None,
+    vendor_id: Annotated[str | None, Query(description="Who it was bought from")] = None,
+) -> ScopeSuggestion:
+    return await controller.suggest_scope(project_id, item_id, vendor_id)
 
 
 @router.get("/projects/{project_id}/spend", operation_id="getProjectSpend", responses=NOT_FOUND)

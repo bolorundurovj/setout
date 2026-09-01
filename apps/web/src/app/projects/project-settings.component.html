@@ -32,6 +32,19 @@
       </label>
     </div>
 
+    <div class="field">
+      <span class="t-micro">Land</span>
+      <app-chip-group
+        label="Land"
+        [chips]="landChips()"
+        [value]="landId()"
+        (valueChange)="landId.set($event)"
+      />
+      <span class="t-small">
+        The plot this is being built on. One plot can carry more than one project.
+      </span>
+    </div>
+
     <label class="field">
       <span class="t-micro">Notes</span>
       <input

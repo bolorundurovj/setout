@@ -12,6 +12,7 @@ class SearchKind(StrEnum):
     VENDORS = "vendors"
     PEOPLE = "people"
     ITEMS = "items"
+    LANDS = "lands"
 
 
 class Hit(BaseModel):

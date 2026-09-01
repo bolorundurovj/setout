@@ -4,6 +4,9 @@
       <span class="initials t-mono">{{ initials(p.name) }}</span>
       <h1 class="project-name">{{ p.name }}</h1>
       <app-currency-pill [code]="p.currency_code" tone="surface" />
+      @if (p.land_id) {
+        <a class="home-link t-mono" [routerLink]="['/lands', p.land_id]">{{ p.land_name }}</a>
+      }
       <a class="home-link t-mono" routerLink="/projects">&#8592; All Projects</a>
     </div>
     <app-button (pressed)="selectTab('expense')">Add Expense</app-button>

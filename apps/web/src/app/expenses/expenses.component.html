@@ -7,7 +7,12 @@
         blocked by a missing budget.
       </p>
     </div>
-    <app-button (pressed)="openDrawer()">Add Expense</app-button>
+    <div class="intro-actions">
+      @if (!filing() && expenses.spend()?.unfiled_count) {
+        <app-button variant="secondary" (pressed)="startFiling()">File unfiled</app-button>
+      }
+      <app-button (pressed)="openDrawer()">Add Expense</app-button>
+    </div>
   </div>
 
   @if (expenses.spend(); as spend) {
@@ -33,7 +38,80 @@
     <p class="t-small error">{{ expenses.error() }}</p>
   }
 
-  @if (expenses.expenses().length === 0) {
+  @if (filing()) {
+    <div class="bulk-bar">
+      <label class="bulk-check">
+        <input
+          type="checkbox"
+          [checked]="allSelected()"
+          [indeterminate]="selectedCount() > 0 && !allSelected()"
+          (change)="toggleAll()"
+        />
+        <span class="t-small">{{ selectedCount() }} selected</span>
+      </label>
+      <select
+        class="bulk-scope"
+        [ngModel]="bulkScopeId()"
+        (ngModelChange)="bulkScopeId.set($event)"
+      >
+        <option value="">Pick a scope</option>
+        @for (scope of fileableScopes(); track scope.id) {
+          <option [value]="scope.id">{{ scope.name }}</option>
+        }
+      </select>
+      <div class="bulk-actions">
+        <app-button variant="secondary" (pressed)="stopFiling()">Cancel</app-button>
+        <app-button [disabled]="!canFile()" (pressed)="fileSelected()">
+          File {{ selectedCount() }} expense{{ selectedCount() === 1 ? '' : 's' }}
+        </app-button>
+      </div>
+    </div>
+
+    @if (unfiled().length === 0) {
+      <div class="card">
+        <p class="t-body">Nothing left to file.</p>
+      </div>
+    } @else {
+      <div class="table bulk">
+        <div class="row head">
+          <span></span>
+          <span class="t-micro">What It Was</span>
+          <span class="t-micro right">Amount</span>
+          <span class="t-micro right">Date</span>
+        </div>
+
+        @for (expense of unfiled(); track expense.id) {
+          <div class="row">
+            <input
+              type="checkbox"
+              [checked]="selected().has(expense.id)"
+              (change)="toggleOne(expense.id)"
+            />
+            <span class="main">
+              <span class="desc">
+                {{ expense.description }}
+                @if (expense.attachment_count > 0) {
+                  <span class="chip photo t-mono" [title]="photoTitle(expense)">photo</span>
+                }
+              </span>
+              @if (meta(expense)) {
+                <span class="t-micro">{{ meta(expense) }}</span>
+              }
+            </span>
+            <span class="right t-mono figure">{{ money(expense.amount) }}</span>
+            <span class="right t-mono muted">{{ expense.spent_on }}</span>
+          </div>
+        }
+      </div>
+
+      <app-pagination
+        [total]="unfiledTotal()"
+        [page]="unfiledPage()"
+        noun="expenses"
+        (pageChange)="goToUnfiled($event)"
+      />
+    }
+  } @else if (expenses.expenses().length === 0) {
     <div class="card">
       <p class="t-body">Nothing recorded yet.</p>
       <p class="t-small">The first expense you add shows up here.</p>

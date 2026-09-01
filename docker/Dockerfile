@@ -1,8 +1,8 @@
 # Setout single image: the API serves both the JSON API and the built web app.
 
-FROM node:24-bookworm-slim AS web
+FROM node:26-bookworm-slim AS web
 WORKDIR /build
-RUN corepack enable
+RUN npm install -g corepack && corepack enable
 # The web app consumes the SDK by path alias, so bring both in.
 COPY package.json yarn.lock* ./
 COPY packages/api-client ./packages/api-client
@@ -13,7 +13,7 @@ RUN cd packages/api-client && yarn generate && yarn format
 WORKDIR /build/apps/web
 RUN yarn build
 
-FROM python:3.12-slim-bookworm AS runtime
+FROM python:3.14-slim-bookworm AS runtime
 COPY --from=ghcr.io/astral-sh/uv:0.9.17 /uv /bin/uv
 
 ARG SETOUT_VERSION=dev

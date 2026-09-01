@@ -15,6 +15,8 @@ const project: ProjectRead = {
   name: 'Jacaranda Close, Ewuru',
   currency_code: 'NGN',
   currency_exponent: 2,
+  land_id: null,
+  land_name: null,
   status: 'active',
   notes: null,
   planned_amount: 0,
@@ -52,6 +54,7 @@ describe('AddExpenseComponent', () => {
       error: () => null,
       load: async () => undefined,
       loadSpend: async () => undefined,
+      suggestScope: async () => ({ scope_id: 's1', reason: 'Past purchases of this item' }),
       add: async (...args: unknown[]) => {
         saves.push(args);
         return { id: 'e1', description: 'Cement' };
@@ -72,6 +75,10 @@ describe('AddExpenseComponent', () => {
       load: async () => undefined,
       loadAll: async () => undefined,
       lastPrice: () => null,
+    };
+    const budget = {
+      ...empty,
+      scopes: () => [{ id: 's1', name: 'Concrete foundation', is_group: false }],
     };
 
     TestBed.resetTestingModule();
@@ -112,7 +119,7 @@ describe('AddExpenseComponent', () => {
             },
           },
         },
-        { provide: BudgetService, useValue: empty },
+        { provide: BudgetService, useValue: budget },
         { provide: ItemService, useValue: empty },
         { provide: VendorService, useValue: empty },
         { provide: PersonService, useValue: empty },
@@ -338,5 +345,86 @@ describe('AddExpenseComponent', () => {
 
     expect(component.chosen()).toBeNull();
     expect(uploads).toEqual([]);
+  });
+
+  it('suggests a scope when an item is picked', async () => {
+    const fixture = render();
+    const component = fixture.componentInstance;
+
+    await component.pickItem('i1');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.scopeId()).toBe('s1');
+    expect(component.suggestedScopeId()).toBe('s1');
+    expect(component.scopeExplicitlyCleared()).toBe(false);
+    expect(component.scopeNote()).toContain('Suggested from past purchases');
+  });
+
+  it('does not override a scope the user already chose', async () => {
+    const fixture = render();
+    const component = fixture.componentInstance;
+    component.pickScope('s2');
+
+    await component.pickItem('i1');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.scopeId()).toBe('s2');
+    expect(component.suggestedScopeId()).toBeNull();
+    expect(component.scopeExplicitlyCleared()).toBe(false);
+    expect(component.scopeNote()).not.toContain('Suggested');
+  });
+
+  it('remembers when the user explicitly leaves a scope unfiled', () => {
+    const component = render().componentInstance;
+    component.pickScope('');
+
+    expect(component.scopeId()).toBe('');
+    expect(component.scopeExplicitlyCleared()).toBe(true);
+    expect(component.suggestedScopeId()).toBeNull();
+  });
+
+  it('asks the backend to auto-assign when the scope was not explicitly cleared', async () => {
+    const component = render().componentInstance;
+    component.description.set('Cement');
+    component.amount.set('11000');
+    component.pickScope('');
+    component.pickScope('s1');
+
+    await component.save(false);
+
+    expect(saves[0][1]).toEqual(
+      expect.objectContaining({
+        scope_id: 's1',
+        auto_scope: true,
+      }),
+    );
+  });
+
+  it('asks the backend not to auto-assign when the scope was explicitly cleared', async () => {
+    const component = render().componentInstance;
+    component.description.set('Cement');
+    component.amount.set('11000');
+    component.pickScope('');
+
+    await component.save(false);
+
+    expect(saves[0][1]).toEqual(
+      expect.objectContaining({
+        scope_id: null,
+        auto_scope: false,
+      }),
+    );
+  });
+
+  it('does not send auto_scope when changing an existing expense', async () => {
+    const component = render(existing).componentInstance;
+    component.amount.set('12000');
+
+    await component.save(false);
+
+    expect(updates[0][1]).toBe('e1');
+    expect(updates[0][2]).not.toHaveProperty('auto_scope');
   });
 });

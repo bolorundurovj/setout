@@ -12,11 +12,14 @@ import { Router } from '@angular/router';
 import type { ProjectRead, ProjectStatus } from '@setout/api-client';
 import { formatMoney } from '../budget/money';
 import { ButtonComponent } from '../ui/button.component';
+import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
 import { CurrencyPillComponent } from '../ui/currency-pill.component';
 import { InfiniteScrollDirective } from '../ui/infinite-scroll.directive';
 import { ToggleComponent } from '../ui/toggle.component';
 import { TopbarComponent } from '../ui/topbar.component';
 import { ToastService } from '../toast.service';
+import { LandService } from '../lands/land.service';
+import { whereLabel } from '../lands/land-labels';
 import { ProjectService } from './project.service';
 
 const STATUS_LINES: Record<ProjectStatus, string> = {
@@ -33,6 +36,7 @@ const STATUS_LINES: Record<ProjectStatus, string> = {
   imports: [
     FormsModule,
     ButtonComponent,
+    ChipGroupComponent,
     CurrencyPillComponent,
     InfiniteScrollDirective,
     ToggleComponent,
@@ -43,6 +47,7 @@ const STATUS_LINES: Record<ProjectStatus, string> = {
 })
 export class ProjectsComponent {
   readonly projects = inject(ProjectService);
+  readonly lands = inject(LandService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
 
@@ -81,10 +86,19 @@ export class ProjectsComponent {
   readonly name = signal('');
   readonly currencyCode = signal('NGN');
   readonly notes = signal('');
+  readonly landId = signal('');
+
+  readonly landChips = computed<Chip[]>(() => [
+    { value: '', label: 'No land' },
+    ...this.lands
+      .choices()
+      .map((land) => ({ value: land.id, label: land.name, detail: whereLabel(land) })),
+  ]);
 
   constructor() {
     void this.projects.load();
     void this.projects.loadCurrencies();
+    void this.lands.loadChoices();
     effect(() => {
       if (this.add()) {
         this.showForm.set(true);
@@ -146,6 +160,7 @@ export class ProjectsComponent {
     this.showForm.set(false);
     this.name.set('');
     this.notes.set('');
+    this.landId.set('');
   }
 
   async save(): Promise<void> {
@@ -155,6 +170,7 @@ export class ProjectsComponent {
     const created = await this.projects.create({
       name: this.name().trim(),
       currency_code: this.currencyCode(),
+      land_id: this.landId() || null,
       notes: this.notes().trim() || null,
     });
     if (created) {

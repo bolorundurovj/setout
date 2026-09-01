@@ -194,4 +194,36 @@ describe('ExpenseService', () => {
     expect(names).toContain('listExpenses');
     expect(service.expenses().length).toBe(1);
   });
+
+  it('files many unfiled expenses and refreshes the list', async () => {
+    const service = configure((name) => {
+      if (name === 'fileExpenses') {
+        return { filed_count: 2 };
+      }
+      return standard(name);
+    });
+
+    const count = await service.file('p1', { expense_ids: ['e1', 'e2'], scope_id: 's1' });
+
+    expect(count).toBe(2);
+    expect(names).toContain('fileExpenses');
+    expect(names).toContain('listExpenses');
+    expect(names).toContain('getProjectSpend');
+    expect(service.saving()).toBe(false);
+  });
+
+  it('surfaces the reason the backend refused bulk filing', async () => {
+    const service = configure((name) => {
+      if (name === 'fileExpenses') {
+        throw { error: { detail: 'A scope with children holds no spend of its own' } };
+      }
+      return standard(name);
+    });
+
+    const count = await service.file('p1', { expense_ids: ['e1'], scope_id: 'sg' });
+
+    expect(count).toBeNull();
+    expect(service.error()).toBe('A scope with children holds no spend of its own');
+    expect(service.saving()).toBe(false);
+  });
 });
