@@ -104,6 +104,7 @@ EXPECTED_OPERATION_IDS = {
     "listLandDocuments",
     "addLandDocument",
     "getLandDocument",
+    "updateLandDocument",
     "downloadLandDocument",
     "deleteLandDocument",
     "restoreLandDocument",

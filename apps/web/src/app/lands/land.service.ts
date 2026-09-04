@@ -4,6 +4,7 @@ import {
   LandCreate,
   LandDocumentKind,
   LandDocumentRead,
+  LandDocumentUpdate,
   LandRead,
   LandUpdate,
   addLandDocument,
@@ -17,6 +18,7 @@ import {
   restoreLand,
   restoreLandDocument,
   updateLand,
+  updateLandDocument,
 } from '@setout/api-client';
 import { CountsService } from '../counts.service';
 import { CHOICE_LIMIT, PAGE_SIZE, offsetOf } from '../ui/paging';
@@ -163,6 +165,7 @@ export class LandService {
     landId: string,
     kind: LandDocumentKind,
     file: File,
+    note?: string | null,
   ): Promise<LandDocumentRead | null> {
     this.saving.set(true);
     this.error.set(null);
@@ -170,7 +173,7 @@ export class LandService {
       return await this.api.invoke(addLandDocument, {
         land_id: landId,
         // The generated body types the file as a string; the SDK wants the File.
-        body: { file: file as unknown as string, kind },
+        body: { file: file as unknown as string, kind, note: note ?? undefined },
       });
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not keep that file.');
@@ -191,5 +194,18 @@ export class LandService {
 
   async restoreDocument(documentId: string): Promise<void> {
     await this.api.invoke(restoreLandDocument, { document_id: documentId });
+  }
+
+  async editDocument(
+    documentId: string,
+    body: LandDocumentUpdate,
+  ): Promise<LandDocumentRead | null> {
+    this.error.set(null);
+    try {
+      return await this.api.invoke(updateLandDocument, { document_id: documentId, body });
+    } catch (e: unknown) {
+      this.error.set(detailOf(e) ?? 'Could not save that paper.');
+      return null;
+    }
   }
 }

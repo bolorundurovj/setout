@@ -39,7 +39,11 @@ export class LandDetailComponent {
   readonly documents = signal<LandDocumentRead[]>([]);
   readonly loading = signal(true);
   readonly kind = signal<LandDocumentKind>('certificate_of_occupancy');
+  readonly note = signal('');
   readonly justRemoved = signal<LandDocumentRead | null>(null);
+  readonly editing = signal<string | null>(null);
+  readonly editNote = signal('');
+  readonly editKind = signal<LandDocumentKind>('other');
 
   readonly notSet = '—';
 
@@ -78,6 +82,33 @@ export class LandDetailComponent {
     return kindName(document.kind);
   }
 
+  value(event: Event): string {
+    return (event.target as HTMLInputElement).value;
+  }
+
+  startEdit(document: LandDocumentRead): void {
+    this.editing.set(document.id);
+    this.editNote.set(document.note ?? '');
+    this.editKind.set(document.kind);
+  }
+
+  cancelEdit(): void {
+    this.editing.set(null);
+  }
+
+  async saveEdit(document: LandDocumentRead): Promise<void> {
+    const saved = await this.lands.editDocument(document.id, {
+      kind: this.editKind(),
+      note: this.editNote().trim() || null,
+    });
+    if (!saved) {
+      this.toast.show(this.lands.error() ?? 'Could not save that paper.', 'error');
+      return;
+    }
+    this.editing.set(null);
+    await this.load();
+  }
+
   fileNote(document: LandDocumentRead): string {
     return `${this.bytes(document.byte_size)} · kept on your own server`;
   }
@@ -111,11 +142,12 @@ export class LandDetailComponent {
     if (!file) {
       return;
     }
-    const saved = await this.lands.addDocument(this.id(), this.kind(), file);
+    const saved = await this.lands.addDocument(this.id(), this.kind(), file, this.note().trim());
     if (!saved) {
       this.toast.show(this.lands.error() ?? 'Could not keep that file.', 'error');
       return;
     }
+    this.note.set('');
     this.toast.show(`${kindName(saved.kind)} kept.`);
     await this.load();
   }

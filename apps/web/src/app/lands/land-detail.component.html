@@ -64,6 +64,17 @@
               (valueChange)="kind.set($any($event))"
             />
           </div>
+          <label class="field">
+            <span class="t-micro">Note</span>
+            <input
+              class="input-field"
+              type="text"
+              autocomplete="off"
+              placeholder="What this paper actually is"
+              [value]="note()"
+              (input)="note.set(value($event))"
+            />
+          </label>
           <app-button [loading]="lands.saving()" (pressed)="pick()">Choose a file</app-button>
           <span class="t-small muted">
             A photograph or a PDF. Kept beside the record on your own server.
@@ -89,21 +100,52 @@
         <div class="papers">
           @for (document of documents(); track document.id) {
             <div class="paper">
-              <span class="paper-what">
-                <span class="t-body">{{ kindLabel(document) }}</span>
-                <span class="t-small muted">{{ document.filename }}</span>
-                <span class="t-micro">{{ fileNote(document) }}</span>
-              </span>
-              <span class="paper-actions">
-                <a class="link t-mono" [href]="href(document)" target="_blank" rel="noopener">
-                  Open
-                </a>
-                @if (!l.deleted_at) {
-                  <button type="button" class="link t-mono" (click)="remove(document)">
-                    Remove
+              @if (editing() === document.id) {
+                <span class="paper-edit">
+                  <app-chip-group
+                    label="What this paper is"
+                    [chips]="kindChips"
+                    [value]="editKind()"
+                    (valueChange)="editKind.set($any($event))"
+                  />
+                  <input
+                    class="input-field"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="What this paper actually is"
+                    [value]="editNote()"
+                    (input)="editNote.set(value($event))"
+                  />
+                </span>
+                <span class="paper-actions">
+                  <button type="button" class="link t-mono" (click)="saveEdit(document)">
+                    Save
                   </button>
-                }
-              </span>
+                  <button type="button" class="link t-mono" (click)="cancelEdit()">Cancel</button>
+                </span>
+              } @else {
+                <span class="paper-what">
+                  <span class="t-body">{{ kindLabel(document) }}</span>
+                  @if (document.note) {
+                    <span class="t-small">{{ document.note }}</span>
+                  }
+                  <span class="t-small muted">{{ document.filename }}</span>
+                  <span class="t-micro">{{ fileNote(document) }}</span>
+                </span>
+                <span class="paper-actions">
+                  <a class="link t-mono" [href]="href(document)" target="_blank" rel="noopener">
+                    Open
+                  </a>
+                  @if (!l.deleted_at) {
+                    <button type="button" class="link t-mono" (click)="startEdit(document)">
+                      Edit
+                    </button>
+                    <button type="button" class="link t-mono" (click)="remove(document)">
+                      Remove
+                    </button>
+                  }
+                </span>
+              }
             </div>
           }
         </div>
