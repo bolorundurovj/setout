@@ -12,6 +12,8 @@ function land(over: Partial<LandRead> = {}): LandRead {
     address: '14 Jacaranda Close',
     city: 'Ewuru',
     state: 'Ogun',
+    country_code: null,
+    country_name: null,
     size_value: '648.5',
     size_unit: 'sqm',
     notes: null,

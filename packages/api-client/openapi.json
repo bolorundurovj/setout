@@ -443,6 +443,131 @@
         }
       }
     },
+    "/api/countries": {
+      "get": {
+        "tags": [
+          "countries"
+        ],
+        "summary": "List Countries",
+        "operationId": "listCountries",
+        "parameters": [
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CountryRead"
+                  },
+                  "title": "Response Listcountries"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/countries/{country_code}/states": {
+      "get": {
+        "tags": [
+          "countries"
+        ],
+        "summary": "List States",
+        "description": "The states, provinces or regions of one country. What a plot's state must be one of.",
+        "operationId": "listStates",
+        "parameters": [
+          {
+            "name": "country_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Country Code"
+            }
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StateRead"
+                  },
+                  "title": "Response Liststates"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/counts": {
       "get": {
         "tags": [
@@ -8766,6 +8891,24 @@
         ],
         "title": "CostType"
       },
+      "CountryRead": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "CountryRead"
+      },
       "Counts": {
         "properties": {
           "projects": {
@@ -10901,6 +11044,20 @@
             ],
             "title": "State"
           },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code",
+            "description": "Give one and the state is checked against it"
+          },
           "size_value": {
             "anyOf": [
               {
@@ -11206,6 +11363,28 @@
             ],
             "title": "State"
           },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "country_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Name"
+          },
           "size_value": {
             "anyOf": [
               {
@@ -11289,6 +11468,8 @@
           "address",
           "city",
           "state",
+          "country_code",
+          "country_name",
           "size_value",
           "size_unit",
           "notes",
@@ -11360,6 +11541,20 @@
               }
             ],
             "title": "State"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code",
+            "description": "Give one and the state is checked against it"
           },
           "size_value": {
             "anyOf": [
@@ -12801,6 +12996,29 @@
           "why"
         ],
         "title": "SheetSkipped"
+      },
+      "StateRead": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "country_code",
+          "name"
+        ],
+        "title": "StateRead"
       },
       "UserResponse": {
         "properties": {

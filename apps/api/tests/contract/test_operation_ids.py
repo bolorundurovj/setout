@@ -108,6 +108,8 @@ EXPECTED_OPERATION_IDS = {
     "downloadLandDocument",
     "deleteLandDocument",
     "restoreLandDocument",
+    "listCountries",
+    "listStates",
     "listVendors",
     "createVendor",
     "getVendor",

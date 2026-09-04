@@ -10,6 +10,8 @@ from tortoise import Tortoise
 # reverse it to clear the way first.
 TABLES: tuple[str, ...] = (
     "currency",
+    "country",
+    "state",
     "scope_preset",
     "user",
     "land",

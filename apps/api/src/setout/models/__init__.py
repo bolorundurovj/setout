@@ -8,6 +8,7 @@ from setout.models.advance import Advance
 from setout.models.agreement import Agreement
 from setout.models.attachment import Attachment
 from setout.models.budget import BudgetItem
+from setout.models.country import Country, State
 from setout.models.currency import Currency
 from setout.models.delivery import Delivery
 from setout.models.expense import CostType, Expense
@@ -27,6 +28,7 @@ __all__ = [
     "Agreement",
     "BudgetItem",
     "CostType",
+    "Country",
     "Currency",
     "Delivery",
     "Expense",
@@ -41,6 +43,7 @@ __all__ = [
     "Scope",
     "ScopePreset",
     "Session",
+    "State",
     "User",
     "Vendor",
 ]

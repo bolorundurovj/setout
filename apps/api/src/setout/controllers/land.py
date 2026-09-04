@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 
+from setout.models.country import Country, State
 from setout.models.land import Land
 from setout.models.land_document import LandDocument, LandDocumentKind
 from setout.models.project import Project
@@ -12,6 +13,7 @@ from setout.utils.cascade import delete_under_land, restore_under_land
 
 NOT_FOUND_LAND = "Land not found"
 DUPLICATE_NAME = "A land with that name already exists"
+
 
 # Every plot is expected to have these eventually. Receipts and anything else
 # are welcome but their absence is not worth reporting.
@@ -34,8 +36,9 @@ class LandController:
         ids = [land.id for land in lands]
         kinds = await self._kinds_of(ids)
         projects = await self._projects_of(ids)
+        countries = await self._country_names(lands)
         return LandPage(
-            items=[self._read(land, kinds, projects) for land in lands],
+            items=[self._read(land, kinds, projects, countries) for land in lands],
             total=total,
             limit=limit,
             offset=offset,
@@ -43,12 +46,16 @@ class LandController:
 
     async def create(self, req: LandCreate) -> LandRead:
         await self._reject_duplicate(req.name)
-        land = await Land.create(**req.model_dump())
-        return self._read(land, {}, {})
+        values = req.model_dump()
+        code = values.pop("country_code")
+        values["country_id"], values["state"] = await self._place(code, values["state"])
+        land = await Land.create(**values)
+        names = await self._country_names([land])
+        return self._read(land, {}, {}, names)
 
     async def get(self, land_id: str) -> LandRead:
         land = await self._land_or_404(land_id, include_deleted=True)
-        return self._read(land, await self._kinds_of([land.id]), await self._projects_of([land.id]))
+        return await self._one(land)
 
     async def update(self, land_id: str, req: LandUpdate) -> LandRead:
         land = await self._land_or_404(land_id)
@@ -56,10 +63,14 @@ class LandController:
         name = changes.get("name")
         if name is not None and name.casefold() != land.name.casefold():
             await self._reject_duplicate(name)
+        if "country_code" in changes or "state" in changes:
+            code = changes.pop("country_code", land.country_id)
+            state = changes.get("state", land.state)
+            changes["country_id"], changes["state"] = await self._place(code, state)
         if changes:
             land.update_from_dict(changes)
             await land.save()
-        return self._read(land, await self._kinds_of([land.id]), await self._projects_of([land.id]))
+        return await self._one(land)
 
     async def delete(self, land_id: str) -> None:
         land = await self._land_or_404(land_id)
@@ -75,7 +86,46 @@ class LandController:
             land.deleted_at = None
             await land.save()
             await restore_under_land(land.id, deleted_at)
-        return self._read(land, await self._kinds_of([land.id]), await self._projects_of([land.id]))
+        return await self._one(land)
+
+    async def _one(self, land: Land) -> LandRead:
+        ids = [land.id]
+        return self._read(
+            land,
+            await self._kinds_of(ids),
+            await self._projects_of(ids),
+            await self._country_names([land]),
+        )
+
+    async def _place(
+        self, country_code: str | None, state: str | None
+    ) -> tuple[str | None, str | None]:
+        """A state is only checked once a country says which list it should be in."""
+        if country_code is None:
+            return None, state
+        code = country_code.upper()
+        country = await Country.get_or_none(code=code)
+        if country is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=f"Unknown country: {country_code}",
+            )
+        if state is None:
+            return code, None
+        wanted = state.strip()
+        for row in await State.filter(country_id=code):
+            if wanted.casefold() in (row.name.casefold(), row.code.casefold()):
+                return code, row.name
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"{state} is not a state in {country.name}",
+        )
+
+    async def _country_names(self, lands: list[Land]) -> dict[str, str]:
+        codes = {land.country_id for land in lands if land.country_id is not None}
+        if not codes:
+            return {}
+        return {c.code: c.name for c in await Country.filter(code__in=list(codes))}
 
     async def _kinds_of(self, land_ids: list[str]) -> dict[str, list[LandDocumentKind]]:
         if not land_ids:
@@ -107,6 +157,7 @@ class LandController:
         land: Land,
         kinds: dict[str, list[LandDocumentKind]],
         projects: dict[str, list[LandProject]],
+        countries: dict[str, str],
     ) -> LandRead:
         held = kinds.get(land.id, [])
         return LandRead(
@@ -115,6 +166,8 @@ class LandController:
             address=land.address,
             city=land.city,
             state=land.state,
+            country_code=land.country_id,
+            country_name=countries.get(land.country_id) if land.country_id else None,
             size_value=land.size_value,
             size_unit=land.size_unit,
             notes=land.notes,

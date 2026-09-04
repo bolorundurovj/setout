@@ -32,6 +32,17 @@
       />
     </label>
 
+    <div class="field">
+      <span class="t-micro">Country</span>
+      <app-chip-group
+        label="Country"
+        [chips]="countryChips()"
+        [value]="country()"
+        [clearable]="true"
+        (valueChange)="pickCountry($event)"
+      />
+    </div>
+
     <div class="pair">
       <label class="field">
         <span class="t-micro">Town or city</span>
@@ -43,16 +54,29 @@
           (input)="city.set(value($event))"
         />
       </label>
-      <label class="field">
-        <span class="t-micro">State</span>
-        <input
-          class="input-field"
-          type="text"
-          autocomplete="off"
-          [value]="state()"
-          (input)="state.set(value($event))"
-        />
-      </label>
+      @if (country()) {
+        <div class="field">
+          <span class="t-micro">State</span>
+          <app-chip-group
+            label="State"
+            [chips]="stateChips()"
+            [value]="state()"
+            [clearable]="true"
+            (valueChange)="state.set($event)"
+          />
+        </div>
+      } @else {
+        <label class="field">
+          <span class="t-micro">State</span>
+          <input
+            class="input-field"
+            type="text"
+            autocomplete="off"
+            [value]="state()"
+            (input)="state.set(value($event))"
+          />
+        </label>
+      }
     </div>
 
     <label class="field">
