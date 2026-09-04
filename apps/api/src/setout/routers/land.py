@@ -12,7 +12,11 @@ from setout.models.land_document import LandDocumentKind
 from setout.models.user import User
 from setout.routers.auth import get_current_user
 from setout.schemas.land import LandCreate, LandPage, LandRead, LandUpdate
-from setout.schemas.land_document import LandDocumentPage, LandDocumentRead
+from setout.schemas.land_document import (
+    LandDocumentPage,
+    LandDocumentRead,
+    LandDocumentUpdate,
+)
 from setout.services.storage import Storage, get_storage
 from setout.utils.uploads import read_capped
 
@@ -118,10 +122,15 @@ async def add_land_document(
     kind: Annotated[LandDocumentKind, Form(description="What the paper is")] = (
         LandDocumentKind.OTHER
     ),
+    note: Annotated[
+        str | None,
+        Form(max_length=255, description="What it actually is, when the kind will not say"),
+    ] = None,
 ) -> LandDocumentRead:
     return await documents.create(
         land_id,
         kind=kind,
+        note=note,
         filename=file.filename or "",
         content_type=file.content_type or "",
         data=await read_capped(file, get_settings().max_attachment_bytes),
@@ -132,6 +141,16 @@ async def add_land_document(
 @router.get("/land-documents/{document_id}", operation_id="getLandDocument", responses=NOT_FOUND)
 async def get_land_document(document_id: str, user: CurrentUser) -> LandDocumentRead:
     return await documents.get(document_id)
+
+
+@router.patch(
+    "/land-documents/{document_id}", operation_id="updateLandDocument", responses=NOT_FOUND
+)
+async def update_land_document(
+    document_id: str, req: LandDocumentUpdate, user: CurrentUser
+) -> LandDocumentRead:
+    """Correct what a paper is called, or say what an Other one actually is."""
+    return await documents.update(document_id, req)
 
 
 @router.get(

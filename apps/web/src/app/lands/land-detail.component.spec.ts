@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import type { LandDocumentRead, LandRead } from '@setout/api-client';
+import type { LandDocumentRead, LandDocumentUpdate, LandRead } from '@setout/api-client';
 import { ToastService } from '../toast.service';
 import { LandDetailComponent } from './land-detail.component';
 import { LandService } from './land.service';
@@ -30,6 +30,7 @@ function paper(over: Partial<LandDocumentRead> = {}): LandDocumentRead {
     id: 'd1',
     land_id: 'l1',
     kind: 'certificate_of_occupancy',
+    note: null,
     filename: 'c-of-o.pdf',
     content_type: 'application/pdf',
     byte_size: 2048,
@@ -42,13 +43,15 @@ function paper(over: Partial<LandDocumentRead> = {}): LandDocumentRead {
 }
 
 describe('LandDetailComponent', () => {
-  let uploads: { kind: string; file: File }[];
+  let uploads: { kind: string; file: File; note: string | null }[];
+  let edited: { id: string; body: LandDocumentUpdate }[];
   let removed: string[];
   let restored: string[];
   let toasts: { message: string; type: string }[];
 
   async function render(row: LandRead | null = land(), papers: LandDocumentRead[] = []) {
     uploads = [];
+    edited = [];
     removed = [];
     restored = [];
     toasts = [];
@@ -59,9 +62,13 @@ describe('LandDetailComponent', () => {
       get: async () => row,
       documents: async () => papers,
       documentUrl: (id: string) => `http://api/api/land-documents/${id}/file`,
-      addDocument: async (_landId: string, kind: string, file: File) => {
-        uploads.push({ kind, file });
+      addDocument: async (_landId: string, kind: string, file: File, note?: string | null) => {
+        uploads.push({ kind, file, note: note ?? null });
         return paper({ kind: kind as LandDocumentRead['kind'] });
+      },
+      editDocument: async (id: string, body: LandDocumentUpdate) => {
+        edited.push({ id, body });
+        return paper({ kind: body.kind ?? undefined, note: body.note });
       },
       removeDocument: async (id: string) => {
         removed.push(id);
@@ -125,7 +132,7 @@ describe('LandDetailComponent', () => {
       target: { files: [file], value: '' },
     } as unknown as Event);
 
-    expect(uploads).toEqual([{ kind: 'survey_plan', file }]);
+    expect(uploads).toEqual([{ kind: 'survey_plan', file, note: '' }]);
     expect(toasts[0].message).toBe('Survey plan kept.');
   });
 

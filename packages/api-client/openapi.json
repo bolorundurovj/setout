@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Setout API",
-    "version": "1.2.0"
+    "version": "1.3.0"
   },
   "paths": {
     "/healthz": {
@@ -3936,6 +3936,82 @@
                 }
               }
             }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "lands"
+        ],
+        "summary": "Update Land Document",
+        "description": "Correct what a paper is called, or say what an Other one actually is.",
+        "operationId": "updateLandDocument",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LandDocumentUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LandDocumentRead"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request: the body could not be parsed"
           }
         }
       },
@@ -8351,6 +8427,19 @@
             "$ref": "#/components/schemas/LandDocumentKind",
             "description": "What the paper is",
             "default": "other"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note",
+            "description": "What it actually is, when the kind will not say"
           }
         },
         "type": "object",
@@ -10912,6 +11001,17 @@
           "kind": {
             "$ref": "#/components/schemas/LandDocumentKind"
           },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
           "filename": {
             "type": "string",
             "title": "Filename"
@@ -10956,6 +11056,7 @@
           "id",
           "land_id",
           "kind",
+          "note",
           "filename",
           "content_type",
           "byte_size",
@@ -10965,6 +11066,35 @@
           "deleted_at"
         ],
         "title": "LandDocumentRead"
+      },
+      "LandDocumentUpdate": {
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LandDocumentKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LandDocumentUpdate"
       },
       "LandPage": {
         "properties": {

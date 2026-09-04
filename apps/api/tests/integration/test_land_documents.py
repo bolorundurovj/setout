@@ -29,11 +29,15 @@ async def _upload(
     filename: str = "c-of-o.jpg",
     content_type: str = "image/jpeg",
     kind: str = "certificate_of_occupancy",
+    note: str | None = None,
 ) -> tuple[int, dict]:
+    form = {"kind": kind}
+    if note is not None:
+        form["note"] = note
     resp = await client.post(
         f"/api/lands/{land_id}/documents",
         files={"file": (filename, data, content_type)},
-        data={"kind": kind},
+        data=form,
     )
     return resp.status_code, resp.json() if resp.content else {}
 
@@ -172,3 +176,50 @@ async def test_a_paper_removed_first_stays_removed_when_the_land_comes_back(
     await client.post(f"/api/lands/{land_id}/restore")
 
     assert (await client.get(f"/api/land-documents/{body['id']}")).status_code == 404
+
+
+async def test_an_other_paper_can_say_what_it_actually_is(client: AsyncClient) -> None:
+    land_id = await _setup(client)
+
+    _, row = await _upload(client, land_id, kind="other", note="Land Use Charge receipt")
+
+    assert row["kind"] == "other"
+    assert row["note"] == "Land Use Charge receipt"
+
+
+async def test_a_paper_kept_without_a_note_has_none(client: AsyncClient) -> None:
+    land_id = await _setup(client)
+
+    _, row = await _upload(client, land_id)
+
+    assert row["note"] is None
+
+
+async def test_a_note_is_written_after_the_file_is_already_kept(client: AsyncClient) -> None:
+    land_id = await _setup(client)
+    _, row = await _upload(client, land_id, kind="other")
+
+    resp = await client.patch(
+        f"/api/land-documents/{row['id']}", json={"note": "Land Use Charge receipt"}
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["note"] == "Land Use Charge receipt"
+
+
+async def test_a_paper_filed_under_the_wrong_kind_is_moved(client: AsyncClient) -> None:
+    land_id = await _setup(client)
+    _, row = await _upload(client, land_id, kind="other")
+
+    resp = await client.patch(f"/api/land-documents/{row['id']}", json={"kind": "receipt"})
+
+    assert resp.status_code == 200
+    assert resp.json()["kind"] == "receipt"
+
+
+async def test_correcting_a_paper_that_is_not_there(client: AsyncClient) -> None:
+    await _setup(client)
+
+    resp = await client.patch("/api/land-documents/nosuchdoc", json={"note": "anything"})
+
+    assert resp.status_code == 404

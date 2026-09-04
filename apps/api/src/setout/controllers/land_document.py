@@ -8,7 +8,11 @@ from fastapi import HTTPException, status
 from setout.config import get_settings
 from setout.models.land import Land
 from setout.models.land_document import LandDocument, LandDocumentKind
-from setout.schemas.land_document import LandDocumentPage, LandDocumentRead
+from setout.schemas.land_document import (
+    LandDocumentPage,
+    LandDocumentRead,
+    LandDocumentUpdate,
+)
 from setout.services.storage import Storage, checksum_of, key_for
 
 NO_SUCH_DOCUMENT = "Document not found"
@@ -53,6 +57,7 @@ class LandDocumentController:
         land_id: str,
         *,
         kind: LandDocumentKind,
+        note: str | None,
         filename: str,
         content_type: str,
         data: bytes,
@@ -85,6 +90,7 @@ class LandDocumentController:
         row = await LandDocument.create(
             land_id=land_id,
             kind=kind,
+            note=note,
             filename=name,
             content_type=media_type,
             byte_size=len(data),
@@ -97,6 +103,14 @@ class LandDocumentController:
         return LandDocumentRead.model_validate(
             await self._document_or_404(document_id), from_attributes=True
         )
+
+    async def update(self, document_id: str, req: LandDocumentUpdate) -> LandDocumentRead:
+        row = await self._document_or_404(document_id)
+        changes = req.model_dump(exclude_unset=True)
+        if changes:
+            row.update_from_dict(changes)
+            await row.save()
+        return LandDocumentRead.model_validate(row, from_attributes=True)
 
     async def read_file(self, document_id: str, storage: Storage) -> LandDocumentFile:
         row = await self._document_or_404(document_id)

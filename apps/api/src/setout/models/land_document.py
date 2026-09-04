@@ -34,6 +34,12 @@ class LandDocument(Model):
         default=LandDocumentKind.OTHER,
         description="What the paper is, so a land can say which ones it is missing",
     )
+    note = fields.CharField(
+        max_length=255,
+        null=True,
+        default=None,
+        description="What the paper actually is, when the kind does not say",
+    )
     filename = fields.CharField(max_length=255, description="What it was called where it came from")
     content_type = fields.CharField(max_length=127)
     byte_size = fields.IntField()
