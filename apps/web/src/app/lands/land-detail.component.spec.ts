@@ -14,6 +14,12 @@ function land(over: Partial<LandRead> = {}): LandRead {
     state: 'Ogun',
     country_code: null,
     country_name: null,
+    purchased_on: null,
+    currency_code: null,
+    currency_exponent: null,
+    purchase_amount: null,
+    current_value: null,
+    valuation_count: 0,
     size_value: '648.5',
     size_unit: 'sqm',
     notes: null,
@@ -72,6 +78,9 @@ describe('LandDetailComponent', () => {
         edited.push({ id, body });
         return paper({ kind: body.kind ?? undefined, note: body.note });
       },
+      valuations: async () => [],
+      addValuation: async () => null,
+      removeValuation: async () => undefined,
       removeDocument: async (id: string) => {
         removed.push(id);
       },

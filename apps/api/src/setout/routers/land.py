@@ -8,6 +8,7 @@ from fastapi.responses import RedirectResponse, Response
 from setout.config import get_settings
 from setout.controllers.land import LandController
 from setout.controllers.land_document import LandDocumentController
+from setout.controllers.land_valuation import LandValuationController
 from setout.models.land_document import LandDocumentKind
 from setout.models.user import User
 from setout.routers.auth import get_current_user
@@ -16,6 +17,12 @@ from setout.schemas.land_document import (
     LandDocumentPage,
     LandDocumentRead,
     LandDocumentUpdate,
+)
+from setout.schemas.land_valuation import (
+    LandValuationCreate,
+    LandValuationPage,
+    LandValuationRead,
+    LandValuationUpdate,
 )
 from setout.services.storage import Storage, get_storage
 from setout.utils.uploads import read_capped
@@ -30,6 +37,7 @@ Store = Annotated[Storage, Depends(get_storage)]
 
 controller = LandController()
 documents = LandDocumentController()
+valuations = LandValuationController()
 
 NOT_FOUND: dict[int | str, dict[str, Any]] = {
     status.HTTP_404_NOT_FOUND: {"description": "Not found"}
@@ -198,3 +206,66 @@ async def delete_land_document(document_id: str, user: CurrentUser) -> None:
 )
 async def restore_land_document(document_id: str, user: CurrentUser) -> LandDocumentRead:
     return await documents.restore(document_id)
+
+
+@router.get("/lands/{land_id}/valuations", operation_id="listLandValuations", responses=NOT_FOUND)
+async def list_land_valuations(
+    land_id: str,
+    user: CurrentUser,
+    include_deleted: Annotated[bool, Query(description="Include removed entries")] = False,
+    limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
+    offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
+) -> LandValuationPage:
+    """What the plot has been worth, newest first."""
+    return await valuations.list(
+        land_id, limit=limit, offset=offset, include_deleted=include_deleted
+    )
+
+
+@router.post(
+    "/lands/{land_id}/valuations",
+    operation_id="addLandValuation",
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        **NOT_FOUND,
+        status.HTTP_409_CONFLICT: {"description": "It already records what it was bought for"},
+    },
+)
+async def add_land_valuation(
+    land_id: str, req: LandValuationCreate, user: CurrentUser
+) -> LandValuationRead:
+    """The first entry fixes the currency every later one has to use."""
+    return await valuations.create(land_id, req)
+
+
+@router.patch(
+    "/land-valuations/{valuation_id}",
+    operation_id="updateLandValuation",
+    responses={
+        **NOT_FOUND,
+        status.HTTP_409_CONFLICT: {"description": "It already records what it was bought for"},
+    },
+)
+async def update_land_valuation(
+    valuation_id: str, req: LandValuationUpdate, user: CurrentUser
+) -> LandValuationRead:
+    return await valuations.update(valuation_id, req)
+
+
+@router.delete(
+    "/land-valuations/{valuation_id}",
+    operation_id="deleteLandValuation",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=NOT_FOUND,
+)
+async def delete_land_valuation(valuation_id: str, user: CurrentUser) -> None:
+    await valuations.delete(valuation_id)
+
+
+@router.post(
+    "/land-valuations/{valuation_id}/restore",
+    operation_id="restoreLandValuation",
+    responses=NOT_FOUND,
+)
+async def restore_land_valuation(valuation_id: str, user: CurrentUser) -> LandValuationRead:
+    return await valuations.restore(valuation_id)

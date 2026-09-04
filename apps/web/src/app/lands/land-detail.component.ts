@@ -16,13 +16,14 @@ import { ButtonComponent } from '../ui/button.component';
 import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
 import { ToastService } from '../toast.service';
 import { LandService } from './land.service';
-import { DOCUMENT_KINDS, kindName, sizeLabel } from './land-labels';
+import { LandValuationsComponent } from './land-valuations.component';
+import { DOCUMENT_KINDS, kindName, sizeLabel, worthLabel } from './land-labels';
 
 @Component({
   selector: 'app-land-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChipGroupComponent, RouterLink],
+  imports: [ButtonComponent, ChipGroupComponent, LandValuationsComponent, RouterLink],
   templateUrl: './land-detail.component.html',
   styleUrl: './land-detail.component.scss',
 })
@@ -84,6 +85,10 @@ export class LandDetailComponent {
 
   value(event: Event): string {
     return (event.target as HTMLInputElement).value;
+  }
+
+  worth(land: LandRead): string {
+    return worthLabel(land) || this.notSet;
   }
 
   startEdit(document: LandDocumentRead): void {

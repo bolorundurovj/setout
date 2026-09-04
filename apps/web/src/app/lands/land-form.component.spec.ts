@@ -15,6 +15,12 @@ function land(over: Partial<LandRead> = {}): LandRead {
     state: 'Ogun',
     country_code: null,
     country_name: null,
+    purchased_on: null,
+    currency_code: null,
+    currency_exponent: null,
+    purchase_amount: null,
+    current_value: null,
+    valuation_count: 0,
     size_value: '648.5',
     size_unit: 'sqm',
     notes: 'a note',
@@ -155,6 +161,7 @@ describe('LandFormComponent', () => {
       city: 'Ewuru',
       state: null,
       country_code: null,
+      purchased_on: null,
       size_value: '648.5',
       size_unit: 'sqm',
       notes: null,
@@ -217,14 +224,19 @@ describe('LandFormComponent', () => {
     expect(component.stateChips().map((chip) => chip.label)).toEqual(['Lagos', 'Ogun']);
   });
 
-  it('sends the country and the state that belongs to it', async () => {
+  it('sends the country and the day it was bought', async () => {
     const component = await render();
     component.name.set('Ewuru plot');
     await component.pickCountry('NG');
     component.state.set('Lagos');
+    component.purchasedOn.set('2023-03-11');
 
     await component.save();
 
-    expect(added[0]).toMatchObject({ country_code: 'NG', state: 'Lagos' });
+    expect(added[0]).toMatchObject({
+      country_code: 'NG',
+      state: 'Lagos',
+      purchased_on: '2023-03-11',
+    });
   });
 });

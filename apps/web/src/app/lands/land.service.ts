@@ -7,18 +7,25 @@ import {
   LandDocumentUpdate,
   LandRead,
   LandUpdate,
+  LandValuationCreate,
+  LandValuationRead,
+  LandValuationUpdate,
   addLandDocument,
+  addLandValuation,
   createLand,
   deleteLand,
   deleteLandDocument,
+  deleteLandValuation,
   downloadLandDocument,
   getLand,
   listLandDocuments,
+  listLandValuations,
   listLands,
   restoreLand,
   restoreLandDocument,
   updateLand,
   updateLandDocument,
+  updateLandValuation,
 } from '@setout/api-client';
 import { CountsService } from '../counts.service';
 import { CHOICE_LIMIT, PAGE_SIZE, offsetOf } from '../ui/paging';
@@ -207,5 +214,44 @@ export class LandService {
       this.error.set(detailOf(e) ?? 'Could not save that paper.');
       return null;
     }
+  }
+
+  async valuations(landId: string): Promise<LandValuationRead[]> {
+    try {
+      const body = await this.api.invoke(listLandValuations, { land_id: landId });
+      return body.items;
+    } catch {
+      return [];
+    }
+  }
+
+  async addValuation(landId: string, body: LandValuationCreate): Promise<LandValuationRead | null> {
+    this.saving.set(true);
+    this.error.set(null);
+    try {
+      return await this.api.invoke(addLandValuation, { land_id: landId, body });
+    } catch (e: unknown) {
+      this.error.set(detailOf(e) ?? 'Could not record that.');
+      return null;
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async editValuation(
+    valuationId: string,
+    body: LandValuationUpdate,
+  ): Promise<LandValuationRead | null> {
+    this.error.set(null);
+    try {
+      return await this.api.invoke(updateLandValuation, { valuation_id: valuationId, body });
+    } catch (e: unknown) {
+      this.error.set(detailOf(e) ?? 'Could not save that.');
+      return null;
+    }
+  }
+
+  async removeValuation(valuationId: string): Promise<void> {
+    await this.api.invoke(deleteLandValuation, { valuation_id: valuationId });
   }
 }

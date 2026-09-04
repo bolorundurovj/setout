@@ -19,11 +19,12 @@ from setout.models.budget import BudgetItem
 from setout.models.delivery import Delivery
 from setout.models.expense import Expense
 from setout.models.land_document import LandDocument
+from setout.models.land_valuation import LandValuation
 from setout.models.scope import Scope
 
 PROJECT_OWNED = (Scope, Expense, Delivery, Attachment, Advance, Agreement)
 EXPENSE_OWNED = (Delivery, Attachment)
-LAND_OWNED = (LandDocument,)
+LAND_OWNED = (LandDocument, LandValuation)
 
 
 async def delete_under_project(project_id: str, deleted_at: datetime) -> None:

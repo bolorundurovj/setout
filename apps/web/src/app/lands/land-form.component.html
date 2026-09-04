@@ -80,6 +80,17 @@
     </div>
 
     <label class="field">
+      <span class="t-micro">Bought on</span>
+      <input
+        class="input-field t-mono"
+        type="date"
+        [value]="purchasedOn()"
+        (input)="purchasedOn.set(value($event))"
+      />
+      <span class="t-small muted">What it cost goes on the plot's own page, with the rest.</span>
+    </label>
+
+    <label class="field">
       <span class="t-micro">Size</span>
       <input
         class="input-field t-mono"
