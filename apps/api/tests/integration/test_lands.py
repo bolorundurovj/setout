@@ -4,6 +4,7 @@ import pytest
 from httpx import AsyncClient
 
 from setout.currencies import CURRENCIES
+from setout.models.country import Country, State
 from setout.models.currency import Currency
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
@@ -216,3 +217,125 @@ async def test_a_restore_puts_the_land_back_under_its_project(client: AsyncClien
     back = await client.get(f"/api/lands/{land['id']}")
     assert back.json()["deleted_at"] is None
     assert [project["name"] for project in back.json()["projects"]] == ["The house"]
+
+
+async def _countries() -> None:
+    await Country.bulk_create(
+        [Country(code="NG", name="Nigeria"), Country(code="GH", name="Ghana")]
+    )
+    await State.bulk_create(
+        [
+            State(code="NG-LA", country_id="NG", name="Lagos"),
+            State(code="NG-OG", country_id="NG", name="Ogun"),
+            State(code="GH-AA", country_id="GH", name="Greater Accra"),
+        ]
+    )
+
+
+async def test_a_plot_records_the_country_it_sits_in(client: AsyncClient) -> None:
+    await _setup(client)
+    await _countries()
+
+    land = await _land(client, "Ewuru plot", country_code="NG", state="Ogun")
+
+    assert land["country_code"] == "NG"
+    assert land["country_name"] == "Nigeria"
+    assert land["state"] == "Ogun"
+
+
+async def test_a_state_is_read_however_it_was_written(client: AsyncClient) -> None:
+    await _setup(client)
+    await _countries()
+
+    land = await _land(client, "Ewuru plot", country_code="NG", state="lagos")
+
+    assert land["state"] == "Lagos"
+
+
+async def test_a_state_can_be_given_by_its_code(client: AsyncClient) -> None:
+    await _setup(client)
+    await _countries()
+
+    land = await _land(client, "Ewuru plot", country_code="NG", state="NG-OG")
+
+    assert land["state"] == "Ogun"
+
+
+async def test_a_state_that_is_not_in_that_country_is_refused(client: AsyncClient) -> None:
+    await _setup(client)
+    await _countries()
+
+    resp = await client.post(
+        "/api/lands", json={"name": "Ewuru plot", "country_code": "NG", "state": "Greater Accra"}
+    )
+
+    assert resp.status_code == 422
+    assert "Nigeria" in resp.json()["detail"]
+
+
+async def test_a_country_that_is_not_there_is_refused(client: AsyncClient) -> None:
+    await _setup(client)
+    await _countries()
+
+    resp = await client.post("/api/lands", json={"name": "Ewuru plot", "country_code": "ZZ"})
+
+    assert resp.status_code == 422
+
+
+async def test_a_plot_with_no_country_keeps_whatever_state_it_was_given(
+    client: AsyncClient,
+) -> None:
+    await _setup(client)
+    await _countries()
+
+    land = await _land(client, "Ewuru plot", state="somewhere off the list")
+
+    assert land["state"] == "somewhere off the list"
+    assert land["country_code"] is None
+
+
+async def test_an_older_plot_survives_an_edit_that_leaves_its_country_alone(
+    client: AsyncClient,
+) -> None:
+    """A land saved before countries existed is never rejected for its free text state."""
+    await _setup(client)
+    await _countries()
+    land = await _land(client, "Ewuru plot", state="lagos state")
+
+    resp = await client.patch(f"/api/lands/{land['id']}", json={"name": "Ewuru plot two"})
+
+    assert resp.status_code == 200
+    assert resp.json()["state"] == "lagos state"
+
+
+async def test_naming_a_country_starts_checking_the_state(client: AsyncClient) -> None:
+    await _setup(client)
+    await _countries()
+    land = await _land(client, "Ewuru plot", state="lagos state")
+
+    resp = await client.patch(f"/api/lands/{land['id']}", json={"country_code": "NG"})
+
+    assert resp.status_code == 422
+
+
+async def test_a_state_is_checked_against_the_country_already_stored(client: AsyncClient) -> None:
+    await _setup(client)
+    await _countries()
+    land = await _land(client, "Ewuru plot", country_code="NG", state="Lagos")
+
+    resp = await client.patch(f"/api/lands/{land['id']}", json={"state": "Greater Accra"})
+
+    assert resp.status_code == 422
+
+
+async def test_dropping_the_country_lets_the_state_be_anything_again(client: AsyncClient) -> None:
+    await _setup(client)
+    await _countries()
+    land = await _land(client, "Ewuru plot", country_code="NG", state="Lagos")
+
+    resp = await client.patch(
+        f"/api/lands/{land['id']}", json={"country_code": None, "state": "off the list"}
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["state"] == "off the list"

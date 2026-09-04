@@ -4,6 +4,7 @@ import type { LandRead } from '@setout/api-client';
 import { ToastService } from '../toast.service';
 import { LandFormComponent } from './land-form.component';
 import { LandService } from './land.service';
+import { CountryService } from './country.service';
 
 function land(over: Partial<LandRead> = {}): LandRead {
   return {
@@ -12,6 +13,8 @@ function land(over: Partial<LandRead> = {}): LandRead {
     address: '14 Jacaranda Close',
     city: 'Ewuru',
     state: 'Ogun',
+    country_code: null,
+    country_name: null,
     size_value: '648.5',
     size_unit: 'sqm',
     notes: 'a note',
@@ -51,12 +54,29 @@ describe('LandFormComponent', () => {
       },
     };
 
+    const countries = {
+      all: () => [
+        { code: 'NG', name: 'Nigeria' },
+        { code: 'GH', name: 'Ghana' },
+      ],
+      load: async () => undefined,
+      loadStates: async () => undefined,
+      states: (code: string) =>
+        code === 'NG'
+          ? [
+              { code: 'NG-LA', country_code: 'NG', name: 'Lagos' },
+              { code: 'NG-OG', country_code: 'NG', name: 'Ogun' },
+            ]
+          : [{ code: 'GH-AA', country_code: 'GH', name: 'Greater Accra' }],
+    };
+
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [LandFormComponent],
       providers: [
         provideRouter([]),
         { provide: LandService, useValue: lands },
+        { provide: CountryService, useValue: countries },
         {
           provide: ToastService,
           useValue: { show: (message: string, type = 'success') => toasts.push({ message, type }) },
@@ -134,6 +154,7 @@ describe('LandFormComponent', () => {
       address: null,
       city: 'Ewuru',
       state: null,
+      country_code: null,
       size_value: '648.5',
       size_unit: 'sqm',
       notes: null,
@@ -159,5 +180,51 @@ describe('LandFormComponent', () => {
     expect(edited.length).toBe(1);
     expect(added.length).toBe(0);
     expect(toasts[0].message).toBe('Land saved.');
+  });
+
+  it('leaves an older plot its free text state when no country is named', async () => {
+    const component = await render('l1', land({ state: 'lagos state', country_code: null }));
+
+    expect(component.state()).toBe('lagos state');
+    expect(component.country()).toBe('');
+
+    await component.save();
+
+    expect(edited[0]).toMatchObject({ state: 'lagos state', country_code: null });
+  });
+
+  it('keeps a state the newly named country also has', async () => {
+    const component = await render('l1', land({ state: 'Lagos', country_code: null }));
+
+    await component.pickCountry('NG');
+
+    expect(component.state()).toBe('Lagos');
+  });
+
+  it('clears a state the newly named country has never heard of', async () => {
+    const component = await render('l1', land({ state: 'Ogun', country_code: null }));
+
+    await component.pickCountry('GH');
+
+    expect(component.state()).toBe('');
+  });
+
+  it('offers only the states of the country that was picked', async () => {
+    const component = await render();
+
+    await component.pickCountry('NG');
+
+    expect(component.stateChips().map((chip) => chip.label)).toEqual(['Lagos', 'Ogun']);
+  });
+
+  it('sends the country and the state that belongs to it', async () => {
+    const component = await render();
+    component.name.set('Ewuru plot');
+    await component.pickCountry('NG');
+    component.state.set('Lagos');
+
+    await component.save();
+
+    expect(added[0]).toMatchObject({ country_code: 'NG', state: 'Lagos' });
   });
 });

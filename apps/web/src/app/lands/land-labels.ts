@@ -46,8 +46,10 @@ export function sizeLabel(land: Pick<LandRead, 'size_value' | 'size_unit'>): str
   return `${value} ${unitName(unit, value)}`;
 }
 
-export function whereLabel(land: Pick<LandRead, 'city' | 'state' | 'address'>): string {
-  const parts = [land.city, land.state].filter((part): part is string => !!part);
+export function whereLabel(
+  land: Pick<LandRead, 'city' | 'state' | 'address'> & Partial<Pick<LandRead, 'country_name'>>,
+): string {
+  const parts = [land.city, land.state, land.country_name].filter((part): part is string => !!part);
   if (parts.length) {
     return parts.join(', ');
   }

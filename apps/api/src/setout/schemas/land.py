@@ -28,6 +28,9 @@ class LandCreate(LandSize):
     address: str | None = None
     city: str | None = Field(None, max_length=255)
     state: str | None = Field(None, max_length=255)
+    country_code: str | None = Field(
+        None, min_length=2, max_length=2, description="Give one and the state is checked against it"
+    )
     size_value: Decimal | None = Field(None, gt=0, max_digits=14, decimal_places=2)
     size_unit: LandSizeUnit | None = None
     notes: str | None = None
@@ -40,6 +43,9 @@ class LandUpdate(LandSize):
     address: str | None = None
     city: str | None = Field(None, max_length=255)
     state: str | None = Field(None, max_length=255)
+    country_code: str | None = Field(
+        None, min_length=2, max_length=2, description="Give one and the state is checked against it"
+    )
     size_value: Decimal | None = Field(None, gt=0, max_digits=14, decimal_places=2)
     size_unit: LandSizeUnit | None = None
     notes: str | None = None
@@ -58,6 +64,8 @@ class LandRead(BaseModel):
     address: str | None
     city: str | None
     state: str | None
+    country_code: str | None
+    country_name: str | None
     size_value: PlainDecimal | None
     size_unit: LandSizeUnit | None
     notes: str | None

@@ -26,6 +26,7 @@ from setout.routers import (
     agreement,
     attachment,
     auth,
+    country,
     counts,
     currency,
     delivery,
@@ -142,6 +143,7 @@ def create_app() -> FastAPI:
     api = APIRouter(prefix="/api")
     api.include_router(auth.router)
     api.include_router(currency.router)
+    api.include_router(country.router)
     api.include_router(counts.router)
     api.include_router(install.router)
     api.include_router(project.router)

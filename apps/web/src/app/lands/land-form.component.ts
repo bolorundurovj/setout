@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
 import type { LandSizeUnit } from '@setout/api-client';
@@ -6,6 +14,7 @@ import { ButtonComponent } from '../ui/button.component';
 import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
 import { ToastService } from '../toast.service';
 import { LandService } from './land.service';
+import { CountryService } from './country.service';
 
 @Component({
   selector: 'app-land-form',
@@ -17,6 +26,7 @@ import { LandService } from './land.service';
 })
 export class LandFormComponent {
   readonly lands = inject(LandService);
+  readonly countries = inject(CountryService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly pageTitle = inject(Title);
@@ -28,9 +38,20 @@ export class LandFormComponent {
   readonly address = signal('');
   readonly city = signal('');
   readonly state = signal('');
+  readonly country = signal('');
   readonly sizeValue = signal('');
   readonly sizeUnit = signal('');
   readonly notes = signal('');
+
+  readonly countryChips = computed<Chip[]>(() =>
+    this.countries.all().map((country) => ({ value: country.code, label: country.name })),
+  );
+
+  readonly stateChips = computed<Chip[]>(() =>
+    this.countries
+      .states(this.country())
+      .map((state) => ({ value: state.name, label: state.name })),
+  );
 
   readonly unitChips: Chip[] = [
     { value: 'sqm', label: 'Square metres' },
@@ -40,6 +61,7 @@ export class LandFormComponent {
   ];
 
   constructor() {
+    void this.countries.load();
     effect(() => {
       this.id();
       void this.load();
@@ -63,6 +85,8 @@ export class LandFormComponent {
       this.address.set(land.address ?? '');
       this.city.set(land.city ?? '');
       this.state.set(land.state ?? '');
+      this.country.set(land.country_code ?? '');
+      void this.countries.loadStates(this.country());
       this.sizeValue.set(land.size_value ?? '');
       this.sizeUnit.set(land.size_unit ?? '');
       this.notes.set(land.notes ?? '');
@@ -72,6 +96,20 @@ export class LandFormComponent {
 
   isEdit(): boolean {
     return this.id().length > 0;
+  }
+
+  async pickCountry(code: string): Promise<void> {
+    this.country.set(code);
+    if (!code) {
+      return;
+    }
+    await this.countries.loadStates(code);
+    // A state the new country has never heard of would only be refused on save.
+    const held = this.state().trim().toLowerCase();
+    const known = this.countries.states(code).some((state) => state.name.toLowerCase() === held);
+    if (!known) {
+      this.state.set('');
+    }
   }
 
   title(): string {
@@ -124,6 +162,7 @@ export class LandFormComponent {
       address: this.address().trim() || null,
       city: this.city().trim() || null,
       state: this.state().trim() || null,
+      country_code: this.country() || null,
       size_value: size || null,
       size_unit: size ? (this.sizeUnit() as LandSizeUnit) : null,
       notes: this.notes().trim() || null,

@@ -5,6 +5,7 @@ from enum import StrEnum
 from tortoise import fields
 from tortoise.models import Model
 
+from setout.models.country import Country
 from setout.utils.ids import short_id
 
 
@@ -23,6 +24,15 @@ class Land(Model):
     address = fields.TextField(null=True, default=None, description="Street address or description")
     city = fields.CharField(max_length=255, null=True, default=None)
     state = fields.CharField(max_length=255, null=True, default=None)
+    country: fields.ForeignKeyNullableRelation[Country] = fields.ForeignKeyField(
+        "models.Country",
+        source_field="country_id",
+        to_field="code",
+        null=True,
+        related_name="lands",
+        on_delete=fields.RESTRICT,
+    )
+    country_id: str | None
     size_value = fields.DecimalField(max_digits=14, decimal_places=2, null=True, default=None)
     size_unit = fields.CharEnumField(LandSizeUnit, max_length=16, null=True, default=None)
     notes = fields.TextField(null=True, default=None)

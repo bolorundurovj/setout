@@ -55,4 +55,21 @@ describe('land labels', () => {
   it('says nothing when the plot has no location at all', () => {
     expect(whereLabel({ city: null, state: null, address: null })).toBe('');
   });
+
+  it('reads the country last, after the town and the state', () => {
+    expect(
+      whereLabel({
+        city: 'Ewuru',
+        state: 'Ogun',
+        address: '14 Jacaranda',
+        country_name: 'Nigeria',
+      }),
+    ).toBe('Ewuru, Ogun, Nigeria');
+  });
+
+  it('leaves out a country the plot never named', () => {
+    expect(whereLabel({ city: 'Ewuru', state: 'Ogun', address: null, country_name: null })).toBe(
+      'Ewuru, Ogun',
+    );
+  });
 });
