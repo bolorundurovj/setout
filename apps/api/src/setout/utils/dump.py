@@ -27,6 +27,7 @@ TABLES: tuple[str, ...] = (
     "delivery",
     "attachment",
     "land_document",
+    "land_valuation",
 )
 
 # Sessions are not carried: they belong to the browsers that were signed in when

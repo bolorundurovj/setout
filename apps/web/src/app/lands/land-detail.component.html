@@ -44,6 +44,14 @@
         <span class="t-body t-mono">{{ size(l) }}</span>
       </div>
       <div class="fact">
+        <span class="t-micro">Bought</span>
+        <span class="t-body t-mono">{{ l.purchased_on ?? notSet }}</span>
+      </div>
+      <div class="fact">
+        <span class="t-micro">Worth now</span>
+        <span class="t-body t-mono">{{ worth(l) }}</span>
+      </div>
+      <div class="fact">
         <span class="t-micro">Papers kept</span>
         <span class="t-body t-mono">{{ l.document_count }}</span>
       </div>
@@ -162,6 +170,10 @@
         accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
         (change)="onPicked($event)"
       />
+    </section>
+
+    <section class="block">
+      <app-land-valuations [land]="l" (changed)="load()" />
     </section>
 
     <section class="block">

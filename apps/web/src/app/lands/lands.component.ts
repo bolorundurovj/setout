@@ -7,7 +7,7 @@ import { PaginationComponent } from '../ui/pagination.component';
 import { ToggleComponent } from '../ui/toggle.component';
 import { TopbarComponent } from '../ui/topbar.component';
 import { LandService } from './land.service';
-import { kindName, sizeLabel, whereLabel } from './land-labels';
+import { kindName, sizeLabel, whereLabel, worthLabel } from './land-labels';
 
 @Component({
   selector: 'app-lands',
@@ -73,6 +73,10 @@ export class LandsComponent {
 
   where(land: LandRead): string {
     return whereLabel(land) || this.notSet;
+  }
+
+  worth(land: LandRead): string {
+    return worthLabel(land) || this.notSet;
   }
 
   size(land: LandRead): string {

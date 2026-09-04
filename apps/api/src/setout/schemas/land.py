@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -31,6 +31,7 @@ class LandCreate(LandSize):
     country_code: str | None = Field(
         None, min_length=2, max_length=2, description="Give one and the state is checked against it"
     )
+    purchased_on: date | None = None
     size_value: Decimal | None = Field(None, gt=0, max_digits=14, decimal_places=2)
     size_unit: LandSizeUnit | None = None
     notes: str | None = None
@@ -46,6 +47,7 @@ class LandUpdate(LandSize):
     country_code: str | None = Field(
         None, min_length=2, max_length=2, description="Give one and the state is checked against it"
     )
+    purchased_on: date | None = None
     size_value: Decimal | None = Field(None, gt=0, max_digits=14, decimal_places=2)
     size_unit: LandSizeUnit | None = None
     notes: str | None = None
@@ -66,9 +68,17 @@ class LandRead(BaseModel):
     state: str | None
     country_code: str | None
     country_name: str | None
+    purchased_on: date | None
     size_value: PlainDecimal | None
     size_unit: LandSizeUnit | None
     notes: str | None
+    currency_code: str | None = Field(
+        None, description="Every valuation is in this. Set by the first one"
+    )
+    currency_exponent: int | None = None
+    purchase_amount: int | None = Field(None, description="Minor units. What it was bought for")
+    current_value: int | None = Field(None, description="Minor units. The newest valuation")
+    valuation_count: int = Field(0, description="Not counting removed ones")
     document_count: int = Field(..., description="Not counting removed ones")
     missing_kinds: list[str] = Field(
         ..., description="The papers worth having that have not been uploaded yet"

@@ -39,6 +39,7 @@ export class LandFormComponent {
   readonly city = signal('');
   readonly state = signal('');
   readonly country = signal('');
+  readonly purchasedOn = signal('');
   readonly sizeValue = signal('');
   readonly sizeUnit = signal('');
   readonly notes = signal('');
@@ -86,6 +87,7 @@ export class LandFormComponent {
       this.city.set(land.city ?? '');
       this.state.set(land.state ?? '');
       this.country.set(land.country_code ?? '');
+      this.purchasedOn.set(land.purchased_on ?? '');
       void this.countries.loadStates(this.country());
       this.sizeValue.set(land.size_value ?? '');
       this.sizeUnit.set(land.size_unit ?? '');
@@ -163,6 +165,7 @@ export class LandFormComponent {
       city: this.city().trim() || null,
       state: this.state().trim() || null,
       country_code: this.country() || null,
+      purchased_on: this.purchasedOn() || null,
       size_value: size || null,
       size_unit: size ? (this.sizeUnit() as LandSizeUnit) : null,
       notes: this.notes().trim() || null,

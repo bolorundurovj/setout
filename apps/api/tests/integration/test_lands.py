@@ -339,3 +339,43 @@ async def test_dropping_the_country_lets_the_state_be_anything_again(client: Asy
 
     assert resp.status_code == 200
     assert resp.json()["state"] == "off the list"
+
+
+async def test_a_plot_remembers_when_it_was_bought(client: AsyncClient) -> None:
+    await _setup(client)
+
+    land = await _land(client, "Ewuru plot", purchased_on="2023-03-11")
+
+    assert land["purchased_on"] == "2023-03-11"
+
+
+async def test_a_restore_carries_the_country_and_the_price_history(client: AsyncClient) -> None:
+    # Land now points at country, and land_valuation points at land and currency.
+    # A wrong table order in the dump would fail on one of those foreign keys.
+    await _setup(client)
+    await _countries()
+    land = await _land(client, "Ewuru plot", country_code="NG", state="Lagos")
+    await client.post(
+        f"/api/lands/{land['id']}/valuations",
+        json={
+            "kind": "purchase",
+            "amount": 4500000,
+            "currency_code": "NGN",
+            "valued_on": "2023-03-11",
+        },
+    )
+    backup = (await client.get("/api/install/export")).json()
+
+    resp = await client.post(
+        "/api/install/restore", json={"backup": backup, "accept_version_change": False}
+    )
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["row_counts"]["land_valuation"] == 1
+
+    await client.post("/api/auth/login", json={"password": "password123"})
+    back = (await client.get(f"/api/lands/{land['id']}")).json()
+    assert back["country_name"] == "Nigeria"
+    assert back["state"] == "Lagos"
+    assert back["purchase_amount"] == 4500000
+    assert back["currency_code"] == "NGN"
