@@ -4761,6 +4761,89 @@
         }
       }
     },
+    "/api/geocode": {
+      "get": {
+        "tags": [
+          "geocode"
+        ],
+        "summary": "Reverse Geocode",
+        "description": "What the map calls this spot, or nothing when the geocoder is off or out of reach.",
+        "operationId": "reverseGeocode",
+        "parameters": [
+          {
+            "name": "latitude",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 90,
+              "minimum": -90,
+              "title": "Latitude"
+            }
+          },
+          {
+            "name": "longitude",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 180,
+              "minimum": -180,
+              "title": "Longitude"
+            }
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/GeocodedPlace"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Reversegeocode"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/vendors": {
       "get": {
         "tags": [
@@ -10213,6 +10296,60 @@
         "type": "object",
         "title": "ExpenseUpdate"
       },
+      "GeocodedPlace": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address",
+            "description": "The whole address, as one line"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City",
+            "description": "Town, village or suburb, whichever it gave"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code",
+            "description": "Two letters, upper case"
+          }
+        },
+        "type": "object",
+        "title": "GeocodedPlace",
+        "description": "What the map calls a spot. Every part is optional: a geocoder answers with\nwhat it knows, and open country knows no street."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -11491,6 +11628,17 @@
             ],
             "title": "Address"
           },
+          "geocoded_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geocoded Address"
+          },
           "city": {
             "anyOf": [
               {
@@ -11868,6 +12016,17 @@
             ],
             "title": "Address"
           },
+          "geocoded_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geocoded Address"
+          },
           "city": {
             "anyOf": [
               {
@@ -12102,6 +12261,7 @@
           "id",
           "name",
           "address",
+          "geocoded_address",
           "city",
           "state",
           "country_code",
@@ -12157,6 +12317,17 @@
               }
             ],
             "title": "Address"
+          },
+          "geocoded_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geocoded Address"
           },
           "city": {
             "anyOf": [

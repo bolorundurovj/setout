@@ -23,6 +23,9 @@ class Land(Model):
     id = fields.CharField(max_length=12, primary_key=True, default=short_id)
     name = fields.CharField(max_length=255, description="What you call it: Ikeja plot, the farm")
     address = fields.TextField(null=True, default=None, description="Street address or description")
+    geocoded_address = fields.TextField(
+        null=True, default=None, description="What the map calls the spot the pin is on"
+    )
     city = fields.CharField(max_length=255, null=True, default=None)
     state = fields.CharField(max_length=255, null=True, default=None)
     country: fields.ForeignKeyNullableRelation[Country] = fields.ForeignKeyField(

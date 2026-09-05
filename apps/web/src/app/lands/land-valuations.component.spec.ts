@@ -9,6 +9,7 @@ function land(over: Partial<LandRead> = {}): LandRead {
     id: 'l1',
     name: 'Ewuru plot',
     address: null,
+    geocoded_address: null,
     city: null,
     state: null,
     country_code: null,

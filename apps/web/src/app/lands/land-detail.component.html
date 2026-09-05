@@ -15,6 +15,9 @@
       <div class="identity">
         <h1 class="t-display">{{ l.name }}</h1>
         <p class="t-small">{{ l.address ?? notSet }}</p>
+        @if (mapAddress(l)) {
+          <p class="t-micro muted">The map calls it {{ mapAddress(l) }}</p>
+        }
       </div>
       <div class="head-actions">
         @if (!l.deleted_at) {

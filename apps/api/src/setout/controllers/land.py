@@ -225,6 +225,7 @@ class LandController:
             id=land.id,
             name=land.name,
             address=land.address,
+            geocoded_address=land.geocoded_address,
             city=land.city,
             state=land.state,
             country_code=land.country_id,

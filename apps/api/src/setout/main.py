@@ -31,6 +31,7 @@ from setout.routers import (
     currency,
     delivery,
     expense,
+    geocode,
     health,
     home,
     import_sheet,
@@ -153,6 +154,7 @@ def create_app() -> FastAPI:
     api.include_router(item.router)
     api.include_router(land.router)
     api.include_router(map.router)
+    api.include_router(geocode.router)
     api.include_router(vendor.router)
     api.include_router(person.router)
     api.include_router(agreement.router)

@@ -485,3 +485,25 @@ async def test_the_edge_can_be_redrawn_and_cleared(client: AsyncClient) -> None:
     assert resp.status_code == 200
     assert resp.json()["boundary"] is None
     assert resp.json()["boundary_area_sqm"] is None
+
+
+async def test_a_plot_keeps_what_the_map_calls_the_spot(client: AsyncClient) -> None:
+    await _setup(client)
+
+    land = await _land(
+        client,
+        "Ewuru plot",
+        address="The farm past the church",
+        geocoded_address="14 Jacaranda Close, Ewuru, Ogun, Nigeria",
+    )
+
+    assert land["address"] == "The farm past the church"
+    assert land["geocoded_address"] == "14 Jacaranda Close, Ewuru, Ogun, Nigeria"
+
+
+async def test_a_plot_with_no_pin_has_nothing_the_map_calls_it(client: AsyncClient) -> None:
+    await _setup(client)
+
+    land = await _land(client, "Ewuru plot")
+
+    assert land["geocoded_address"] is None

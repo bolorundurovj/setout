@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import {
   Api,
+  GeocodedPlace,
   LandCreate,
   LandDocumentKind,
   LandDocumentRead,
@@ -23,6 +24,7 @@ import {
   listLands,
   restoreLand,
   restoreLandDocument,
+  reverseGeocode,
   updateLand,
   updateLandDocument,
   updateLandValuation,
@@ -253,5 +255,15 @@ export class LandService {
 
   async removeValuation(valuationId: string): Promise<void> {
     await this.api.invoke(deleteLandValuation, { valuation_id: valuationId });
+  }
+
+  /** What the map calls a spot, or nothing when the geocoder is off or unreachable. */
+  async placeAt(latitude: number, longitude: number): Promise<GeocodedPlace | null> {
+    try {
+      return await this.api.invoke(reverseGeocode, { latitude, longitude });
+    } catch {
+      // A check that cannot run is not an error worth putting in front of anyone.
+      return null;
+    }
   }
 }

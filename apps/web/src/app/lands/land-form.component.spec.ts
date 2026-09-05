@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import type { LandRead } from '@setout/api-client';
+import type { GeocodedPlace, LandRead } from '@setout/api-client';
 import { ToastService } from '../toast.service';
 import { LandFormComponent } from './land-form.component';
 import { LandService } from './land.service';
@@ -11,6 +11,7 @@ function land(over: Partial<LandRead> = {}): LandRead {
     id: 'l1',
     name: 'Ewuru plot',
     address: '14 Jacaranda Close',
+    geocoded_address: null,
     city: 'Ewuru',
     state: 'Ogun',
     country_code: null,
@@ -44,8 +45,11 @@ describe('LandFormComponent', () => {
   let navigations: unknown[][];
   let toasts: { message: string; type: string }[];
 
+  let mapSays: GeocodedPlace | null = null;
+
   async function render(id = '', existing: LandRead | null = land()) {
     added = [];
+    mapSays = null;
     edited = [];
     navigations = [];
     toasts = [];
@@ -54,6 +58,7 @@ describe('LandFormComponent', () => {
       saving: () => false,
       error: () => null,
       get: async () => existing,
+      placeAt: async () => mapSays,
       add: async (body: unknown) => {
         added.push(body);
         return land({ id: 'l9', name: 'Saved Plot' });
@@ -172,6 +177,7 @@ describe('LandFormComponent', () => {
       size_value: '648.5',
       size_unit: 'sqm',
       notes: null,
+      geocoded_address: null,
     });
     expect(navigations[0][0]).toEqual(['/lands', 'l9']);
   });
@@ -333,7 +339,7 @@ describe('LandFormComponent', () => {
 
     it('says nothing when there is a pin but no edge', async () => {
       const component = await render();
-      component.place.set({ lat: 6.505, lon: 3.305 });
+      await component.setPin({ lat: 6.505, lon: 3.305 });
 
       expect(component.pinIsOutside()).toBe(false);
     });
@@ -341,7 +347,7 @@ describe('LandFormComponent', () => {
     it('says nothing when the pin is inside the edge', async () => {
       const component = await render();
       component.edge.set(SQUARE);
-      component.place.set({ lat: 6.505, lon: 3.305 });
+      await component.setPin({ lat: 6.505, lon: 3.305 });
 
       expect(component.pinIsOutside()).toBe(false);
     });
@@ -349,7 +355,7 @@ describe('LandFormComponent', () => {
     it('catches a pin outside the edge', async () => {
       const component = await render();
       component.edge.set(SQUARE);
-      component.place.set({ lat: 6.6, lon: 3.4 });
+      await component.setPin({ lat: 6.6, lon: 3.4 });
 
       expect(component.pinIsOutside()).toBe(true);
     });
@@ -357,7 +363,7 @@ describe('LandFormComponent', () => {
     it('centring the pin puts it inside and quiets the warning', async () => {
       const component = await render();
       component.edge.set(SQUARE);
-      component.place.set({ lat: 6.6, lon: 3.4 });
+      await component.setPin({ lat: 6.6, lon: 3.4 });
 
       component.centrePin();
 
@@ -368,11 +374,87 @@ describe('LandFormComponent', () => {
 
     it('has no centre to offer without an edge', async () => {
       const component = await render();
-      component.place.set({ lat: 6.6, lon: 3.4 });
+      await component.setPin({ lat: 6.6, lon: 3.4 });
 
       component.centrePin();
 
       expect(component.place()).toEqual({ lat: 6.6, lon: 3.4 });
+    });
+  });
+
+  describe('a pin against the address', () => {
+    it('says nothing when the geocoder had nothing to say', async () => {
+      const component = await render();
+      component.city.set('Ewuru');
+
+      await component.setPin({ lat: 6.5, lon: 3.3 });
+
+      expect(component.placeNote()).toBe('');
+    });
+
+    it('says nothing when the map agrees', async () => {
+      const component = await render();
+      mapSays = { address: '14 Jacaranda', city: 'Ewuru', state: 'Ogun', country_code: 'NG' };
+      component.city.set('Ewuru');
+      component.state.set('Ogun');
+      component.country.set('NG');
+
+      await component.setPin({ lat: 6.5, lon: 3.3 });
+
+      expect(component.placeNote()).toBe('');
+    });
+
+    it('names the town when the pin is somewhere else', async () => {
+      const component = await render();
+      mapSays = { address: '2 Allen Avenue', city: 'Ikeja', state: 'Lagos', country_code: 'NG' };
+      component.city.set('Ewuru');
+      component.state.set('Ogun');
+      component.country.set('NG');
+
+      await component.setPin({ lat: 6.6, lon: 3.35 });
+
+      expect(component.placeNote()).toContain('different state');
+    });
+
+    it('keeps what the map said even when it agrees', async () => {
+      const component = await render();
+      mapSays = { address: '14 Jacaranda', city: 'Ewuru', state: 'Ogun', country_code: 'NG' };
+
+      await component.setPin({ lat: 6.5, lon: 3.3 });
+
+      expect(component.geocodedAddress()).toBe('14 Jacaranda');
+    });
+
+    it('taking the map address fills the fields it answered', async () => {
+      const component = await render();
+      mapSays = { address: '2 Allen Avenue', city: 'Ikeja', state: null, country_code: null };
+
+      await component.setPin({ lat: 6.6, lon: 3.35 });
+      component.useMapAddress();
+
+      expect(component.address()).toBe('2 Allen Avenue');
+      expect(component.city()).toBe('Ikeja');
+    });
+
+    it('forgets what the map said once the pin is taken off', async () => {
+      const component = await render();
+      mapSays = { address: '14 Jacaranda', city: 'Ewuru', state: 'Ogun', country_code: 'NG' };
+      await component.setPin({ lat: 6.5, lon: 3.3 });
+
+      await component.setPin(null);
+
+      expect(component.placeNote()).toBe('');
+    });
+
+    it('saves what the map said alongside the typed address', async () => {
+      const component = await render();
+      mapSays = { address: '14 Jacaranda', city: 'Ewuru', state: 'Ogun', country_code: 'NG' };
+      component.name.set('Ewuru plot');
+      await component.setPin({ lat: 6.5, lon: 3.3 });
+
+      await component.save();
+
+      expect(added[0]).toMatchObject({ geocoded_address: '14 Jacaranda' });
     });
   });
 });

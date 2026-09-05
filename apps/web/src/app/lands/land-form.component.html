@@ -105,7 +105,7 @@
               mode="pin"
               [point]="place()"
               [editable]="true"
-              (pointChange)="place.set($event)"
+              (pointChange)="setPin($event)"
             />
           } @else {
             <app-land-map
@@ -125,6 +125,15 @@
           The pin is outside the edge you drew.
           <button type="button" class="link t-mono" (click)="centrePin()">
             Centre It In The Plot
+          </button>
+        </p>
+      }
+
+      @if (placeNote()) {
+        <p class="t-small warn">
+          {{ placeNote() }}
+          <button type="button" class="link t-mono" (click)="useMapAddress()">
+            Use The Map's Address
           </button>
         </p>
       }

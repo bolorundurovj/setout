@@ -74,6 +74,7 @@ class LandBoundary(BaseModel):
 class LandCreate(LandSize, LandPoint):
     name: str = Field(..., min_length=1, max_length=255)
     address: str | None = None
+    geocoded_address: str | None = None
     city: str | None = Field(None, max_length=255)
     state: str | None = Field(None, max_length=255)
     country_code: str | None = Field(
@@ -93,6 +94,7 @@ class LandUpdate(LandSize, LandPoint):
 
     name: str | None = Field(None, min_length=1, max_length=255)
     address: str | None = None
+    geocoded_address: str | None = None
     city: str | None = Field(None, max_length=255)
     state: str | None = Field(None, max_length=255)
     country_code: str | None = Field(
@@ -118,6 +120,7 @@ class LandRead(BaseModel):
     id: str
     name: str
     address: str | None
+    geocoded_address: str | None
     city: str | None
     state: str | None
     country_code: str | None
