@@ -37,6 +37,7 @@ from setout.routers import (
     install,
     item,
     land,
+    map,
     person,
     project,
     scope,
@@ -151,6 +152,7 @@ def create_app() -> FastAPI:
     api.include_router(expense.router)
     api.include_router(item.router)
     api.include_router(land.router)
+    api.include_router(map.router)
     api.include_router(vendor.router)
     api.include_router(person.router)
     api.include_router(agreement.router)

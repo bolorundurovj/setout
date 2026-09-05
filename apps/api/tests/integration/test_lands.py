@@ -379,3 +379,109 @@ async def test_a_restore_carries_the_country_and_the_price_history(client: Async
     assert back["state"] == "Lagos"
     assert back["purchase_amount"] == 4500000
     assert back["currency_code"] == "NGN"
+
+
+SQUARE = [[3.3, 6.5], [3.3009, 6.5], [3.3009, 6.5009], [3.3, 6.5009], [3.3, 6.5]]
+
+
+async def test_a_plot_remembers_where_it_is(client: AsyncClient) -> None:
+    await _setup(client)
+
+    land = await _land(client, "Ewuru plot", latitude="6.5244", longitude="3.3792")
+
+    assert land["latitude"] == "6.5244"
+    assert land["longitude"] == "3.3792"
+
+
+async def test_half_a_coordinate_is_refused(client: AsyncClient) -> None:
+    await _setup(client)
+
+    resp = await client.post("/api/lands", json={"name": "Nameless", "latitude": "6.5"})
+
+    assert resp.status_code == 422
+    assert "longitude" in resp.text
+
+
+@pytest.mark.parametrize(
+    ("latitude", "longitude"),
+    [("91", "3.3"), ("-91", "3.3"), ("6.5", "181"), ("6.5", "-181")],
+)
+async def test_a_coordinate_off_the_earth_is_refused(
+    client: AsyncClient, latitude: str, longitude: str
+) -> None:
+    await _setup(client)
+
+    resp = await client.post(
+        "/api/lands",
+        json={"name": "Nameless", "latitude": latitude, "longitude": longitude},
+    )
+
+    assert resp.status_code == 422
+
+
+async def test_a_plot_keeps_the_shape_of_its_edge(client: AsyncClient) -> None:
+    await _setup(client)
+
+    land = await _land(client, "Ewuru plot", boundary={"type": "Polygon", "coordinates": [SQUARE]})
+
+    assert land["boundary"]["type"] == "Polygon"
+    assert land["boundary"]["coordinates"][0][0] == [3.3, 6.5]
+    assert land["boundary_area_sqm"] == pytest.approx(10_000, rel=0.01)
+
+
+async def test_an_edge_that_was_left_open_comes_back_closed(client: AsyncClient) -> None:
+    await _setup(client)
+
+    land = await _land(
+        client, "Ewuru plot", boundary={"type": "Polygon", "coordinates": [SQUARE[:-1]]}
+    )
+
+    ring = land["boundary"]["coordinates"][0]
+    assert ring[0] == ring[-1]
+    assert len(ring) == 5
+
+
+async def test_a_line_is_not_an_edge(client: AsyncClient) -> None:
+    await _setup(client)
+
+    resp = await client.post(
+        "/api/lands",
+        json={
+            "name": "Nameless",
+            "boundary": {"type": "Polygon", "coordinates": [[[3.3, 6.5], [3.4, 6.6]]]},
+        },
+    )
+
+    assert resp.status_code == 422
+
+
+async def test_a_pasted_county_is_refused(client: AsyncClient) -> None:
+    await _setup(client)
+    huge = [[3.3 + i / 100000, 6.5] for i in range(1001)]
+
+    resp = await client.post(
+        "/api/lands",
+        json={"name": "Nameless", "boundary": {"type": "Polygon", "coordinates": [huge]}},
+    )
+
+    assert resp.status_code == 422
+
+
+async def test_a_plot_with_no_edge_reports_no_area(client: AsyncClient) -> None:
+    await _setup(client)
+
+    land = await _land(client, "Ewuru plot")
+
+    assert land["boundary"] is None
+    assert land["boundary_area_sqm"] is None
+
+
+async def test_the_edge_can_be_redrawn_and_cleared(client: AsyncClient) -> None:
+    await _setup(client)
+    land = await _land(client, "Ewuru plot", boundary={"type": "Polygon", "coordinates": [SQUARE]})
+
+    resp = await client.patch(f"/api/lands/{land['id']}", json={"boundary": None})
+
+    assert resp.status_code == 200
+    assert resp.json()["boundary"] is None
+    assert resp.json()["boundary_area_sqm"] is None

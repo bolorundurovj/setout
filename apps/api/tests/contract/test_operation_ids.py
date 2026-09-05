@@ -114,6 +114,7 @@ EXPECTED_OPERATION_IDS = {
     "deleteLandValuation",
     "restoreLandValuation",
     "listCountries",
+    "getMapSettings",
     "listStates",
     "listVendors",
     "createVendor",

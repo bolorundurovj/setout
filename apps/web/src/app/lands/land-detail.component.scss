@@ -151,3 +151,17 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+// Holds the map's height while its chunk loads, so the page does not jump.
+.map-waiting {
+  height: 340px;
+  border: 1.5px solid var(--rule);
+  border-radius: 14px;
+  background: var(--field);
+}
+
+@media (max-width: 719px) {
+  .map-waiting {
+    height: 260px;
+  }
+}

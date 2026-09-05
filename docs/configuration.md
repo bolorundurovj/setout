@@ -24,11 +24,37 @@ and adjust. Local development defaults to `./data`.
 | `SETOUT_S3_USE_PATH_STYLE` | `false` | Turn on for MinIO and anything else wanting the bucket in the path |
 | `SETOUT_S3_LINK_SECONDS` | `300` | How long a link straight to the bucket stays good |
 | `SETOUT_MAX_ATTACHMENT_BYTES` | `26214400` | Largest file that can be attached |
+| `SETOUT_MAP_TILE_URL` | OpenStreetMap | Tile template for the map on a plot of land |
+| `SETOUT_MAP_ATTRIBUTION` | `© OpenStreetMap contributors` | Credit shown on the map |
 
 Two of these decide whether the install is safe to expose. `SETOUT_SECRET_KEY`
 signs session cookies, so anyone who knows it can forge a session; the app warns
 on startup while it is still the default. `SETOUT_COOKIE_SECURE` should be on
 anywhere that is not localhost.
+
+### The map
+
+A plot of land can carry coordinates and a boundary, drawn on a map. The map is
+[Leaflet](https://leafletjs.com), bundled with the app rather than fetched from a
+CDN, and it needs no account and no API key.
+
+The tiles behind it are a different matter. `SETOUT_MAP_TILE_URL` defaults to
+OpenStreetMap's own servers, which is what makes the map work the moment you
+install. Their [tile usage policy](https://operations.osmfoundation.org/policies/tiles/)
+asks that applications not send them bulk or heavy traffic, so if you are running
+Setout for more than a household, point this at your own tile server:
+
+```bash
+SETOUT_MAP_TILE_URL=http://tiles.example.lan/{z}/{x}/{y}.png
+SETOUT_MAP_ATTRIBUTION="Tiles by me, data © OpenStreetMap contributors"
+```
+
+The template takes `{z}`, `{x}` and `{y}`. Whatever you point it at, keep the
+attribution honest about where the data came from.
+
+Tiles are the only thing Setout fetches from another host, and only on a land
+page. When they cannot be reached the pin and the boundary still draw on a plain
+background, so a site with no signal still shows you the shape of the plot.
 
 ## The compose stack
 

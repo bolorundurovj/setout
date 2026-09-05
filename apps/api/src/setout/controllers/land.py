@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 
@@ -11,8 +12,16 @@ from setout.models.land import Land
 from setout.models.land_document import LandDocument, LandDocumentKind
 from setout.models.land_valuation import LandValuation, LandValuationKind
 from setout.models.project import Project
-from setout.schemas.land import LandCreate, LandPage, LandProject, LandRead, LandUpdate
+from setout.schemas.land import (
+    LandBoundary,
+    LandCreate,
+    LandPage,
+    LandProject,
+    LandRead,
+    LandUpdate,
+)
 from setout.utils.cascade import delete_under_land, restore_under_land
+from setout.utils.geo import polygon_area_sqm
 
 NOT_FOUND_LAND = "Land not found"
 DUPLICATE_NAME = "A land with that name already exists"
@@ -61,6 +70,7 @@ class LandController:
     async def create(self, req: LandCreate) -> LandRead:
         await self._reject_duplicate(req.name)
         values = req.model_dump()
+        values["boundary"] = _as_text(req.boundary)
         code = values.pop("country_code")
         values["country_id"], values["state"] = await self._place(code, values["state"])
         land = await Land.create(**values)
@@ -74,6 +84,8 @@ class LandController:
     async def update(self, land_id: str, req: LandUpdate) -> LandRead:
         land = await self._land_or_404(land_id)
         changes = req.model_dump(exclude_unset=True)
+        if "boundary" in changes:
+            changes["boundary"] = _as_text(req.boundary)
         name = changes.get("name")
         if name is not None and name.casefold() != land.name.casefold():
             await self._reject_duplicate(name)
@@ -207,6 +219,7 @@ class LandController:
         prices: dict[str, LandPrice],
     ) -> LandRead:
         held = kinds.get(land.id, [])
+        edge = _as_boundary(land.boundary)
         price = prices.get(land.id)
         return LandRead(
             id=land.id,
@@ -217,6 +230,10 @@ class LandController:
             country_code=land.country_id,
             country_name=countries.get(land.country_id) if land.country_id else None,
             purchased_on=land.purchased_on,
+            latitude=land.latitude,
+            longitude=land.longitude,
+            boundary=edge,
+            boundary_area_sqm=_area_of(edge),
             size_value=land.size_value,
             size_unit=land.size_unit,
             notes=land.notes,
@@ -242,3 +259,23 @@ class LandController:
         if land is None or (land.deleted_at is not None and not include_deleted):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND_LAND)
         return land
+
+
+def _as_text(boundary: LandBoundary | None) -> str | None:
+    return None if boundary is None else json.dumps(boundary.model_dump())
+
+
+def _as_boundary(text: str | None) -> LandBoundary | None:
+    """A shape that was written before its rules tightened is shown, not raised over."""
+    if not text:
+        return None
+    try:
+        return LandBoundary.model_validate(json.loads(text))
+    except (ValueError, TypeError):
+        return None
+
+
+def _area_of(boundary: LandBoundary | None) -> float | None:
+    if boundary is None or not boundary.coordinates:
+        return None
+    return round(polygon_area_sqm(boundary.coordinates[0]), 2)
