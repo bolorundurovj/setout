@@ -30,8 +30,9 @@ OPENAPI_JSON := $(SDK_DIR)/openapi.json
 # name is an optional argument to `make migration`.
 name ?=
 
+
 .PHONY: help setup dev api web watch-sdk lint format test test-unit test-int test-contract \
-	sdk migration migrate downgrade seed backup restore check build docker-build clean \
+	sdk migration migrate downgrade seed backup restore check build docker-build kill clean \
 	require-uv require-yarn require-docker
 
 # file is the archive argument to `make restore`.
@@ -81,7 +82,8 @@ setup: require-uv require-yarn ## Install everything, backend and frontend.
 dev: ## Run API and web together with reload.
 	@echo "Starting API and web. Press Ctrl-C to stop both."
 	@# kill 0 signals the whole process group. Without it the reloader and
-	@# its child survive Ctrl-C and keep holding the port.
+	@# its child survive Ctrl-C and keep holding the port. When one gets away
+	@# regardless, `make kill` frees the ports.
 	@trap 'trap - INT TERM EXIT; kill 0' INT TERM EXIT; \
 	$(MAKE) api & \
 	$(MAKE) web & \
@@ -154,6 +156,33 @@ build: require-uv require-yarn sdk ## Production build of both apps.
 
 docker-build: require-docker ## Build the single deployment image.
 	docker build -f docker/Dockerfile -t setout:latest .
+
+kill: ## Stop anything left holding the dev ports.
+	@for port in $${SETOUT_PORT:-8474} $${WEB_PORT:-4200}; do \
+		case "$$(uname -s)" in \
+		MINGW*|MSYS*|CYGWIN*) \
+			pids=$$(netstat -ano \
+				| awk -v want=":$$port$$" \
+					'$$1 == "TCP" && $$2 ~ want && $$4 == "LISTENING" { print $$5 }' \
+				| sort -u) ;; \
+		*) \
+			pids=$$(lsof -ti tcp:$$port 2>/dev/null | sort -u) ;; \
+		esac; \
+		if [ -z "$$pids" ]; then \
+			echo "$$port: nothing listening"; \
+			continue; \
+		fi; \
+		for pid in $$pids; do \
+			case "$$(uname -s)" in \
+			MINGW*|MSYS*|CYGWIN*) taskkill //F //T //PID $$pid >/dev/null 2>&1 ;; \
+			*) kill $$pid 2>/dev/null || true ;; \
+			esac; \
+			echo "$$port: stopped $$pid"; \
+		done; \
+	done
+	@# watch-sdk holds no port of its own, so it is named rather than found.
+	@pkill -f "watchfiles --filter python" 2>/dev/null \
+		&& echo "stopped the SDK watcher" || true
 
 clean: ## Remove build artefacts and caches.
 	rm -rf $(API_DIR)/dist $(API_DIR)/.venv $(API_DIR)/.pytest_cache \

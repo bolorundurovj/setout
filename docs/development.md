@@ -23,6 +23,7 @@ make restore      read a backup archive back (file=<archive>)
 make check        lint, typecheck, all tests, coverage floor, SDK drift
 make build        production build of both apps
 make docker-build build the single deployment image
+make kill         stop anything left holding the dev ports
 make clean        remove build artefacts and caches
 ```
 
