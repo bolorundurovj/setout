@@ -67,6 +67,22 @@ docker inspect ghcr.io/bolorundurovj/setout:1.2.3 \
 `edge` exists for trying a fix before it is released. It is whatever last landed
 on `master`, so it is not the thing to point a household at.
 
+Every tag goes to Docker Hub as `bolorundurovj/setout` as well, pushed as the
+same manifest, so a digest pinned against one registry matches the other.
+
+Each GHCR image also carries a signed record of which workflow built it, from
+which repository and at which commit. It separates an image built from this
+source from one pushed by whoever got hold of a token:
+
+```bash
+gh attestation verify oci://ghcr.io/bolorundurovj/setout:1.2.3 \
+  --repo bolorundurovj/setout
+```
+
+The record is attached to the image in GHCR rather than stored inside it, so it
+does not follow the copy to Docker Hub. Verification runs against GHCR, and the
+digests are identical, so the result covers the Docker Hub copy as well.
+
 ## Checking on it
 
 `/healthz` answers with the version and the database status, which is the right

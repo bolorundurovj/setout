@@ -15,7 +15,9 @@ attachments, with the bucket made before the app starts. The MinIO console is on
 9001.
 
 The image is published to `ghcr.io/bolorundurovj/setout` for amd64 and arm64, so
-a Raspberry Pi or an ARM server pulls the same way an ordinary one does.
+a Raspberry Pi or an ARM server pulls the same way an ordinary one does. It is
+published to Docker Hub as `bolorundurovj/setout` at the same time, with the same
+tags and the same digests, so either name pulls the identical image.
 
 | Tag | What it is |
 | --- | --- |

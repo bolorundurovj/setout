@@ -10,6 +10,7 @@
   <a href="https://github.com/bolorundurovj/setout/actions/workflows/ci.yml"><img src="https://github.com/bolorundurovj/setout/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://github.com/bolorundurovj/setout/releases"><img src="https://img.shields.io/github/v/release/bolorundurovj/setout?label=release" alt="Release" /></a>
   <a href="https://github.com/bolorundurovj/setout/pkgs/container/setout"><img src="https://img.shields.io/badge/ghcr.io-setout-blue" alt="Container image" /></a>
+  <a href="https://hub.docker.com/r/bolorundurovj/setout"><img src="https://img.shields.io/docker/pulls/bolorundurovj/setout" alt="Docker Hub pulls" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-AGPL--3.0-blue.svg" alt="Licence: AGPL v3" /></a>
 </p>
 
@@ -40,7 +41,8 @@ docker compose -f docker/docker-compose.yml up -d
 
 That pulls the published image, `ghcr.io/bolorundurovj/setout` for amd64 and
 arm64, and brings up the app on 8474 with Postgres for the record and MinIO for
-the attachments. From a checkout instead:
+the attachments. The same image is on Docker Hub as `bolorundurovj/setout` if you
+would rather pull from there. From a checkout instead:
 
 ```bash
 make setup    # install backend and frontend
