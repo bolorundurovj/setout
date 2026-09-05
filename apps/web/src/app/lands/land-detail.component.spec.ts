@@ -10,6 +10,7 @@ function land(over: Partial<LandRead> = {}): LandRead {
     id: 'l1',
     name: 'Ewuru plot',
     address: '14 Jacaranda Close',
+    geocoded_address: null,
     city: 'Ewuru',
     state: 'Ogun',
     country_code: null,
@@ -285,6 +286,28 @@ describe('LandDetailComponent', () => {
     expect(component.shownMap(land({ boundary: { type: 'Polygon', coordinates: [[]] } }))).toBe(
       'boundary',
     );
+  });
+
+  it('says what the map calls the spot when it differs from the address', async () => {
+    const { component } = await render();
+    const plot = land({
+      address: 'The farm past the church',
+      geocoded_address: '14 Jacaranda Close, Ewuru',
+    });
+
+    expect(component.mapAddress(plot)).toBe('14 Jacaranda Close, Ewuru');
+  });
+
+  it('stays quiet when the map only says the address back', async () => {
+    const { component } = await render();
+    const plot = land({ address: '14 Jacaranda', geocoded_address: '  14 Jacaranda  ' });
+
+    expect(component.mapAddress(plot)).toBe('');
+  });
+
+  it('stays quiet when the map was never asked', async () => {
+    const { component } = await render();
+    expect(component.mapAddress(land())).toBe('');
   });
 
   describe('a pin outside the edge', () => {

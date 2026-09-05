@@ -42,7 +42,12 @@ class Settings(BaseSettings):
     # Tiles for the map on a plot of land. The default is OpenStreetMap's own
     # server; point this at your own if you run Setout for more than a household.
     map_tile_url: str = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-    map_attribution: str = "© OpenStreetMap contributors"
+    map_attribution: str = "© OpenStreetMap"
+
+    # Turning a pin into an address. Empty turns the check off entirely.
+    geocoder_url: str = "https://nominatim.openstreetmap.org"
+    # Nominatim asks for a contact address on anything beyond occasional use.
+    geocoder_email: str = ""
 
     # Where attached files are kept: "local" for the disk under data_dir, or
     # "s3" for any S3 compatible bucket.

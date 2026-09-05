@@ -115,6 +115,7 @@ EXPECTED_OPERATION_IDS = {
     "restoreLandValuation",
     "listCountries",
     "getMapSettings",
+    "reverseGeocode",
     "listStates",
     "listVendors",
     "createVendor",

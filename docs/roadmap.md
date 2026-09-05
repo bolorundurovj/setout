@@ -36,6 +36,28 @@ cash handed back, so a balance can only be worked down by spending it, never
 squared off. The number drifts, and there is nothing to show the person when you
 sit down to count.
 
+## Warning on a plot page that the pin is nowhere near its address
+
+Setting a pin on the land form already asks the geocoder what it calls that spot,
+and says so when the town, state or country disagrees with what the plot records.
+Opening a plot says nothing: the check runs where the pin is moved, not where it
+is read.
+
+The awkward part is that the record does not hold enough to repeat the check. The
+address the geocoder gave is stored, but not the town, state and country the
+comparison actually needs, so a plot page would have to ask again on every view.
+That is cheap in practice, because answers are cached per coordinate on the
+server, but it means opening a plot makes a request that opening a plot does not
+otherwise make.
+
+The alternative is keeping the town, state and country beside the address, so the
+check needs nothing at all. It costs three columns, and they quietly go stale the
+day somebody corrects a plot's town without touching its pin — a stored answer to
+a question nobody asked again.
+
+The pin-outside-the-boundary warning already shows in both places, because that
+one is arithmetic on what the page has in hand.
+
 ## Vendors and people tabs on a project
 
 Vendors and people are install-wide, and the only way to see them today is the

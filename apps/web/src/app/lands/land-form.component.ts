@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
-import type { LandBoundary, LandSizeUnit } from '@setout/api-client';
+import type { GeocodedPlace, LandBoundary, LandSizeUnit } from '@setout/api-client';
 import { ButtonComponent } from '../ui/button.component';
 import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
 import { TabsComponent, type Tab } from '../ui/tabs.component';
@@ -27,6 +27,7 @@ import {
   pointInRing,
   ringOf,
 } from './land-geo';
+import { disagreementNote, placeDisagrees, type Disagreement } from './land-place';
 
 @Component({
   selector: 'app-land-form',
@@ -70,6 +71,10 @@ export class LandFormComponent {
 
   private typedTheEdge = false;
 
+  readonly geocodedAddress = signal('');
+  readonly mapSays = signal<GeocodedPlace | null>(null);
+  private asking = 0;
+
   readonly mapTab = signal<'pin' | 'boundary'>('pin');
 
   readonly mapTabs: Tab[] = [
@@ -100,6 +105,19 @@ export class LandFormComponent {
     const pin = this.place();
     const ring = ringOf(this.edge());
     return pin !== null && ring.length >= 3 && !pointInRing([pin.lon, pin.lat], ring);
+  });
+
+  readonly placeNote = computed<string>(() => {
+    const said = this.mapSays();
+    if (!said) {
+      return '';
+    }
+    const where = placeDisagrees(said, {
+      city: this.city(),
+      state: this.state(),
+      countryCode: this.country(),
+    });
+    return where ? disagreementNote(where as Disagreement, said) : '';
   });
 
   readonly unitChips: Chip[] = [
@@ -152,6 +170,7 @@ export class LandFormComponent {
           : null,
       );
       this.edge.set(land.boundary ?? null);
+      this.geocodedAddress.set(land.geocoded_address ?? '');
     }
     this.loading.set(false);
   }
@@ -181,7 +200,54 @@ export class LandFormComponent {
     if (!middle || !pointInRing(middle, ring)) {
       return;
     }
-    this.place.set({ lat: middle[1], lon: middle[0] });
+    void this.setPin({ lat: middle[1], lon: middle[0] });
+  }
+
+  async setPin(pin: LandPoint | null): Promise<void> {
+    this.place.set(pin);
+    await this.askTheMap(pin);
+  }
+
+  /** The last answer wins, so dragging a pin about does not leave a stale note. */
+  private async askTheMap(pin: LandPoint | null): Promise<void> {
+    if (!pin) {
+      this.mapSays.set(null);
+      return;
+    }
+    const ticket = ++this.asking;
+    const said = await this.lands.placeAt(pin.lat, pin.lon);
+    if (ticket !== this.asking) {
+      return;
+    }
+    this.mapSays.set(said);
+    if (said?.address) {
+      this.geocodedAddress.set(said.address);
+    }
+  }
+
+  /** Take the map's word for where this is, in every field it answered. */
+  useMapAddress(): void {
+    const said = this.mapSays();
+    if (!said) {
+      return;
+    }
+    if (said.address) {
+      this.address.set(said.address);
+    }
+    if (said.city) {
+      this.city.set(said.city);
+    }
+    if (said.country_code) {
+      void this.pickCountry(said.country_code).then(() => {
+        if (said.state) {
+          this.state.set(said.state);
+        }
+      });
+      return;
+    }
+    if (said.state) {
+      this.state.set(said.state);
+    }
   }
 
   openTyping(): void {
@@ -280,6 +346,7 @@ export class LandFormComponent {
       latitude: this.place() ? String(this.place()?.lat) : null,
       longitude: this.place() ? String(this.place()?.lon) : null,
       boundary: this.edge(),
+      geocoded_address: this.geocodedAddress().trim() || null,
     };
     const saved = this.isEdit()
       ? await this.lands.edit(this.id(), body)

@@ -87,6 +87,12 @@ export class LandDetailComponent {
     this.loading.set(false);
   }
 
+  /** Only worth saying when it is not just the address said back. */
+  mapAddress(land: LandRead): string {
+    const said = (land.geocoded_address ?? '').trim();
+    return said && said !== (land.address ?? '').trim() ? said : '';
+  }
+
   place(land: LandRead): LandPoint | null {
     return land.latitude !== null && land.longitude !== null
       ? { lat: Number(land.latitude), lon: Number(land.longitude) }
