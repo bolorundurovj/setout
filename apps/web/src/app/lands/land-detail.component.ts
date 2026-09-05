@@ -16,13 +16,24 @@ import { ButtonComponent } from '../ui/button.component';
 import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
 import { ToastService } from '../toast.service';
 import { LandService } from './land.service';
-import { DOCUMENT_KINDS, kindName, sizeLabel } from './land-labels';
+import { LandValuationsComponent } from './land-valuations.component';
+import { LandMapComponent, type LandPoint } from './land-map.component';
+import { TabsComponent, type Tab } from '../ui/tabs.component';
+import { asSize, pointInRing, ringOf } from './land-geo';
+import { DOCUMENT_KINDS, kindName, sizeLabel, worthLabel } from './land-labels';
 
 @Component({
   selector: 'app-land-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChipGroupComponent, RouterLink],
+  imports: [
+    ButtonComponent,
+    ChipGroupComponent,
+    LandMapComponent,
+    LandValuationsComponent,
+    TabsComponent,
+    RouterLink,
+  ],
   templateUrl: './land-detail.component.html',
   styleUrl: './land-detail.component.scss',
 })
@@ -39,9 +50,15 @@ export class LandDetailComponent {
   readonly documents = signal<LandDocumentRead[]>([]);
   readonly loading = signal(true);
   readonly kind = signal<LandDocumentKind>('certificate_of_occupancy');
+  readonly note = signal('');
   readonly justRemoved = signal<LandDocumentRead | null>(null);
+  readonly editing = signal<string | null>(null);
+  readonly editNote = signal('');
+  readonly editKind = signal<LandDocumentKind>('other');
 
   readonly notSet = '—';
+
+  readonly mapTab = signal<'pin' | 'boundary'>('pin');
 
   readonly kindChips: Chip[] = DOCUMENT_KINDS.map((value) => ({ value, label: kindName(value) }));
 
@@ -70,12 +87,128 @@ export class LandDetailComponent {
     this.loading.set(false);
   }
 
+  /** Only worth saying when it is not just the address said back. */
+  mapAddress(land: LandRead): string {
+    const said = (land.geocoded_address ?? '').trim();
+    return said && said !== (land.address ?? '').trim() ? said : '';
+  }
+
+  place(land: LandRead): LandPoint | null {
+    return land.latitude !== null && land.longitude !== null
+      ? { lat: Number(land.latitude), lon: Number(land.longitude) }
+      : null;
+  }
+
+  hasMap(land: LandRead): boolean {
+    return this.place(land) !== null || land.boundary !== null;
+  }
+
+  /** Both halves have to be there before one can disagree with the other. */
+  pinIsOutside(land: LandRead): boolean {
+    const pin = this.place(land);
+    const ring = ringOf(land.boundary);
+    return pin !== null && ring.length >= 3 && !pointInRing([pin.lon, pin.lat], ring);
+  }
+
+  /** Only worth a switch when there is something to switch between. */
+  mapTabs(land: LandRead): Tab[] {
+    if (this.place(land) === null || land.boundary === null) {
+      return [];
+    }
+    return [
+      { value: 'pin', label: 'Pin' },
+      { value: 'boundary', label: 'Boundary' },
+    ];
+  }
+
+  shownMap(land: LandRead): 'pin' | 'boundary' {
+    if (this.place(land) === null) {
+      return 'boundary';
+    }
+    if (land.boundary === null) {
+      return 'pin';
+    }
+    return this.mapTab();
+  }
+
+  area(land: LandRead): string {
+    const sqm = land.boundary_area_sqm;
+    if (sqm === null || sqm === undefined) {
+      return this.notSet;
+    }
+    const unit = land.size_unit && land.size_unit !== 'plot' ? land.size_unit : 'sqm';
+    return `${asSize(sqm, unit)} ${unit === 'sqm' ? 'sqm' : unit + 's'}`;
+  }
+
+  /** How far the drawn edge is from what the survey said, when both exist. */
+  areaGap(land: LandRead): number | null {
+    const sqm = land.boundary_area_sqm;
+    if (!sqm || !land.size_value || !land.size_unit || land.size_unit === 'plot') {
+      return null;
+    }
+    const drawn = Number(asSize(sqm, land.size_unit));
+    const stated = Number(land.size_value);
+    if (!stated || Number.isNaN(drawn)) {
+      return null;
+    }
+    return Math.round(Math.abs((drawn - stated) / stated) * 100);
+  }
+
+  async useDrawnSize(land: LandRead): Promise<void> {
+    const sqm = land.boundary_area_sqm;
+    if (!sqm) {
+      return;
+    }
+    const unit = land.size_unit && land.size_unit !== 'plot' ? land.size_unit : 'sqm';
+    const saved = await this.lands.edit(land.id, {
+      size_value: asSize(sqm, unit),
+      size_unit: unit,
+    });
+    if (!saved) {
+      this.toast.show(this.lands.error() ?? 'Could not save that size.', 'error');
+      return;
+    }
+    this.toast.show('Size taken from the boundary.');
+    await this.load();
+  }
+
   size(land: LandRead): string {
     return sizeLabel(land) || this.notSet;
   }
 
   kindLabel(document: LandDocumentRead): string {
     return kindName(document.kind);
+  }
+
+  value(event: Event): string {
+    return (event.target as HTMLInputElement).value;
+  }
+
+  worth(land: LandRead): string {
+    return worthLabel(land) || this.notSet;
+  }
+
+  startEdit(document: LandDocumentRead): void {
+    this.editing.set(document.id);
+    this.editNote.set(document.note ?? '');
+    this.editKind.set(document.kind);
+  }
+
+  cancelEdit(): void {
+    this.editing.set(null);
+  }
+
+  async saveEdit(document: LandDocumentRead): Promise<void> {
+    const saved = await this.lands.editDocument(document.id, {
+      kind: this.editKind(),
+      note: this.editNote().trim() || null,
+    });
+    if (!saved) {
+      this.toast.show(this.lands.error() ?? 'Could not save that paper.', 'error');
+      return;
+    }
+    this.editing.set(null);
+    await this.load();
   }
 
   fileNote(document: LandDocumentRead): string {
@@ -111,11 +244,12 @@ export class LandDetailComponent {
     if (!file) {
       return;
     }
-    const saved = await this.lands.addDocument(this.id(), this.kind(), file);
+    const saved = await this.lands.addDocument(this.id(), this.kind(), file, this.note().trim());
     if (!saved) {
       this.toast.show(this.lands.error() ?? 'Could not keep that file.', 'error');
       return;
     }
+    this.note.set('');
     this.toast.show(`${kindName(saved.kind)} kept.`);
     await this.load();
   }

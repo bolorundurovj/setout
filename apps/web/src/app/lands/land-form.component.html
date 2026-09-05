@@ -32,6 +32,17 @@
       />
     </label>
 
+    <div class="field">
+      <span class="t-micro">Country</span>
+      <app-chip-group
+        label="Country"
+        [chips]="countryChips()"
+        [value]="country()"
+        [clearable]="true"
+        (valueChange)="pickCountry($event)"
+      />
+    </div>
+
     <div class="pair">
       <label class="field">
         <span class="t-micro">Town or city</span>
@@ -43,16 +54,137 @@
           (input)="city.set(value($event))"
         />
       </label>
-      <label class="field">
-        <span class="t-micro">State</span>
-        <input
-          class="input-field"
-          type="text"
-          autocomplete="off"
-          [value]="state()"
-          (input)="state.set(value($event))"
-        />
-      </label>
+      @if (country()) {
+        <div class="field">
+          <span class="t-micro">State</span>
+          <app-chip-group
+            label="State"
+            [chips]="stateChips()"
+            [value]="state()"
+            [clearable]="true"
+            (valueChange)="state.set($event)"
+          />
+        </div>
+      } @else {
+        <label class="field">
+          <span class="t-micro">State</span>
+          <input
+            class="input-field"
+            type="text"
+            autocomplete="off"
+            [value]="state()"
+            (input)="state.set(value($event))"
+          />
+        </label>
+      }
+    </div>
+
+    <label class="field">
+      <span class="t-micro">Bought on</span>
+      <input
+        class="input-field t-mono"
+        type="date"
+        [value]="purchasedOn()"
+        (input)="purchasedOn.set(value($event))"
+      />
+      <span class="t-small muted">What it cost goes on the plot's own page, with the rest.</span>
+    </label>
+
+    <div class="field">
+      <span class="t-micro">Where it is</span>
+      <app-tabs
+        label="Pin or boundary"
+        [tabs]="mapTabs"
+        [value]="mapTab()"
+        (valueChange)="mapTab.set($any($event))"
+      />
+      @defer (on viewport) {
+        <div role="tabpanel" [id]="mapTab() + '-panel'" [attr.aria-labelledby]="mapTab() + '-tab'">
+          @if (mapTab() === 'pin') {
+            <app-land-map
+              mode="pin"
+              [point]="place()"
+              [editable]="true"
+              (pointChange)="setPin($event)"
+            />
+          } @else {
+            <app-land-map
+              mode="boundary"
+              [boundary]="edge()"
+              [editable]="true"
+              (boundaryChange)="edge.set($event)"
+            />
+          }
+        </div>
+      } @placeholder {
+        <div class="map-waiting"></div>
+      }
+
+      @if (pinIsOutside()) {
+        <p class="t-small warn">
+          The pin is outside the edge you drew.
+          <button type="button" class="link t-mono" (click)="centrePin()">
+            Centre It In The Plot
+          </button>
+        </p>
+      }
+
+      @if (placeNote()) {
+        <p class="t-small warn">
+          {{ placeNote() }}
+          <button type="button" class="link t-mono" (click)="useMapAddress()">
+            Use The Map's Address
+          </button>
+        </p>
+      }
+
+      @if (mapTab() === 'boundary') {
+        <div class="field">
+          <span class="t-micro">How you are describing the edge</span>
+          <app-chip-group
+            label="How you are describing the edge"
+            [chips]="edgeWays"
+            [value]="edgeBy()"
+            (valueChange)="edgeBy.set($event)"
+          />
+        </div>
+      }
+
+      @if (mapTab() === 'boundary' && edgeBy() === 'survey') {
+        <app-land-survey (boundaryChange)="edge.set($event)" />
+      }
+
+      @if (mapTab() === 'boundary' && edgeBy() === 'corners') {
+        @if (typing()) {
+          <label class="field">
+            <span class="t-micro">Corners &middot; latitude first, one per line</span>
+            <textarea
+              class="input-field geojson t-mono"
+              rows="6"
+              spellcheck="false"
+              autocapitalize="off"
+              placeholder="6.5244, 3.3792&#10;6&#176;31'30.4&quot;N 3&#176;22'48.0&quot;E"
+              [value]="typed()"
+              (input)="onTyped(area($event))"
+            ></textarea>
+            @if (typeNote()) {
+              <span class="t-small warn">{{ typeNote() }}</span>
+            } @else {
+              <span class="t-small muted">
+                Degrees, or degrees minutes seconds off the survey. GeoJSON pastes in here too.
+              </span>
+            }
+          </label>
+          <div class="form-actions">
+            <app-button variant="secondary" (pressed)="typing.set(false)">Done</app-button>
+            <button type="button" class="link t-mono" (click)="showGeoJson()">
+              Show As GeoJSON
+            </button>
+          </div>
+        } @else {
+          <button type="button" class="link t-mono" (click)="openTyping()">Type The Corners</button>
+        }
+      }
     </div>
 
     <label class="field">

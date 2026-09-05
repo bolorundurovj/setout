@@ -1,4 +1,11 @@
-import { DOCUMENT_KINDS, kindName, sizeLabel, unitName, whereLabel } from './land-labels';
+import {
+  DOCUMENT_KINDS,
+  kindName,
+  sizeLabel,
+  unitName,
+  whereLabel,
+  worthLabel,
+} from './land-labels';
 
 describe('land labels', () => {
   it('spells out what each paper is', () => {
@@ -54,5 +61,34 @@ describe('land labels', () => {
 
   it('says nothing when the plot has no location at all', () => {
     expect(whereLabel({ city: null, state: null, address: null })).toBe('');
+  });
+
+  it('reads what it is worth in the currency it was valued in', () => {
+    expect(
+      worthLabel({ current_value: 450000000, currency_code: 'NGN', currency_exponent: 2 }),
+    ).toContain('4,500,000.00');
+  });
+
+  it('says nothing about worth when nothing has been valued', () => {
+    expect(worthLabel({ current_value: null, currency_code: null, currency_exponent: null })).toBe(
+      '',
+    );
+  });
+
+  it('reads the country last, after the town and the state', () => {
+    expect(
+      whereLabel({
+        city: 'Ewuru',
+        state: 'Ogun',
+        address: '14 Jacaranda',
+        country_name: 'Nigeria',
+      }),
+    ).toBe('Ewuru, Ogun, Nigeria');
+  });
+
+  it('leaves out a country the plot never named', () => {
+    expect(whereLabel({ city: 'Ewuru', state: 'Ogun', address: null, country_name: null })).toBe(
+      'Ewuru, Ogun',
+    );
   });
 });

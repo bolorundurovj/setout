@@ -10,6 +10,8 @@ from tortoise import Tortoise
 # reverse it to clear the way first.
 TABLES: tuple[str, ...] = (
     "currency",
+    "country",
+    "state",
     "scope_preset",
     "user",
     "land",
@@ -25,6 +27,7 @@ TABLES: tuple[str, ...] = (
     "delivery",
     "attachment",
     "land_document",
+    "land_valuation",
 )
 
 # Sessions are not carried: they belong to the browsers that were signed in when

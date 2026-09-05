@@ -24,11 +24,58 @@ and adjust. Local development defaults to `./data`.
 | `SETOUT_S3_USE_PATH_STYLE` | `false` | Turn on for MinIO and anything else wanting the bucket in the path |
 | `SETOUT_S3_LINK_SECONDS` | `300` | How long a link straight to the bucket stays good |
 | `SETOUT_MAX_ATTACHMENT_BYTES` | `26214400` | Largest file that can be attached |
+| `SETOUT_MAP_TILE_URL` | OpenStreetMap | Tile template for the map on a plot of land |
+| `SETOUT_MAP_ATTRIBUTION` | `© OpenStreetMap contributors` | Credit shown on the map |
+| `SETOUT_GEOCODER_URL` | Nominatim | Turns a pin into an address. Empty turns the check off |
+| `SETOUT_GEOCODER_EMAIL` | empty | Contact address, which Nominatim asks for beyond light use |
 
 Two of these decide whether the install is safe to expose. `SETOUT_SECRET_KEY`
 signs session cookies, so anyone who knows it can forge a session; the app warns
 on startup while it is still the default. `SETOUT_COOKIE_SECURE` should be on
 anywhere that is not localhost.
+
+### The map
+
+A plot of land can carry coordinates and a boundary, drawn on a map. The map is
+[Leaflet](https://leafletjs.com), bundled with the app rather than fetched from a
+CDN, and it needs no account and no API key.
+
+The tiles behind it are a different matter. `SETOUT_MAP_TILE_URL` defaults to
+OpenStreetMap's own servers, which is what makes the map work the moment you
+install. Their [tile usage policy](https://operations.osmfoundation.org/policies/tiles/)
+asks that applications not send them bulk or heavy traffic, so if you are running
+Setout for more than a household, point this at your own tile server:
+
+```bash
+SETOUT_MAP_TILE_URL=http://tiles.example.lan/{z}/{x}/{y}.png
+SETOUT_MAP_ATTRIBUTION="Tiles by me, data © OpenStreetMap contributors"
+```
+
+The template takes `{z}`, `{x}` and `{y}`. Whatever you point it at, keep the
+attribution honest about where the data came from.
+
+### Checking a pin against its address
+
+Setting a pin asks the geocoder what it calls that spot, so a plot recorded in one
+town with a pin dropped in another says so. `SETOUT_GEOCODER_URL` defaults to
+Nominatim, which is OpenStreetMap's own and needs no key. Their
+[usage policy](https://operations.osmfoundation.org/policies/nominatim/) is a
+request a second and no bulk, so Setout asks through the API rather than from the
+browser: it sends a User-Agent of its own, holds to that rate, and remembers an
+answer so the same pin is never looked up twice.
+
+```bash
+SETOUT_GEOCODER_URL=https://nominatim.example.lan
+SETOUT_GEOCODER_EMAIL=you@example.com
+SETOUT_GEOCODER_URL=          # empty turns the check off entirely
+```
+
+Nothing about this blocks saving. A geocoder that is off, slow or unreachable
+means the check quietly does not happen.
+
+Tiles and the geocoder are the only things Setout fetches from another host, and
+only on a land page. When they cannot be reached the pin and the boundary still draw on a plain
+background, so a site with no signal still shows you the shape of the plot.
 
 ## The compose stack
 

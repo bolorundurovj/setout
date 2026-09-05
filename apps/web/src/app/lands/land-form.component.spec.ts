@@ -1,17 +1,31 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import type { LandRead } from '@setout/api-client';
+import type { GeocodedPlace, LandRead } from '@setout/api-client';
 import { ToastService } from '../toast.service';
 import { LandFormComponent } from './land-form.component';
 import { LandService } from './land.service';
+import { CountryService } from './country.service';
 
 function land(over: Partial<LandRead> = {}): LandRead {
   return {
     id: 'l1',
     name: 'Ewuru plot',
     address: '14 Jacaranda Close',
+    geocoded_address: null,
     city: 'Ewuru',
     state: 'Ogun',
+    country_code: null,
+    country_name: null,
+    purchased_on: null,
+    latitude: null,
+    longitude: null,
+    boundary: null,
+    boundary_area_sqm: null,
+    currency_code: null,
+    currency_exponent: null,
+    purchase_amount: null,
+    current_value: null,
+    valuation_count: 0,
     size_value: '648.5',
     size_unit: 'sqm',
     notes: 'a note',
@@ -31,8 +45,11 @@ describe('LandFormComponent', () => {
   let navigations: unknown[][];
   let toasts: { message: string; type: string }[];
 
+  let mapSays: GeocodedPlace | null = null;
+
   async function render(id = '', existing: LandRead | null = land()) {
     added = [];
+    mapSays = null;
     edited = [];
     navigations = [];
     toasts = [];
@@ -41,6 +58,7 @@ describe('LandFormComponent', () => {
       saving: () => false,
       error: () => null,
       get: async () => existing,
+      placeAt: async () => mapSays,
       add: async (body: unknown) => {
         added.push(body);
         return land({ id: 'l9', name: 'Saved Plot' });
@@ -51,12 +69,29 @@ describe('LandFormComponent', () => {
       },
     };
 
+    const countries = {
+      all: () => [
+        { code: 'NG', name: 'Nigeria' },
+        { code: 'GH', name: 'Ghana' },
+      ],
+      load: async () => undefined,
+      loadStates: async () => undefined,
+      states: (code: string) =>
+        code === 'NG'
+          ? [
+              { code: 'NG-LA', country_code: 'NG', name: 'Lagos' },
+              { code: 'NG-OG', country_code: 'NG', name: 'Ogun' },
+            ]
+          : [{ code: 'GH-AA', country_code: 'GH', name: 'Greater Accra' }],
+    };
+
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [LandFormComponent],
       providers: [
         provideRouter([]),
         { provide: LandService, useValue: lands },
+        { provide: CountryService, useValue: countries },
         {
           provide: ToastService,
           useValue: { show: (message: string, type = 'success') => toasts.push({ message, type }) },
@@ -134,9 +169,15 @@ describe('LandFormComponent', () => {
       address: null,
       city: 'Ewuru',
       state: null,
+      country_code: null,
+      purchased_on: null,
+      latitude: null,
+      longitude: null,
+      boundary: null,
       size_value: '648.5',
       size_unit: 'sqm',
       notes: null,
+      geocoded_address: null,
     });
     expect(navigations[0][0]).toEqual(['/lands', 'l9']);
   });
@@ -159,5 +200,261 @@ describe('LandFormComponent', () => {
     expect(edited.length).toBe(1);
     expect(added.length).toBe(0);
     expect(toasts[0].message).toBe('Land saved.');
+  });
+
+  it('leaves an older plot its free text state when no country is named', async () => {
+    const component = await render('l1', land({ state: 'lagos state', country_code: null }));
+
+    expect(component.state()).toBe('lagos state');
+    expect(component.country()).toBe('');
+
+    await component.save();
+
+    expect(edited[0]).toMatchObject({ state: 'lagos state', country_code: null });
+  });
+
+  it('keeps a state the newly named country also has', async () => {
+    const component = await render('l1', land({ state: 'Lagos', country_code: null }));
+
+    await component.pickCountry('NG');
+
+    expect(component.state()).toBe('Lagos');
+  });
+
+  it('clears a state the newly named country has never heard of', async () => {
+    const component = await render('l1', land({ state: 'Ogun', country_code: null }));
+
+    await component.pickCountry('GH');
+
+    expect(component.state()).toBe('');
+  });
+
+  it('offers only the states of the country that was picked', async () => {
+    const component = await render();
+
+    await component.pickCountry('NG');
+
+    expect(component.stateChips().map((chip) => chip.label)).toEqual(['Lagos', 'Ogun']);
+  });
+
+  it('sends the country and the day it was bought', async () => {
+    const component = await render();
+    component.name.set('Ewuru plot');
+    await component.pickCountry('NG');
+    component.state.set('Lagos');
+    component.purchasedOn.set('2023-03-11');
+
+    await component.save();
+
+    expect(added[0]).toMatchObject({
+      country_code: 'NG',
+      state: 'Lagos',
+      purchased_on: '2023-03-11',
+    });
+  });
+
+  it('draws the edge from corners typed off a survey plan', async () => {
+    const component = await render();
+
+    component.onTyped(['6.5244, 3.3792', '6.5251, 3.3792', '6.5251, 3.3799'].join('\n'));
+
+    expect(component.typeNote()).toBe('');
+    expect(component.edge()?.coordinates[0].length).toBe(4);
+    // Latitude was typed first; GeoJSON stores longitude first.
+    expect(component.edge()?.coordinates[0][0]).toEqual([3.3792, 6.5244]);
+  });
+
+  it('leaves what was typed exactly as typed', async () => {
+    const component = await render();
+    const typed = ['6.5244,3.3792', '6.5251,3.3792', '6.5251,3.3799'].join('\n');
+
+    component.onTyped(typed);
+
+    expect(component.typed()).toBe(typed);
+  });
+
+  it('says which line will not read, and keeps the last good shape', async () => {
+    const component = await render();
+    component.onTyped(['6.5244, 3.3792', '6.5251, 3.3792', '6.5251, 3.3799'].join('\n'));
+    const good = component.edge();
+
+    component.onTyped(['6.5244, 3.3792', 'beacon 4 by the road'].join('\n'));
+
+    expect(component.typeNote()).toBe('Line 2 does not read as a coordinate.');
+    expect(component.edge()).toBe(good);
+  });
+
+  it('fills the box from the edge already on the plot', async () => {
+    const component = await render();
+    component.onTyped(['6.5244, 3.3792', '6.5251, 3.3792', '6.5251, 3.3799'].join('\n'));
+    component.typing.set(false);
+
+    component.openTyping();
+
+    expect(component.typed().split('\n').length).toBe(3);
+    expect(component.typed().split('\n')[0]).toBe('6.5244, 3.3792');
+  });
+
+  it('shows the same shape as GeoJSON when asked', async () => {
+    const component = await render();
+    component.onTyped(['6.5244, 3.3792', '6.5251, 3.3792', '6.5251, 3.3799'].join('\n'));
+
+    component.showGeoJson();
+
+    expect(component.typed().startsWith('{"type":"Polygon"')).toBe(true);
+  });
+
+  it('sends the typed edge when the plot is saved', async () => {
+    const component = await render();
+    component.name.set('Ewuru plot');
+    component.onTyped(['6.5244, 3.3792', '6.5251, 3.3792', '6.5251, 3.3799'].join('\n'));
+
+    await component.save();
+
+    expect(added[0]).toMatchObject({
+      boundary: { type: 'Polygon' },
+    });
+  });
+
+  const SQUARE = {
+    type: 'Polygon' as const,
+    coordinates: [
+      [
+        [3.3, 6.5],
+        [3.31, 6.5],
+        [3.31, 6.51],
+        [3.3, 6.51],
+        [3.3, 6.5],
+      ] as [number, number][],
+    ],
+  };
+
+  describe('a pin that disagrees with the plot', () => {
+    it('says nothing when there is an edge but no pin', async () => {
+      const component = await render();
+      component.edge.set(SQUARE);
+
+      expect(component.pinIsOutside()).toBe(false);
+    });
+
+    it('says nothing when there is a pin but no edge', async () => {
+      const component = await render();
+      await component.setPin({ lat: 6.505, lon: 3.305 });
+
+      expect(component.pinIsOutside()).toBe(false);
+    });
+
+    it('says nothing when the pin is inside the edge', async () => {
+      const component = await render();
+      component.edge.set(SQUARE);
+      await component.setPin({ lat: 6.505, lon: 3.305 });
+
+      expect(component.pinIsOutside()).toBe(false);
+    });
+
+    it('catches a pin outside the edge', async () => {
+      const component = await render();
+      component.edge.set(SQUARE);
+      await component.setPin({ lat: 6.6, lon: 3.4 });
+
+      expect(component.pinIsOutside()).toBe(true);
+    });
+
+    it('centring the pin puts it inside and quiets the warning', async () => {
+      const component = await render();
+      component.edge.set(SQUARE);
+      await component.setPin({ lat: 6.6, lon: 3.4 });
+
+      component.centrePin();
+
+      expect(component.pinIsOutside()).toBe(false);
+      expect(component.place()?.lat).toBeCloseTo(6.505, 3);
+      expect(component.place()?.lon).toBeCloseTo(3.305, 3);
+    });
+
+    it('has no centre to offer without an edge', async () => {
+      const component = await render();
+      await component.setPin({ lat: 6.6, lon: 3.4 });
+
+      component.centrePin();
+
+      expect(component.place()).toEqual({ lat: 6.6, lon: 3.4 });
+    });
+  });
+
+  describe('a pin against the address', () => {
+    it('says nothing when the geocoder had nothing to say', async () => {
+      const component = await render();
+      component.city.set('Ewuru');
+
+      await component.setPin({ lat: 6.5, lon: 3.3 });
+
+      expect(component.placeNote()).toBe('');
+    });
+
+    it('says nothing when the map agrees', async () => {
+      const component = await render();
+      mapSays = { address: '14 Jacaranda', city: 'Ewuru', state: 'Ogun', country_code: 'NG' };
+      component.city.set('Ewuru');
+      component.state.set('Ogun');
+      component.country.set('NG');
+
+      await component.setPin({ lat: 6.5, lon: 3.3 });
+
+      expect(component.placeNote()).toBe('');
+    });
+
+    it('names the town when the pin is somewhere else', async () => {
+      const component = await render();
+      mapSays = { address: '2 Allen Avenue', city: 'Ikeja', state: 'Lagos', country_code: 'NG' };
+      component.city.set('Ewuru');
+      component.state.set('Ogun');
+      component.country.set('NG');
+
+      await component.setPin({ lat: 6.6, lon: 3.35 });
+
+      expect(component.placeNote()).toContain('different state');
+    });
+
+    it('keeps what the map said even when it agrees', async () => {
+      const component = await render();
+      mapSays = { address: '14 Jacaranda', city: 'Ewuru', state: 'Ogun', country_code: 'NG' };
+
+      await component.setPin({ lat: 6.5, lon: 3.3 });
+
+      expect(component.geocodedAddress()).toBe('14 Jacaranda');
+    });
+
+    it('taking the map address fills the fields it answered', async () => {
+      const component = await render();
+      mapSays = { address: '2 Allen Avenue', city: 'Ikeja', state: null, country_code: null };
+
+      await component.setPin({ lat: 6.6, lon: 3.35 });
+      component.useMapAddress();
+
+      expect(component.address()).toBe('2 Allen Avenue');
+      expect(component.city()).toBe('Ikeja');
+    });
+
+    it('forgets what the map said once the pin is taken off', async () => {
+      const component = await render();
+      mapSays = { address: '14 Jacaranda', city: 'Ewuru', state: 'Ogun', country_code: 'NG' };
+      await component.setPin({ lat: 6.5, lon: 3.3 });
+
+      await component.setPin(null);
+
+      expect(component.placeNote()).toBe('');
+    });
+
+    it('saves what the map said alongside the typed address', async () => {
+      const component = await render();
+      mapSays = { address: '14 Jacaranda', city: 'Ewuru', state: 'Ogun', country_code: 'NG' };
+      component.name.set('Ewuru plot');
+      await component.setPin({ lat: 6.5, lon: 3.3 });
+
+      await component.save();
+
+      expect(added[0]).toMatchObject({ geocoded_address: '14 Jacaranda' });
+    });
   });
 });

@@ -34,6 +34,7 @@
         <span class="t-micro">Plot</span>
         <span class="t-micro">Where</span>
         <span class="t-micro right">Size</span>
+        <span class="t-micro right">Worth</span>
         <span class="t-micro right">Papers</span>
       </div>
 
@@ -57,6 +58,8 @@
           <span class="t-small">{{ where(land) }}</span>
 
           <span class="right t-mono figure">{{ size(land) }}</span>
+
+          <span class="right t-mono figure">{{ worth(land) }}</span>
 
           <span class="right papers">
             <span class="t-small" [class.muted]="land.missing_kinds.length === 0">

@@ -30,9 +30,18 @@ OPENAPI_JSON := $(SDK_DIR)/openapi.json
 # name is an optional argument to `make migration`.
 name ?=
 
+PYTEST_WORKERS ?= auto
+ifeq ($(PYTEST_WORKERS),1)
+PYTEST_PARALLEL :=
+else
+# loadfile keeps a file's tests on one worker, so the contract test starts its
+# server once rather than once per test.
+PYTEST_PARALLEL := -n $(PYTEST_WORKERS) --dist loadfile
+endif
+
 .PHONY: help setup dev api web watch-sdk lint format test test-unit test-int test-contract \
-	sdk migration migrate downgrade seed backup restore check build docker-build clean \
-	require-uv require-yarn require-docker
+	sdk migration migrate downgrade seed backup restore check check-parallel run-check \
+	build docker-build kill clean line-endings require-uv require-yarn require-docker
 
 # file is the archive argument to `make restore`.
 file ?=
@@ -81,7 +90,8 @@ setup: require-uv require-yarn ## Install everything, backend and frontend.
 dev: ## Run API and web together with reload.
 	@echo "Starting API and web. Press Ctrl-C to stop both."
 	@# kill 0 signals the whole process group. Without it the reloader and
-	@# its child survive Ctrl-C and keep holding the port.
+	@# its child survive Ctrl-C and keep holding the port. When one gets away
+	@# regardless, `make kill` frees the ports.
 	@trap 'trap - INT TERM EXIT; kill 0' INT TERM EXIT; \
 	$(MAKE) api & \
 	$(MAKE) web & \
@@ -98,6 +108,7 @@ web: require-yarn ## Run the web app alone.
 	cd $(WEB_DIR) && yarn start
 
 lint: require-uv require-yarn ## ruff, mypy, eslint, prettier, all in check mode.
+	@$(MAKE) line-endings
 	cd $(API_DIR) && uv run ruff check .
 	cd $(API_DIR) && uv run ruff format --check .
 	cd $(API_DIR) && uv run mypy
@@ -105,6 +116,7 @@ lint: require-uv require-yarn ## ruff, mypy, eslint, prettier, all in check mode
 	cd $(WEB_DIR) && yarn prettier --check .
 
 format: require-uv require-yarn ## Write mode for the same tools.
+	@$(MAKE) line-endings fix=1
 	cd $(API_DIR) && uv run ruff check --fix .
 	cd $(API_DIR) && uv run ruff format .
 	cd $(WEB_DIR) && yarn lint --fix || true
@@ -117,7 +129,7 @@ test-unit: require-uv ## Unit tests only, fast.
 	cd $(API_DIR) && uv run pytest tests/unit -m unit
 
 test-int: require-uv ## Integration tests against a real database.
-	cd $(API_DIR) && uv run pytest tests/integration -m integration
+	cd $(API_DIR) && uv run pytest tests/integration -m integration $(PYTEST_PARALLEL)
 
 test-contract: require-uv sdk ## Schema and SDK contract tests.
 	cd $(API_DIR) && uv run pytest tests/contract -m contract
@@ -143,9 +155,16 @@ backup: ## Write the database and uploaded files into one dated archive.
 restore: ## Read a backup archive back, after asking. Pass file=<archive>.
 	$(BASH) scripts/restore.sh $(file)
 
-check: sdk ## Lint, typecheck, all tests, coverage floor.
+check: ## Lint, typecheck, all tests, coverage floor.
+	@$(MAKE) run-check PYTEST_WORKERS=1
+
+check-parallel: ## The same gate, with the backend suite spread across the cores.
+	@$(MAKE) run-check PYTEST_WORKERS=$(PYTEST_WORKERS)
+
+run-check: sdk
 	$(MAKE) lint
-	cd $(API_DIR) && uv run pytest --cov=setout --cov-report=term-missing --cov-fail-under=80
+	cd $(API_DIR) && uv run pytest $(PYTEST_PARALLEL) \
+		--cov=setout --cov-report=term-missing --cov-fail-under=80
 	cd $(WEB_DIR) && yarn test --watch=false
 
 build: require-uv require-yarn sdk ## Production build of both apps.
@@ -154,6 +173,48 @@ build: require-uv require-yarn sdk ## Production build of both apps.
 
 docker-build: require-docker ## Build the single deployment image.
 	docker build -f docker/Dockerfile -t setout:latest .
+
+line-endings:
+	@crlf=$$(git ls-files --eol --cached --others --exclude-standard \
+		| awk '$$2 == "w/crlf" { sub(/^[^\t]*\t/, ""); print }'); \
+	if [ -z "$$crlf" ]; then exit 0; fi; \
+	if [ -z "$(fix)" ]; then \
+		echo "Error: these files are CRLF and this repository is LF:"; \
+		echo "$$crlf" | sed 's/^/  /'; \
+		echo "Run make format to fix them."; \
+		exit 1; \
+	fi; \
+	echo "$$crlf" | while IFS= read -r file; do \
+		tr -d '\r' < "$$file" > "$$file.lf" && mv "$$file.lf" "$$file"; \
+		echo "  fixed $$file"; \
+	done
+
+kill: ## Stop anything left holding the dev ports.
+	@for port in $${SETOUT_PORT:-8474} $${WEB_PORT:-4200}; do \
+		case "$$(uname -s)" in \
+		MINGW*|MSYS*|CYGWIN*) \
+			pids=$$(netstat -ano \
+				| awk -v want=":$$port$$" \
+					'$$1 == "TCP" && $$2 ~ want && $$4 == "LISTENING" { print $$5 }' \
+				| sort -u) ;; \
+		*) \
+			pids=$$(lsof -ti tcp:$$port 2>/dev/null | sort -u) ;; \
+		esac; \
+		if [ -z "$$pids" ]; then \
+			echo "$$port: nothing listening"; \
+			continue; \
+		fi; \
+		for pid in $$pids; do \
+			case "$$(uname -s)" in \
+			MINGW*|MSYS*|CYGWIN*) taskkill //F //T //PID $$pid >/dev/null 2>&1 ;; \
+			*) kill $$pid 2>/dev/null || true ;; \
+			esac; \
+			echo "$$port: stopped $$pid"; \
+		done; \
+	done
+	@# watch-sdk holds no port of its own, so it is named rather than found.
+	@pkill -f "watchfiles --filter python" 2>/dev/null \
+		&& echo "stopped the SDK watcher" || true
 
 clean: ## Remove build artefacts and caches.
 	rm -rf $(API_DIR)/dist $(API_DIR)/.venv $(API_DIR)/.pytest_cache \

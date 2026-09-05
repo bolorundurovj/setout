@@ -47,3 +47,24 @@
 .warn {
   color: var(--over);
 }
+
+// Holds the map's height while its chunk loads, so the form does not jump.
+.map-waiting {
+  height: 340px;
+  border: 1.5px solid var(--rule);
+  border-radius: 14px;
+  background: var(--field);
+}
+
+.geojson {
+  min-height: 96px;
+  resize: vertical;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (max-width: 719px) {
+  .map-waiting {
+    height: 260px;
+  }
+}

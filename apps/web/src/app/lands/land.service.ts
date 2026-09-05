@@ -1,22 +1,33 @@
 import { Injectable, inject, signal } from '@angular/core';
 import {
   Api,
+  GeocodedPlace,
   LandCreate,
   LandDocumentKind,
   LandDocumentRead,
+  LandDocumentUpdate,
   LandRead,
   LandUpdate,
+  LandValuationCreate,
+  LandValuationRead,
+  LandValuationUpdate,
   addLandDocument,
+  addLandValuation,
   createLand,
   deleteLand,
   deleteLandDocument,
+  deleteLandValuation,
   downloadLandDocument,
   getLand,
   listLandDocuments,
+  listLandValuations,
   listLands,
   restoreLand,
   restoreLandDocument,
+  reverseGeocode,
   updateLand,
+  updateLandDocument,
+  updateLandValuation,
 } from '@setout/api-client';
 import { CountsService } from '../counts.service';
 import { CHOICE_LIMIT, PAGE_SIZE, offsetOf } from '../ui/paging';
@@ -163,6 +174,7 @@ export class LandService {
     landId: string,
     kind: LandDocumentKind,
     file: File,
+    note?: string | null,
   ): Promise<LandDocumentRead | null> {
     this.saving.set(true);
     this.error.set(null);
@@ -170,7 +182,7 @@ export class LandService {
       return await this.api.invoke(addLandDocument, {
         land_id: landId,
         // The generated body types the file as a string; the SDK wants the File.
-        body: { file: file as unknown as string, kind },
+        body: { file: file as unknown as string, kind, note: note ?? undefined },
       });
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not keep that file.');
@@ -191,5 +203,67 @@ export class LandService {
 
   async restoreDocument(documentId: string): Promise<void> {
     await this.api.invoke(restoreLandDocument, { document_id: documentId });
+  }
+
+  async editDocument(
+    documentId: string,
+    body: LandDocumentUpdate,
+  ): Promise<LandDocumentRead | null> {
+    this.error.set(null);
+    try {
+      return await this.api.invoke(updateLandDocument, { document_id: documentId, body });
+    } catch (e: unknown) {
+      this.error.set(detailOf(e) ?? 'Could not save that paper.');
+      return null;
+    }
+  }
+
+  async valuations(landId: string): Promise<LandValuationRead[]> {
+    try {
+      const body = await this.api.invoke(listLandValuations, { land_id: landId });
+      return body.items;
+    } catch {
+      return [];
+    }
+  }
+
+  async addValuation(landId: string, body: LandValuationCreate): Promise<LandValuationRead | null> {
+    this.saving.set(true);
+    this.error.set(null);
+    try {
+      return await this.api.invoke(addLandValuation, { land_id: landId, body });
+    } catch (e: unknown) {
+      this.error.set(detailOf(e) ?? 'Could not record that.');
+      return null;
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async editValuation(
+    valuationId: string,
+    body: LandValuationUpdate,
+  ): Promise<LandValuationRead | null> {
+    this.error.set(null);
+    try {
+      return await this.api.invoke(updateLandValuation, { valuation_id: valuationId, body });
+    } catch (e: unknown) {
+      this.error.set(detailOf(e) ?? 'Could not save that.');
+      return null;
+    }
+  }
+
+  async removeValuation(valuationId: string): Promise<void> {
+    await this.api.invoke(deleteLandValuation, { valuation_id: valuationId });
+  }
+
+  /** What the map calls a spot, or nothing when the geocoder is off or unreachable. */
+  async placeAt(latitude: number, longitude: number): Promise<GeocodedPlace | null> {
+    try {
+      return await this.api.invoke(reverseGeocode, { latitude, longitude });
+    } catch {
+      // A check that cannot run is not an error worth putting in front of anyone.
+      return null;
+    }
   }
 }

@@ -1,0 +1,109 @@
+<h2 class="t-heading">What it is worth</h2>
+
+@if (rows().length === 0) {
+  <p class="t-small muted">Nothing recorded yet. What it cost is the place to start.</p>
+} @else {
+  <div class="entries">
+    @for (row of rows(); track row.id; let i = $index) {
+      <div class="entry">
+        <span class="entry-what">
+          <span class="t-body">{{ label(row) }}</span>
+          <span class="t-small muted">{{ row.valued_on }}</span>
+          @if (row.note) {
+            <span class="t-micro">{{ row.note }}</span>
+          }
+        </span>
+        <span class="entry-money">
+          <span class="t-body t-mono">{{ money(row) }}</span>
+          @if (change(i)) {
+            <span class="t-micro shift">{{ change(i) }}</span>
+          }
+        </span>
+        <span class="entry-actions">
+          <button type="button" class="link t-mono" (click)="remove(row)">Remove</button>
+        </span>
+      </div>
+    }
+  </div>
+}
+
+@if (adding()) {
+  <div class="card add">
+    <div class="field">
+      <span class="t-micro">What this is</span>
+      <app-chip-group
+        label="What this is"
+        [chips]="kindChips()"
+        [value]="kind()"
+        (valueChange)="kind.set($any($event))"
+      />
+    </div>
+
+    @if (pinned()) {
+      <div class="field">
+        <span class="t-micro">Currency</span>
+        <app-currency-pill [code]="pinned()" />
+        <span class="t-small muted">Fixed by the first entry, so the history compares.</span>
+      </div>
+    } @else {
+      <div class="field">
+        <span class="t-micro">Currency &middot; required</span>
+        <app-chip-group
+          label="Currency"
+          [chips]="currencyChips()"
+          [value]="currency()"
+          (valueChange)="currency.set($event)"
+        />
+        <span class="t-small muted">This one fixes what every later entry has to use.</span>
+      </div>
+    }
+
+    <label class="field">
+      <span class="t-micro">Amount &middot; required</span>
+      <span class="amount">
+        <span class="amount-prefix t-mono">{{ symbol() }}</span>
+        <input
+          class="amount-input t-mono"
+          inputmode="decimal"
+          autocomplete="off"
+          aria-label="Amount"
+          [value]="amount()"
+          (input)="amount.set(value($event))"
+        />
+      </span>
+    </label>
+
+    <label class="field">
+      <span class="t-micro">On &middot; required</span>
+      <input
+        class="input-field t-mono"
+        type="date"
+        [value]="valuedOn()"
+        (input)="valuedOn.set(value($event))"
+      />
+    </label>
+
+    <label class="field">
+      <span class="t-micro">Note</span>
+      <input
+        class="input-field"
+        type="text"
+        autocomplete="off"
+        placeholder="Who valued it, or why"
+        [value]="note()"
+        (input)="note.set(value($event))"
+      />
+    </label>
+
+    <div class="form-actions">
+      <app-button [disabled]="!isValid()" [loading]="lands.saving()" (pressed)="save()">
+        Save
+      </app-button>
+      <app-button variant="secondary" (pressed)="cancel()">Cancel</app-button>
+    </div>
+  </div>
+} @else {
+  <app-button variant="secondary" (pressed)="open()">
+    {{ bought() ? 'Record a valuation' : 'Record what it cost' }}
+  </app-button>
+}

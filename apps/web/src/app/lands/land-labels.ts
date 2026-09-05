@@ -1,4 +1,5 @@
 import type { LandDocumentKind, LandRead, LandSizeUnit } from '@setout/api-client';
+import { formatMoney } from '../budget/money';
 
 const KIND_NAMES: Record<string, string> = {
   certificate_of_occupancy: 'Certificate of Occupancy',
@@ -46,8 +47,20 @@ export function sizeLabel(land: Pick<LandRead, 'size_value' | 'size_unit'>): str
   return `${value} ${unitName(unit, value)}`;
 }
 
-export function whereLabel(land: Pick<LandRead, 'city' | 'state' | 'address'>): string {
-  const parts = [land.city, land.state].filter((part): part is string => !!part);
+export function worthLabel(
+  land: Pick<LandRead, 'current_value' | 'currency_code' | 'currency_exponent'>,
+): string {
+  const amount = land.current_value;
+  if (amount === null || amount === undefined || !land.currency_code) {
+    return '';
+  }
+  return formatMoney(amount, land.currency_code, land.currency_exponent ?? 2);
+}
+
+export function whereLabel(
+  land: Pick<LandRead, 'city' | 'state' | 'address'> & Partial<Pick<LandRead, 'country_name'>>,
+): string {
+  const parts = [land.city, land.state, land.country_name].filter((part): part is string => !!part);
   if (parts.length) {
     return parts.join(', ');
   }

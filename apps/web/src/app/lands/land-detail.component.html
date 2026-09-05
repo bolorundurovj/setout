@@ -15,6 +15,9 @@
       <div class="identity">
         <h1 class="t-display">{{ l.name }}</h1>
         <p class="t-small">{{ l.address ?? notSet }}</p>
+        @if (mapAddress(l)) {
+          <p class="t-micro muted">The map calls it {{ mapAddress(l) }}</p>
+        }
       </div>
       <div class="head-actions">
         @if (!l.deleted_at) {
@@ -36,8 +39,26 @@
         <span class="t-body">{{ l.state ?? notSet }}</span>
       </div>
       <div class="fact">
+        <span class="t-micro">Country</span>
+        <span class="t-body">{{ l.country_name ?? notSet }}</span>
+      </div>
+      <div class="fact">
         <span class="t-micro">Size</span>
         <span class="t-body t-mono">{{ size(l) }}</span>
+      </div>
+      @if (l.boundary) {
+        <div class="fact">
+          <span class="t-micro">Boundary area</span>
+          <span class="t-body t-mono">{{ area(l) }}</span>
+        </div>
+      }
+      <div class="fact">
+        <span class="t-micro">Bought</span>
+        <span class="t-body t-mono">{{ l.purchased_on ?? notSet }}</span>
+      </div>
+      <div class="fact">
+        <span class="t-micro">Worth now</span>
+        <span class="t-body t-mono">{{ worth(l) }}</span>
       </div>
       <div class="fact">
         <span class="t-micro">Papers kept</span>
@@ -47,6 +68,55 @@
 
     @if (l.notes) {
       <p class="t-small muted">{{ l.notes }}</p>
+    }
+
+    @if (hasMap(l)) {
+      <section class="block">
+        <h2 class="t-heading">Where it is</h2>
+        @if (pinIsOutside(l)) {
+          <div class="banner warn pin-warning">
+            <span class="t-small">The pin is outside the edge drawn for this plot.</span>
+            @if (!l.deleted_at) {
+              <app-button variant="secondary" (pressed)="edit()">Fix it on the form</app-button>
+            }
+          </div>
+        }
+        @if (mapTabs(l).length) {
+          <app-tabs
+            label="Pin or boundary"
+            [tabs]="mapTabs(l)"
+            [value]="mapTab()"
+            (valueChange)="mapTab.set($any($event))"
+          />
+        }
+        @defer (on viewport) {
+          <div
+            role="tabpanel"
+            [id]="shownMap(l) + '-panel'"
+            [attr.aria-labelledby]="mapTabs(l).length ? shownMap(l) + '-tab' : null"
+          >
+            @if (shownMap(l) === 'pin') {
+              <app-land-map mode="pin" [point]="place(l)" />
+            } @else {
+              <app-land-map mode="boundary" [boundary]="l.boundary" />
+            }
+          </div>
+        } @placeholder {
+          <div class="map-waiting"></div>
+        }
+        @if (areaGap(l); as gap) {
+          @if (gap >= 5) {
+            <p class="t-small muted">
+              The edge drawn here works out {{ gap }}% away from the size on record.
+              @if (!l.deleted_at) {
+                <button type="button" class="link t-mono" (click)="useDrawnSize(l)">
+                  Use The Drawn Area
+                </button>
+              }
+            </p>
+          }
+        }
+      </section>
     }
 
     <section class="block">
@@ -64,6 +134,17 @@
               (valueChange)="kind.set($any($event))"
             />
           </div>
+          <label class="field">
+            <span class="t-micro">Note</span>
+            <input
+              class="input-field"
+              type="text"
+              autocomplete="off"
+              placeholder="What this paper actually is"
+              [value]="note()"
+              (input)="note.set(value($event))"
+            />
+          </label>
           <app-button [loading]="lands.saving()" (pressed)="pick()">Choose a file</app-button>
           <span class="t-small muted">
             A photograph or a PDF. Kept beside the record on your own server.
@@ -89,21 +170,52 @@
         <div class="papers">
           @for (document of documents(); track document.id) {
             <div class="paper">
-              <span class="paper-what">
-                <span class="t-body">{{ kindLabel(document) }}</span>
-                <span class="t-small muted">{{ document.filename }}</span>
-                <span class="t-micro">{{ fileNote(document) }}</span>
-              </span>
-              <span class="paper-actions">
-                <a class="link t-mono" [href]="href(document)" target="_blank" rel="noopener">
-                  Open
-                </a>
-                @if (!l.deleted_at) {
-                  <button type="button" class="link t-mono" (click)="remove(document)">
-                    Remove
+              @if (editing() === document.id) {
+                <span class="paper-edit">
+                  <app-chip-group
+                    label="What this paper is"
+                    [chips]="kindChips"
+                    [value]="editKind()"
+                    (valueChange)="editKind.set($any($event))"
+                  />
+                  <input
+                    class="input-field"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="What this paper actually is"
+                    [value]="editNote()"
+                    (input)="editNote.set(value($event))"
+                  />
+                </span>
+                <span class="paper-actions">
+                  <button type="button" class="link t-mono" (click)="saveEdit(document)">
+                    Save
                   </button>
-                }
-              </span>
+                  <button type="button" class="link t-mono" (click)="cancelEdit()">Cancel</button>
+                </span>
+              } @else {
+                <span class="paper-what">
+                  <span class="t-body">{{ kindLabel(document) }}</span>
+                  @if (document.note) {
+                    <span class="t-small">{{ document.note }}</span>
+                  }
+                  <span class="t-small muted">{{ document.filename }}</span>
+                  <span class="t-micro">{{ fileNote(document) }}</span>
+                </span>
+                <span class="paper-actions">
+                  <a class="link t-mono" [href]="href(document)" target="_blank" rel="noopener">
+                    Open
+                  </a>
+                  @if (!l.deleted_at) {
+                    <button type="button" class="link t-mono" (click)="startEdit(document)">
+                      Edit
+                    </button>
+                    <button type="button" class="link t-mono" (click)="remove(document)">
+                      Remove
+                    </button>
+                  }
+                </span>
+              }
             </div>
           }
         </div>
@@ -116,6 +228,10 @@
         accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
         (change)="onPicked($event)"
       />
+    </section>
+
+    <section class="block">
+      <app-land-valuations [land]="l" (changed)="load()" />
     </section>
 
     <section class="block">

@@ -27,6 +27,7 @@ dependencies = [
     "email-validator==2.3.0",
     "python-multipart==0.0.32",
     "boto3==1.43.81",
+    "httpx==0.28.1",
     "openpyxl==3.1.5",
 ]
 
@@ -37,9 +38,9 @@ dev = [
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
     "pytest-cov==7.1.0",
-    "httpx==0.28.1",
     "schemathesis==4.24.3",
     "watchfiles==1.2.0",
+    "pytest-xdist==3.8.0",
 ]
 
 [project.urls]
@@ -67,6 +68,11 @@ extend-exclude = ["src/setout/migrations"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "W", "C4", "SIM"]
+
+[tool.ruff.format]
+# Windows writes CRLF and .gitattributes stores LF, so a working tree left as it
+# was written fails the format check. Normalise rather than preserve.
+line-ending = "lf"
 
 [tool.mypy]
 python_version = "3.12"

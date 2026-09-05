@@ -8,12 +8,14 @@ from setout.models.advance import Advance
 from setout.models.agreement import Agreement
 from setout.models.attachment import Attachment
 from setout.models.budget import BudgetItem
+from setout.models.country import Country, State
 from setout.models.currency import Currency
 from setout.models.delivery import Delivery
 from setout.models.expense import CostType, Expense
 from setout.models.item import Item
 from setout.models.land import Land, LandSizeUnit
 from setout.models.land_document import LandDocument, LandDocumentKind
+from setout.models.land_valuation import LandValuation, LandValuationKind
 from setout.models.person import Person
 from setout.models.project import Project, ProjectStatus
 from setout.models.scope import Scope
@@ -27,6 +29,7 @@ __all__ = [
     "Agreement",
     "BudgetItem",
     "CostType",
+    "Country",
     "Currency",
     "Delivery",
     "Expense",
@@ -35,12 +38,15 @@ __all__ = [
     "LandDocument",
     "LandDocumentKind",
     "LandSizeUnit",
+    "LandValuation",
+    "LandValuationKind",
     "Person",
     "Project",
     "ProjectStatus",
     "Scope",
     "ScopePreset",
     "Session",
+    "State",
     "User",
     "Vendor",
 ]

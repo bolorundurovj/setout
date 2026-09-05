@@ -21,8 +21,10 @@ make seed         load the sample data
 make backup       write the database and files into one dated archive
 make restore      read a backup archive back (file=<archive>)
 make check        lint, typecheck, all tests, coverage floor, SDK drift
+make check-parallel  the same gate, spread across the cores
 make build        production build of both apps
 make docker-build build the single deployment image
+make kill         stop anything left holding the dev ports
 make clean        remove build artefacts and caches
 ```
 
@@ -30,6 +32,33 @@ make clean        remove build artefacts and caches
 against a coverage floor of 80%, the frontend unit tests, and then regenerates
 the SDK and fails if the committed client drifted. If it passes locally it will
 pass in CI, which runs the same thing.
+
+`make check-parallel` is the same gate with the backend suite spread across every
+core. Its time goes on building a fresh app and schema for each test, which is
+work a machine can do all at once: about two and a half minutes rather than six.
+Tests are handed out a file at a time, so the contract test starts its server
+once rather than once per test.
+
+`make check` stays on one process. It is the slower of the two and the one to
+reach for when a failure needs a traceback that is not interleaved with three
+others. Both run exactly the same lint, tests, coverage floor and SDK check.
+
+The worker count is tunable, and `make test-int` takes it too:
+
+```bash
+PYTEST_WORKERS=8 make check-parallel
+PYTEST_WORKERS=1 make test-int
+```
+
+### Line endings
+
+The repository is LF everywhere, which `.gitattributes` enforces on the way in
+and out of git. Prettier and ruff, though, read the working tree, so a file
+written by a Windows editor fails the gate before git ever sees it.
+
+`make lint` names any file whose working copy is CRLF and stops; `make format`
+converts them. Both ask git for the answer, so an untracked file and a migration
+ruff is told to skip are caught the same as anything else.
 
 ## The three test layers
 

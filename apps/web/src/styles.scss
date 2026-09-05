@@ -1,6 +1,10 @@
 // Fonts are listed in angular.json so they are bundled rather than fetched
 // from a CDN, which keeps a self-hosted Setout working offline.
 
+// Leaflet paints its own elements outside Angular's view encapsulation, so its
+// stylesheet and the markers below cannot live in the map component.
+@import 'leaflet/dist/leaflet.css';
+
 :root {
   --canvas: #e9ebee; // App background
   --surface: #fbfcfd; // Card background
@@ -269,5 +273,34 @@ body {
 
   .panel {
     padding: 20px 16px;
+  }
+}
+
+.leaflet-container {
+  font: inherit;
+  background: var(--field);
+}
+
+.leaflet-container .leaflet-control-attribution {
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+// A dropped pin and a draggable boundary corner. Leaflet builds both from a
+// divIcon, so they are out of reach of the component stylesheet.
+.pin {
+  background: none;
+  border: 0;
+}
+
+.corner {
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
   }
 }

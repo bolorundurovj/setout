@@ -1,22 +1,52 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
-import type { LandSizeUnit } from '@setout/api-client';
+import type { GeocodedPlace, LandBoundary, LandSizeUnit } from '@setout/api-client';
 import { ButtonComponent } from '../ui/button.component';
 import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
+import { TabsComponent, type Tab } from '../ui/tabs.component';
+import { LandSurveyComponent } from './land-survey.component';
 import { ToastService } from '../toast.service';
 import { LandService } from './land.service';
+import { CountryService } from './country.service';
+import { LandMapComponent, type LandPoint } from './land-map.component';
+import {
+  boundaryText,
+  centroidOf,
+  cornerText,
+  parseCorners,
+  pointInRing,
+  ringOf,
+} from './land-geo';
+import { disagreementNote, placeDisagrees, type Disagreement } from './land-place';
 
 @Component({
   selector: 'app-land-form',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChipGroupComponent, RouterLink],
+  imports: [
+    ButtonComponent,
+    ChipGroupComponent,
+    LandMapComponent,
+    LandSurveyComponent,
+    TabsComponent,
+    RouterLink,
+  ],
   templateUrl: './land-form.component.html',
   styleUrl: './land-form.component.scss',
 })
 export class LandFormComponent {
   readonly lands = inject(LandService);
+  readonly countries = inject(CountryService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly pageTitle = inject(Title);
@@ -28,9 +58,67 @@ export class LandFormComponent {
   readonly address = signal('');
   readonly city = signal('');
   readonly state = signal('');
+  readonly country = signal('');
+  readonly purchasedOn = signal('');
   readonly sizeValue = signal('');
   readonly sizeUnit = signal('');
   readonly notes = signal('');
+  readonly place = signal<LandPoint | null>(null);
+  readonly edge = signal<LandBoundary | null>(null);
+  readonly typing = signal(false);
+  readonly typed = signal('');
+  readonly typeNote = signal('');
+
+  private typedTheEdge = false;
+
+  readonly geocodedAddress = signal('');
+  readonly mapSays = signal<GeocodedPlace | null>(null);
+  private asking = 0;
+
+  readonly mapTab = signal<'pin' | 'boundary'>('pin');
+
+  readonly mapTabs: Tab[] = [
+    { value: 'pin', label: 'Pin' },
+    { value: 'boundary', label: 'Boundary' },
+  ];
+
+  readonly edgeBy = signal('draw');
+
+  readonly edgeWays: Chip[] = [
+    { value: 'draw', label: 'Draw it' },
+    { value: 'corners', label: 'Type corners' },
+    { value: 'survey', label: 'From a survey' },
+  ];
+
+  readonly countryChips = computed<Chip[]>(() =>
+    this.countries.all().map((country) => ({ value: country.code, label: country.name })),
+  );
+
+  readonly stateChips = computed<Chip[]>(() =>
+    this.countries
+      .states(this.country())
+      .map((state) => ({ value: state.name, label: state.name })),
+  );
+
+  /** Only a complaint when there is a pin and an edge for it to be outside of. */
+  readonly pinIsOutside = computed(() => {
+    const pin = this.place();
+    const ring = ringOf(this.edge());
+    return pin !== null && ring.length >= 3 && !pointInRing([pin.lon, pin.lat], ring);
+  });
+
+  readonly placeNote = computed<string>(() => {
+    const said = this.mapSays();
+    if (!said) {
+      return '';
+    }
+    const where = placeDisagrees(said, {
+      city: this.city(),
+      state: this.state(),
+      countryCode: this.country(),
+    });
+    return where ? disagreementNote(where as Disagreement, said) : '';
+  });
 
   readonly unitChips: Chip[] = [
     { value: 'sqm', label: 'Square metres' },
@@ -40,9 +128,16 @@ export class LandFormComponent {
   ];
 
   constructor() {
+    void this.countries.load();
     effect(() => {
       this.id();
       void this.load();
+    });
+    // Drawing on the map while the box is open keeps the two showing the same
+    // thing. Untracked, so it only ever answers the map, never its own writing.
+    effect(() => {
+      const drawn = cornerText(this.edge());
+      untracked(() => this.matchTheMap(drawn));
     });
     effect(() => {
       const name = this.name();
@@ -63,15 +158,130 @@ export class LandFormComponent {
       this.address.set(land.address ?? '');
       this.city.set(land.city ?? '');
       this.state.set(land.state ?? '');
+      this.country.set(land.country_code ?? '');
+      this.purchasedOn.set(land.purchased_on ?? '');
+      void this.countries.loadStates(this.country());
       this.sizeValue.set(land.size_value ?? '');
       this.sizeUnit.set(land.size_unit ?? '');
       this.notes.set(land.notes ?? '');
+      this.place.set(
+        land.latitude !== null && land.longitude !== null
+          ? { lat: Number(land.latitude), lon: Number(land.longitude) }
+          : null,
+      );
+      this.edge.set(land.boundary ?? null);
+      this.geocodedAddress.set(land.geocoded_address ?? '');
     }
     this.loading.set(false);
   }
 
   isEdit(): boolean {
     return this.id().length > 0;
+  }
+
+  async pickCountry(code: string): Promise<void> {
+    this.country.set(code);
+    if (!code) {
+      return;
+    }
+    await this.countries.loadStates(code);
+    // A state the new country has never heard of would only be refused on save.
+    const held = this.state().trim().toLowerCase();
+    const known = this.countries.states(code).some((state) => state.name.toLowerCase() === held);
+    if (!known) {
+      this.state.set('');
+    }
+  }
+
+  /** Drop the pin in the middle of the plot, unless the middle is outside it too. */
+  centrePin(): void {
+    const ring = ringOf(this.edge());
+    const middle = centroidOf(ring);
+    if (!middle || !pointInRing(middle, ring)) {
+      return;
+    }
+    void this.setPin({ lat: middle[1], lon: middle[0] });
+  }
+
+  async setPin(pin: LandPoint | null): Promise<void> {
+    this.place.set(pin);
+    await this.askTheMap(pin);
+  }
+
+  /** The last answer wins, so dragging a pin about does not leave a stale note. */
+  private async askTheMap(pin: LandPoint | null): Promise<void> {
+    if (!pin) {
+      this.mapSays.set(null);
+      return;
+    }
+    const ticket = ++this.asking;
+    const said = await this.lands.placeAt(pin.lat, pin.lon);
+    if (ticket !== this.asking) {
+      return;
+    }
+    this.mapSays.set(said);
+    if (said?.address) {
+      this.geocodedAddress.set(said.address);
+    }
+  }
+
+  /** Take the map's word for where this is, in every field it answered. */
+  useMapAddress(): void {
+    const said = this.mapSays();
+    if (!said) {
+      return;
+    }
+    if (said.address) {
+      this.address.set(said.address);
+    }
+    if (said.city) {
+      this.city.set(said.city);
+    }
+    if (said.country_code) {
+      void this.pickCountry(said.country_code).then(() => {
+        if (said.state) {
+          this.state.set(said.state);
+        }
+      });
+      return;
+    }
+    if (said.state) {
+      this.state.set(said.state);
+    }
+  }
+
+  openTyping(): void {
+    this.typing.set(true);
+    this.typed.set(cornerText(this.edge()));
+    this.typeNote.set('');
+  }
+
+  /** Redraws as it is typed, so a coordinate in the wrong order shows itself. */
+  onTyped(text: string): void {
+    this.typed.set(text);
+    const { boundary, error } = parseCorners(text);
+    this.typeNote.set(error ?? '');
+    if (!error) {
+      // What was typed stays exactly as typed; only the map follows.
+      this.typedTheEdge = true;
+      this.edge.set(boundary ?? null);
+    }
+  }
+
+  private matchTheMap(drawn: string): void {
+    if (this.typedTheEdge) {
+      this.typedTheEdge = false;
+      return;
+    }
+    if (this.typing() && !this.typed().trim().startsWith('{') && drawn !== this.typed()) {
+      this.typed.set(drawn);
+      this.typeNote.set('');
+    }
+  }
+
+  showGeoJson(): void {
+    this.typed.set(boundaryText(this.edge()));
+    this.typeNote.set('');
   }
 
   title(): string {
@@ -86,6 +296,10 @@ export class LandFormComponent {
 
   value(event: Event): string {
     return (event.target as HTMLInputElement).value;
+  }
+
+  area(event: Event): string {
+    return (event.target as HTMLTextAreaElement).value;
   }
 
   isValid(): boolean {
@@ -124,9 +338,15 @@ export class LandFormComponent {
       address: this.address().trim() || null,
       city: this.city().trim() || null,
       state: this.state().trim() || null,
+      country_code: this.country() || null,
+      purchased_on: this.purchasedOn() || null,
       size_value: size || null,
       size_unit: size ? (this.sizeUnit() as LandSizeUnit) : null,
       notes: this.notes().trim() || null,
+      latitude: this.place() ? String(this.place()?.lat) : null,
+      longitude: this.place() ? String(this.place()?.lon) : null,
+      boundary: this.edge(),
+      geocoded_address: this.geocodedAddress().trim() || null,
     };
     const saved = this.isEdit()
       ? await this.lands.edit(this.id(), body)
