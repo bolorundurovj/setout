@@ -30,10 +30,18 @@ OPENAPI_JSON := $(SDK_DIR)/openapi.json
 # name is an optional argument to `make migration`.
 name ?=
 
+PYTEST_WORKERS ?= auto
+ifeq ($(PYTEST_WORKERS),1)
+PYTEST_PARALLEL :=
+else
+# loadfile keeps a file's tests on one worker, so the contract test starts its
+# server once rather than once per test.
+PYTEST_PARALLEL := -n $(PYTEST_WORKERS) --dist loadfile
+endif
 
 .PHONY: help setup dev api web watch-sdk lint format test test-unit test-int test-contract \
-	sdk migration migrate downgrade seed backup restore check build docker-build kill clean \
-	require-uv require-yarn require-docker
+	sdk migration migrate downgrade seed backup restore check check-parallel run-check \
+	build docker-build kill clean require-uv require-yarn require-docker
 
 # file is the archive argument to `make restore`.
 file ?=
@@ -119,7 +127,7 @@ test-unit: require-uv ## Unit tests only, fast.
 	cd $(API_DIR) && uv run pytest tests/unit -m unit
 
 test-int: require-uv ## Integration tests against a real database.
-	cd $(API_DIR) && uv run pytest tests/integration -m integration
+	cd $(API_DIR) && uv run pytest tests/integration -m integration $(PYTEST_PARALLEL)
 
 test-contract: require-uv sdk ## Schema and SDK contract tests.
 	cd $(API_DIR) && uv run pytest tests/contract -m contract
@@ -145,9 +153,16 @@ backup: ## Write the database and uploaded files into one dated archive.
 restore: ## Read a backup archive back, after asking. Pass file=<archive>.
 	$(BASH) scripts/restore.sh $(file)
 
-check: sdk ## Lint, typecheck, all tests, coverage floor.
+check: ## Lint, typecheck, all tests, coverage floor.
+	@$(MAKE) run-check PYTEST_WORKERS=1
+
+check-parallel: ## The same gate, with the backend suite spread across the cores.
+	@$(MAKE) run-check PYTEST_WORKERS=$(PYTEST_WORKERS)
+
+run-check: sdk
 	$(MAKE) lint
-	cd $(API_DIR) && uv run pytest --cov=setout --cov-report=term-missing --cov-fail-under=80
+	cd $(API_DIR) && uv run pytest $(PYTEST_PARALLEL) \
+		--cov=setout --cov-report=term-missing --cov-fail-under=80
 	cd $(WEB_DIR) && yarn test --watch=false
 
 build: require-uv require-yarn sdk ## Production build of both apps.
