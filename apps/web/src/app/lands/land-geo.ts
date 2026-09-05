@@ -30,6 +30,48 @@ export function polygonAreaSqm(ring: Position[]): number {
   return Math.abs((total * EARTH_RADIUS * EARTH_RADIUS) / 2);
 }
 
+/** Ray cast: a point is inside when a line drawn east of it crosses an odd number of sides. */
+export function pointInRing(point: Position, ring: Position[]): boolean {
+  if (ring.length < 3) {
+    return false;
+  }
+  const [x, y] = point;
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+/**
+ * The area weighted centre. A concave plot can put this outside its own edge,
+ * so anything offering it as a place to stand should check with pointInRing.
+ */
+export function centroidOf(ring: Position[]): Position | null {
+  if (ring.length < 3) {
+    return null;
+  }
+  let twiceArea = 0;
+  let x = 0;
+  let y = 0;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    const cross = xj * yi - xi * yj;
+    twiceArea += cross;
+    x += (xj + xi) * cross;
+    y += (yj + yi) * cross;
+  }
+  if (twiceArea === 0) {
+    return null;
+  }
+  return [x / (3 * twiceArea), y / (3 * twiceArea)];
+}
+
 /** A plot is not measured in plots anywhere twice, so it is never offered. */
 export const AREA_UNITS: LandSizeUnit[] = ['sqm', 'hectare', 'acre'];
 

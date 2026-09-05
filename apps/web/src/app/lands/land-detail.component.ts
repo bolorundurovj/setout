@@ -19,7 +19,7 @@ import { LandService } from './land.service';
 import { LandValuationsComponent } from './land-valuations.component';
 import { LandMapComponent, type LandPoint } from './land-map.component';
 import { TabsComponent, type Tab } from '../ui/tabs.component';
-import { asSize } from './land-geo';
+import { asSize, pointInRing, ringOf } from './land-geo';
 import { DOCUMENT_KINDS, kindName, sizeLabel, worthLabel } from './land-labels';
 
 @Component({
@@ -95,6 +95,13 @@ export class LandDetailComponent {
 
   hasMap(land: LandRead): boolean {
     return this.place(land) !== null || land.boundary !== null;
+  }
+
+  /** Both halves have to be there before one can disagree with the other. */
+  pinIsOutside(land: LandRead): boolean {
+    const pin = this.place(land);
+    const ring = ringOf(land.boundary);
+    return pin !== null && ring.length >= 3 && !pointInRing([pin.lon, pin.lat], ring);
   }
 
   /** Only worth a switch when there is something to switch between. */

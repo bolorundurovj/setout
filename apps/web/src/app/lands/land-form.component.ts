@@ -19,7 +19,14 @@ import { ToastService } from '../toast.service';
 import { LandService } from './land.service';
 import { CountryService } from './country.service';
 import { LandMapComponent, type LandPoint } from './land-map.component';
-import { boundaryText, cornerText, parseCorners } from './land-geo';
+import {
+  boundaryText,
+  centroidOf,
+  cornerText,
+  parseCorners,
+  pointInRing,
+  ringOf,
+} from './land-geo';
 
 @Component({
   selector: 'app-land-form',
@@ -87,6 +94,13 @@ export class LandFormComponent {
       .states(this.country())
       .map((state) => ({ value: state.name, label: state.name })),
   );
+
+  /** Only a complaint when there is a pin and an edge for it to be outside of. */
+  readonly pinIsOutside = computed(() => {
+    const pin = this.place();
+    const ring = ringOf(this.edge());
+    return pin !== null && ring.length >= 3 && !pointInRing([pin.lon, pin.lat], ring);
+  });
 
   readonly unitChips: Chip[] = [
     { value: 'sqm', label: 'Square metres' },
@@ -158,6 +172,16 @@ export class LandFormComponent {
     if (!known) {
       this.state.set('');
     }
+  }
+
+  /** Drop the pin in the middle of the plot, unless the middle is outside it too. */
+  centrePin(): void {
+    const ring = ringOf(this.edge());
+    const middle = centroidOf(ring);
+    if (!middle || !pointInRing(middle, ring)) {
+      return;
+    }
+    this.place.set({ lat: middle[1], lon: middle[0] });
   }
 
   openTyping(): void {

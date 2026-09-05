@@ -70,6 +70,14 @@
     @if (hasMap(l)) {
       <section class="block">
         <h2 class="t-heading">Where it is</h2>
+        @if (pinIsOutside(l)) {
+          <div class="banner warn pin-warning">
+            <span class="t-small">The pin is outside the edge drawn for this plot.</span>
+            @if (!l.deleted_at) {
+              <app-button variant="secondary" (pressed)="edit()">Fix it on the form</app-button>
+            }
+          </div>
+        }
         @if (mapTabs(l).length) {
           <app-tabs
             label="Pin or boundary"

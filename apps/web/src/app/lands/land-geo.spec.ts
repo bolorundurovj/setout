@@ -1,5 +1,6 @@
 import {
   asSize,
+  centroidOf,
   boundaryOf,
   closeRing,
   cornerText,
@@ -8,6 +9,7 @@ import {
   parseBoundary,
   parseCoordinate,
   parseCorners,
+  pointInRing,
   ringOf,
 } from './land-geo';
 import type { Position } from './land-geo';
@@ -20,6 +22,56 @@ const SQUARE: Position[] = [
 ];
 
 describe('land geo', () => {
+  describe('a point against a ring', () => {
+    const SQ: Position[] = [
+      [0, 0],
+      [4, 0],
+      [4, 4],
+      [0, 4],
+    ];
+
+    it('knows the middle is inside', () => {
+      expect(pointInRing([2, 2], SQ)).toBe(true);
+    });
+
+    it('knows what is outside', () => {
+      expect(pointInRing([5, 2], SQ)).toBe(false);
+      expect(pointInRing([-1, -1], SQ)).toBe(false);
+    });
+
+    it('does not care which way the ring was drawn', () => {
+      expect(pointInRing([2, 2], [...SQ].reverse())).toBe(true);
+    });
+
+    it('encloses nothing with fewer than three corners', () => {
+      expect(pointInRing([1, 1], SQ.slice(0, 2))).toBe(false);
+    });
+
+    it('finds the centre of a square', () => {
+      expect(centroidOf(SQ)).toEqual([2, 2]);
+    });
+
+    it('has no centre to give for two corners', () => {
+      expect(centroidOf(SQ.slice(0, 2))).toBeNull();
+    });
+
+    it('puts the centre of an L outside the L, which is why callers check', () => {
+      const bent: Position[] = [
+        [0, 0],
+        [4, 0],
+        [4, 1],
+        [1, 1],
+        [1, 4],
+        [0, 4],
+      ];
+
+      const middle = centroidOf(bent);
+
+      expect(middle).not.toBeNull();
+      expect(pointInRing(middle as Position, bent)).toBe(false);
+    });
+  });
+
   it('closes a ring that was left open', () => {
     const closed = closeRing(SQUARE);
     expect(closed.length).toBe(5);
