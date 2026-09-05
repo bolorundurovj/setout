@@ -1,29 +1,40 @@
-<div #canvas class="canvas" role="application" aria-label="Where the plot is"></div>
+<div #canvas class="canvas" role="application" [attr.aria-label]="ariaLabel()"></div>
 
 @if (tilesFailed()) {
   <p class="t-small muted">No map tiles from here. The plot still draws.</p>
 }
 
 @if (editable()) {
-  <div class="tools">
-    @if (point()) {
-      <app-button variant="secondary" (pressed)="clearPin()">Remove pin</app-button>
-    } @else {
-      <app-button variant="secondary" (pressed)="dropPin()">Drop a pin here</app-button>
+  @if (mode() === 'pin') {
+    <div class="tools">
       <app-button variant="secondary" (pressed)="locate()">Use my location</app-button>
-    }
+      @if (point()) {
+        <app-button variant="secondary" (pressed)="clearPin()">Remove the pin</app-button>
+      }
+    </div>
+    <p class="t-small muted">
+      @if (point()) {
+        Tap somewhere else to move it, or drag the pin.
+      } @else {
+        Tap the map to drop a pin where the plot is.
+      }
+    </p>
+  } @else {
     @if (corners().length) {
-      <app-button variant="secondary" (pressed)="undo()">Undo last corner</app-button>
-      <app-button variant="secondary" (pressed)="clear()">Clear the edge</app-button>
+      <div class="tools">
+        <app-button variant="secondary" (pressed)="undo()">Undo last corner</app-button>
+        <app-button variant="secondary" (pressed)="clear()">Clear the edge</app-button>
+      </div>
     }
-  </div>
-  <p class="t-small muted">
-    @if (corners().length === 0) {
-      Tap the map to put down the first corner of the plot.
-    } @else if (corners().length < 3) {
-      {{ 3 - corners().length }} more corner before it encloses anything.
-    } @else {
-      {{ corners().length }} corners. Drag one to move it.
-    }
-  </p>
+    <p class="t-small muted">
+      @if (corners().length === 0) {
+        Tap the map to put down the first corner of the plot.
+      } @else if (corners().length < 3) {
+        {{ 3 - corners().length }} more corner{{ corners().length === 2 ? '' : 's' }} before it
+        encloses anything.
+      } @else {
+        {{ corners().length }} corners. Drag one to move it.
+      }
+    </p>
+  }
 }

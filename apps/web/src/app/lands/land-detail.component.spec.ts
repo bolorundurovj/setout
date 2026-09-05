@@ -237,4 +237,45 @@ describe('LandDetailComponent', () => {
     ).toBeNull();
     expect(component.areaGap(land({ size_value: '600', size_unit: 'sqm' }))).toBeNull();
   });
+
+  it('offers no switch when the plot has only a boundary', async () => {
+    const { component } = await render();
+    const boundaryOnly = land({ boundary: { type: 'Polygon', coordinates: [[]] } });
+
+    expect(component.mapTabs(boundaryOnly)).toEqual([]);
+    expect(component.shownMap(boundaryOnly)).toBe('boundary');
+  });
+
+  it('offers no switch when the plot has only a pin', async () => {
+    const { component } = await render();
+    const pinOnly = land({ latitude: '6.52', longitude: '3.37' });
+
+    expect(component.mapTabs(pinOnly)).toEqual([]);
+    expect(component.shownMap(pinOnly)).toBe('pin');
+  });
+
+  it('offers both once the plot has a pin and an edge', async () => {
+    const { component } = await render();
+    const both = land({
+      latitude: '6.52',
+      longitude: '3.37',
+      boundary: { type: 'Polygon', coordinates: [[]] },
+    });
+
+    expect(component.mapTabs(both).map((tab) => tab.value)).toEqual(['pin', 'boundary']);
+    expect(component.shownMap(both)).toBe('pin');
+
+    component.mapTab.set('boundary');
+
+    expect(component.shownMap(both)).toBe('boundary');
+  });
+
+  it('ignores the chosen tab when that half is missing', async () => {
+    const { component } = await render();
+    component.mapTab.set('pin');
+
+    expect(component.shownMap(land({ boundary: { type: 'Polygon', coordinates: [[]] } }))).toBe(
+      'boundary',
+    );
+  });
 });

@@ -18,6 +18,7 @@ import { ToastService } from '../toast.service';
 import { LandService } from './land.service';
 import { LandValuationsComponent } from './land-valuations.component';
 import { LandMapComponent, type LandPoint } from './land-map.component';
+import { TabsComponent, type Tab } from '../ui/tabs.component';
 import { asSize } from './land-geo';
 import { DOCUMENT_KINDS, kindName, sizeLabel, worthLabel } from './land-labels';
 
@@ -30,6 +31,7 @@ import { DOCUMENT_KINDS, kindName, sizeLabel, worthLabel } from './land-labels';
     ChipGroupComponent,
     LandMapComponent,
     LandValuationsComponent,
+    TabsComponent,
     RouterLink,
   ],
   templateUrl: './land-detail.component.html',
@@ -55,6 +57,8 @@ export class LandDetailComponent {
   readonly editKind = signal<LandDocumentKind>('other');
 
   readonly notSet = '—';
+
+  readonly mapTab = signal<'pin' | 'boundary'>('pin');
 
   readonly kindChips: Chip[] = DOCUMENT_KINDS.map((value) => ({ value, label: kindName(value) }));
 
@@ -91,6 +95,27 @@ export class LandDetailComponent {
 
   hasMap(land: LandRead): boolean {
     return this.place(land) !== null || land.boundary !== null;
+  }
+
+  /** Only worth a switch when there is something to switch between. */
+  mapTabs(land: LandRead): Tab[] {
+    if (this.place(land) === null || land.boundary === null) {
+      return [];
+    }
+    return [
+      { value: 'pin', label: 'Pin' },
+      { value: 'boundary', label: 'Boundary' },
+    ];
+  }
+
+  shownMap(land: LandRead): 'pin' | 'boundary' {
+    if (this.place(land) === null) {
+      return 'boundary';
+    }
+    if (land.boundary === null) {
+      return 'pin';
+    }
+    return this.mapTab();
   }
 
   area(land: LandRead): string {

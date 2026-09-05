@@ -70,8 +70,26 @@
     @if (hasMap(l)) {
       <section class="block">
         <h2 class="t-heading">Where it is</h2>
+        @if (mapTabs(l).length) {
+          <app-tabs
+            label="Pin or boundary"
+            [tabs]="mapTabs(l)"
+            [value]="mapTab()"
+            (valueChange)="mapTab.set($any($event))"
+          />
+        }
         @defer (on viewport) {
-          <app-land-map [point]="place(l)" [boundary]="l.boundary" />
+          <div
+            role="tabpanel"
+            [id]="shownMap(l) + '-panel'"
+            [attr.aria-labelledby]="mapTabs(l).length ? shownMap(l) + '-tab' : null"
+          >
+            @if (shownMap(l) === 'pin') {
+              <app-land-map mode="pin" [point]="place(l)" />
+            } @else {
+              <app-land-map mode="boundary" [boundary]="l.boundary" />
+            }
+          </div>
         } @placeholder {
           <div class="map-waiting"></div>
         }
