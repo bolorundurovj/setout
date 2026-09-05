@@ -1,0 +1,69 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.legs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.leg {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.leg.head {
+  gap: 12px;
+}
+
+.bearing,
+.distance {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bearing .input-field {
+  width: 100%;
+  min-width: 0;
+}
+
+.unit {
+  color: var(--ink-3);
+  font-size: 13px;
+  flex: none;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.muted {
+  color: var(--ink-3);
+}
+
+@media (max-width: 719px) {
+  .pair {
+    grid-template-columns: 1fr;
+  }
+}

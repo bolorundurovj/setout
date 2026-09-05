@@ -121,6 +121,22 @@
       }
 
       @if (mapTab() === 'boundary') {
+        <div class="field">
+          <span class="t-micro">How you are describing the edge</span>
+          <app-chip-group
+            label="How you are describing the edge"
+            [chips]="edgeWays"
+            [value]="edgeBy()"
+            (valueChange)="edgeBy.set($event)"
+          />
+        </div>
+      }
+
+      @if (mapTab() === 'boundary' && edgeBy() === 'survey') {
+        <app-land-survey (boundaryChange)="edge.set($event)" />
+      }
+
+      @if (mapTab() === 'boundary' && edgeBy() === 'corners') {
         @if (typing()) {
           <label class="field">
             <span class="t-micro">Corners &middot; latitude first, one per line</span>
