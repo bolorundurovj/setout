@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.4.0](https://github.com/bolorundurovj/setout/compare/v1.3.0...v1.4.0) (2026-09-05)
+
+
+### Features
+
+* **land:** check the pin against the address it was given ([4f6cd2f](https://github.com/bolorundurovj/setout/commit/4f6cd2f9fe7c5d14429d312c487cb108dc58c942))
+* **land:** keep what a plot is worth over time ([898b75e](https://github.com/bolorundurovj/setout/commit/898b75eec5e1af1e9d50069ec091f9fd6ab481ff))
+* **land:** put a plot on a map ([a88c3c4](https://github.com/bolorundurovj/setout/commit/a88c3c4018de5007761ca1e0e39c0e326ede17b7))
+* **land:** read a boundary from a survey traverse ([9fe9b3c](https://github.com/bolorundurovj/setout/commit/9fe9b3c0c2f47973704fee7b9eb5842344539de3))
+* **land:** record the country a plot sits in ([177d721](https://github.com/bolorundurovj/setout/commit/177d7213f6158bb323d2f564471007e71a0ca2e6))
+* **land:** say what an "other" paper actually is ([19159f3](https://github.com/bolorundurovj/setout/commit/19159f3eb39b5e872838345268021e55e547f6ca))
+* **land:** show the pin and the boundary on their own maps ([9e2a645](https://github.com/bolorundurovj/setout/commit/9e2a6455905b5479ec23812a8be9d4b3ec4c0f34))
+* **land:** type the corners off a plan ([0673c74](https://github.com/bolorundurovj/setout/commit/0673c7408ed8c9058b7b6665d00b31d7c7520b76))
+* **land:** warn when the pin sits outside the edge ([dc45cb5](https://github.com/bolorundurovj/setout/commit/dc45cb58765952c8250619a10a016b57997f2b40))
+
+
+### Build and dependencies
+
+* free the dev ports with make kill ([4c88bc5](https://github.com/bolorundurovj/setout/commit/4c88bc56d0a31cf9bdd4a612e078909e8f0c2dd9))
+* hold the working tree to LF ([4e6cf26](https://github.com/bolorundurovj/setout/commit/4e6cf26a26073dd0f31255c56c85681fafc2c6d3))
+* run the backend suite across the cores ([c7e4ae2](https://github.com/bolorundurovj/setout/commit/c7e4ae2a3b0bc0055f8db3e057defab734ac3ed1))
+
 ## [1.3.0](https://github.com/bolorundurovj/setout/compare/v1.2.0...v1.3.0) (2026-08-31)
 
 
