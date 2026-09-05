@@ -1,0 +1,103 @@
+<div class="field">
+  <span class="t-micro">Grid the plan was drawn on</span>
+  <app-option-picker
+    label="Grid the plan was drawn on"
+    [chips]="gridChips"
+    [value]="grid()"
+    (valueChange)="setGrid($event)"
+  />
+  <span class="t-small muted">
+    The same numbers read hundreds of kilometres apart between zones, so this cannot be guessed.
+  </span>
+</div>
+
+<div class="pair">
+  <label class="field">
+    <span class="t-micro">First beacon &middot; northing</span>
+    <input
+      class="input-field t-mono"
+      inputmode="decimal"
+      autocomplete="off"
+      placeholder="800000.000"
+      [value]="northing()"
+      (input)="northing.set(value($event))"
+      (blur)="setBeacon()"
+    />
+  </label>
+  <label class="field">
+    <span class="t-micro">First beacon &middot; easting</span>
+    <input
+      class="input-field t-mono"
+      inputmode="decimal"
+      autocomplete="off"
+      placeholder="750000.000"
+      [value]="easting()"
+      (input)="easting.set(value($event))"
+      (blur)="setBeacon()"
+    />
+  </label>
+</div>
+
+<div class="legs">
+  <div class="leg head">
+    <span class="t-micro">Bearing</span>
+    <span class="t-micro">Distance</span>
+    <span></span>
+  </div>
+  @for (leg of legs(); track $index) {
+    <div class="leg">
+      <span class="bearing">
+        <input
+          class="input-field t-mono"
+          inputmode="numeric"
+          [attr.aria-label]="'Leg ' + ($index + 1) + ' bearing degrees'"
+          placeholder="30"
+          [value]="shown(leg.degrees)"
+          (input)="setLeg($index, 'degrees', value($event))"
+        />
+        <span class="t-mono unit">&deg;</span>
+        <input
+          class="input-field t-mono"
+          inputmode="numeric"
+          [attr.aria-label]="'Leg ' + ($index + 1) + ' bearing minutes'"
+          placeholder="00"
+          [value]="shown(leg.minutes)"
+          (input)="setLeg($index, 'minutes', value($event))"
+        />
+        <span class="t-mono unit">&prime;</span>
+      </span>
+      <span class="distance">
+        <input
+          class="input-field t-mono"
+          inputmode="decimal"
+          [attr.aria-label]="'Leg ' + ($index + 1) + ' distance in metres'"
+          placeholder="40.00"
+          [value]="shown(leg.distance)"
+          (input)="setLeg($index, 'distance', value($event))"
+        />
+        <span class="t-mono unit">m</span>
+      </span>
+      <button
+        type="button"
+        class="link t-mono"
+        [attr.aria-label]="'Remove leg ' + ($index + 1)"
+        (click)="removeLeg($index)"
+      >
+        Remove
+      </button>
+    </div>
+  }
+</div>
+
+<div class="form-actions">
+  <app-button variant="secondary" (pressed)="addLeg()">Add a leg</app-button>
+</div>
+
+@if (closure()) {
+  <p class="t-small" [class.muted]="closure().startsWith('Closes')">{{ closure() }}</p>
+}
+@if (areaText()) {
+  <p class="t-small muted t-mono">{{ areaText() }}</p>
+} @else if (good().length < 3) {
+  <p class="t-small muted">A beacon and three legs, and the plot draws itself on the map above.</p>
+}

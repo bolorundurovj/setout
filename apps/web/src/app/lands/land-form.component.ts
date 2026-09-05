@@ -14,6 +14,7 @@ import type { LandBoundary, LandSizeUnit } from '@setout/api-client';
 import { ButtonComponent } from '../ui/button.component';
 import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
 import { TabsComponent, type Tab } from '../ui/tabs.component';
+import { LandSurveyComponent } from './land-survey.component';
 import { ToastService } from '../toast.service';
 import { LandService } from './land.service';
 import { CountryService } from './country.service';
@@ -24,7 +25,14 @@ import { boundaryText, cornerText, parseCorners } from './land-geo';
   selector: 'app-land-form',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChipGroupComponent, LandMapComponent, TabsComponent, RouterLink],
+  imports: [
+    ButtonComponent,
+    ChipGroupComponent,
+    LandMapComponent,
+    LandSurveyComponent,
+    TabsComponent,
+    RouterLink,
+  ],
   templateUrl: './land-form.component.html',
   styleUrl: './land-form.component.scss',
 })
@@ -60,6 +68,14 @@ export class LandFormComponent {
   readonly mapTabs: Tab[] = [
     { value: 'pin', label: 'Pin' },
     { value: 'boundary', label: 'Boundary' },
+  ];
+
+  readonly edgeBy = signal('draw');
+
+  readonly edgeWays: Chip[] = [
+    { value: 'draw', label: 'Draw it' },
+    { value: 'corners', label: 'Type corners' },
+    { value: 'survey', label: 'From a survey' },
   ];
 
   readonly countryChips = computed<Chip[]>(() =>
