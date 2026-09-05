@@ -1,4 +1,15 @@
-import { asSize, boundaryOf, closeRing, inMetres, parseBoundary, ringOf } from './land-geo';
+import {
+  asSize,
+  boundaryOf,
+  closeRing,
+  cornerText,
+  degreesFrom,
+  inMetres,
+  parseBoundary,
+  parseCoordinate,
+  parseCorners,
+  ringOf,
+} from './land-geo';
 import type { Position } from './land-geo';
 
 const SQUARE: Position[] = [
@@ -99,5 +110,139 @@ describe('land geo', () => {
 
   it('treats an empty box as nothing to save, not an error', () => {
     expect(parseBoundary('   ')).toEqual({ boundary: undefined });
+  });
+
+  describe('coordinates off a survey plan', () => {
+    it('reads a plain decimal degree', () => {
+      expect(degreesFrom('6.5244')).toBeCloseTo(6.5244, 6);
+      expect(degreesFrom('-6.5244')).toBeCloseTo(-6.5244, 6);
+    });
+
+    it('reads degrees, minutes and seconds', () => {
+      expect(degreesFrom(`6°31'27.8"N`)).toBeCloseTo(6.524389, 5);
+      expect(degreesFrom(`3°22'45.1"E`)).toBeCloseTo(3.379194, 5);
+    });
+
+    it('takes the hemisphere as the sign', () => {
+      expect(degreesFrom(`33°55'30"S`)).toBeCloseTo(-33.925, 5);
+      expect(degreesFrom(`0°10'00"W`)).toBeCloseTo(-0.166667, 5);
+      expect(degreesFrom('6.5244S')).toBeCloseTo(-6.5244, 6);
+    });
+
+    it('reads degrees and minutes with no seconds', () => {
+      expect(degreesFrom(`6°31.5'N`)).toBeCloseTo(6.525, 5);
+    });
+
+    it('refuses a minus sign and a hemisphere at once', () => {
+      expect(degreesFrom(`-6°31'27.8"N`)).toBeNull();
+    });
+
+    it('refuses what is not a coordinate at all', () => {
+      expect(degreesFrom('beacon')).toBeNull();
+      expect(degreesFrom('')).toBeNull();
+    });
+
+    it('reads a pair latitude first, however it is separated', () => {
+      expect(parseCoordinate('6.5244, 3.3792')).toEqual([3.3792, 6.5244]);
+      expect(parseCoordinate('6.5244 3.3792')).toEqual([3.3792, 6.5244]);
+      expect(parseCoordinate('6.5244;3.3792')).toEqual([3.3792, 6.5244]);
+    });
+
+    it('reads a pair written in degrees minutes seconds', () => {
+      const corner = parseCoordinate(`6°31'27.8"N 3°22'45.1"E`);
+      expect(corner?.[1]).toBeCloseTo(6.524389, 5);
+      expect(corner?.[0]).toBeCloseTo(3.379194, 5);
+    });
+
+    it('ignores the beacon label a plan puts in front', () => {
+      expect(parseCoordinate('Beacon 3: 6.5244, 3.3792')).toEqual([3.3792, 6.5244]);
+    });
+
+    it('refuses a pair that is not on Earth', () => {
+      expect(parseCoordinate('95.0, 3.3792')).toBeNull();
+      expect(parseCoordinate('6.5244, 181')).toBeNull();
+    });
+
+    it('refuses a line with only one number', () => {
+      expect(parseCoordinate('6.5244')).toBeNull();
+    });
+
+    it('builds a boundary out of a typed list', () => {
+      const { boundary, error } = parseCorners(
+        ['6.5244, 3.3792', '6.5251, 3.3792', '6.5251, 3.3799', '6.5244, 3.3799'].join('\n'),
+      );
+      expect(error).toBeUndefined();
+      expect(ringOf(boundary).length).toBe(4);
+      expect(ringOf(boundary)[0]).toEqual([3.3792, 6.5244]);
+    });
+
+    it('takes degrees and dms mixed in one list', () => {
+      const { boundary, error } = parseCorners(
+        ['6.5244, 3.3792', `6°31'30.4"N 3°22'48.0"E`, '6.5251, 3.3799'].join('\n'),
+      );
+      expect(error).toBeUndefined();
+      expect(ringOf(boundary).length).toBe(3);
+    });
+
+    it('still takes GeoJSON in the same box', () => {
+      const { boundary } = parseCorners(
+        JSON.stringify({ type: 'Polygon', coordinates: [closeRing(SQUARE)] }),
+      );
+      expect(ringOf(boundary).length).toBe(4);
+    });
+
+    it('says which line it could not read', () => {
+      const { error } = parseCorners(['6.5244, 3.3792', 'somewhere near the church 12'].join('\n'));
+      expect(error).toBe('Line 2 does not read as a coordinate.');
+    });
+
+    it('says how many more corners it needs', () => {
+      const { error } = parseCorners(['6.5244, 3.3792', '6.5251, 3.3792'].join('\n'));
+      expect(error).toBe('1 more corner before it encloses anything.');
+    });
+
+    it('writes the corners back out latitude first', () => {
+      const text = cornerText(boundaryOf(SQUARE));
+      expect(text.split('\n').length).toBe(4);
+      expect(text.split('\n')[0]).toBe('6.5, 3.3');
+    });
+
+    it('round trips a typed list', () => {
+      const typed = ['6.5244, 3.3792', '6.5251, 3.3792', '6.5251, 3.3799'].join('\n');
+      expect(cornerText(parseCorners(typed).boundary)).toBe(typed);
+    });
+
+    it('skips a heading with no numbers in it', () => {
+      const { boundary, error } = parseCorners(
+        ['SURVEY PLAN OF LAND AT EWURU', '6.5244, 3.3792', '6.5251, 3.3792', '6.5251, 3.3799'].join(
+          '\n',
+        ),
+      );
+      expect(error).toBeUndefined();
+      expect(ringOf(boundary).length).toBe(3);
+    });
+
+    it('reads a survey plan copied out whole', () => {
+      const plan = [
+        'SURVEY PLAN OF LAND AT EWURU',
+        `Beacon 1: 6°31'27.8"N 3°22'45.1"E`,
+        `Beacon 2: 6°31'30.4"N 3°22'45.1"E`,
+        `Beacon 3: 6°31'30.4"N 3°22'48.0"E`,
+        `Beacon 4: 6°31'27.8"N 3°22'48.0"E`,
+      ].join('\n');
+
+      const { boundary, error } = parseCorners(plan);
+
+      expect(error).toBeUndefined();
+      expect(ringOf(boundary).length).toBe(4);
+      expect(ringOf(boundary)[0][1]).toBeCloseTo(6.524389, 5);
+      expect(ringOf(boundary)[0][0]).toBeCloseTo(3.379194, 5);
+    });
+
+    it('counts the corners it is short in plain words', () => {
+      expect(parseCorners('6.5244, 3.3792').error).toBe(
+        '2 more corners before it encloses anything.',
+      );
+    });
   });
 });

@@ -6,6 +6,7 @@ import {
   inject,
   input,
   signal,
+  untracked,
 } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
@@ -16,6 +17,7 @@ import { ToastService } from '../toast.service';
 import { LandService } from './land.service';
 import { CountryService } from './country.service';
 import { LandMapComponent, type LandPoint } from './land-map.component';
+import { boundaryText, cornerText, parseCorners } from './land-geo';
 
 @Component({
   selector: 'app-land-form',
@@ -46,6 +48,11 @@ export class LandFormComponent {
   readonly notes = signal('');
   readonly place = signal<LandPoint | null>(null);
   readonly edge = signal<LandBoundary | null>(null);
+  readonly typing = signal(false);
+  readonly typed = signal('');
+  readonly typeNote = signal('');
+
+  private typedTheEdge = false;
 
   readonly countryChips = computed<Chip[]>(() =>
     this.countries.all().map((country) => ({ value: country.code, label: country.name })),
@@ -69,6 +76,12 @@ export class LandFormComponent {
     effect(() => {
       this.id();
       void this.load();
+    });
+    // Drawing on the map while the box is open keeps the two showing the same
+    // thing. Untracked, so it only ever answers the map, never its own writing.
+    effect(() => {
+      const drawn = cornerText(this.edge());
+      untracked(() => this.matchTheMap(drawn));
     });
     effect(() => {
       const name = this.name();
@@ -123,6 +136,40 @@ export class LandFormComponent {
     }
   }
 
+  openTyping(): void {
+    this.typing.set(true);
+    this.typed.set(cornerText(this.edge()));
+    this.typeNote.set('');
+  }
+
+  /** Redraws as it is typed, so a coordinate in the wrong order shows itself. */
+  onTyped(text: string): void {
+    this.typed.set(text);
+    const { boundary, error } = parseCorners(text);
+    this.typeNote.set(error ?? '');
+    if (!error) {
+      // What was typed stays exactly as typed; only the map follows.
+      this.typedTheEdge = true;
+      this.edge.set(boundary ?? null);
+    }
+  }
+
+  private matchTheMap(drawn: string): void {
+    if (this.typedTheEdge) {
+      this.typedTheEdge = false;
+      return;
+    }
+    if (this.typing() && !this.typed().trim().startsWith('{') && drawn !== this.typed()) {
+      this.typed.set(drawn);
+      this.typeNote.set('');
+    }
+  }
+
+  showGeoJson(): void {
+    this.typed.set(boundaryText(this.edge()));
+    this.typeNote.set('');
+  }
+
   title(): string {
     return this.isEdit() ? 'Edit Land' : 'New Land';
   }
@@ -135,6 +182,10 @@ export class LandFormComponent {
 
   value(event: Event): string {
     return (event.target as HTMLInputElement).value;
+  }
+
+  area(event: Event): string {
+    return (event.target as HTMLTextAreaElement).value;
   }
 
   isValid(): boolean {

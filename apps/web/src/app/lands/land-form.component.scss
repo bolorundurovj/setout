@@ -56,6 +56,13 @@
   background: var(--field);
 }
 
+.geojson {
+  min-height: 96px;
+  resize: vertical;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 @media (max-width: 719px) {
   .map-waiting {
     height: 260px;
