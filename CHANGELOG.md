@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/bolorundurovj/setout/compare/v1.4.0...v1.4.1) (2026-09-05)
+
+
+### Build and dependencies
+
+* publish images to Docker Hub as well ([#36](https://github.com/bolorundurovj/setout/issues/36)) ([fd5efd2](https://github.com/bolorundurovj/setout/commit/fd5efd28d6ffebf39afa62c0304d359da4d9df28))
+
 ## [1.4.0](https://github.com/bolorundurovj/setout/compare/v1.3.0...v1.4.0) (2026-09-05)
 
 
