@@ -103,6 +103,34 @@
       } @placeholder {
         <div class="map-waiting"></div>
       }
+
+      @if (typing()) {
+        <label class="field">
+          <span class="t-micro">Corners &middot; latitude first, one per line</span>
+          <textarea
+            class="input-field geojson t-mono"
+            rows="6"
+            spellcheck="false"
+            autocapitalize="off"
+            placeholder="6.5244, 3.3792&#10;6&#176;31'30.4&quot;N 3&#176;22'48.0&quot;E"
+            [value]="typed()"
+            (input)="onTyped(area($event))"
+          ></textarea>
+          @if (typeNote()) {
+            <span class="t-small warn">{{ typeNote() }}</span>
+          } @else {
+            <span class="t-small muted">
+              Degrees, or degrees minutes seconds off the survey. GeoJSON pastes in here too.
+            </span>
+          }
+        </label>
+        <div class="form-actions">
+          <app-button variant="secondary" (pressed)="typing.set(false)">Done</app-button>
+          <button type="button" class="link t-mono" (click)="showGeoJson()">Show As GeoJSON</button>
+        </div>
+      } @else {
+        <button type="button" class="link t-mono" (click)="openTyping()">Type The Corners</button>
+      }
     </div>
 
     <label class="field">

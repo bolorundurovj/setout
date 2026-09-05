@@ -121,3 +121,96 @@ function geometryIn(parsed: unknown): { type?: string; coordinates?: unknown } |
 export function boundaryText(boundary: LandBoundary | null | undefined): string {
   return boundary ? JSON.stringify(boundary) : '';
 }
+
+/**
+ * One coordinate, in whatever a survey plan wrote it: a decimal degree, or
+ * degrees-minutes-seconds with a hemisphere on either end.
+ */
+export function degreesFrom(token: string): number | null {
+  const text = token.trim();
+  if (!text) {
+    return null;
+  }
+  const hemisphere = /[NSEWnsew]/.exec(text)?.[0]?.toUpperCase();
+  const numbers = text.match(/-?\d+(?:\.\d+)?/g);
+  if (!numbers || numbers.length === 0 || numbers.length > 3) {
+    return null;
+  }
+  const [degrees, minutes, seconds] = numbers.map(Number);
+  if (numbers.length > 1 && degrees < 0) {
+    return null; // A sign and a hemisphere disagree about which way is down.
+  }
+  const size = Math.abs(degrees) + (minutes ?? 0) / 60 + (seconds ?? 0) / 3600;
+  if (Number.isNaN(size)) {
+    return null;
+  }
+  const negative = degrees < 0 || hemisphere === 'S' || hemisphere === 'W';
+  return negative ? -size : size;
+}
+
+/** A line of a survey list: latitude first, then longitude. */
+export function parseCoordinate(line: string): Position | null {
+  // "Beacon 3: 6.5244, 3.3792" is how a plan is usually copied out.
+  const body = line.includes(':') ? line.slice(line.lastIndexOf(':') + 1) : line;
+  const text = body.trim();
+  if (!text) {
+    return null;
+  }
+  const halves = splitPair(text);
+  if (!halves) {
+    return null;
+  }
+  const latitude = degreesFrom(halves[0]);
+  const longitude = degreesFrom(halves[1]);
+  if (latitude === null || longitude === null) {
+    return null;
+  }
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+    return null;
+  }
+  return [longitude, latitude];
+}
+
+function splitPair(text: string): [string, string] | null {
+  // A hemisphere letter ends its own half, whichever side of the number it sits.
+  const marked = /^(.*?[NSns])[\s,]*(.*[EWew].*)$/.exec(text);
+  if (marked) {
+    return [marked[1], marked[2]];
+  }
+  const parts = text.split(/[,;\s]+/).filter(Boolean);
+  return parts.length === 2 ? [parts[0], parts[1]] : null;
+}
+
+/** Every corner of a pasted list, in the order they were written. */
+export function parseCorners(text: string): { boundary?: LandBoundary; error?: string } {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return { boundary: undefined };
+  }
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    return parseBoundary(trimmed);
+  }
+  const lines = trimmed.split(/\r?\n/).filter((line) => /\d/.test(line));
+  const ring: Position[] = [];
+  for (const [index, line] of lines.entries()) {
+    const corner = parseCoordinate(line);
+    if (!corner) {
+      return { error: `Line ${index + 1} does not read as a coordinate.` };
+    }
+    ring.push(corner);
+  }
+  if (ring.length < 3) {
+    const short = 3 - ring.length;
+    return {
+      error: `${short} more corner${short === 1 ? '' : 's'} before it encloses anything.`,
+    };
+  }
+  return { boundary: boundaryOf(ring) ?? undefined };
+}
+
+/** The corners written back out the way they were typed: latitude first. */
+export function cornerText(boundary: LandBoundary | null | undefined): string {
+  return ringOf(boundary)
+    .map(([lon, lat]) => `${lat}, ${lon}`)
+    .join('\n');
+}

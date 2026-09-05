@@ -246,4 +246,67 @@ describe('LandFormComponent', () => {
       purchased_on: '2023-03-11',
     });
   });
+
+  it('draws the edge from corners typed off a survey plan', async () => {
+    const component = await render();
+
+    component.onTyped(['6.5244, 3.3792', '6.5251, 3.3792', '6.5251, 3.3799'].join('\n'));
+
+    expect(component.typeNote()).toBe('');
+    expect(component.edge()?.coordinates[0].length).toBe(4);
+    // Latitude was typed first; GeoJSON stores longitude first.
+    expect(component.edge()?.coordinates[0][0]).toEqual([3.3792, 6.5244]);
+  });
+
+  it('leaves what was typed exactly as typed', async () => {
+    const component = await render();
+    const typed = ['6.5244,3.3792', '6.5251,3.3792', '6.5251,3.3799'].join('\n');
+
+    component.onTyped(typed);
+
+    expect(component.typed()).toBe(typed);
+  });
+
+  it('says which line will not read, and keeps the last good shape', async () => {
+    const component = await render();
+    component.onTyped(['6.5244, 3.3792', '6.5251, 3.3792', '6.5251, 3.3799'].join('\n'));
+    const good = component.edge();
+
+    component.onTyped(['6.5244, 3.3792', 'beacon 4 by the road'].join('\n'));
+
+    expect(component.typeNote()).toBe('Line 2 does not read as a coordinate.');
+    expect(component.edge()).toBe(good);
+  });
+
+  it('fills the box from the edge already on the plot', async () => {
+    const component = await render();
+    component.onTyped(['6.5244, 3.3792', '6.5251, 3.3792', '6.5251, 3.3799'].join('\n'));
+    component.typing.set(false);
+
+    component.openTyping();
+
+    expect(component.typed().split('\n').length).toBe(3);
+    expect(component.typed().split('\n')[0]).toBe('6.5244, 3.3792');
+  });
+
+  it('shows the same shape as GeoJSON when asked', async () => {
+    const component = await render();
+    component.onTyped(['6.5244, 3.3792', '6.5251, 3.3792', '6.5251, 3.3799'].join('\n'));
+
+    component.showGeoJson();
+
+    expect(component.typed().startsWith('{"type":"Polygon"')).toBe(true);
+  });
+
+  it('sends the typed edge when the plot is saved', async () => {
+    const component = await render();
+    component.name.set('Ewuru plot');
+    component.onTyped(['6.5244, 3.3792', '6.5251, 3.3792', '6.5251, 3.3799'].join('\n'));
+
+    await component.save();
+
+    expect(added[0]).toMatchObject({
+      boundary: { type: 'Polygon' },
+    });
+  });
 });
