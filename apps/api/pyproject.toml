@@ -40,6 +40,7 @@ dev = [
     "httpx==0.28.1",
     "schemathesis==4.24.3",
     "watchfiles==1.2.0",
+    "pytest-xdist==3.8.0",
 ]
 
 [project.urls]
