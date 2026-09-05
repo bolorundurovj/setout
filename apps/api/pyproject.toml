@@ -38,7 +38,7 @@ dev = [
     "pytest-asyncio==1.4.0",
     "pytest-cov==7.1.0",
     "httpx==0.28.1",
-    "schemathesis==4.24.3",
+    "schemathesis==4.25.2",
     "watchfiles==1.2.0",
 ]
 
