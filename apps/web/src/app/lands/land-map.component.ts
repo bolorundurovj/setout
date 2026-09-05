@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  DestroyRef,
   effect,
   inject,
   input,
@@ -41,6 +42,7 @@ export class LandMapComponent {
   readonly point = input<LandPoint | null>(null);
   readonly boundary = input<LandBoundary | null>(null);
   readonly editable = input(false);
+  readonly mode = input<'pin' | 'boundary'>('boundary');
 
   readonly pointChange = output<LandPoint | null>();
   readonly boundaryChange = output<LandBoundary | null>();
@@ -55,6 +57,11 @@ export class LandMapComponent {
 
   constructor() {
     void this.maps.load();
+    // Tabs build and tear down a map each time one is opened, so it has to let go.
+    inject(DestroyRef).onDestroy(() => {
+      this.map?.remove();
+      this.map = null;
+    });
     effect(() => {
       const settings = this.maps.settings();
       const element = this.host().nativeElement;
@@ -80,7 +87,7 @@ export class LandMapComponent {
   private build(element: HTMLElement): L.Map {
     const map = L.map(element, { attributionControl: true }).setView([9, 8], 5);
     if (this.editable()) {
-      map.on('click', (event: L.LeafletMouseEvent) => this.addCorner(event.latlng));
+      map.on('click', (event: L.LeafletMouseEvent) => this.onClick(event.latlng));
     }
     return map;
   }
@@ -159,7 +166,11 @@ export class LandMapComponent {
     }
   }
 
-  private addCorner(at: L.LatLng): void {
+  private onClick(at: L.LatLng): void {
+    if (this.mode() === 'pin') {
+      this.pointChange.emit({ lat: round(at.lat), lon: round(at.lng) });
+      return;
+    }
     this.commit([...this.corners(), [round(at.lng), round(at.lat)]]);
   }
 
@@ -167,6 +178,10 @@ export class LandMapComponent {
     this.corners.set(ring);
     this.boundaryChange.emit(boundaryOf(ring));
     this.draw();
+  }
+
+  ariaLabel(): string {
+    return this.mode() === 'pin' ? 'Where the plot is' : 'The edge of the plot';
   }
 
   undo(): void {
