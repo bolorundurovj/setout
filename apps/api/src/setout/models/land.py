@@ -45,6 +45,11 @@ class Land(Model):
         on_delete=fields.RESTRICT,
     )
     currency_id: str | None
+    latitude = fields.DecimalField(max_digits=10, decimal_places=7, null=True, default=None)
+    longitude = fields.DecimalField(max_digits=10, decimal_places=7, null=True, default=None)
+    boundary = fields.TextField(
+        null=True, default=None, description="GeoJSON Polygon of the plot's edge"
+    )
     size_value = fields.DecimalField(max_digits=14, decimal_places=2, null=True, default=None)
     size_unit = fields.CharEnumField(LandSizeUnit, max_length=16, null=True, default=None)
     notes = fields.TextField(null=True, default=None)

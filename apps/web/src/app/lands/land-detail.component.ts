@@ -17,13 +17,21 @@ import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
 import { ToastService } from '../toast.service';
 import { LandService } from './land.service';
 import { LandValuationsComponent } from './land-valuations.component';
+import { LandMapComponent, type LandPoint } from './land-map.component';
+import { asSize } from './land-geo';
 import { DOCUMENT_KINDS, kindName, sizeLabel, worthLabel } from './land-labels';
 
 @Component({
   selector: 'app-land-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChipGroupComponent, LandValuationsComponent, RouterLink],
+  imports: [
+    ButtonComponent,
+    ChipGroupComponent,
+    LandMapComponent,
+    LandValuationsComponent,
+    RouterLink,
+  ],
   templateUrl: './land-detail.component.html',
   styleUrl: './land-detail.component.scss',
 })
@@ -73,6 +81,57 @@ export class LandDetailComponent {
     this.land.set(land);
     this.documents.set(documents);
     this.loading.set(false);
+  }
+
+  place(land: LandRead): LandPoint | null {
+    return land.latitude !== null && land.longitude !== null
+      ? { lat: Number(land.latitude), lon: Number(land.longitude) }
+      : null;
+  }
+
+  hasMap(land: LandRead): boolean {
+    return this.place(land) !== null || land.boundary !== null;
+  }
+
+  area(land: LandRead): string {
+    const sqm = land.boundary_area_sqm;
+    if (sqm === null || sqm === undefined) {
+      return this.notSet;
+    }
+    const unit = land.size_unit && land.size_unit !== 'plot' ? land.size_unit : 'sqm';
+    return `${asSize(sqm, unit)} ${unit === 'sqm' ? 'sqm' : unit + 's'}`;
+  }
+
+  /** How far the drawn edge is from what the survey said, when both exist. */
+  areaGap(land: LandRead): number | null {
+    const sqm = land.boundary_area_sqm;
+    if (!sqm || !land.size_value || !land.size_unit || land.size_unit === 'plot') {
+      return null;
+    }
+    const drawn = Number(asSize(sqm, land.size_unit));
+    const stated = Number(land.size_value);
+    if (!stated || Number.isNaN(drawn)) {
+      return null;
+    }
+    return Math.round(Math.abs((drawn - stated) / stated) * 100);
+  }
+
+  async useDrawnSize(land: LandRead): Promise<void> {
+    const sqm = land.boundary_area_sqm;
+    if (!sqm) {
+      return;
+    }
+    const unit = land.size_unit && land.size_unit !== 'plot' ? land.size_unit : 'sqm';
+    const saved = await this.lands.edit(land.id, {
+      size_value: asSize(sqm, unit),
+      size_unit: unit,
+    });
+    if (!saved) {
+      this.toast.show(this.lands.error() ?? 'Could not save that size.', 'error');
+      return;
+    }
+    this.toast.show('Size taken from the boundary.');
+    await this.load();
   }
 
   size(land: LandRead): string {

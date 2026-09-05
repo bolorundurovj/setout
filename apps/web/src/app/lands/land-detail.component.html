@@ -43,6 +43,12 @@
         <span class="t-micro">Size</span>
         <span class="t-body t-mono">{{ size(l) }}</span>
       </div>
+      @if (l.boundary) {
+        <div class="fact">
+          <span class="t-micro">Boundary area</span>
+          <span class="t-body t-mono">{{ area(l) }}</span>
+        </div>
+      }
       <div class="fact">
         <span class="t-micro">Bought</span>
         <span class="t-body t-mono">{{ l.purchased_on ?? notSet }}</span>
@@ -59,6 +65,29 @@
 
     @if (l.notes) {
       <p class="t-small muted">{{ l.notes }}</p>
+    }
+
+    @if (hasMap(l)) {
+      <section class="block">
+        <h2 class="t-heading">Where it is</h2>
+        @defer (on viewport) {
+          <app-land-map [point]="place(l)" [boundary]="l.boundary" />
+        } @placeholder {
+          <div class="map-waiting"></div>
+        }
+        @if (areaGap(l); as gap) {
+          @if (gap >= 5) {
+            <p class="t-small muted">
+              The edge drawn here works out {{ gap }}% away from the size on record.
+              @if (!l.deleted_at) {
+                <button type="button" class="link t-mono" (click)="useDrawnSize(l)">
+                  Use The Drawn Area
+                </button>
+              }
+            </p>
+          }
+        }
+      </section>
     }
 
     <section class="block">

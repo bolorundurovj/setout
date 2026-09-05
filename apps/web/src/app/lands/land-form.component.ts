@@ -9,18 +9,19 @@ import {
 } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
-import type { LandSizeUnit } from '@setout/api-client';
+import type { LandBoundary, LandSizeUnit } from '@setout/api-client';
 import { ButtonComponent } from '../ui/button.component';
 import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
 import { ToastService } from '../toast.service';
 import { LandService } from './land.service';
 import { CountryService } from './country.service';
+import { LandMapComponent, type LandPoint } from './land-map.component';
 
 @Component({
   selector: 'app-land-form',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChipGroupComponent, RouterLink],
+  imports: [ButtonComponent, ChipGroupComponent, LandMapComponent, RouterLink],
   templateUrl: './land-form.component.html',
   styleUrl: './land-form.component.scss',
 })
@@ -43,6 +44,8 @@ export class LandFormComponent {
   readonly sizeValue = signal('');
   readonly sizeUnit = signal('');
   readonly notes = signal('');
+  readonly place = signal<LandPoint | null>(null);
+  readonly edge = signal<LandBoundary | null>(null);
 
   readonly countryChips = computed<Chip[]>(() =>
     this.countries.all().map((country) => ({ value: country.code, label: country.name })),
@@ -92,6 +95,12 @@ export class LandFormComponent {
       this.sizeValue.set(land.size_value ?? '');
       this.sizeUnit.set(land.size_unit ?? '');
       this.notes.set(land.notes ?? '');
+      this.place.set(
+        land.latitude !== null && land.longitude !== null
+          ? { lat: Number(land.latitude), lon: Number(land.longitude) }
+          : null,
+      );
+      this.edge.set(land.boundary ?? null);
     }
     this.loading.set(false);
   }
@@ -169,6 +178,9 @@ export class LandFormComponent {
       size_value: size || null,
       size_unit: size ? (this.sizeUnit() as LandSizeUnit) : null,
       notes: this.notes().trim() || null,
+      latitude: this.place() ? String(this.place()?.lat) : null,
+      longitude: this.place() ? String(this.place()?.lon) : null,
+      boundary: this.edge(),
     };
     const saved = this.isEdit()
       ? await this.lands.edit(this.id(), body)

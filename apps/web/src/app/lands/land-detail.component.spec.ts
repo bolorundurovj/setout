@@ -15,6 +15,10 @@ function land(over: Partial<LandRead> = {}): LandRead {
     country_code: null,
     country_name: null,
     purchased_on: null,
+    latitude: null,
+    longitude: null,
+    boundary: null,
+    boundary_area_sqm: null,
     currency_code: null,
     currency_exponent: null,
     purchase_amount: null,
@@ -186,5 +190,51 @@ describe('LandDetailComponent', () => {
       }),
     );
     expect(element.textContent).toContain('The house');
+  });
+
+  it('shows no map for a plot with neither a pin nor an edge', async () => {
+    const { component } = await render();
+    expect(component.hasMap(land())).toBe(false);
+  });
+
+  it('shows a map once there is a pin', async () => {
+    const { component } = await render();
+    expect(component.hasMap(land({ latitude: '6.52', longitude: '3.37' }))).toBe(true);
+  });
+
+  it('reads the boundary area in the unit the size uses', async () => {
+    const { component } = await render();
+    expect(component.area(land({ boundary_area_sqm: 10000, size_unit: 'hectare' }))).toBe(
+      '1 hectares',
+    );
+    expect(component.area(land({ boundary_area_sqm: 648.5, size_unit: null }))).toBe('648.5 sqm');
+  });
+
+  it('says a dash when nothing has been drawn', async () => {
+    const { component } = await render();
+    expect(component.area(land())).toBe('—');
+  });
+
+  it('works out how far the drawn edge is from the recorded size', async () => {
+    const { component } = await render();
+    const gap = component.areaGap(
+      land({ boundary_area_sqm: 648.5, size_value: '600', size_unit: 'sqm' }),
+    );
+    expect(gap).toBe(8);
+  });
+
+  it('compares nothing when the size is in plots', async () => {
+    const { component } = await render();
+    expect(
+      component.areaGap(land({ boundary_area_sqm: 648.5, size_value: '1', size_unit: 'plot' })),
+    ).toBeNull();
+  });
+
+  it('compares nothing when only one of the two figures exists', async () => {
+    const { component } = await render();
+    expect(
+      component.areaGap(land({ boundary_area_sqm: 648.5, size_value: null, size_unit: null })),
+    ).toBeNull();
+    expect(component.areaGap(land({ size_value: '600', size_unit: 'sqm' }))).toBeNull();
   });
 });

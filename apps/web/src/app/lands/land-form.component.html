@@ -90,6 +90,21 @@
       <span class="t-small muted">What it cost goes on the plot's own page, with the rest.</span>
     </label>
 
+    <div class="field">
+      <span class="t-micro">Where it is</span>
+      @defer (on viewport) {
+        <app-land-map
+          [point]="place()"
+          [boundary]="edge()"
+          [editable]="true"
+          (pointChange)="place.set($event)"
+          (boundaryChange)="edge.set($event)"
+        />
+      } @placeholder {
+        <div class="map-waiting"></div>
+      }
+    </div>
+
     <label class="field">
       <span class="t-micro">Size</span>
       <input

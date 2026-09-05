@@ -4708,6 +4708,59 @@
         }
       }
     },
+    "/api/map": {
+      "get": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Get Map Settings",
+        "description": "Where the map gets its tiles. Set SETOUT_MAP_TILE_URL to use your own.",
+        "operationId": "getMapSettings",
+        "parameters": [
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/vendors": {
       "get": {
         "tags": [
@@ -11383,6 +11436,42 @@
         "title": "ItemUpdate"
       },
       "JsonValue": {},
+      "LandBoundary": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "Polygon",
+            "title": "Type",
+            "default": "Polygon"
+          },
+          "coordinates": {
+            "items": {
+              "items": {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Coordinates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "coordinates"
+        ],
+        "title": "LandBoundary",
+        "description": "A GeoJSON Polygon: positions are longitude first, and the ring closes."
+      },
       "LandCreate": {
         "properties": {
           "name": {
@@ -11451,6 +11540,50 @@
               }
             ],
             "title": "Purchased On"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 90.0,
+                "minimum": -90.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,3}|(?=[\\d.]{1,11}0*$)\\d{0,3}\\.\\d{0,7}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 180.0,
+                "minimum": -180.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,3}|(?=[\\d.]{1,11}0*$)\\d{0,3}\\.\\d{0,7}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "boundary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LandBoundary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "size_value": {
             "anyOf": [
@@ -11791,6 +11924,50 @@
             ],
             "title": "Purchased On"
           },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "boundary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LandBoundary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "boundary_area_sqm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boundary Area Sqm",
+            "description": "Worked out from the boundary, never stored"
+          },
           "size_value": {
             "anyOf": [
               {
@@ -11930,6 +12107,9 @@
           "country_code",
           "country_name",
           "purchased_on",
+          "latitude",
+          "longitude",
+          "boundary",
           "size_value",
           "size_unit",
           "notes",
@@ -12027,6 +12207,50 @@
               }
             ],
             "title": "Purchased On"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 90.0,
+                "minimum": -90.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,3}|(?=[\\d.]{1,11}0*$)\\d{0,3}\\.\\d{0,7}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 180.0,
+                "minimum": -180.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,3}|(?=[\\d.]{1,11}0*$)\\d{0,3}\\.\\d{0,7}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "boundary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LandBoundary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "size_value": {
             "anyOf": [
@@ -12302,6 +12526,26 @@
           "password"
         ],
         "title": "LoginRequest"
+      },
+      "MapSettings": {
+        "properties": {
+          "tile_url": {
+            "type": "string",
+            "title": "Tile Url",
+            "description": "Leaflet tile template, with {z}, {x} and {y}"
+          },
+          "attribution": {
+            "type": "string",
+            "title": "Attribution",
+            "description": "Credit the tiles carry, shown on the map"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tile_url",
+          "attribution"
+        ],
+        "title": "MapSettings"
       },
       "MonthScopeSpend": {
         "properties": {

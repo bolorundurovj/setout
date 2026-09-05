@@ -1,0 +1,29 @@
+<div #canvas class="canvas" role="application" aria-label="Where the plot is"></div>
+
+@if (tilesFailed()) {
+  <p class="t-small muted">No map tiles from here. The plot still draws.</p>
+}
+
+@if (editable()) {
+  <div class="tools">
+    @if (point()) {
+      <app-button variant="secondary" (pressed)="clearPin()">Remove pin</app-button>
+    } @else {
+      <app-button variant="secondary" (pressed)="dropPin()">Drop a pin here</app-button>
+      <app-button variant="secondary" (pressed)="locate()">Use my location</app-button>
+    }
+    @if (corners().length) {
+      <app-button variant="secondary" (pressed)="undo()">Undo last corner</app-button>
+      <app-button variant="secondary" (pressed)="clear()">Clear the edge</app-button>
+    }
+  </div>
+  <p class="t-small muted">
+    @if (corners().length === 0) {
+      Tap the map to put down the first corner of the plot.
+    } @else if (corners().length < 3) {
+      {{ 3 - corners().length }} more corner before it encloses anything.
+    } @else {
+      {{ corners().length }} corners. Drag one to move it.
+    }
+  </p>
+}
