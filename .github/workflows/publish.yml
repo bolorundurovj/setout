@@ -80,6 +80,9 @@ jobs:
       packages: write
       id-token: write
       attestations: write
+    env:
+      DOCKERHUB_IMAGE: docker.io/bolorundurovj/setout
+      HAS_DOCKERHUB: ${{ secrets.DOCKERHUB_TOKEN != '' }}
     steps:
       - name: Collect the digests
         uses: actions/download-artifact@v4
@@ -98,11 +101,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Sign in to Docker Hub
+        if: env.HAS_DOCKERHUB == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Work out the tags
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+            name=${{ env.DOCKERHUB_IMAGE }},enable=${{ env.HAS_DOCKERHUB }}
           tags: |
             type=edge,branch=master
             type=semver,pattern={{version}}
@@ -122,10 +134,14 @@ jobs:
 
       - name: Read back the digest
         id: digest
+        env:
+          GHCR_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         run: |
-          version=$(jq -r '.tags[0]' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          version=$(jq -r --arg image "$GHCR_IMAGE" \
+            'first(.tags[] | select(startswith($image + ":")))' <<< "$DOCKER_METADATA_OUTPUT_JSON")
           echo "value=$(docker buildx imagetools inspect "$version" --format '{{json .Manifest}}' | jq -r .digest)" >> "$GITHUB_OUTPUT"
 
+      # Attestation takes one subject, so it covers the primary registry only.
       - name: Attest the build provenance
         uses: actions/attest-build-provenance@v2
         with:
