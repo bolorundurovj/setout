@@ -50,6 +50,16 @@ PYTEST_WORKERS=8 make check-parallel
 PYTEST_WORKERS=1 make test-int
 ```
 
+### Line endings
+
+The repository is LF everywhere, which `.gitattributes` enforces on the way in
+and out of git. Prettier and ruff, though, read the working tree, so a file
+written by a Windows editor fails the gate before git ever sees it.
+
+`make lint` names any file whose working copy is CRLF and stops; `make format`
+converts them. Both ask git for the answer, so an untracked file and a migration
+ruff is told to skip are caught the same as anything else.
+
 ## The three test layers
 
 Write the tests with the feature, not afterwards.

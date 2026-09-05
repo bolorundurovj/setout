@@ -41,7 +41,7 @@ endif
 
 .PHONY: help setup dev api web watch-sdk lint format test test-unit test-int test-contract \
 	sdk migration migrate downgrade seed backup restore check check-parallel run-check \
-	build docker-build kill clean require-uv require-yarn require-docker
+	build docker-build kill clean line-endings require-uv require-yarn require-docker
 
 # file is the archive argument to `make restore`.
 file ?=
@@ -108,6 +108,7 @@ web: require-yarn ## Run the web app alone.
 	cd $(WEB_DIR) && yarn start
 
 lint: require-uv require-yarn ## ruff, mypy, eslint, prettier, all in check mode.
+	@$(MAKE) line-endings
 	cd $(API_DIR) && uv run ruff check .
 	cd $(API_DIR) && uv run ruff format --check .
 	cd $(API_DIR) && uv run mypy
@@ -115,6 +116,7 @@ lint: require-uv require-yarn ## ruff, mypy, eslint, prettier, all in check mode
 	cd $(WEB_DIR) && yarn prettier --check .
 
 format: require-uv require-yarn ## Write mode for the same tools.
+	@$(MAKE) line-endings fix=1
 	cd $(API_DIR) && uv run ruff check --fix .
 	cd $(API_DIR) && uv run ruff format .
 	cd $(WEB_DIR) && yarn lint --fix || true
@@ -171,6 +173,21 @@ build: require-uv require-yarn sdk ## Production build of both apps.
 
 docker-build: require-docker ## Build the single deployment image.
 	docker build -f docker/Dockerfile -t setout:latest .
+
+line-endings:
+	@crlf=$$(git ls-files --eol --cached --others --exclude-standard \
+		| awk '$$2 == "w/crlf" { sub(/^[^\t]*\t/, ""); print }'); \
+	if [ -z "$$crlf" ]; then exit 0; fi; \
+	if [ -z "$(fix)" ]; then \
+		echo "Error: these files are CRLF and this repository is LF:"; \
+		echo "$$crlf" | sed 's/^/  /'; \
+		echo "Run make format to fix them."; \
+		exit 1; \
+	fi; \
+	echo "$$crlf" | while IFS= read -r file; do \
+		tr -d '\r' < "$$file" > "$$file.lf" && mv "$$file.lf" "$$file"; \
+		echo "  fixed $$file"; \
+	done
 
 kill: ## Stop anything left holding the dev ports.
 	@for port in $${SETOUT_PORT:-8474} $${WEB_PORT:-4200}; do \

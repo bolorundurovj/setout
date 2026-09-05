@@ -69,6 +69,11 @@ extend-exclude = ["src/setout/migrations"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "W", "C4", "SIM"]
 
+[tool.ruff.format]
+# Windows writes CRLF and .gitattributes stores LF, so a working tree left as it
+# was written fails the format check. Normalise rather than preserve.
+line-ending = "lf"
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
