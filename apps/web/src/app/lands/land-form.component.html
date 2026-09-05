@@ -120,6 +120,15 @@
         <div class="map-waiting"></div>
       }
 
+      @if (pinIsOutside()) {
+        <p class="t-small warn">
+          The pin is outside the edge you drew.
+          <button type="button" class="link t-mono" (click)="centrePin()">
+            Centre It In The Plot
+          </button>
+        </p>
+      }
+
       @if (mapTab() === 'boundary') {
         <div class="field">
           <span class="t-micro">How you are describing the edge</span>

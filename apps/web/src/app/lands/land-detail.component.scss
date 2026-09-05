@@ -15,6 +15,14 @@
   color: var(--warn-ink);
 }
 
+.pin-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .head {
   display: flex;
   align-items: flex-start;

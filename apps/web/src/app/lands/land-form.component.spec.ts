@@ -309,4 +309,70 @@ describe('LandFormComponent', () => {
       boundary: { type: 'Polygon' },
     });
   });
+
+  const SQUARE = {
+    type: 'Polygon' as const,
+    coordinates: [
+      [
+        [3.3, 6.5],
+        [3.31, 6.5],
+        [3.31, 6.51],
+        [3.3, 6.51],
+        [3.3, 6.5],
+      ] as [number, number][],
+    ],
+  };
+
+  describe('a pin that disagrees with the plot', () => {
+    it('says nothing when there is an edge but no pin', async () => {
+      const component = await render();
+      component.edge.set(SQUARE);
+
+      expect(component.pinIsOutside()).toBe(false);
+    });
+
+    it('says nothing when there is a pin but no edge', async () => {
+      const component = await render();
+      component.place.set({ lat: 6.505, lon: 3.305 });
+
+      expect(component.pinIsOutside()).toBe(false);
+    });
+
+    it('says nothing when the pin is inside the edge', async () => {
+      const component = await render();
+      component.edge.set(SQUARE);
+      component.place.set({ lat: 6.505, lon: 3.305 });
+
+      expect(component.pinIsOutside()).toBe(false);
+    });
+
+    it('catches a pin outside the edge', async () => {
+      const component = await render();
+      component.edge.set(SQUARE);
+      component.place.set({ lat: 6.6, lon: 3.4 });
+
+      expect(component.pinIsOutside()).toBe(true);
+    });
+
+    it('centring the pin puts it inside and quiets the warning', async () => {
+      const component = await render();
+      component.edge.set(SQUARE);
+      component.place.set({ lat: 6.6, lon: 3.4 });
+
+      component.centrePin();
+
+      expect(component.pinIsOutside()).toBe(false);
+      expect(component.place()?.lat).toBeCloseTo(6.505, 3);
+      expect(component.place()?.lon).toBeCloseTo(3.305, 3);
+    });
+
+    it('has no centre to offer without an edge', async () => {
+      const component = await render();
+      component.place.set({ lat: 6.6, lon: 3.4 });
+
+      component.centrePin();
+
+      expect(component.place()).toEqual({ lat: 6.6, lon: 3.4 });
+    });
+  });
 });

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import type { LandDocumentRead, LandDocumentUpdate, LandRead } from '@setout/api-client';
 import { ToastService } from '../toast.service';
 import { LandDetailComponent } from './land-detail.component';
@@ -60,6 +60,7 @@ describe('LandDetailComponent', () => {
   let removed: string[];
   let restored: string[];
   let toasts: { message: string; type: string }[];
+  let navigations: unknown[][];
 
   async function render(row: LandRead | null = land(), papers: LandDocumentRead[] = []) {
     uploads = [];
@@ -67,6 +68,7 @@ describe('LandDetailComponent', () => {
     removed = [];
     restored = [];
     toasts = [];
+    navigations = [];
 
     const lands = {
       saving: () => false,
@@ -107,6 +109,12 @@ describe('LandDetailComponent', () => {
         },
       ],
     });
+    const router = TestBed.inject(Router);
+    router.navigate = (...args: unknown[]) => {
+      navigations.push(args);
+      return Promise.resolve(true);
+    };
+
     const fixture = TestBed.createComponent(LandDetailComponent);
     fixture.componentRef.setInput('id', 'l1');
     fixture.detectChanges();
@@ -277,5 +285,77 @@ describe('LandDetailComponent', () => {
     expect(component.shownMap(land({ boundary: { type: 'Polygon', coordinates: [[]] } }))).toBe(
       'boundary',
     );
+  });
+
+  describe('a pin outside the edge', () => {
+    const SQUARE = {
+      type: 'Polygon' as const,
+      coordinates: [
+        [
+          [3.3, 6.5],
+          [3.31, 6.5],
+          [3.31, 6.51],
+          [3.3, 6.51],
+          [3.3, 6.5],
+        ] as [number, number][],
+      ],
+    };
+
+    it('says nothing without both a pin and an edge', async () => {
+      const { component } = await render();
+
+      expect(component.pinIsOutside(land({ boundary: SQUARE }))).toBe(false);
+      expect(component.pinIsOutside(land({ latitude: '6.505', longitude: '3.305' }))).toBe(false);
+    });
+
+    it('says nothing when the pin is inside', async () => {
+      const { component } = await render();
+      const plot = land({ latitude: '6.505', longitude: '3.305', boundary: SQUARE });
+
+      expect(component.pinIsOutside(plot)).toBe(false);
+    });
+
+    it('catches a pin outside the edge', async () => {
+      const { component } = await render();
+      const plot = land({ latitude: '6.6', longitude: '3.4', boundary: SQUARE });
+
+      expect(component.pinIsOutside(plot)).toBe(true);
+    });
+
+    it('shows it as a banner with a button to fix it', async () => {
+      const { element } = await render(
+        land({ latitude: '6.6', longitude: '3.4', boundary: SQUARE }),
+      );
+
+      const banner = element.querySelector('.banner.warn.pin-warning');
+      expect(banner).not.toBeNull();
+      expect(banner?.textContent).toContain('outside the edge');
+      expect(banner?.querySelector('button')?.textContent).toContain('Fix it on the form');
+    });
+
+    it('offers nothing to press on an archived plot', async () => {
+      const { element } = await render(
+        land({
+          latitude: '6.6',
+          longitude: '3.4',
+          boundary: SQUARE,
+          deleted_at: '2026-01-02T00:00:00Z',
+        }),
+      );
+
+      const banner = element.querySelector('.banner.warn.pin-warning');
+      expect(banner?.textContent).toContain('outside the edge');
+      expect(banner?.querySelector('button')).toBeNull();
+    });
+
+    it('takes you to the form to fix it', async () => {
+      const { component } = await render(
+        land({ latitude: '6.6', longitude: '3.4', boundary: SQUARE }),
+      );
+
+      component.edit();
+
+      expect(navigations.at(-1)?.[0]).toEqual(['/lands', 'l1', 'edit']);
+    });
   });
 });
