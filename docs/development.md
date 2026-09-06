@@ -30,18 +30,13 @@ make clean        remove build artefacts and caches
 
 `make check` is the gate. It runs lint and type checking, the whole test suite
 against a coverage floor of 80%, the frontend unit tests, and then regenerates
-the SDK and fails if the committed client drifted. If it passes locally it will
-pass in CI, which runs the same thing.
+the SDK and fails if the committed client drifted. If it passes locally it will pass in CI, which runs the same checks.
 
 `make check-parallel` is the same gate with the backend suite spread across every
-core. Its time goes on building a fresh app and schema for each test, which is
-work a machine can do all at once: about two and a half minutes rather than six.
-Tests are handed out a file at a time, so the contract test starts its server
-once rather than once per test.
+core. Most of its time is spent building a fresh app and schema for each test, which can run concurrently: about two and a half minutes rather than six.
+Tests are distributed one file at a time, so the contract test starts its server once rather than once per test.
 
-`make check` stays on one process. It is the slower of the two and the one to
-reach for when a failure needs a traceback that is not interleaved with three
-others. Both run exactly the same lint, tests, coverage floor and SDK check.
+`make check` stays on one process. It is the slower of the two, and the one to use when a failure needs a traceback that is not interleaved with others. Both run exactly the same lint, tests, coverage floor and SDK check.
 
 The worker count is tunable, and `make test-int` takes it too:
 
@@ -57,18 +52,17 @@ and out of git. Prettier and ruff, though, read the working tree, so a file
 written by a Windows editor fails the gate before git ever sees it.
 
 `make lint` names any file whose working copy is CRLF and stops; `make format`
-converts them. Both ask git for the answer, so an untracked file and a migration
-ruff is told to skip are caught the same as anything else.
+converts them. Both use git to find the files, so untracked files and files ruff skips are checked the same as any other.
 
 ## The three test layers
 
-Write the tests with the feature, not afterwards.
+Write tests with the feature, not afterwards.
 
 | Layer | Lives in | Runs against |
 | --- | --- | --- |
 | Unit | `apps/api/tests/unit` | Functions in isolation: balances, budgets, item prices, sheet readers |
 | Integration | `apps/api/tests/integration` | The real ASGI app on a fresh in-memory SQLite database per test, nothing mocked |
-| Contract | `apps/api/tests/contract` | The published schema: operation ids stay stable, and the API conforms to what it documents |
+| Contract | `apps/api/tests/contract` | The published schema: operation ids stay stable, and the API matches its documentation |
 
 Frontend specs sit beside the code they cover and run on Vitest through the
 Angular CLI.
@@ -82,24 +76,18 @@ make downgrade                      # roll the last step back
 ```
 
 Migrations live in `apps/api/src/setout/migrations`, one per feature, each
-depending on the one before. Because the tests build their schema from the
-models rather than from the migrations, a migration is only proven by running
-`make migrate` against a fresh database. Do that before sending the change.
+depending on the one before. The tests build their schema from the models rather than the migrations, so a migration is only verified by running `make migrate` against a fresh database. Do that before submitting the change.
 
 ## Changing the API surface
 
-Every operation needs an explicit `operation_id`: it becomes the SDK method
-name, and a contract test pins the set so a rename cannot pass unnoticed.
+Every operation needs an explicit `operation_id`. It becomes the SDK method name, and a contract test pins the set so a rename cannot pass unnoticed.
 
 After changing routes or schemas, run `make sdk` and commit the regenerated
-client. Never edit `packages/api-client/src` by hand; it is generated output,
-and `make check` will overwrite and then reject your edit.
+client. Never edit `packages/api-client/src` by hand. It is generated output, and `make check` overwrites it and then rejects the change.
 
 ## Cutting a release
 
-Releases are handled by release-please. It watches the commits on `master` and
-keeps a pull request open titled something like `chore(master): release 0.2.0`,
-holding the changelog entry and the version bump. Nothing is published until
+Releases are handled by release-please. It watches commits on `master` and keeps a pull request open, titled `chore(master): release 0.2.0` or similar, holding the changelog entry and the version bump. Nothing is published until
 that pull request is merged.
 
 Merging it does four things: tags the commit, writes `CHANGELOG.md`, publishes a
@@ -111,13 +99,9 @@ To release a specific version rather than the one the commits imply, set
 `VERSION` to it and push. The workflow releases exactly that whenever `VERSION`
 runs ahead of the last released version recorded in
 `.release-please-manifest.json`. When the two match, the commit history decides
-the bump. A `VERSION` behind the last release, or one that is not a semantic
-version, fails the run rather than releasing something surprising.
+the bump. A `VERSION` behind the last release, or one that is not a semantic version, fails the run rather than releasing an unexpected version.
 
-It asks for that version by adding an empty `chore: release X.Y.Z` commit
-carrying a `Release-As` footer, which is how release-please accepts an exact
-version when it is driven by a manifest. The footer applies to that release
-alone, so there is nothing to unset afterwards.
+It requests that version by adding an empty `chore: release X.Y.Z` commit carrying a `Release-As` footer, which is how release-please accepts an exact version when driven by a manifest. The footer applies to that release only, so there is nothing to unset afterwards.
 
 ### The release token
 
