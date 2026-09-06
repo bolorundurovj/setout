@@ -127,7 +127,7 @@ async def add_land_document(
     user: CurrentUser,
     storage: Store,
     file: Annotated[UploadFile, File(description="The scan or PDF")],
-    kind: Annotated[LandDocumentKind, Form(description="What the paper is")] = (
+    kind: Annotated[LandDocumentKind, Form(description="The document type")] = (
         LandDocumentKind.OTHER
     ),
     note: Annotated[

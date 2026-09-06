@@ -21,12 +21,14 @@ class ExpenseCreate(BaseModel):
     item_id: str | None = Field(None, description="What was bought, to build its price history")
     vendor_id: str | None = Field(None, description="Who it was bought from")
     agreement_id: str | None = Field(None, description="A part payment against what was agreed")
-    paid_by_id: str | None = Field(None, description="Who handed over the money")
+    paid_by_id: str | None = Field(None, description="Who paid")
     quantity: Decimal | None = Field(None, gt=0, max_digits=12, decimal_places=3)
     unit_rate: int | None = Field(None, ge=0, description="Minor units")
     cost_type: CostType | None = None
     notes: str | None = None
-    auto_scope: bool = Field(True, description="Let history choose the scope when none is given")
+    auto_scope: bool = Field(
+        True, description="Use past purchases to choose the category when none is given"
+    )
 
 
 class ExpenseUpdate(BaseModel):
@@ -47,17 +49,19 @@ class ExpenseUpdate(BaseModel):
 
 
 class ScopeSuggestion(BaseModel):
-    scope_id: str | None = Field(None, description="The scope that past purchases used most often")
-    reason: str | None = Field(None, description="Why this scope was suggested")
+    scope_id: str | None = Field(None, description="The category past purchases used most often")
+    reason: str | None = Field(None, description="Why this category was suggested")
 
 
 class BulkFileExpenses(BaseModel):
-    expense_ids: list[str] = Field(..., min_length=1, description="Unfiled expenses to file")
-    scope_id: str = Field(..., description="The scope they should all be filed under")
+    expense_ids: list[str] = Field(
+        ..., min_length=1, description="Uncategorized expenses to assign"
+    )
+    scope_id: str = Field(..., description="The category they should all be assigned to")
 
 
 class BulkFileResult(BaseModel):
-    filed_count: int = Field(..., description="How many unfiled expenses were filed")
+    filed_count: int = Field(..., description="How many uncategorized expenses were assigned")
 
 
 class ExpenseRead(BaseModel):
@@ -75,7 +79,7 @@ class ExpenseRead(BaseModel):
     amount: int
     cost_type: CostType | None
     notes: str | None
-    attachment_count: int = Field(..., description="How many files are kept beside it")
+    attachment_count: int = Field(..., description="How many files are attached")
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None
@@ -91,7 +95,7 @@ class ExpensePage(BaseModel):
 
 
 class MonthScopeSpend(BaseModel):
-    scope_id: str | None = Field(..., description="Null for spend that reached no scope")
+    scope_id: str | None = Field(..., description="Null for expenses with no category")
     name: str
     amount: int
 
@@ -101,7 +105,7 @@ class MonthSpend(BaseModel):
     amount: int
     expense_count: int
     scopes: list[MonthScopeSpend] = Field(
-        ..., description="Split by the scope at the top of each branch, in budget order"
+        ..., description="Split by the top-level category, in budget order"
     )
 
 
@@ -111,7 +115,7 @@ class ProjectMonths(BaseModel):
     currency_exponent: int
     total_amount: int
     months: list[MonthSpend] = Field(
-        ..., description="Oldest first. A month with nothing spent in it is left out"
+        ..., description="Oldest first. Months with no expenses are omitted"
     )
     busiest_month: str | None = Field(..., description="Null until something has been spent")
 
