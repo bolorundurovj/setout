@@ -10,7 +10,7 @@ import {
 describe('land labels', () => {
   it('spells out what each paper is', () => {
     expect(kindName('certificate_of_occupancy')).toBe('Certificate of Occupancy');
-    expect(kindName('survey_plan')).toBe('Survey plan');
+    expect(kindName('survey_plan')).toBe('Survey Plan');
   });
 
   it('hands back anything it does not know', () => {

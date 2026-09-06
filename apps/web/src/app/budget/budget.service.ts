@@ -83,7 +83,7 @@ export class BudgetService {
       await this.load(projectId);
       return true;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not rename that scope.');
+      this.error.set(detailOf(e) ?? 'Could not rename the category.');
       return false;
     }
   }
@@ -95,7 +95,7 @@ export class BudgetService {
       await this.load(projectId);
       return true;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not remove that scope.');
+      this.error.set(detailOf(e) ?? 'Could not remove the category.');
       return false;
     }
   }
@@ -106,7 +106,7 @@ export class BudgetService {
       await this.load(projectId);
       return true;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not put that scope back.');
+      this.error.set(detailOf(e) ?? 'Could not restore the category.');
       return false;
     }
   }

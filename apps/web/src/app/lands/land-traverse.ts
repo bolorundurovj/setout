@@ -71,5 +71,5 @@ export function closureNote(misclosure: number, legs: Leg[]): string {
     return `Closes to ${(misclosure * 1000).toFixed(0)}mm.`;
   }
   const ratio = Math.round(walked / misclosure);
-  return `Out by ${misclosure.toFixed(2)}m, about 1 in ${ratio}. Check the bearings.`;
+  return `Misclosure ${misclosure.toFixed(2)}m, about 1 in ${ratio}. Check the bearings.`;
 }

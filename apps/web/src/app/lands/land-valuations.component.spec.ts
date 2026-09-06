@@ -177,7 +177,7 @@ describe('LandValuationsComponent', () => {
 
   it('names the purchase for what it is', async () => {
     const { component } = await render();
-    expect(component.label(entry({ kind: 'purchase' }))).toBe('Bought for');
-    expect(component.label(entry())).toBe('Valued at');
+    expect(component.label(entry({ kind: 'purchase' }))).toBe('Purchase Price');
+    expect(component.label(entry())).toBe('Valuation');
   });
 });

@@ -161,7 +161,7 @@ describe('MonthsComponent', () => {
             expense_count: 2,
             scopes: [
               { scope_id: 'a', name: 'Groundwork', amount: 750_000 },
-              { scope_id: null, name: 'Not filed to a scope', amount: 250_000 },
+              { scope_id: null, name: 'Uncategorized', amount: 250_000 },
             ],
           },
           { month: '2026-07', amount: 4_000_000, expense_count: 1, scopes: [] },
@@ -183,7 +183,7 @@ describe('MonthsComponent', () => {
             scopes: [
               { scope_id: 'a', name: 'Groundwork', amount: 100 },
               { scope_id: 'b', name: 'Roof', amount: 100 },
-              { scope_id: null, name: 'Not filed to a scope', amount: 100 },
+              { scope_id: null, name: 'Uncategorized', amount: 100 },
             ],
           },
         ],
@@ -226,7 +226,7 @@ describe('MonthsComponent', () => {
         busiest_month: '2026-07',
       }),
     );
-    expect(c.note()).toContain('Jul 2026 was the heaviest month');
+    expect(c.note()).toContain('Highest month: Jul 2026');
     expect(c.note()).toContain('40,000');
   });
 
@@ -270,8 +270,8 @@ describe('MonthsComponent', () => {
   it('names the scope an expense was filed to, and says so when it was not', () => {
     const c = render(months(), [scope({ id: 'a', name: 'Groundwork' })]);
     expect(c.scopeName(expense({ scope_id: 'a' }))).toBe('Groundwork');
-    expect(c.scopeName(expense({ scope_id: null }))).toBe('Not filed to a scope');
-    expect(c.scopeName(expense({ scope_id: 'gone' }))).toBe('Not filed to a scope');
+    expect(c.scopeName(expense({ scope_id: null }))).toBe('Uncategorized');
+    expect(c.scopeName(expense({ scope_id: 'gone' }))).toBe('Uncategorized');
   });
 
   it('drops the symbol from figures in the table and keeps it in the note', () => {

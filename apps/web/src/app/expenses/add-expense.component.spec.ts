@@ -291,7 +291,7 @@ describe('AddExpenseComponent', () => {
 
   it('asks for the photograph before one is chosen', () => {
     const component = render().componentInstance;
-    expect(component.photoLabel()).toContain('Photograph the receipt now');
+    expect(component.photoLabel()).toContain('Attach a receipt photo now');
   });
 
   it('forgets the held photo once the expense is filed', async () => {

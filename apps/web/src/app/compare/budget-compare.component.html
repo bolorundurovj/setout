@@ -1,14 +1,14 @@
 <div class="compare">
   <div class="intro">
-    <h2 class="title">Budget versus Spend</h2>
-    <p class="hint">Click a scope to see what was spent on it</p>
+    <h2 class="title">Budget vs Spent</h2>
+    <p class="hint">Select a category to see its expenses</p>
   </div>
 
   <div class="head row">
-    <span class="col">Scope</span>
+    <span class="col">Category</span>
     <span class="col right">Budget {{ symbol() }}</span>
     <span class="col right">Spent {{ symbol() }}</span>
-    <span class="col right">Left {{ symbol() }}</span>
+    <span class="col right">Remaining {{ symbol() }}</span>
     <span class="col right">Used</span>
   </div>
 
@@ -44,7 +44,7 @@
           @if (filed === undefined) {
             <p class="empty">Loading…</p>
           } @else if (filed.total === 0) {
-            <p class="empty">Nothing has been spent on this yet.</p>
+            <p class="empty">No expenses recorded for this category.</p>
           } @else {
             @for (expense of filed.rows; track expense.id) {
               <div class="row expense">
@@ -80,11 +80,11 @@
   }
 
   @if (rows().length === 0) {
-    <p class="empty">No scopes yet. Set a budget and what you spend will line up against it.</p>
+    <p class="empty">No categories yet. Set a budget and expenses will be compared against it.</p>
   }
 
   <div class="row total">
-    <span class="total-label">Project total · {{ countLabel() }}</span>
+    <span class="total-label">Project Total · {{ countLabel() }}</span>
     <span class="figure right">{{ plannedTotal() ? bare(plannedTotal()) : '—' }}</span>
     <span class="figure right">{{ bare(spentTotal()) }}</span>
     <span class="figure right" [class.over]="totalOver()">{{
@@ -94,7 +94,7 @@
   </div>
 
   <p class="footer-note">
-    Left is what remains of the budget. A scope with no budget set shows a dash rather than a
+    Remaining is what is left of the budget. A category with no budget shows a dash instead of a
     number.
   </p>
 

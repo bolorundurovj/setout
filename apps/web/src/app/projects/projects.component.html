@@ -12,8 +12,8 @@
   <div class="intro">
     <h1 class="t-heading">Choose a Project</h1>
     <p class="prose">
-      A purchase can only be filed from inside a project you opened on purpose. A new project takes
-      a name, a currency and the six scopes, then the plan, before any spending.
+      An expense can only be added from inside an open project. A new project needs a name, a
+      currency and its categories, then a budget.
     </p>
   </div>
 
@@ -34,7 +34,7 @@
           class="input-field"
           type="text"
           [(ngModel)]="name"
-          placeholder="Where you are building"
+          placeholder="Location"
         />
       </div>
       <div class="field">
@@ -44,7 +44,7 @@
             <option [value]="currency.code">{{ currency.code }} - {{ currency.name }}</option>
           }
         </select>
-        <span class="t-small">Fixed once the project is created.</span>
+        <span class="t-small">Set when the project is created and cannot be changed.</span>
       </div>
       <div class="field">
         <span class="t-micro">Land</span>
@@ -54,7 +54,7 @@
           [value]="landId()"
           (valueChange)="landId.set($event)"
         />
-        <span class="t-small">Can be set later, from the project's own settings.</span>
+        <span class="t-small">Can be set later in the project settings.</span>
       </div>
       <div class="field">
         <label class="t-micro" for="project-notes">Notes</label>
@@ -76,7 +76,7 @@
   @if (projects.projects().length === 0) {
     <div class="card">
       <p class="t-body">No projects yet.</p>
-      <p class="t-small">Create one to start tracking what it costs to build.</p>
+      <p class="t-small">Create one to start tracking project expenses.</p>
     </div>
   } @else {
     @for (project of projects.projects(); track project.id) {
@@ -151,7 +151,7 @@
       @if (projects.hasMore()) {
         <span class="t-small">Loading more…</span>
       } @else {
-        <span class="t-small">That is all {{ projects.total() }} of them.</span>
+        <span class="t-small">All {{ projects.total() }} projects shown.</span>
       }
     </div>
   }

@@ -1,14 +1,14 @@
-<app-topbar title="Import a Sheet" [subtitle]="targetName()">
+<app-topbar title="Import Spreadsheet" [subtitle]="targetName()">
   <app-button variant="secondary" (pressed)="leave()">All Projects</app-button>
 </app-topbar>
 
 <div class="page">
   <div class="intro">
-    <h1 class="t-heading">Bring in What the Spreadsheet Already Holds</h1>
+    <h1 class="t-heading">Import an Existing Spreadsheet</h1>
     <p class="prose">
-      The whole workbook is read at once and each sheet recognised by its own headings. Planned
-      figures come only from a budget sheet and spending only from an invoices sheet, so a sheet of
-      spending can never write a budget.
+      The whole workbook is read at once and each sheet is recognised by its headings. Budget
+      amounts come only from a budget sheet and expenses only from an invoices sheet, so an expense
+      sheet can never write a budget.
     </p>
   </div>
 
@@ -27,7 +27,7 @@
 
   @if (at('file')) {
     <section class="card block">
-      <span class="t-micro">Where it lands</span>
+      <span class="t-micro">Destination</span>
       <div class="fields">
         <label class="field">
           <span class="t-micro">Project</span>
@@ -71,13 +71,13 @@
 
       @if (intoNew()) {
         <p class="t-small note">
-          The sheet carries no currency of its own, so a new project needs one before any figure can
-          be read as money.
+          The spreadsheet carries no currency, so a new project needs one before any amount can be
+          read as money.
         </p>
       } @else {
         <p class="t-small note">
-          Rows already in this project, by date, amount and description, are recognised so a second
-          import does not double the spend.
+          Rows already in this project, matched by date, amount and description, are recognised so a
+          second import does not duplicate expenses.
         </p>
       }
     </section>
@@ -85,8 +85,8 @@
     <section class="card block">
       <span class="t-micro">Nothing to import yet</span>
       <p class="t-small note">
-        Start from one of these. Each carries the headings Setout recognises and a sheet saying how
-        to fill it in, so what you send back reads first time.
+        Start from one of these. Each has the headings Setout recognises and instructions for
+        filling it in.
       </p>
       <div class="samples">
         @for (choice of samples; track choice.kind) {
@@ -99,7 +99,7 @@
     </section>
 
     <section class="card block">
-      <span class="t-micro">The file</span>
+      <span class="t-micro">File</span>
 
       @if (file(); as chosen) {
         <div class="chosen">
@@ -111,9 +111,9 @@
         </div>
       } @else {
         <button type="button" class="drop" (click)="pick()">
-          <span class="t-body">Choose a .xlsx or .csv</span>
+          <span class="t-body">Choose a .xlsx or .csv file</span>
           <span class="t-small muted">
-            Nothing is uploaded anywhere. It is read where Setout runs.
+            The file is not uploaded. It is read where Setout runs.
           </span>
         </button>
       }
@@ -128,26 +128,26 @@
 
       <div class="actions">
         <app-button [disabled]="!canRead()" [loading]="sheets.working()" (pressed)="read()">
-          Read the Sheet
+          Read Spreadsheet
         </app-button>
-        <span class="t-small muted">Nothing is written until you have seen what it holds.</span>
+        <span class="t-small muted">Nothing is written until you have reviewed the contents.</span>
       </div>
     </section>
   }
 
   @if (at('review') && report(); as found) {
     <section class="card block">
-      <span class="t-micro">What the sheet holds</span>
+      <span class="t-micro">Spreadsheet Contents</span>
       <div class="counts">
         <div class="count">
-          <span class="t-micro">Planned</span>
+          <span class="t-micro">Budgeted</span>
           <span class="count-value t-mono">{{ money(found.planned_amount) }}</span>
           <span class="t-small muted">
-            {{ found.planned_lines }} lines across {{ found.scopes.length }} scopes
+            {{ found.planned_lines }} lines across {{ found.scopes.length }} categories
           </span>
         </div>
         <div class="count">
-          <span class="t-micro">Spending</span>
+          <span class="t-micro">Expenses</span>
           <span class="count-value t-mono">{{ money(found.spend_amount) }}</span>
           <span class="t-small muted">{{ found.spend_rows }} rows</span>
         </div>
@@ -176,7 +176,7 @@
 
     @if (found.scopes.length > 0) {
       <section class="card block">
-        <span class="t-micro">Scopes found in the sheet</span>
+        <span class="t-micro">Categories found in the spreadsheet</span>
         <div class="scopes">
           @for (scope of found.scopes; track scope.code) {
             <div class="scope">
@@ -195,7 +195,7 @@
 
     @if (found.decisions.length > 0) {
       <section class="card block">
-        <span class="t-micro">Rows that need a decision</span>
+        <span class="t-micro">Rows That Need Attention</span>
         @for (decision of found.decisions; track decision.kind) {
           <div class="decision" [class.blocking]="decision.blocking">
             <span class="decision-text">
@@ -225,12 +225,12 @@
 
     @if (found.sample.length > 0) {
       <section class="card block">
-        <span class="t-micro">First rows, as they will be filed</span>
+        <span class="t-micro">First rows, as they will be imported</span>
         <div class="rows">
           <div class="row head">
             <span class="t-micro">Date</span>
             <span class="t-micro">Description</span>
-            <span class="t-micro">Scope</span>
+            <span class="t-micro">Category</span>
             <span class="t-micro right">Amount</span>
           </div>
           @for (row of found.sample; track $index) {
@@ -247,7 +247,7 @@
 
     @if (found.left_behind.length > 0) {
       <section class="card block">
-        <span class="t-micro">Columns Setout keeps nowhere</span>
+        <span class="t-micro">Columns Setout does not store</span>
         <p class="t-small note">
           {{ found.left_behind.join(', ') }}. Everything else in the sheet comes across.
         </p>
@@ -257,29 +257,31 @@
     <div class="actions">
       <app-button variant="secondary" (pressed)="back()">Choose Another File</app-button>
       <app-button [disabled]="blocking()" [loading]="sheets.working()" (pressed)="bringIn()">
-        Bring It In
+        Import
       </app-button>
       @if (blocking()) {
         <span class="t-small muted">
-          The rows marked above sit under no scope heading, so there is nowhere to file them. Fix
-          the sheet and read it again.
+          The rows marked above have no category heading, so they cannot be assigned. Fix the
+          spreadsheet and read it again.
         </span>
       } @else {
-        <span class="t-small muted">Written all at once. If any row fails, none of it lands.</span>
+        <span class="t-small muted"
+          >Written all at once. If any row fails, nothing is imported.</span
+        >
       }
     </div>
   }
 
   @if (at('done') && result(); as done) {
     <section class="card block">
-      <span class="t-micro">Brought in</span>
+      <span class="t-micro">Imported</span>
       <h2 class="t-heading">{{ done.project_name }}</h2>
       <div class="counts">
         <div class="count">
           <span class="t-micro">Planned</span>
           <span class="count-value t-mono">{{ money(done.planned_amount) }}</span>
           <span class="t-small muted">
-            {{ done.budget_items }} lines across {{ done.scopes }} scopes
+            {{ done.budget_items }} lines across {{ done.scopes }} categories
           </span>
         </div>
         <div class="count">
@@ -296,12 +298,12 @@
 
       @if (done.skipped_duplicates > 0) {
         <p class="t-small note">
-          {{ done.skipped_duplicates }} rows were already in the project and were left alone.
+          {{ done.skipped_duplicates }} rows were already in the project and were skipped.
         </p>
       }
 
       <div class="actions">
-        <app-button (pressed)="openProject()">Open the Project</app-button>
+        <app-button (pressed)="openProject()">Open Project</app-button>
         <app-button variant="secondary" (pressed)="leave()">All Projects</app-button>
       </div>
     </section>

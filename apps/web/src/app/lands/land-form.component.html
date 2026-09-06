@@ -8,12 +8,12 @@
 
   <div class="card form">
     <label class="field">
-      <span class="t-micro">Name &middot; required</span>
+      <span class="t-micro">Name (required)</span>
       <input
         class="input-field"
         type="text"
         autocomplete="off"
-        placeholder="What you call the plot"
+        placeholder="Name of the land"
         [value]="name()"
         (input)="name.set(value($event))"
         (keyup.enter)="save()"
@@ -45,7 +45,7 @@
 
     <div class="pair">
       <label class="field">
-        <span class="t-micro">Town or city</span>
+        <span class="t-micro">Town or City</span>
         <input
           class="input-field"
           type="text"
@@ -80,20 +80,22 @@
     </div>
 
     <label class="field">
-      <span class="t-micro">Bought on</span>
+      <span class="t-micro">Purchase Date</span>
       <input
         class="input-field t-mono"
         type="date"
         [value]="purchasedOn()"
         (input)="purchasedOn.set(value($event))"
       />
-      <span class="t-small muted">What it cost goes on the plot's own page, with the rest.</span>
+      <span class="t-small muted"
+        >Purchase price and valuations are recorded on the land's page.</span
+      >
     </label>
 
     <div class="field">
-      <span class="t-micro">Where it is</span>
+      <span class="t-micro">Location</span>
       <app-tabs
-        label="Pin or boundary"
+        label="Location Pin or Mapped Survey"
         [tabs]="mapTabs"
         [value]="mapTab()"
         (valueChange)="mapTab.set($any($event))"
@@ -122,9 +124,9 @@
 
       @if (pinIsOutside()) {
         <p class="t-small warn">
-          The pin is outside the edge you drew.
+          The location pin is outside the mapped survey.
           <button type="button" class="link t-mono" (click)="centrePin()">
-            Centre It In The Plot
+            Centre Pin in Land
           </button>
         </p>
       }
@@ -133,7 +135,7 @@
         <p class="t-small warn">
           {{ placeNote() }}
           <button type="button" class="link t-mono" (click)="useMapAddress()">
-            Use The Map's Address
+            Use Map Address
           </button>
         </p>
       }
@@ -157,7 +159,7 @@
       @if (mapTab() === 'boundary' && edgeBy() === 'corners') {
         @if (typing()) {
           <label class="field">
-            <span class="t-micro">Corners &middot; latitude first, one per line</span>
+            <span class="t-micro">Survey Points (latitude first, one per line)</span>
             <textarea
               class="input-field geojson t-mono"
               rows="6"
@@ -171,40 +173,42 @@
               <span class="t-small warn">{{ typeNote() }}</span>
             } @else {
               <span class="t-small muted">
-                Degrees, or degrees minutes seconds off the survey. GeoJSON pastes in here too.
+                Degrees, or degrees minutes seconds from the survey. GeoJSON can be pasted here.
               </span>
             }
           </label>
           <div class="form-actions">
             <app-button variant="secondary" (pressed)="typing.set(false)">Done</app-button>
             <button type="button" class="link t-mono" (click)="showGeoJson()">
-              Show As GeoJSON
+              Show as GeoJSON
             </button>
           </div>
         } @else {
-          <button type="button" class="link t-mono" (click)="openTyping()">Type The Corners</button>
+          <button type="button" class="link t-mono" (click)="openTyping()">
+            Enter Survey Points
+          </button>
         }
       }
     </div>
 
     <label class="field">
-      <span class="t-micro">Size</span>
+      <span class="t-micro">Stated Area</span>
       <input
         class="input-field t-mono"
         type="number"
         min="0"
         step="0.01"
         autocomplete="off"
-        placeholder="What the survey says"
+        placeholder="Area stated on the survey"
         [value]="sizeValue()"
         (input)="sizeValue.set(value($event))"
       />
     </label>
 
     <div class="field">
-      <span class="t-micro">Measured in</span>
+      <span class="t-micro">Unit</span>
       <app-chip-group
-        label="Measured in"
+        label="Unit"
         [chips]="unitChips"
         [value]="sizeUnit()"
         [clearable]="true"
@@ -213,7 +217,7 @@
       @if (sizeNote()) {
         <span class="t-small warn">{{ sizeNote() }}</span>
       } @else {
-        <span class="t-small muted">Recorded the way the survey put it, not converted.</span>
+        <span class="t-small muted">Stored as entered, without conversion.</span>
       }
     </div>
 
@@ -223,7 +227,7 @@
         class="input-field"
         type="text"
         autocomplete="off"
-        placeholder="Anything worth remembering"
+        placeholder="Optional notes"
         [value]="notes()"
         (input)="notes.set(value($event))"
       />
@@ -237,9 +241,7 @@
     </div>
 
     @if (!isEdit()) {
-      <p class="t-small muted">
-        The Certificate of Occupancy and the rest go on after this, from the plot's own page.
-      </p>
+      <p class="t-small muted">Documents are added afterwards from the land's page.</p>
     }
   </div>
 </div>

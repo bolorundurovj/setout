@@ -8,12 +8,12 @@
 
   <div class="card form">
     <label class="field">
-      <span class="t-micro">Name &middot; required</span>
+      <span class="t-micro">Name (required)</span>
       <input
         class="input-field"
         type="text"
         autocomplete="off"
-        placeholder="What you call them"
+        placeholder="Their name"
         [value]="name()"
         (input)="name.set(value($event))"
         (keyup.enter)="save()"
@@ -22,7 +22,7 @@
 
     <div class="pair">
       <label class="field">
-        <span class="t-micro">How they relate to the build</span>
+        <span class="t-micro">Relationship to the Project</span>
         <input
           class="input-field"
           type="text"

@@ -96,6 +96,6 @@ describe('ImportService', () => {
 
     await service.look(file, { projectId: 'p1', name: '', currencyCode: 'NGN' });
 
-    expect(service.error()).toBe('That file could not be read.');
+    expect(service.error()).toBe('The file could not be read.');
   });
 });

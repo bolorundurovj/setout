@@ -63,12 +63,11 @@ export class LandsComponent {
 
   countLabel(): string {
     const total = this.lands.total();
-    const label = `${total} ${total === 1 ? 'plot' : 'plots'}`;
-    return `${label} · a plot can carry more than one project`;
+    return `${total} ${total === 1 ? 'land record' : 'land records'}`;
   }
 
   archivedLabel(): string {
-    return this.includeArchived() ? 'Hide archived' : 'Show archived';
+    return this.includeArchived() ? 'Hide Archived' : 'Show Archived';
   }
 
   where(land: LandRead): string {
@@ -85,15 +84,20 @@ export class LandsComponent {
 
   papersLabel(land: LandRead): string {
     if (land.missing_kinds.length === 0) {
-      return 'all here';
+      return 'All present';
     }
-    return `${land.missing_kinds.map(kindName).join(', ')} missing`;
+    return `Missing: ${land.missing_kinds.map(kindName).join(', ')}`;
+  }
+
+  documentsLabel(land: LandRead): string {
+    const count = land.document_count;
+    return `${count} ${count === 1 ? 'document' : 'documents'}`;
   }
 
   projectsLabel(land: LandRead): string {
     const count = land.projects.length;
     if (count === 0) {
-      return 'nothing on it yet';
+      return 'No projects';
     }
     return `${count} ${count === 1 ? 'project' : 'projects'}`;
   }

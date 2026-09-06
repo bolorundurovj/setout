@@ -53,7 +53,7 @@ describe('a pin against what the plot says', () => {
 
   it('names what the map called it', () => {
     expect(disagreementNote('town', pin({ city: 'Ikeja' }))).toBe(
-      'The pin is in a different town. The map calls it Ikeja.',
+      'The location pin is in a different town. The map address is Ikeja.',
     );
     expect(disagreementNote('country', pin({ country_code: 'GH' }))).toContain('GH');
   });

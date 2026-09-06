@@ -168,7 +168,7 @@ export class ProjectSettingsComponent {
     const done = await this.budget.renameScope(this.project().id, scope.id, name);
     this.cancelRename();
     this.toast.show(
-      done ? `Renamed to ${name}.` : (this.budget.error() ?? 'Could not rename that scope.'),
+      done ? `Renamed to ${name}.` : (this.budget.error() ?? 'Could not rename the category.'),
       done ? 'success' : 'error',
     );
   }
@@ -206,7 +206,7 @@ export class ProjectSettingsComponent {
     const done = await this.budget.putScopeBack(this.project().id, gone.id);
     this.justRemoved.set(null);
     this.toast.show(
-      done ? `${gone.name} is back.` : (this.budget.error() ?? 'Could not put that scope back.'),
+      done ? `${gone.name} is back.` : (this.budget.error() ?? 'Could not restore the category.'),
       done ? 'success' : 'error',
     );
   }
@@ -216,7 +216,7 @@ export class ProjectSettingsComponent {
     this.removing.set(null);
     this.justRemoved.set(done ? scope : null);
     this.toast.show(
-      done ? `${scope.name} removed.` : (this.budget.error() ?? 'Could not remove that scope.'),
+      done ? `${scope.name} removed.` : (this.budget.error() ?? 'Could not remove the category.'),
       done ? 'success' : 'error',
     );
   }

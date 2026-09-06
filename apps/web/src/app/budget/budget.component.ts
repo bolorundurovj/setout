@@ -100,7 +100,7 @@ export class BudgetComponent {
     this.itemAmount.set('');
     this.itemCostType.set('');
     await this.load();
-    this.toast.show('Planned item added.');
+    this.toast.show('Budget item added.');
   }
 
   money(minor: number): string {
@@ -173,7 +173,7 @@ export class BudgetComponent {
       return;
     }
     if (items.length > 1) {
-      this.toast.show('This scope has several planned items. Open it to change them.', 'info');
+      this.toast.show('This category has several budget items. Open it to change them.', 'info');
       this.syncDrafts();
       return;
     }
@@ -184,7 +184,7 @@ export class BudgetComponent {
       await this.budget.addItem(this.project().id, scope.id, scope.name, planned);
     }
     await this.load();
-    this.toast.show(`${scope.name} planned at ${this.money(planned)}.`);
+    this.toast.show(`${scope.name} budgeted at ${this.money(planned)}.`);
   }
 
   async addScope(): Promise<void> {
@@ -201,6 +201,6 @@ export class BudgetComponent {
   async removeItem(scope: ScopeRead, itemId: string): Promise<void> {
     await this.budget.removeItem(this.project().id, scope.id, itemId);
     await this.load();
-    this.toast.show('Planned item removed.');
+    this.toast.show('Budget item removed.');
   }
 }

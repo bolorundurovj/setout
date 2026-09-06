@@ -3,8 +3,8 @@
     <div class="intro-text">
       <h2 class="t-heading">Agreements</h2>
       <p class="prose">
-        What a vendor agreed to do for a fixed price. Paid and balance are worked out from the
-        expenses filed against each one, so a part payment is recorded once.
+        What a vendor agreed to do for a fixed price. Paid and balance are calculated from the
+        expenses assigned to each agreement, so a part payment is recorded once.
       </p>
     </div>
     @if (!adding()) {
@@ -26,25 +26,25 @@
           [value]="vendorId()"
           (change)="vendorId.set(value($event))"
         >
-          <option value="">Pick a vendor</option>
+          <option value="">Select a vendor</option>
           @for (vendor of vendors.choices(); track vendor.id) {
             <option [value]="vendor.id">{{ vendor.name }}</option>
           }
         </select>
       </div>
       <div class="field">
-        <label class="t-micro" for="agreement-what">What was agreed</label>
+        <label class="t-micro" for="agreement-what">Description</label>
         <input
           id="agreement-what"
           class="input-field"
           type="text"
-          placeholder="Block work"
+          placeholder="Blockwork"
           [value]="description()"
           (input)="description.set(value($event))"
         />
       </div>
       <div class="field">
-        <label class="t-micro" for="agreement-amount">Agreed price</label>
+        <label class="t-micro" for="agreement-amount">Agreed Price</label>
         <span class="amount">
           <span class="amount-prefix t-mono">{{ symbol() }}</span>
           <input
@@ -70,7 +70,7 @@
     <div class="card">
       <p class="t-body">No agreements yet.</p>
       <p class="t-small">
-        Record what someone agreed to do for a fixed price, then file each payment against it.
+        Record what a vendor agreed to do for a fixed price, then assign each payment to it.
       </p>
     </div>
   } @else {
@@ -142,14 +142,14 @@
           @if (paymentsFor(agreement.id).length === 0) {
             <div class="payment">
               <span></span>
-              <span class="t-small note">Nothing paid yet.</span>
+              <span class="t-small note">No payments yet.</span>
               <span></span>
             </div>
           }
 
           <div class="payment left-to-pay">
             <span></span>
-            <span class="left-label">Left to Pay</span>
+            <span class="left-label">Remaining to Pay</span>
             <span class="t-mono paid owed">{{ bare(agreement.balance_amount) }}</span>
           </div>
 
@@ -160,7 +160,7 @@
                 <input
                   class="amount-input t-mono"
                   inputmode="decimal"
-                  aria-label="How much was paid"
+                  aria-label="Amount paid"
                   [value]="paymentAmount()"
                   (input)="paymentAmount.set(value($event))"
                   (keyup.enter)="savePayment(agreement)"
@@ -185,7 +185,7 @@
                 Change
               </button>
               <span class="t-small hint">
-                A payment writes one expense on this project and one line here.
+                A payment creates one expense on this project and one entry here.
               </span>
               <button
                 type="button"
@@ -209,7 +209,7 @@
       @if (agreements.hasMore()) {
         <span class="t-small muted">Loading more…</span>
       } @else {
-        <span class="t-small muted">That is all {{ agreements.agreementTotal() }} of them.</span>
+        <span class="t-small muted">All {{ agreements.agreementTotal() }} agreements shown.</span>
       }
     </div>
   }
@@ -219,13 +219,13 @@
       <div class="intro-text">
         <h2 class="t-heading">Money Held</h2>
         <p class="prose">
-          What someone was given before they spent it. A balance is what they were handed less what
-          they have paid out, so an advance and their purchases cancel each other.
+          Money given to someone before they spend it. The balance is the advance less what they
+          have paid out.
         </p>
       </div>
       @if (!addingAdvance()) {
         <app-button variant="secondary" (pressed)="addingAdvance.set(true)">
-          Give an Advance
+          Issue an Advance
         </app-button>
       }
     </div>
@@ -233,21 +233,21 @@
     @if (addingAdvance()) {
       <div class="panel">
         <div class="field">
-          <label class="t-micro" for="advance-person">Who</label>
+          <label class="t-micro" for="advance-person">People</label>
           <select
             id="advance-person"
             class="input-field"
             [value]="personId()"
             (change)="personId.set(value($event))"
           >
-            <option value="">Pick a person</option>
+            <option value="">Select a person</option>
             @for (person of people.choices(); track person.id) {
               <option [value]="person.id">{{ person.name }}</option>
             }
           </select>
         </div>
         <div class="field">
-          <label class="t-micro" for="advance-amount">How much</label>
+          <label class="t-micro" for="advance-amount">Amount</label>
           <span class="amount">
             <span class="amount-prefix t-mono">{{ symbol() }}</span>
             <input
@@ -276,7 +276,7 @@
     @if (agreements.balances().length === 0) {
       <div class="card">
         <p class="t-body">Nobody is holding money.</p>
-        <p class="t-small">Give an advance, or record who paid for a purchase.</p>
+        <p class="t-small">Issue an advance, or record who paid for a purchase.</p>
       </div>
     } @else {
       <div class="table">
@@ -284,7 +284,7 @@
           <span class="t-micro">Person</span>
           <span class="t-micro right">Given</span>
           <span class="t-micro right">Spent</span>
-          <span class="t-micro right">Balance</span>
+          <span class="t-micro right">Outstanding Balance</span>
           <span></span>
         </div>
         @for (balance of balanceRows(); track balance.person_id) {
@@ -323,7 +323,7 @@
         <div class="row head">
           <span class="t-micro">Advance</span>
           <span class="t-micro right">Amount</span>
-          <span class="t-micro right">Given on</span>
+          <span class="t-micro right">Given On</span>
           <span></span>
           <span></span>
         </div>

@@ -116,8 +116,8 @@ export class LandDetailComponent {
       return [];
     }
     return [
-      { value: 'pin', label: 'Pin' },
-      { value: 'boundary', label: 'Boundary' },
+      { value: 'pin', label: 'Location Pin' },
+      { value: 'boundary', label: 'Mapped Survey' },
     ];
   }
 
@@ -165,10 +165,10 @@ export class LandDetailComponent {
       size_unit: unit,
     });
     if (!saved) {
-      this.toast.show(this.lands.error() ?? 'Could not save that size.', 'error');
+      this.toast.show(this.lands.error() ?? 'Could not save the area.', 'error');
       return;
     }
-    this.toast.show('Size taken from the boundary.');
+    this.toast.show('Stated area updated from the mapped survey.');
     await this.load();
   }
 
@@ -204,7 +204,7 @@ export class LandDetailComponent {
       note: this.editNote().trim() || null,
     });
     if (!saved) {
-      this.toast.show(this.lands.error() ?? 'Could not save that paper.', 'error');
+      this.toast.show(this.lands.error() ?? 'Could not save the document.', 'error');
       return;
     }
     this.editing.set(null);
@@ -212,7 +212,7 @@ export class LandDetailComponent {
   }
 
   fileNote(document: LandDocumentRead): string {
-    return `${this.bytes(document.byte_size)} · kept on your own server`;
+    return `${this.bytes(document.byte_size)} · stored on your own server`;
   }
 
   bytes(size: number): string {
@@ -228,9 +228,9 @@ export class LandDetailComponent {
   missingLine(): string {
     const missing = this.missing();
     if (missing.length === 0) {
-      return 'Every paper worth chasing is here.';
+      return 'All required documents are present.';
     }
-    return `Still to come: ${missing.join(', ')}.`;
+    return `Missing: ${missing.join(', ')}.`;
   }
 
   pick(): void {
@@ -246,11 +246,11 @@ export class LandDetailComponent {
     }
     const saved = await this.lands.addDocument(this.id(), this.kind(), file, this.note().trim());
     if (!saved) {
-      this.toast.show(this.lands.error() ?? 'Could not keep that file.', 'error');
+      this.toast.show(this.lands.error() ?? 'Could not upload the file.', 'error');
       return;
     }
     this.note.set('');
-    this.toast.show(`${kindName(saved.kind)} kept.`);
+    this.toast.show(`${kindName(saved.kind)} uploaded.`);
     await this.load();
   }
 
@@ -281,12 +281,12 @@ export class LandDetailComponent {
   async archive(): Promise<void> {
     await this.lands.archive(this.id());
     await this.load();
-    this.toast.show('Land archived. Its papers go with it.');
+    this.toast.show('Land archived. Its documents are archived with it.');
   }
 
   async restore(): Promise<void> {
     await this.lands.restore(this.id());
     await this.load();
-    this.toast.show('Land taken out of the archive.');
+    this.toast.show('Land restored.');
   }
 }

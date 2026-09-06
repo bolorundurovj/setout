@@ -2,12 +2,12 @@
   <a class="link t-mono back" routerLink="/lands">&#8592; Land</a>
 
   @if (loading()) {
-    <div class="card"><p class="t-body">Loading the plot…</p></div>
+    <div class="card"><p class="t-body">Loading land…</p></div>
   } @else if (land(); as l) {
     @if (l.deleted_at) {
       <p class="banner warn t-small">
-        Archived. Its papers went with it and come back if you take it out again. Projects already
-        pointing at it still do.
+        Archived. Its documents are archived with it and return if you restore it. Projects that
+        reference it are unaffected.
       </p>
     }
 
@@ -16,22 +16,22 @@
         <h1 class="t-display">{{ l.name }}</h1>
         <p class="t-small">{{ l.address ?? notSet }}</p>
         @if (mapAddress(l)) {
-          <p class="t-micro muted">The map calls it {{ mapAddress(l) }}</p>
+          <p class="t-micro muted">Map address: {{ mapAddress(l) }}</p>
         }
       </div>
       <div class="head-actions">
         @if (!l.deleted_at) {
-          <app-button variant="secondary" (pressed)="edit()">Edit land</app-button>
+          <app-button variant="secondary" (pressed)="edit()">Edit Land</app-button>
           <app-button variant="danger" (pressed)="archive()">Archive</app-button>
         } @else {
-          <app-button (pressed)="restore()">Take out of the archive</app-button>
+          <app-button (pressed)="restore()">Restore</app-button>
         }
       </div>
     </div>
 
     <div class="facts">
       <div class="fact">
-        <span class="t-micro">Town or city</span>
+        <span class="t-micro">Town or City</span>
         <span class="t-body">{{ l.city ?? notSet }}</span>
       </div>
       <div class="fact">
@@ -43,25 +43,25 @@
         <span class="t-body">{{ l.country_name ?? notSet }}</span>
       </div>
       <div class="fact">
-        <span class="t-micro">Size</span>
+        <span class="t-micro">Stated Area</span>
         <span class="t-body t-mono">{{ size(l) }}</span>
       </div>
       @if (l.boundary) {
         <div class="fact">
-          <span class="t-micro">Boundary area</span>
+          <span class="t-micro">Measured Area</span>
           <span class="t-body t-mono">{{ area(l) }}</span>
         </div>
       }
       <div class="fact">
-        <span class="t-micro">Bought</span>
+        <span class="t-micro">Purchase Date</span>
         <span class="t-body t-mono">{{ l.purchased_on ?? notSet }}</span>
       </div>
       <div class="fact">
-        <span class="t-micro">Worth now</span>
+        <span class="t-micro">Valuation</span>
         <span class="t-body t-mono">{{ worth(l) }}</span>
       </div>
       <div class="fact">
-        <span class="t-micro">Papers kept</span>
+        <span class="t-micro">Documents</span>
         <span class="t-body t-mono">{{ l.document_count }}</span>
       </div>
     </div>
@@ -72,18 +72,18 @@
 
     @if (hasMap(l)) {
       <section class="block">
-        <h2 class="t-heading">Where it is</h2>
+        <h2 class="t-heading">Location</h2>
         @if (pinIsOutside(l)) {
           <div class="banner warn pin-warning">
-            <span class="t-small">The pin is outside the edge drawn for this plot.</span>
+            <span class="t-small">The location pin is outside the mapped survey.</span>
             @if (!l.deleted_at) {
-              <app-button variant="secondary" (pressed)="edit()">Fix it on the form</app-button>
+              <app-button variant="secondary" (pressed)="edit()">Edit Land</app-button>
             }
           </div>
         }
         @if (mapTabs(l).length) {
           <app-tabs
-            label="Pin or boundary"
+            label="Location Pin or Mapped Survey"
             [tabs]="mapTabs(l)"
             [value]="mapTab()"
             (valueChange)="mapTab.set($any($event))"
@@ -107,10 +107,10 @@
         @if (areaGap(l); as gap) {
           @if (gap >= 5) {
             <p class="t-small muted">
-              The edge drawn here works out {{ gap }}% away from the size on record.
+              The measured area differs from the stated area by {{ gap }}%.
               @if (!l.deleted_at) {
                 <button type="button" class="link t-mono" (click)="useDrawnSize(l)">
-                  Use The Drawn Area
+                  Use Measured Area
                 </button>
               }
             </p>
@@ -120,15 +120,15 @@
     }
 
     <section class="block">
-      <h2 class="t-heading">Papers</h2>
+      <h2 class="t-heading">Documents</h2>
       <p class="t-small" [class.muted]="missing().length === 0">{{ missingLine() }}</p>
 
       @if (!l.deleted_at) {
         <div class="card upload">
           <div class="field">
-            <span class="t-micro">What you are adding</span>
+            <span class="t-micro">Document Type</span>
             <app-chip-group
-              label="What you are adding"
+              label="Document Type"
               [chips]="kindChips"
               [value]="kind()"
               (valueChange)="kind.set($any($event))"
@@ -140,30 +140,28 @@
               class="input-field"
               type="text"
               autocomplete="off"
-              placeholder="What this paper actually is"
+              placeholder="Describe this document"
               [value]="note()"
               (input)="note.set(value($event))"
             />
           </label>
-          <app-button [loading]="lands.saving()" (pressed)="pick()">Choose a file</app-button>
-          <span class="t-small muted">
-            A photograph or a PDF. Kept beside the record on your own server.
-          </span>
+          <app-button [loading]="lands.saving()" (pressed)="pick()">Choose File</app-button>
+          <span class="t-small muted"> A photograph or PDF. Stored on your own server. </span>
         </div>
       }
 
       @if (justRemoved(); as gone) {
         <p class="t-small muted">
           {{ gone.filename }} was removed.
-          <button type="button" class="link t-mono" (click)="putBack()">Put It Back</button>
+          <button type="button" class="link t-mono" (click)="putBack()">Undo</button>
         </p>
       }
 
       @if (documents().length === 0) {
         <div class="card">
-          <p class="t-body">Nothing kept against this plot yet.</p>
+          <p class="t-body">No documents yet.</p>
           <p class="t-small">
-            The Certificate of Occupancy is the one worth having before anything else.
+            The Certificate of Occupancy is the most important document to store.
           </p>
         </div>
       } @else {
@@ -173,7 +171,7 @@
               @if (editing() === document.id) {
                 <span class="paper-edit">
                   <app-chip-group
-                    label="What this paper is"
+                    label="Document Type"
                     [chips]="kindChips"
                     [value]="editKind()"
                     (valueChange)="editKind.set($any($event))"
@@ -235,11 +233,11 @@
     </section>
 
     <section class="block">
-      <h2 class="t-heading">Built on this land</h2>
+      <h2 class="t-heading">Projects on This Land</h2>
       @if (l.projects.length === 0) {
         <div class="card">
-          <p class="t-body">No project points at this plot yet.</p>
-          <p class="t-small">Pick it on the New Project form, or from a project's own settings.</p>
+          <p class="t-body">No projects reference this land yet.</p>
+          <p class="t-small">Select it on the New Project form or in a project's settings.</p>
         </div>
       } @else {
         <div class="card projects">
@@ -259,8 +257,8 @@
     </section>
   } @else {
     <div class="card">
-      <p class="t-body">That plot is not here.</p>
-      <p class="t-small"><a class="link" routerLink="/lands">Back to all land</a></p>
+      <p class="t-body">Land not found.</p>
+      <p class="t-small"><a class="link" routerLink="/lands">Back to Land</a></p>
     </div>
   }
 </div>

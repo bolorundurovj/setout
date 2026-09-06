@@ -54,7 +54,7 @@ export class DashboardComponent {
   readonly spent = computed(() => this.home.summary()?.spent_amount ?? 0);
   readonly left = computed(() => Math.abs(this.planned() - this.spent()));
   readonly over = computed(() => this.planned() > 0 && this.spent() > this.planned());
-  readonly leftLabel = computed(() => (this.over() ? 'Over by' : 'Left'));
+  readonly leftLabel = computed(() => (this.over() ? 'Over by' : 'Remaining'));
 
   readonly usedLabel = computed(() =>
     this.planned() ? `${Math.round((this.spent() / this.planned()) * 100)}%` : '—',
@@ -74,7 +74,7 @@ export class DashboardComponent {
       return '';
     }
     if (!found.projects) {
-      return 'No projects yet. The first one takes a name, a currency and its scopes.';
+      return 'No projects yet. A project needs a name, a currency and its categories.';
     }
     const projects = `${found.projects} ${found.projects === 1 ? 'project' : 'projects'} open`;
     if (!found.alerts.length) {
@@ -91,9 +91,9 @@ export class DashboardComponent {
     const kept = found.currency_projects;
     const counted = `${kept} ${kept === 1 ? 'project' : 'projects'}`;
     if (!this.split()) {
-      return `${counted}, all in ${found.currency_code} — totalled straight`;
+      return `${counted}, all in ${found.currency_code}. Totalled directly`;
     }
-    return `${counted} in ${found.currency_code}. Currencies are never added together, so each is read on its own.`;
+    return `${counted} in ${found.currency_code}. Currencies are shown separately and never combined.`;
   });
 
   readonly bars = computed<MonthBar[]>(() => {
@@ -118,7 +118,7 @@ export class DashboardComponent {
     if (!busiest) {
       return '';
     }
-    return `Heaviest month was ${this.monthName(busiest)}, at ${this.money(busiest.amount)}. Bars are every project kept in ${found?.currency_code}.`;
+    return `Highest month: ${this.monthName(busiest)} at ${this.money(busiest.amount)}. Bars include every project in ${found?.currency_code}.`;
   });
 
   constructor() {
@@ -214,7 +214,7 @@ export class DashboardComponent {
   }
 
   where(row: HomeSpend): string {
-    return `${row.project_name} · ${row.scope_name ?? 'Unfiled'}`;
+    return `${row.project_name} · ${row.scope_name ?? 'Uncategorized'}`;
   }
 
   barTitle(bar: MonthBar): string {

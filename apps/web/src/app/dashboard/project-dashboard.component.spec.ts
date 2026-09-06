@@ -107,7 +107,7 @@ describe('ProjectDashboardComponent', () => {
   it('says what is left while under the plan', () => {
     const c = render(spend(215_000_000, 100_000_000, 0, -53.49));
     expect(c.isOver()).toBe(false);
-    expect(c.varianceLabel()).toBe('Left');
+    expect(c.varianceLabel()).toBe('Remaining');
     expect(c.varianceAmount()).toBe(115_000_000);
   });
 
@@ -117,7 +117,7 @@ describe('ProjectDashboardComponent', () => {
     expect(c.isOver()).toBe(true);
     expect(c.varianceLabel()).toBe('Over by');
     expect(c.varianceAmount()).toBe(17_630_000);
-    expect(c.varianceNote()).toContain('8.2% past the plan');
+    expect(c.varianceNote()).toContain('8.2% over budget');
   });
 
   it('will not claim a variance without a budget', () => {
@@ -178,7 +178,7 @@ describe('ProjectDashboardComponent', () => {
   it('flags spend that is filed to no scope', () => {
     const alerts = render(spend(1000, 500, 5_300_000)).alerts();
     expect(alerts.length).toBe(1);
-    expect(alerts[0].title).toBe('Spend with nothing recorded');
+    expect(alerts[0].title).toBe('Uncategorized expenses');
     expect(alerts[0].amount).toBe('53,000');
     expect(alerts[0].urgent).toBe(true);
   });
@@ -194,7 +194,7 @@ describe('ProjectDashboardComponent', () => {
       { id: 'a2', vendor_name: 'Paid Up Co', description: 'Roofing', balance_amount: 0 },
     ]).alerts();
     expect(alerts.length).toBe(1);
-    expect(alerts[0].title).toBe('Left on an agreement');
+    expect(alerts[0].title).toBe('Remaining on an agreement');
     expect(alerts[0].detail).toBe('Kunle Bricklaying · block work');
     expect(alerts[0].amount).toBe('35,000');
   });
@@ -245,7 +245,7 @@ describe('ProjectDashboardComponent', () => {
     ).alerts();
 
     const owed = alerts.find((a) => a.title === 'Paid for, not delivered');
-    expect(owed?.detail).toBe('2 things owed by vendors');
+    expect(owed?.detail).toBe('2 items owed by vendors');
     expect(owed?.amount).toBe('100,000');
   });
 
@@ -285,8 +285,8 @@ describe('ProjectDashboardComponent', () => {
     ).alerts();
 
     const tabFor = (title: string) => alerts.find((a) => a.title.startsWith(title))?.tab;
-    expect(tabFor('Spend with nothing')).toBe('table');
-    expect(tabFor('Left on an agreement')).toBe('agreements');
+    expect(tabFor('Uncategorized expenses')).toBe('table');
+    expect(tabFor('Remaining on an agreement')).toBe('agreements');
     expect(tabFor('Paid for, not delivered')).toBe('deliveries');
     expect(tabFor('Owed to')).toBe('agreements');
   });

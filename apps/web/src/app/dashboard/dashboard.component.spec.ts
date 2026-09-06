@@ -125,7 +125,7 @@ describe('DashboardComponent', () => {
 
     expect(component.left()).toBe(55_900_000);
     expect(component.over()).toBe(false);
-    expect(component.leftLabel()).toBe('Left');
+    expect(component.leftLabel()).toBe('Remaining');
     expect(component.usedLabel()).toBe('91%');
   });
 
@@ -141,7 +141,7 @@ describe('DashboardComponent', () => {
     const component = render();
 
     expect(component.split()).toBe(false);
-    expect(component.currencyNote()).toBe('2 projects, all in NGN — totalled straight');
+    expect(component.currencyNote()).toBe('2 projects, all in NGN. Totalled directly');
   });
 
   it('offers a pill per currency and says the figures stay apart', () => {
@@ -163,7 +163,7 @@ describe('DashboardComponent', () => {
     ]);
     expect(component.showingPill(component.choices()[0])).toBe(true);
     expect(component.showingPill(component.choices()[1])).toBe(false);
-    expect(component.currencyNote()).toContain('never added together');
+    expect(component.currencyNote()).toContain('never combined');
   });
 
   it('asks for the currency whose pill was pressed', () => {
@@ -191,8 +191,8 @@ describe('DashboardComponent', () => {
     expect(bars[1].height).toBe(100);
     expect(bars[1].busiest).toBe(true);
     expect(bars[0].height).toBe(34);
-    expect(component.heaviest()).toContain('Heaviest month was Jul');
-    expect(component.heaviest()).toContain('kept in NGN');
+    expect(component.heaviest()).toContain('Highest month: Jul');
+    expect(component.heaviest()).toContain('include every project in NGN');
   });
 
   it('gives a month with nothing in it a sliver rather than no bar at all', () => {
@@ -249,7 +249,7 @@ describe('DashboardComponent', () => {
     };
 
     expect(component.where(row)).toBe('Jacaranda Close · Foundation');
-    expect(component.where({ ...row, scope_name: null })).toBe('Jacaranda Close · Unfiled');
+    expect(component.where({ ...row, scope_name: null })).toBe('Jacaranda Close · Uncategorized');
   });
 
   it('opens a project, its expense tab, and the whole list', () => {

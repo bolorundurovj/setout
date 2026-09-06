@@ -120,26 +120,26 @@ export function parseBoundary(text: string): { boundary?: LandBoundary; error?: 
   try {
     parsed = JSON.parse(trimmed);
   } catch {
-    return { error: 'That is not JSON.' };
+    return { error: 'Not valid JSON.' };
   }
   // A Feature or a FeatureCollection is what geojson.io hands you.
   const geometry = geometryIn(parsed);
   if (!geometry) {
-    return { error: 'No polygon in there.' };
+    return { error: 'No polygon found.' };
   }
   if (geometry.type !== 'Polygon') {
-    return { error: `A boundary has to be a Polygon, not a ${geometry.type}.` };
+    return { error: `A mapped survey must be a Polygon, not a ${geometry.type}.` };
   }
   const ring = ringOf(geometry as LandBoundary);
   if (ring.length < 3) {
-    return { error: 'A boundary needs three corners before it encloses anything.' };
+    return { error: 'A mapped survey needs at least three survey points.' };
   }
   for (const [lon, lat] of ring) {
     if (typeof lon !== 'number' || typeof lat !== 'number' || Number.isNaN(lon + lat)) {
-      return { error: 'Those corners are not numbers.' };
+      return { error: 'Survey point coordinates must be numbers.' };
     }
     if (lon < -180 || lon > 180 || lat < -90 || lat > 90) {
-      return { error: 'That is not anywhere on Earth. Longitude comes first.' };
+      return { error: 'Coordinates are out of range. Longitude comes first.' };
     }
   }
   return { boundary: boundaryOf(ring) ?? undefined };
@@ -237,7 +237,7 @@ export function parseCorners(text: string): { boundary?: LandBoundary; error?: s
   for (const [index, line] of lines.entries()) {
     const corner = parseCoordinate(line);
     if (!corner) {
-      return { error: `Line ${index + 1} does not read as a coordinate.` };
+      return { error: `Line ${index + 1} is not a valid coordinate.` };
     }
     ring.push(corner);
   }

@@ -1,9 +1,9 @@
 <div class="budget">
   <div class="intro">
-    <h2 class="t-heading">Set the Budget</h2>
+    <h2 class="t-heading">Set Budget</h2>
     <p class="prose">
-      The plan for {{ project().name }}. Set before work starts. Every change is stamped with the
-      day it was made, so a plan written after the spending shows itself.
+      The budget for {{ project().name }}. Set it before work starts. Every change records the date
+      it was made.
     </p>
   </div>
 
@@ -15,24 +15,24 @@
     <app-combobox
       [options]="availablePresets()"
       [value]="newScopeName()"
-      placeholder="Pick a scope or type your own"
+      placeholder="Select a category or type your own"
       (valueChange)="newScopeName.set($event)"
       (submitted)="addScope()"
     />
-    <app-button [disabled]="!newScopeName().trim()" (pressed)="addScope()">Add Scope</app-button>
+    <app-button [disabled]="!newScopeName().trim()" (pressed)="addScope()">Add Category</app-button>
   </div>
 
   @if (budget.scopes().length === 0) {
     <div class="card">
-      <p class="t-body">No scopes yet.</p>
-      <p class="t-small">Add the parts of the build you want to plan and track against.</p>
+      <p class="t-body">No categories yet.</p>
+      <p class="t-small">Add the parts of the project you want to budget and track.</p>
     </div>
   } @else {
     <div class="table">
       <div class="row head">
-        <span class="t-micro">Scope</span>
-        <span class="t-micro right">Planned {{ project().currency_code }}</span>
-        <span class="t-micro right">Set on</span>
+        <span class="t-micro">Category</span>
+        <span class="t-micro right">Budgeted {{ project().currency_code }}</span>
+        <span class="t-micro right">Set On</span>
         <span class="t-micro right">Changed</span>
       </div>
 
@@ -89,14 +89,14 @@
                 </div>
               }
               @if (itemsFor(scope.id).length === 0) {
-                <p class="t-small muted">Nothing planned here yet.</p>
+                <p class="t-small muted">No budget set here yet.</p>
               }
 
               <div class="add-item">
                 <input
                   class="input-field"
                   type="text"
-                  placeholder="What is planned"
+                  placeholder="Budgeted Amount"
                   [value]="itemDescription()"
                   (input)="itemDescription.set(asValue($event))"
                 />
@@ -105,7 +105,7 @@
                   <input
                     class="amount-input t-mono"
                     inputmode="decimal"
-                    aria-label="Planned amount for this item"
+                    aria-label="Budgeted amount for this item"
                     [value]="itemAmount()"
                     (input)="itemAmount.set(asValue($event))"
                     (keyup.enter)="addLineItem(scope)"
@@ -115,11 +115,11 @@
                   class="split-choice"
                   [chips]="costTypes"
                   [value]="itemCostType()"
-                  label="What kind of cost this is"
+                  label="Cost Type"
                   (valueChange)="itemCostType.set($event)"
                 />
                 <app-button [disabled]="!canAddItem()" (pressed)="addLineItem(scope)">
-                  + Planned Item
+                  + Budget Item
                 </app-button>
               </div>
             </div>
@@ -128,7 +128,7 @@
       }
 
       <div class="row total">
-        <span class="total-label">Planned total</span>
+        <span class="total-label">Budgeted Total</span>
         <span class="right t-mono total-figure">{{ plannedTotal() }}</span>
         <span class="right t-mono muted">{{ budget.scopes().length }} scopes</span>
         <span></span>

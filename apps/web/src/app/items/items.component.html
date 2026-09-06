@@ -4,15 +4,15 @@
 
 <div class="page">
   <p class="prose">
-    What things cost, and what they used to cost. An item holds no prices of its own: every purchase
-    filed against it builds its history. Shared across every project.
+    What items cost now and what they cost before. Each expense assigned to an item builds its price
+    history. Items are shared across every project.
   </p>
 
   <input
     class="input-field search"
     type="search"
-    placeholder="Find an item"
-    aria-label="Find an item"
+    placeholder="Search items"
+    aria-label="Search items"
     [value]="search()"
     (input)="onSearch($event)"
   />
@@ -25,11 +25,10 @@
     <div class="card form">
       <h2 class="t-heading">New Item</h2>
       <p class="t-small">
-        The unit is what the price is quoted in. Every future purchase of this item builds its price
-        history.
+        The unit is what the price is quoted in. Future purchases build a price history.
       </p>
       <label class="field">
-        <span class="t-micro">Name &middot; required</span>
+        <span class="t-micro">Name (required)</span>
         <input
           class="input-field"
           type="text"
@@ -54,7 +53,7 @@
       </label>
       <div class="form-actions">
         <app-button [disabled]="!isValid()" [loading]="items.saving()" (pressed)="save()">
-          Add to the Catalogue
+          Add to Catalogue
         </app-button>
         <app-button variant="secondary" (pressed)="cancel()">Cancel</app-button>
       </div>
@@ -67,8 +66,7 @@
         {{ search() ? 'Nothing matches that.' : 'Nothing in the catalogue yet.' }}
       </p>
       <p class="t-small">
-        Add the things you buy more than once. Filing a purchase against one starts its price
-        history.
+        Add the items you buy more than once. Assigning an expense to one starts its price history.
       </p>
     </div>
   } @else {
@@ -76,8 +74,8 @@
       <div class="row head">
         <span class="t-micro">Item</span>
         <span class="t-micro">Unit</span>
-        <span class="t-micro right">First price</span>
-        <span class="t-micro right">Last price</span>
+        <span class="t-micro right">First Price</span>
+        <span class="t-micro right">Last Price</span>
         <span class="t-micro right">Change</span>
         <span></span>
       </div>

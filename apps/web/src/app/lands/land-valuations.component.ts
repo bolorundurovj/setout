@@ -53,9 +53,9 @@ export class LandValuationsComponent {
   readonly bought = computed(() => this.rows().some((row) => row.kind === 'purchase'));
 
   readonly kindChips = computed<Chip[]>(() => {
-    const chips: Chip[] = [{ value: 'valuation', label: 'Valued at' }];
+    const chips: Chip[] = [{ value: 'valuation', label: 'Valuation' }];
     if (!this.bought()) {
-      chips.unshift({ value: 'purchase', label: 'Bought for' });
+      chips.unshift({ value: 'purchase', label: 'Purchase Price' });
     }
     return chips;
   });
@@ -94,7 +94,7 @@ export class LandValuationsComponent {
   }
 
   label(row: LandValuationRead): string {
-    return row.kind === 'purchase' ? 'Bought for' : 'Valued at';
+    return row.kind === 'purchase' ? 'Purchase Price' : 'Valuation';
   }
 
   value(event: Event): string {

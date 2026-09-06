@@ -181,7 +181,7 @@ export class LandMapComponent {
   }
 
   ariaLabel(): string {
-    return this.mode() === 'pin' ? 'Where the plot is' : 'The edge of the plot';
+    return this.mode() === 'pin' ? 'Location pin' : 'Mapped survey';
   }
 
   undo(): void {

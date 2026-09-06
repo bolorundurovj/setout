@@ -181,7 +181,7 @@ describe('ProjectDetailComponent', () => {
     fixture.detectChanges();
 
     expect(TestBed.inject(Title).getTitle()).toBe(
-      'Jacaranda Close, Ewuru · Budget vs Spend · Setout',
+      'Jacaranda Close, Ewuru · Budget vs Spent · Setout',
     );
   });
 

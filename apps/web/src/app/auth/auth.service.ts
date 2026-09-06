@@ -42,7 +42,7 @@ export class AuthService {
       await this.checkStatus();
       return true;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not save that name.');
+      this.error.set(detailOf(e) ?? 'Could not save the name.');
       return false;
     }
   }
@@ -54,7 +54,7 @@ export class AuthService {
       await this.checkStatus();
       return true;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not save that currency.');
+      this.error.set(detailOf(e) ?? 'Could not save the currency.');
       return false;
     }
   }

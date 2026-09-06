@@ -133,7 +133,7 @@ describe('AgreementService', () => {
 
     await service.loadAll('p1');
 
-    expect(service.error()).toBe('Could not read what has been paid.');
+    expect(service.error()).toBe('Could not load payments.');
     expect(service.payments()['a1']).toBeUndefined();
   });
 

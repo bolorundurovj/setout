@@ -41,7 +41,7 @@ export class ProjectDashboardComponent {
   readonly unfiled = computed(() => this.expenses.spend()?.unfiled_amount ?? 0);
 
   readonly isOver = computed(() => this.planned() > 0 && this.spent() > this.planned());
-  readonly varianceLabel = computed(() => (this.isOver() ? 'Over by' : 'Left'));
+  readonly varianceLabel = computed(() => (this.isOver() ? 'Over by' : 'Remaining'));
 
   readonly varianceAmount = computed(() => {
     if (!this.planned()) {
@@ -52,17 +52,17 @@ export class ProjectDashboardComponent {
 
   readonly varianceNote = computed(() => {
     if (!this.planned()) {
-      return 'No budget set, so there is nothing to compare against.';
+      return 'No budget set.';
     }
     const percent = this.expenses.spend()?.variance_percent;
     if (percent === null || percent === undefined) {
       return '';
     }
-    return this.isOver() ? `${percent}% past the plan.` : `${Math.abs(percent)}% under the plan.`;
+    return this.isOver() ? `${percent}% over budget.` : `${Math.abs(percent)}% under budget.`;
   });
 
   readonly budgetNote = computed(() =>
-    this.planned() ? `Across ${this.budget.scopes().length} scopes.` : 'Nothing planned yet.',
+    this.planned() ? `Across ${this.budget.scopes().length} categories.` : 'No budget set.',
   );
 
   readonly spentNote = computed(() => {
@@ -99,8 +99,8 @@ export class ProjectDashboardComponent {
     if (this.unfiled() > 0) {
       alerts.push({
         key: 'unfiled',
-        title: 'Spend with nothing recorded',
-        detail: 'Filed to no scope, so it is in none of the bars above',
+        title: 'Uncategorized expenses',
+        detail: 'Uncategorized, so not included in the bars above',
         amount: this.bare(this.unfiled()),
         urgent: true,
         tab: 'table',
@@ -111,7 +111,7 @@ export class ProjectDashboardComponent {
       if (agreement.balance_amount > 0) {
         alerts.push({
           key: `agreement-${agreement.id}`,
-          title: 'Left on an agreement',
+          title: 'Remaining on an agreement',
           detail: `${agreement.vendor_name} · ${agreement.description.toLowerCase()}`,
           amount: this.bare(agreement.balance_amount),
           urgent: false,
@@ -129,7 +129,7 @@ export class ProjectDashboardComponent {
         detail:
           owed.total === 1 && first
             ? `${first.description} · ${first.vendor_name ?? 'vendor not recorded'}`
-            : `${owed.total} things owed by vendors`,
+            : `${owed.total} items owed by vendors`,
         amount: this.bare(owed.owed),
         urgent: false,
         tab: 'deliveries',
@@ -141,7 +141,7 @@ export class ProjectDashboardComponent {
         alerts.push({
           key: `owed-${balance.person_id}`,
           title: `Owed to ${balance.person_name}`,
-          detail: 'Bought on your behalf, not yet paid back',
+          detail: 'Purchased on your behalf, not yet reimbursed',
           amount: this.bare(-balance.balance_amount),
           urgent: false,
           tab: 'agreements',

@@ -3,9 +3,9 @@ import { formatMoney } from '../budget/money';
 
 const KIND_NAMES: Record<string, string> = {
   certificate_of_occupancy: 'Certificate of Occupancy',
-  survey_plan: 'Survey plan',
+  survey_plan: 'Survey Plan',
   deed: 'Deed',
-  architectural_plan: 'Architectural plan',
+  architectural_plan: 'Architectural Plan',
   receipt: 'Receipt',
   other: 'Other',
 };

@@ -12,7 +12,7 @@ import {
 } from '@setout/api-client';
 import { detailOf } from '../api-error';
 
-const TROUBLE = 'Could not read what the record holds.';
+const TROUBLE = 'Could not load the dashboard.';
 
 @Injectable({
   providedIn: 'root',

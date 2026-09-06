@@ -125,7 +125,7 @@ describe('BudgetComponent', () => {
 
     expect(added.length).toBe(0);
     expect(updated.length).toBe(0);
-    expect(toasts[0].message).toContain('several planned items');
+    expect(toasts[0].message).toContain('several budget items');
   });
 
   it('rejects something that is not an amount', async () => {

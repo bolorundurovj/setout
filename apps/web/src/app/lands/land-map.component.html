@@ -1,39 +1,39 @@
 <div #canvas class="canvas" role="application" [attr.aria-label]="ariaLabel()"></div>
 
 @if (tilesFailed()) {
-  <p class="t-small muted">No map tiles from here. The plot still draws.</p>
+  <p class="t-small muted">Map tiles unavailable. The land still displays.</p>
 }
 
 @if (editable()) {
   @if (mode() === 'pin') {
     <div class="tools">
-      <app-button variant="secondary" (pressed)="locate()">Use my location</app-button>
+      <app-button variant="secondary" (pressed)="locate()">Use My Location</app-button>
       @if (point()) {
-        <app-button variant="secondary" (pressed)="clearPin()">Remove the pin</app-button>
+        <app-button variant="secondary" (pressed)="clearPin()">Remove Pin</app-button>
       }
     </div>
     <p class="t-small muted">
       @if (point()) {
-        Tap somewhere else to move it, or drag the pin.
+        Tap elsewhere to move the pin, or drag it.
       } @else {
-        Tap the map to drop a pin where the plot is.
+        Tap the map to place the location pin.
       }
     </p>
   } @else {
     @if (corners().length) {
       <div class="tools">
-        <app-button variant="secondary" (pressed)="undo()">Undo last corner</app-button>
-        <app-button variant="secondary" (pressed)="clear()">Clear the edge</app-button>
+        <app-button variant="secondary" (pressed)="undo()">Undo Last Point</app-button>
+        <app-button variant="secondary" (pressed)="clear()">Clear Survey</app-button>
       </div>
     }
     <p class="t-small muted">
       @if (corners().length === 0) {
-        Tap the map to put down the first corner of the plot.
+        Tap the map to mark the first survey point.
       } @else if (corners().length < 3) {
-        {{ 3 - corners().length }} more corner{{ corners().length === 2 ? '' : 's' }} before it
-        encloses anything.
+        {{ 3 - corners().length }} more point{{ corners().length === 2 ? '' : 's' }} needed to
+        enclose an area.
       } @else {
-        {{ corners().length }} corners. Drag one to move it.
+        {{ corners().length }} survey points. Drag one to move it.
       }
     </p>
   }

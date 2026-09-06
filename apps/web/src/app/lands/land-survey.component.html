@@ -1,5 +1,5 @@
 <div class="field">
-  <span class="t-micro">Grid the plan was drawn on</span>
+  <span class="t-micro">Survey Grid</span>
   <app-option-picker
     label="Grid the plan was drawn on"
     [chips]="gridChips"
@@ -7,13 +7,13 @@
     (valueChange)="setGrid($event)"
   />
   <span class="t-small muted">
-    The same numbers read hundreds of kilometres apart between zones, so this cannot be guessed.
+    Coordinates differ between zones, so the grid must be selected.
   </span>
 </div>
 
 <div class="pair">
   <label class="field">
-    <span class="t-micro">First beacon &middot; northing</span>
+    <span class="t-micro">First Beacon (Northing)</span>
     <input
       class="input-field t-mono"
       inputmode="decimal"
@@ -25,7 +25,7 @@
     />
   </label>
   <label class="field">
-    <span class="t-micro">First beacon &middot; easting</span>
+    <span class="t-micro">First Beacon (Easting)</span>
     <input
       class="input-field t-mono"
       inputmode="decimal"
@@ -90,7 +90,7 @@
 </div>
 
 <div class="form-actions">
-  <app-button variant="secondary" (pressed)="addLeg()">Add a leg</app-button>
+  <app-button variant="secondary" (pressed)="addLeg()">Add Leg</app-button>
 </div>
 
 @if (closure()) {
@@ -99,5 +99,7 @@
 @if (areaText()) {
   <p class="t-small muted t-mono">{{ areaText() }}</p>
 } @else if (good().length < 3) {
-  <p class="t-small muted">A beacon and three legs, and the plot draws itself on the map above.</p>
+  <p class="t-small muted">
+    Enter a beacon and at least three legs to draw the survey on the map above.
+  </p>
 }
