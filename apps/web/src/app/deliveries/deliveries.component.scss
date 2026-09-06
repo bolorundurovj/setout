@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 .deliveries {
   display: flex;
   flex-direction: column;
@@ -123,7 +125,7 @@
   color: var(--ink-2);
 }
 
-@media (max-width: 599px) {
+@media (max-width: bp.$phone) {
   .owed,
   .done {
     flex-direction: column;

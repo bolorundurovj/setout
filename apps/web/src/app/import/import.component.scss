@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 .intro {
   display: flex;
   flex-direction: column;
@@ -243,7 +245,7 @@
   text-align: right;
 }
 
-@media (max-width: 599px) {
+@media (max-width: bp.$phone) {
   .scope,
   .row {
     grid-template-columns: 1fr 1fr;

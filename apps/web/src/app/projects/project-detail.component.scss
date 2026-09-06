@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 .project-bar {
   padding: 12px 22px;
   background: var(--field);
@@ -90,7 +92,7 @@
   }
 }
 
-@media (max-width: 599px) {
+@media (max-width: bp.$phone) {
   .project-bar {
     flex-direction: column;
     align-items: flex-start;

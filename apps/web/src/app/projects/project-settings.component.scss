@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 .settings {
   display: flex;
   flex-direction: column;
@@ -212,14 +214,14 @@
   border: 1px solid var(--tint-unfiled-ink);
 }
 
-@media (max-width: 899px) {
+@media (max-width: bp.$lap) {
   .fields,
   .facts {
     grid-template-columns: 1fr 1fr;
   }
 }
 
-@media (max-width: 599px) {
+@media (max-width: bp.$phone) {
   .fields,
   .facts {
     grid-template-columns: 1fr;

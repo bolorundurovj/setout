@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 .back {
   align-self: flex-start;
   font-size: 13px;
@@ -145,7 +147,7 @@
   color: var(--ink);
 }
 
-@media (max-width: 899px) {
+@media (max-width: bp.$lap) {
   .facts,
   .pair {
     grid-template-columns: 1fr;

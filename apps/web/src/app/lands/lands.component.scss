@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 .controls {
   display: flex;
   align-items: center;
@@ -102,7 +104,7 @@ button.row {
   color: var(--over);
 }
 
-@media (max-width: 720px) {
+@media (max-width: bp.$narrow) {
   .row {
     grid-template-columns: 1fr auto;
     row-gap: 6px;

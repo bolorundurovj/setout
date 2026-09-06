@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 .group {
   display: flex;
   flex-direction: column;
@@ -48,7 +50,7 @@
   white-space: nowrap;
 }
 
-@media (max-width: 599px) {
+@media (max-width: bp.$phone) {
   .hit {
     grid-template-columns: 1fr auto;
   }

@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 .months {
   display: flex;
   flex-direction: column;
@@ -248,7 +250,7 @@
   border: none;
 }
 
-@media (max-width: 899px) {
+@media (max-width: bp.$lap) {
   .row {
     grid-template-columns: 92px 1fr 120px;
   }

@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 .dashboard {
   display: flex;
   flex-direction: column;
@@ -254,7 +256,7 @@
   color: var(--over-ink);
 }
 
-@media (max-width: 899px) {
+@media (max-width: bp.$lap) {
   .alerts {
     grid-template-columns: 1fr;
   }

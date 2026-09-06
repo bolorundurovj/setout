@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 .agreements {
   display: flex;
   flex-direction: column;
@@ -317,7 +319,7 @@
   color: var(--over);
 }
 
-@media (max-width: 899px) {
+@media (max-width: bp.$lap) {
   .intro {
     flex-direction: column;
   }

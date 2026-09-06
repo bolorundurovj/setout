@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 .budget {
   display: flex;
   flex-direction: column;
@@ -188,7 +190,7 @@
   color: var(--over);
 }
 
-@media (max-width: 899px) {
+@media (max-width: bp.$lap) {
   .row,
   .row.head,
   .row.total {

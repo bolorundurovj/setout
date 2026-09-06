@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 .back {
   align-self: flex-start;
   font-size: 13px;
@@ -38,7 +40,7 @@
   color: var(--ink-3);
 }
 
-@media (max-width: 719px) {
+@media (max-width: bp.$narrow) {
   .pair {
     grid-template-columns: 1fr;
   }
@@ -63,7 +65,7 @@
   line-height: 1.5;
 }
 
-@media (max-width: 719px) {
+@media (max-width: bp.$narrow) {
   .map-waiting {
     height: 260px;
   }
