@@ -8,16 +8,13 @@
   }
 
   @if (results.looking()) {
-    <p class="t-small muted">Looking…</p>
+    <p class="t-small muted">Searching…</p>
   }
 
   @if (empty()) {
     <div class="card">
       <p class="t-body">Nothing matches "{{ q() }}".</p>
-      <p class="t-small">
-        Search reads what a thing is called, the trade or role it carries, and the words written on
-        an expense.
-      </p>
+      <p class="t-small">Search covers names, trades and roles, and expense descriptions.</p>
     </div>
   }
 

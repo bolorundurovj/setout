@@ -97,22 +97,22 @@
     </div>
 
     <div class="preview">
-      <span class="t-small">Same stored number, printed for this project</span>
+      <span class="t-small">The same stored amount, shown for this project</span>
       <span class="preview-figure t-mono">{{ preview() }}</span>
     </div>
 
     <p class="t-small note">
-      The currency is fixed when the project is created. Every amount is stored in its minor units,
-      so changing it would reprint what was already spent as a different number rather than convert
-      it. Start another project instead.
+      The currency is set when the project is created. Amounts are stored in minor units, so
+      changing it would reprint existing amounts rather than convert them. Create another project
+      instead.
     </p>
   </section>
 
   <section class="card block">
-    <span class="t-micro">Scopes</span>
+    <span class="t-micro">Categories</span>
 
     @if (budget.scopes().length === 0) {
-      <p class="t-small note">No scopes yet. The budget tab is where they are added.</p>
+      <p class="t-small note">No categories yet. Add them on the Budget tab.</p>
     } @else {
       <div class="scopes">
         @for (scope of budget.scopes(); track scope.id) {
@@ -133,9 +133,9 @@
             } @else if (removing() === scope.id) {
               <span class="swatch" [class]="tint(scope)"></span>
               <span class="scope-name">{{ scope.name }}</span>
-              <span class="t-small confirm">Remove this scope?</span>
+              <span class="t-small confirm">Remove this category?</span>
               <button type="button" class="link-action destructive" (click)="remove(scope)">
-                Yes, remove
+                Yes, Remove
               </button>
               <button type="button" class="link-action" (click)="cancelRemove()">Cancel</button>
             } @else {
@@ -168,20 +168,20 @@
       @if (justRemoved(); as gone) {
         <p class="t-small note">
           {{ gone.name }} was removed.
-          <button type="button" class="link-action" (click)="putScopeBack()">Put It Back</button>
+          <button type="button" class="link-action" (click)="putScopeBack()">Undo</button>
         </p>
       }
 
-      <p class="t-small note">A scope with expenses cannot be deleted, only renamed.</p>
+      <p class="t-small note">A category with expenses cannot be deleted, only renamed.</p>
     }
   </section>
 
   <section class="card block">
-    <span class="t-micro">The spreadsheet</span>
+    <span class="t-micro">Spreadsheet</span>
 
     <div class="actions">
-      <app-button variant="secondary" (pressed)="importSheet()">Import a Sheet</app-button>
-      <app-button variant="secondary" (pressed)="exportSheet()">Export a workbook</app-button>
+      <app-button variant="secondary" (pressed)="importSheet()">Import Spreadsheet</app-button>
+      <app-button variant="secondary" (pressed)="exportSheet()">Export Workbook</app-button>
     </div>
 
     <p class="t-small note">

@@ -1,6 +1,6 @@
 <app-topbar title="Home" [subtitle]="today">
-  <app-button variant="secondary" (pressed)="allProjects()">All projects</app-button>
-  <app-button (pressed)="newProject()">New project</app-button>
+  <app-button variant="secondary" (pressed)="allProjects()">All Projects</app-button>
+  <app-button (pressed)="newProject()">New Project</app-button>
 </app-topbar>
 
 <div class="page">
@@ -18,7 +18,7 @@
       @if (found.currency_code) {
         <div class="totals">
           @if (split()) {
-            <div class="pills" role="group" aria-label="Which currency to read">
+            <div class="pills" role="group" aria-label="Currency">
               @for (choice of choices(); track choice.currency_code) {
                 <button
                   type="button"
@@ -84,7 +84,7 @@
                 <span class="figure t-mono">{{ rowMoney(row, row.spent_amount) }}</span>
                 <span class="t-small" [class.over-ink]="rowOver(row)">{{ rowStanding(row) }}</span>
               </span>
-              <app-button variant="secondary" (pressed)="addExpense(row)">Add expense</app-button>
+              <app-button variant="secondary" (pressed)="addExpense(row)">Add Expense</app-button>
             </div>
           }
         </section>
@@ -92,7 +92,7 @@
 
       @if (bars().length) {
         <section class="block">
-          <h2 class="t-heading">Spend by Month, {{ found.currency_code }}</h2>
+          <h2 class="t-heading">Expenses by Month, {{ found.currency_code }}</h2>
           <div class="chart" role="img" [attr.aria-label]="heaviest()">
             @for (bar of bars(); track bar.month) {
               <span class="column" [title]="barTitle(bar)">
@@ -136,7 +136,7 @@
 
       @if (recent().length) {
         <section class="block">
-          <h2 class="t-heading">Latest Spend</h2>
+          <h2 class="t-heading">Recent Expenses</h2>
           <div class="latest">
             @for (row of recent(); track row.id) {
               <button type="button" class="spend" (click)="openSpend(row)">
@@ -154,11 +154,9 @@
     } @else {
       <div class="card">
         <p class="t-body">Nothing recorded yet.</p>
-        <p class="t-small">
-          A project takes a name, a currency and its scopes, then the plan, then what you spend.
-        </p>
+        <p class="t-small">A project needs a name, a currency and its categories, then a budget.</p>
         <div class="actions">
-          <app-button (pressed)="newProject()">New project</app-button>
+          <app-button (pressed)="newProject()">New Project</app-button>
         </div>
       </div>
     }

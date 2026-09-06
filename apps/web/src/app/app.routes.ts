@@ -22,7 +22,7 @@ import { authGuard, guestGuard } from './auth/auth.guard';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent, canActivate: [guestGuard], title: 'Unlock' },
-  { path: 'setup', component: SetupComponent, canActivate: [guestGuard], title: 'Set up' },
+  { path: 'setup', component: SetupComponent, canActivate: [guestGuard], title: 'Setup' },
   { path: '', component: DashboardComponent, canActivate: [authGuard], title: 'Dashboard' },
   {
     path: 'projects',
@@ -40,7 +40,7 @@ export const routes: Routes = [
     path: 'import',
     component: ImportComponent,
     canActivate: [authGuard],
-    title: 'Import a Sheet',
+    title: 'Import Spreadsheet',
   },
   {
     path: 'projects/:id',
@@ -67,7 +67,7 @@ export const routes: Routes = [
     path: 'lands/:id/edit',
     component: LandFormComponent,
     canActivate: [authGuard],
-    title: 'Edit land',
+    title: 'Edit Land',
   },
   {
     path: 'lands/:id',
@@ -86,7 +86,7 @@ export const routes: Routes = [
     path: 'vendors/:id/edit',
     component: VendorFormComponent,
     canActivate: [authGuard],
-    title: 'Edit vendor',
+    title: 'Edit Vendor',
   },
   {
     path: 'vendors/:id',
@@ -99,13 +99,13 @@ export const routes: Routes = [
     path: 'people/new',
     component: PersonFormComponent,
     canActivate: [authGuard],
-    title: 'Add Someone',
+    title: 'Add Person',
   },
   {
     path: 'people/:id/edit',
     component: PersonFormComponent,
     canActivate: [authGuard],
-    title: 'Edit person',
+    title: 'Edit Person',
   },
   {
     path: 'people/:id',

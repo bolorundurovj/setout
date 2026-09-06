@@ -6,8 +6,7 @@
   } @else if (person(); as p) {
     @if (p.deleted_at) {
       <p class="banner warn t-small">
-        Archived. Everything they paid for still counts; they no longer come up as a payer on the
-        expense form.
+        Archived. Their expenses still count. They no longer appear as a payer on the expense form.
       </p>
     }
 
@@ -21,7 +20,7 @@
           <app-button variant="secondary" (pressed)="edit()">Edit</app-button>
           <app-button variant="danger" (pressed)="archive()">Archive</app-button>
         } @else {
-          <app-button (pressed)="restore()">Take out of the archive</app-button>
+          <app-button (pressed)="restore()">Restore</app-button>
         }
       </div>
     </div>
@@ -46,22 +45,22 @@
         }
       </div>
       <div class="fact">
-        <span class="t-micro">Balance</span>
+        <span class="t-micro">Outstanding Balance</span>
         <span class="fact-figure t-mono">{{ notSet }}</span>
       </div>
     </div>
 
     <p class="t-small muted">
-      A balance belongs to a project, because a total must never cross two currencies. Open a
-      project and look under Agreements to see what someone was given and what they still hold.
+      A balance belongs to a project so that a total never spans two currencies. Open a project and
+      see Agreements for what someone was given and what they still hold.
     </p>
 
     <section class="block">
-      <h2 class="t-heading">What They Bought</h2>
+      <h2 class="t-heading">Their Expenses</h2>
 
       @if (spend(); as s) {
         @if (s.projects.length === 0) {
-          <div class="card"><p class="t-body">Nothing paid for yet.</p></div>
+          <div class="card"><p class="t-body">No expenses yet.</p></div>
         } @else {
           <div class="table">
             <div class="row head-row">
@@ -85,12 +84,12 @@
             }
           </div>
           <p class="t-small muted">
-            Projects are listed separately. Two currencies would never be added together. Every
-            purchase they made is listed under them, so a balance can always be taken apart.
+            Projects are listed separately so that currencies are never combined. Every expense is
+            listed under its project.
           </p>
         }
       } @else {
-        <p class="t-small muted">Could not read what they spent.</p>
+        <p class="t-small muted">Could not load their expenses.</p>
       }
     </section>
 
@@ -102,8 +101,8 @@
     }
   } @else {
     <div class="card">
-      <p class="t-body">That person is not here.</p>
-      <p class="t-small"><a class="link" routerLink="/people">Back to all people</a></p>
+      <p class="t-body">Person not found.</p>
+      <p class="t-small"><a class="link" routerLink="/people">Back to People</a></p>
     </div>
   }
 </div>

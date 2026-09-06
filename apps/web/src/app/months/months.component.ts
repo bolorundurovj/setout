@@ -87,7 +87,7 @@ export class MonthsComponent {
     if (!row) {
       return 'Nothing recorded yet. The first expense you add opens the first month.';
     }
-    return `${row.label} was the heaviest month, at ${this.money(row.amount)}. Every expense sits in the month it was spent, so the months add up to the project total.`;
+    return `Highest month: ${row.label} at ${this.money(row.amount)}. Every expense falls in the month it was spent, so the months total the project.`;
   });
 
   constructor() {
@@ -145,11 +145,10 @@ export class MonthsComponent {
 
   scopeName(expense: ExpenseRead): string {
     if (!expense.scope_id) {
-      return 'Not filed to a scope';
+      return 'Uncategorized';
     }
     return (
-      this.budget.scopes().find((scope) => scope.id === expense.scope_id)?.name ??
-      'Not filed to a scope'
+      this.budget.scopes().find((scope) => scope.id === expense.scope_id)?.name ?? 'Uncategorized'
     );
   }
 }

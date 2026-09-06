@@ -140,7 +140,7 @@ export class VendorDetailComponent {
   async archive(): Promise<void> {
     await this.vendors.archive(this.id());
     await this.load();
-    this.toast.show('Vendor archived. Everything filed against them still counts.');
+    this.toast.show('Vendor archived. Their expenses still count.');
   }
 
   async restore(): Promise<void> {

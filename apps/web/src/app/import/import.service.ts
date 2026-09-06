@@ -44,7 +44,7 @@ export class ImportService {
         },
       });
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'That file could not be read.');
+      this.error.set(detailOf(e) ?? 'The file could not be read.');
       return null;
     } finally {
       this.working.set(false);

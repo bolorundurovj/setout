@@ -44,5 +44,5 @@ export function disagreementNote(where: Disagreement, pin: GeocodedPlace): strin
     town: pin.city,
   }[where];
   const noun = where === 'town' ? 'town' : where;
-  return `The pin is in a different ${noun}. The map calls it ${said}.`;
+  return `The location pin is in a different ${noun}. The map address is ${said}.`;
 }

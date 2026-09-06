@@ -127,14 +127,12 @@ describe('LandDetailComponent', () => {
 
   it('names the papers that have not arrived yet', async () => {
     const { component } = await render();
-    expect(component.missingLine()).toBe(
-      'Still to come: Certificate of Occupancy, Survey plan, Deed.',
-    );
+    expect(component.missingLine()).toBe('Missing: Certificate of Occupancy, Survey Plan, Deed.');
   });
 
   it('says so plainly once every paper is in', async () => {
     const { component } = await render(land({ missing_kinds: [] }));
-    expect(component.missingLine()).toBe('Every paper worth chasing is here.');
+    expect(component.missingLine()).toBe('All required documents are present.');
   });
 
   it('shows the size the way it was recorded', async () => {
@@ -157,7 +155,7 @@ describe('LandDetailComponent', () => {
     } as unknown as Event);
 
     expect(uploads).toEqual([{ kind: 'survey_plan', file, note: '' }]);
-    expect(toasts[0].message).toBe('Survey plan kept.');
+    expect(toasts[0].message).toBe('Survey Plan uploaded.');
   });
 
   it('does nothing when the picker is dismissed', async () => {
@@ -352,8 +350,8 @@ describe('LandDetailComponent', () => {
 
       const banner = element.querySelector('.banner.warn.pin-warning');
       expect(banner).not.toBeNull();
-      expect(banner?.textContent).toContain('outside the edge');
-      expect(banner?.querySelector('button')?.textContent).toContain('Fix it on the form');
+      expect(banner?.textContent).toContain('outside the mapped survey');
+      expect(banner?.querySelector('button')?.textContent).toContain('Edit Land');
     });
 
     it('offers nothing to press on an archived plot', async () => {
@@ -367,7 +365,7 @@ describe('LandDetailComponent', () => {
       );
 
       const banner = element.querySelector('.banner.warn.pin-warning');
-      expect(banner?.textContent).toContain('outside the edge');
+      expect(banner?.textContent).toContain('outside the mapped survey');
       expect(banner?.querySelector('button')).toBeNull();
     });
 

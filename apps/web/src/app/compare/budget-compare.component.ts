@@ -58,7 +58,7 @@ export class BudgetCompareComponent {
     if (unfiled > 0) {
       rows.push({
         id: UNFILED,
-        name: 'Not filed to a scope',
+        name: 'Uncategorized',
         planned: 0,
         spent: unfiled,
         count: this.expenses.spend()?.unfiled_count ?? 0,
@@ -91,7 +91,7 @@ export class BudgetCompareComponent {
       return '';
     }
     const rows = removed === 1 ? 'expense' : 'expenses';
-    return `${removed} ${rows} taken off the record in this project, counted nowhere.`;
+    return `${removed} ${rows} removed from this project and not counted.`;
   });
 
   constructor() {

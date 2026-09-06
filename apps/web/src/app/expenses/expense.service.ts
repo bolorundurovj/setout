@@ -71,7 +71,7 @@ export class ExpenseService {
       this.totalState.set(rows.total);
       this.pageState.set(page);
     } catch {
-      this.error.set('Could not load what has been spent.');
+      this.error.set('Could not load expenses.');
     }
     await this.loadSpend(projectId);
   }
@@ -108,7 +108,7 @@ export class ExpenseService {
       this.monthsState.set(await this.api.invoke(getProjectMonths, { project_id: projectId }));
     } catch {
       this.monthsState.set(null);
-      this.error.set('Could not work out where the money went.');
+      this.error.set('Could not load the expense summary.');
     }
   }
 
@@ -153,7 +153,7 @@ export class ExpenseService {
       await this.goTo(projectId, this.pageState());
       return created;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not save that expense.');
+      this.error.set(detailOf(e) ?? 'Could not save the expense.');
       return null;
     } finally {
       this.saving.set(false);
@@ -173,7 +173,7 @@ export class ExpenseService {
       await this.loadSpend(projectId);
       return updated;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not change that expense.');
+      this.error.set(detailOf(e) ?? 'Could not update the expense.');
       return null;
     } finally {
       this.saving.set(false);
@@ -189,7 +189,7 @@ export class ExpenseService {
       await this.loadSpend(projectId);
       return result.filed_count;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not file those expenses.');
+      this.error.set(detailOf(e) ?? 'Could not assign those expenses.');
       return null;
     } finally {
       this.saving.set(false);

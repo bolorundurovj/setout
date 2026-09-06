@@ -184,7 +184,7 @@ export class SetupComponent {
       this.password(),
     );
     if (success) {
-      this.toast.show('Server ready. Welcome to SetOut.');
+      this.toast.show('Server ready. Welcome to Setout.');
       await this.router.navigate(['/']);
     }
   }

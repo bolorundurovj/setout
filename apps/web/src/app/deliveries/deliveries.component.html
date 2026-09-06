@@ -2,8 +2,8 @@
   <div class="intro">
     <h2 class="t-heading">Deliveries</h2>
     <p class="prose">
-      What you have paid for and not received. The money is already counted as spent, so marking
-      something delivered moves no total.
+      What you have paid for and not received. The amount is already counted as spent, so marking an
+      item delivered does not change any total.
     </p>
   </div>
 
@@ -14,7 +14,7 @@
   @if (justRemoved(); as gone) {
     <p class="banner t-small">
       {{ gone.description }} is no longer owed.
-      <button type="button" class="link-action" (click)="putBackRemoved()">Put It Back</button>
+      <button type="button" class="link-action" (click)="putBackRemoved()">Undo</button>
     </p>
   }
 
@@ -26,9 +26,9 @@
 
     @if (waitingRows().length === 0) {
       <div class="card">
-        <p class="t-body">Nothing is outstanding.</p>
+        <p class="t-body">Nothing outstanding.</p>
         <p class="t-small">
-          Tick "Paid for, not delivered yet" when you file an expense and it will wait here.
+          Tick "Paid for, not delivered yet" when adding an expense and it appears here.
         </p>
       </div>
     } @else {
@@ -37,7 +37,7 @@
           <div class="owed editing">
             <div class="edit-fields">
               <div class="field">
-                <label class="t-micro" [attr.for]="'owed-what-' + owed.id">What is owed</label>
+                <label class="t-micro" [attr.for]="'owed-what-' + owed.id">What Is Owed</label>
                 <input
                   [id]="'owed-what-' + owed.id"
                   class="input-field"

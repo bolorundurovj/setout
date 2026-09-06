@@ -117,7 +117,7 @@ export class AgreementsComponent {
       agreed_amount: agreed,
     });
     if (!changed) {
-      this.toast.show(this.agreements.error() ?? 'Could not change that agreement.', 'error');
+      this.toast.show(this.agreements.error() ?? 'Could not update the agreement.', 'error');
       return;
     }
     this.cancelEdit();
@@ -140,7 +140,7 @@ export class AgreementsComponent {
     }
     const changed = await this.agreements.editAdvance(this.project().id, advance.id, { amount });
     if (!changed) {
-      this.toast.show(this.agreements.error() ?? 'Could not change that advance.', 'error');
+      this.toast.show(this.agreements.error() ?? 'Could not update the advance.', 'error');
       return;
     }
     this.cancelEditAdvance();
@@ -176,7 +176,7 @@ export class AgreementsComponent {
       cost_type: 'labour',
     });
     if (!created) {
-      this.toast.show(this.expenses.error() ?? 'Could not record that payment.', 'error');
+      this.toast.show(this.expenses.error() ?? 'Could not record the payment.', 'error');
       return;
     }
     this.cancelPayment();
@@ -235,7 +235,7 @@ export class AgreementsComponent {
       this.toast.show(`Agreed ${this.money(created.agreed_amount)} with ${created.vendor_name}.`);
       this.cancel();
     } else {
-      this.toast.show(this.agreements.error() ?? 'Could not save that agreement.', 'error');
+      this.toast.show(this.agreements.error() ?? 'Could not save the agreement.', 'error');
     }
   }
 
@@ -254,11 +254,11 @@ export class AgreementsComponent {
       amount,
     });
     if (created) {
-      this.toast.show(`${this.money(amount)} given to ${created.person_name}.`);
+      this.toast.show(`Advance of ${this.money(amount)} issued to ${created.person_name}.`);
       this.advanceAmount.set('');
       this.addingAdvance.set(false);
     } else {
-      this.toast.show(this.agreements.error() ?? 'Could not save that advance.', 'error');
+      this.toast.show(this.agreements.error() ?? 'Could not save the advance.', 'error');
     }
   }
 

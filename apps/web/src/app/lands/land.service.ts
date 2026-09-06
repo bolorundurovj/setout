@@ -121,7 +121,7 @@ export class LandService {
       void this.counts.load();
       return created;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not add that land.');
+      this.error.set(detailOf(e) ?? 'Could not add the land.');
       return null;
     } finally {
       this.saving.set(false);
@@ -135,7 +135,7 @@ export class LandService {
       this.state.update((rows) => rows.map((row) => (row.id === landId ? updated : row)));
       return updated;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not save that land.');
+      this.error.set(detailOf(e) ?? 'Could not save the land.');
       return null;
     }
   }
@@ -156,7 +156,7 @@ export class LandService {
     try {
       return await this.api.invoke(getLand, { land_id: landId });
     } catch {
-      this.error.set('Could not load that land.');
+      this.error.set('Could not load the land.');
       return null;
     }
   }
@@ -185,7 +185,7 @@ export class LandService {
         body: { file: file as unknown as string, kind, note: note ?? undefined },
       });
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not keep that file.');
+      this.error.set(detailOf(e) ?? 'Could not upload the file.');
       return null;
     } finally {
       this.saving.set(false);
@@ -213,7 +213,7 @@ export class LandService {
     try {
       return await this.api.invoke(updateLandDocument, { document_id: documentId, body });
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not save that paper.');
+      this.error.set(detailOf(e) ?? 'Could not save the document.');
       return null;
     }
   }
@@ -233,7 +233,7 @@ export class LandService {
     try {
       return await this.api.invoke(addLandValuation, { land_id: landId, body });
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not record that.');
+      this.error.set(detailOf(e) ?? 'Could not save the valuation.');
       return null;
     } finally {
       this.saving.set(false);

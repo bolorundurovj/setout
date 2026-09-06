@@ -79,7 +79,7 @@ describe('ExpenseService', () => {
     });
     await service.load('p1');
 
-    expect(service.error()).toBe('Could not load what has been spent.');
+    expect(service.error()).toBe('Could not load expenses.');
     expect(service.expenses()).toEqual([]);
   });
 
@@ -164,7 +164,7 @@ describe('ExpenseService', () => {
     });
 
     await service.add('p1', { description: 'Blocks', amount: 1 });
-    expect(service.error()).toBe('Could not save that expense.');
+    expect(service.error()).toBe('Could not save the expense.');
   });
 
   it('reads the page back after removing one', async () => {

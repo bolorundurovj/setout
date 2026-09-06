@@ -74,7 +74,7 @@ export class AttachmentService {
       this.put(expenseId, [back, ...this.forExpense(expenseId)]);
       return back;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not put that file back.');
+      this.error.set(detailOf(e) ?? 'Could not restore the file.');
       return null;
     }
   }

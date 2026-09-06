@@ -126,7 +126,7 @@ export class AgreementService {
         }
       }
     } catch {
-      this.error.set('Could not read what has been paid.');
+      this.error.set('Could not load payments.');
     }
     this.paymentState.set(byAgreement);
   }
@@ -171,7 +171,7 @@ export class AgreementService {
       this.agreementTotalState.update((total) => total + 1);
       return created;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not save that agreement.');
+      this.error.set(detailOf(e) ?? 'Could not save the agreement.');
       return null;
     } finally {
       this.saving.set(false);
@@ -191,7 +191,7 @@ export class AgreementService {
       );
       return changed;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not change that agreement.');
+      this.error.set(detailOf(e) ?? 'Could not update the agreement.');
       return null;
     } finally {
       this.saving.set(false);
@@ -213,7 +213,7 @@ export class AgreementService {
       await this.loadBalances(projectId);
       return created;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not save that advance.');
+      this.error.set(detailOf(e) ?? 'Could not save the advance.');
       return null;
     } finally {
       this.saving.set(false);
@@ -233,7 +233,7 @@ export class AgreementService {
       await this.loadBalances(projectId);
       return changed;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not change that advance.');
+      this.error.set(detailOf(e) ?? 'Could not update the advance.');
       return null;
     } finally {
       this.saving.set(false);

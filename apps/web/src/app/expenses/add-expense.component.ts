@@ -165,7 +165,7 @@ export class AddExpenseComponent {
   readonly photoLabel = computed(() => {
     const file = this.chosen();
     if (!file) {
-      return 'Photograph the receipt now. Paper on site does not survive the month';
+      return 'Attach a receipt photo now.';
     }
     return `${file.name} � ${this.attachments.size(file.size)} � kept beside the record on your own server`;
   });
@@ -233,23 +233,23 @@ export class AddExpenseComponent {
   scopeNote(): string {
     const scope = this.budget.scopes().find((s) => s.id === this.scopeId());
     if (!scope) {
-      return 'Files as unfiled. Nothing is blocked, and you can file it later.';
+      return 'Saved as Uncategorized. You can assign a category later.';
     }
     if (this.scopeId() === this.suggestedScopeId()) {
-      return `Suggested from past purchases. Counts against the plan for ${scope.name}.`;
+      return `Suggested from past purchases. Counts against the budget for ${scope.name}.`;
     }
-    return `Counts against the plan for ${scope.name}.`;
+    return `Counts against the budget for ${scope.name}.`;
   }
 
   dateNote(): string {
     return this.spentOn() === isoDay()
       ? 'Today. Change it when you are working through a pile of receipts.'
-      : `Filed on ${this.spentOn()}, not today. It lands in that month.`;
+      : `Recorded on ${this.spentOn()}, not today. It counts in that month.`;
   }
 
   costTypeNote(): string {
     return this.costType()
-      ? 'Splits the project total three ways on the dashboard. Tap again to clear it.'
+      ? 'Splits the project total three ways on the dashboard. Tap again to clear.'
       : 'Optional. Leave it off and the expense still counts in every total.';
   }
 
@@ -297,7 +297,7 @@ export class AddExpenseComponent {
 
   saveHint(): string {
     return this.canSave()
-      ? `Files to ${this.project().name}`
+      ? `Saves to ${this.project().name}`
       : 'Description and amount are all that is required.';
   }
 

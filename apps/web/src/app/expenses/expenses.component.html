@@ -3,13 +3,13 @@
     <div class="intro-text">
       <h2 class="t-heading">Expenses</h2>
       <p class="prose">
-        Everything spent on {{ project().name }}, newest first. Recording a purchase is never
-        blocked by a missing budget.
+        All expenses for {{ project().name }}, newest first. An expense can be added without a
+        budget.
       </p>
     </div>
     <div class="intro-actions">
       @if (!filing() && expenses.spend()?.unfiled_count) {
-        <app-button variant="secondary" (pressed)="startFiling()">File unfiled</app-button>
+        <app-button variant="secondary" (pressed)="startFiling()">Assign Uncategorized</app-button>
       }
       <app-button (pressed)="openDrawer()">Add Expense</app-button>
     </div>
@@ -19,14 +19,14 @@
     <div class="summary">
       <span class="t-micro">Spent</span>
       <span class="summary-figure t-mono">{{ money(spend.spent_amount) }}</span>
-      <span class="t-micro">Planned</span>
+      <span class="t-micro">Budgeted</span>
       <span class="summary-figure t-mono">{{ money(spend.planned_amount) }}</span>
       @if (spend.unfiled_amount > 0) {
-        <span class="t-micro">Unfiled</span>
+        <span class="t-micro">Uncategorized</span>
         <span class="summary-figure t-mono">{{ money(spend.unfiled_amount) }}</span>
       }
       @if (spend.variance_percent !== null) {
-        <span class="t-micro">Against plan</span>
+        <span class="t-micro">Against Budget</span>
         <span class="summary-figure t-mono" [class.over]="spend.variance_percent > 0">
           {{ variance(spend.variance_percent) }}
         </span>
@@ -54,7 +54,7 @@
         [ngModel]="bulkScopeId()"
         (ngModelChange)="bulkScopeId.set($event)"
       >
-        <option value="">Pick a scope</option>
+        <option value="">Select a category</option>
         @for (scope of fileableScopes(); track scope.id) {
           <option [value]="scope.id">{{ scope.name }}</option>
         }
@@ -62,20 +62,20 @@
       <div class="bulk-actions">
         <app-button variant="secondary" (pressed)="stopFiling()">Cancel</app-button>
         <app-button [disabled]="!canFile()" (pressed)="fileSelected()">
-          File {{ selectedCount() }} expense{{ selectedCount() === 1 ? '' : 's' }}
+          Assign {{ selectedCount() }} expense{{ selectedCount() === 1 ? '' : 's' }}
         </app-button>
       </div>
     </div>
 
     @if (unfiled().length === 0) {
       <div class="card">
-        <p class="t-body">Nothing left to file.</p>
+        <p class="t-body">Nothing left to assign.</p>
       </div>
     } @else {
       <div class="table bulk">
         <div class="row head">
           <span></span>
-          <span class="t-micro">What It Was</span>
+          <span class="t-micro">Description</span>
           <span class="t-micro right">Amount</span>
           <span class="t-micro right">Date</span>
         </div>
@@ -114,13 +114,13 @@
   } @else if (expenses.expenses().length === 0) {
     <div class="card">
       <p class="t-body">Nothing recorded yet.</p>
-      <p class="t-small">The first expense you add shows up here.</p>
+      <p class="t-small">The first expense you add appears here.</p>
     </div>
   } @else {
     <div class="table">
       <div class="row head">
-        <span class="t-micro">What It Was</span>
-        <span class="t-micro">Scope</span>
+        <span class="t-micro">Description</span>
+        <span class="t-micro">Category</span>
         <span class="t-micro right">Amount</span>
         <span class="t-micro right">Date</span>
         <span></span>

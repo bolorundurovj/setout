@@ -180,7 +180,7 @@ describe('ImportComponent', () => {
       'Bring them in again',
     ]);
     expect(component.answerFor(answer)).toBe('yes');
-    expect(component.consequenceFor(answer)).toContain('not doubled');
+    expect(component.consequenceFor(answer)).toContain('not duplicated');
   });
 
   it('changes an answer only to the one that was chosen', () => {

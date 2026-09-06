@@ -108,10 +108,10 @@ export class ImportComponent {
   readonly samples = [
     { kind: 'blank', name: 'Blank workbook', detail: 'Every sheet, headings only, ready to fill' },
     { kind: 'example', name: 'Filled example', detail: 'The same shape with rows to copy' },
-    { kind: 'budget-csv', name: 'Budget as a CSV', detail: 'One sheet, for a plan on its own' },
+    { kind: 'budget-csv', name: 'Budget as a CSV', detail: 'One sheet, for a budget on its own' },
     {
       kind: 'spending-csv',
-      name: 'Spending as a CSV',
+      name: 'Expenses as a CSV',
       detail: 'One sheet, for invoices on their own',
     },
   ];
@@ -166,7 +166,7 @@ export class ImportComponent {
   }
 
   scopeMatch(matchedTo: string | null | undefined): string {
-    return matchedTo ? `into ${matchedTo}` : 'new scope';
+    return matchedTo ? `into ${matchedTo}` : 'new category';
   }
 
   sampleDay(row: SampleRow): string {
@@ -199,8 +199,8 @@ export class ImportComponent {
         ];
       case 'several_codes':
         return [
-          { value: 'first', label: 'File under the first' },
-          { value: 'unfiled', label: 'Leave unfiled' },
+          { value: 'first', label: 'Assign to the first' },
+          { value: 'unfiled', label: 'Leave uncategorized' },
         ];
       default:
         return [];
@@ -247,20 +247,20 @@ export class ImportComponent {
     switch (decision.kind) {
       case 'new_scopes':
         return this.createMissingScopes()
-          ? 'The plan comes in against these scopes.'
-          : 'No budget is written at all, and the spending arrives unfiled.';
+          ? 'The budget is imported against these categories.'
+          : 'No budget is written, and expenses arrive uncategorized.';
       case 'duplicates':
         return this.skipDuplicates()
-          ? 'Left alone, so the spend is not doubled.'
-          : 'Filed a second time, doubling the spend.';
+          ? 'Skipped, so expenses are not duplicated.'
+          : 'Imported a second time, duplicating expenses.';
       case 'unpaid':
         return this.takeUnpaid()
           ? 'Counted as spent, since the invoice exists.'
-          : 'Left out until they are paid.';
+          : 'Excluded until they are paid.';
       case 'several_codes':
         return this.severalCodes() === 'first'
           ? 'One amount cannot be split, so it lands under the first code named.'
-          : 'Left against no scope, to be filed by hand.';
+          : 'Left uncategorized, to be assigned by hand.';
       default:
         return '';
     }
@@ -273,7 +273,7 @@ export class ImportComponent {
     }
     const found = await this.sheets.look(chosen, this.target());
     if (!found) {
-      this.toast.show(this.sheets.error() ?? 'That file could not be read.', 'error');
+      this.toast.show(this.sheets.error() ?? 'The file could not be read.', 'error');
       return;
     }
     this.report.set(found);

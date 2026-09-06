@@ -133,7 +133,7 @@ describe('LandFormComponent', () => {
     component.name.set('Ewuru plot');
     component.sizeValue.set('648');
 
-    expect(component.sizeNote()).toBe('Say what the figure is measured in.');
+    expect(component.sizeNote()).toBe('Select a unit for the area.');
     expect(component.isValid()).toBe(false);
   });
 
@@ -142,7 +142,7 @@ describe('LandFormComponent', () => {
     component.name.set('Ewuru plot');
     component.sizeUnit.set('acre');
 
-    expect(component.sizeNote()).toBe('Say how big it is, or clear the unit.');
+    expect(component.sizeNote()).toBe('Enter an area, or clear the unit.');
     expect(component.isValid()).toBe(false);
   });
 
@@ -280,7 +280,7 @@ describe('LandFormComponent', () => {
 
     component.onTyped(['6.5244, 3.3792', 'beacon 4 by the road'].join('\n'));
 
-    expect(component.typeNote()).toBe('Line 2 does not read as a coordinate.');
+    expect(component.typeNote()).toBe('Line 2 is not a valid coordinate.');
     expect(component.edge()).toBe(good);
   });
 

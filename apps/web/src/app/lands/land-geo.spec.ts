@@ -134,7 +134,7 @@ describe('land geo', () => {
   });
 
   it('says so when it is not JSON at all', () => {
-    expect(parseBoundary('a plot near the church').error).toBe('That is not JSON.');
+    expect(parseBoundary('a plot near the church').error).toBe('Not valid JSON.');
   });
 
   it('says so when the shape is not a polygon', () => {
@@ -245,7 +245,7 @@ describe('land geo', () => {
 
     it('says which line it could not read', () => {
       const { error } = parseCorners(['6.5244, 3.3792', 'somewhere near the church 12'].join('\n'));
-      expect(error).toBe('Line 2 does not read as a coordinate.');
+      expect(error).toBe('Line 2 is not a valid coordinate.');
     });
 
     it('says how many more corners it needs', () => {

@@ -1,7 +1,7 @@
-<h2 class="t-heading">What it is worth</h2>
+<h2 class="t-heading">Valuations</h2>
 
 @if (rows().length === 0) {
-  <p class="t-small muted">Nothing recorded yet. What it cost is the place to start.</p>
+  <p class="t-small muted">No valuations yet. Start with the purchase price.</p>
 } @else {
   <div class="entries">
     @for (row of rows(); track row.id; let i = $index) {
@@ -30,9 +30,9 @@
 @if (adding()) {
   <div class="card add">
     <div class="field">
-      <span class="t-micro">What this is</span>
+      <span class="t-micro">Valuation Type</span>
       <app-chip-group
-        label="What this is"
+        label="Valuation Type"
         [chips]="kindChips()"
         [value]="kind()"
         (valueChange)="kind.set($any($event))"
@@ -43,23 +43,23 @@
       <div class="field">
         <span class="t-micro">Currency</span>
         <app-currency-pill [code]="pinned()" />
-        <span class="t-small muted">Fixed by the first entry, so the history compares.</span>
+        <span class="t-small muted">Set by the first entry so values can be compared.</span>
       </div>
     } @else {
       <div class="field">
-        <span class="t-micro">Currency &middot; required</span>
+        <span class="t-micro">Currency (required)</span>
         <app-chip-group
           label="Currency"
           [chips]="currencyChips()"
           [value]="currency()"
           (valueChange)="currency.set($event)"
         />
-        <span class="t-small muted">This one fixes what every later entry has to use.</span>
+        <span class="t-small muted">This sets the currency for all later entries.</span>
       </div>
     }
 
     <label class="field">
-      <span class="t-micro">Amount &middot; required</span>
+      <span class="t-micro">Amount (required)</span>
       <span class="amount">
         <span class="amount-prefix t-mono">{{ symbol() }}</span>
         <input
@@ -74,7 +74,7 @@
     </label>
 
     <label class="field">
-      <span class="t-micro">On &middot; required</span>
+      <span class="t-micro">Date (required)</span>
       <input
         class="input-field t-mono"
         type="date"

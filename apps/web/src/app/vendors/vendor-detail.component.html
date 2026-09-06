@@ -2,16 +2,16 @@
   <a class="link t-mono back" routerLink="/vendors">&#8592; Vendors</a>
 
   @if (loading()) {
-    <div class="card"><p class="t-body">Loading the vendor…</p></div>
+    <div class="card"><p class="t-body">Loading vendor…</p></div>
   } @else if (vendor(); as v) {
     @if (v.deleted_at) {
       <p class="banner warn t-small">
-        Archived. Everything filed against them still counts; they no longer come up when you pick a
-        vendor on the expense form.
+        Archived. Their expenses still count. They no longer appear when selecting a vendor on the
+        expense form.
       </p>
     } @else if (needsFillingIn(v)) {
       <p class="banner warn t-small">
-        Added with the name only. Add the trade and a phone number while you still remember them.
+        Added with a name only. Add the trade and a phone number when you can.
       </p>
     }
 
@@ -22,17 +22,17 @@
       </div>
       <div class="head-actions">
         @if (!v.deleted_at) {
-          <app-button variant="secondary" (pressed)="edit()">Edit vendor</app-button>
+          <app-button variant="secondary" (pressed)="edit()">Edit Vendor</app-button>
           <app-button variant="danger" (pressed)="archive()">Archive</app-button>
         } @else {
-          <app-button (pressed)="restore()">Take out of the archive</app-button>
+          <app-button (pressed)="restore()">Restore</app-button>
         }
       </div>
     </div>
 
     <div class="facts">
       <div class="fact">
-        <span class="t-micro">Person to ask for</span>
+        <span class="t-micro">Contact</span>
         <span class="t-body">{{ v.contact_name ?? notSet }}</span>
       </div>
       <div class="fact">
@@ -44,14 +44,14 @@
         <span class="t-body t-mono">{{ v.email ?? 'no email' }}</span>
       </div>
       <div class="fact">
-        <span class="t-micro">Expenses filed</span>
+        <span class="t-micro">Expenses</span>
         <span class="t-body t-mono">{{ v.expense_count }}</span>
       </div>
     </div>
 
     @if (owedHere().length > 0) {
       <section class="block">
-        <h2 class="t-heading">Paid for, Not Delivered</h2>
+        <h2 class="t-heading">Paid For, Not Delivered</h2>
         @for (owed of owedHere(); track owed.id) {
           <div class="owed">
             <span class="owed-text">
@@ -68,11 +68,11 @@
     }
 
     <section class="block">
-      <h2 class="t-heading">Spent with This Vendor</h2>
+      <h2 class="t-heading">Spent With This Vendor</h2>
 
       @if (spend(); as s) {
         @if (s.projects.length === 0) {
-          <div class="card"><p class="t-body">Nothing filed against them yet.</p></div>
+          <div class="card"><p class="t-body">No expenses yet.</p></div>
         } @else {
           <div class="table">
             <div class="row head-row">
@@ -100,7 +100,7 @@
           </p>
         }
       } @else {
-        <p class="t-small muted">Could not read what was spent with them.</p>
+        <p class="t-small muted">Could not load their expenses.</p>
       }
     </section>
 
@@ -108,19 +108,19 @@
       <h2 class="t-heading">Agreements</h2>
       @if (agreements().length === 0) {
         <div class="card">
-          <p class="t-body">No agreements with them.</p>
+          <p class="t-body">No agreements with this vendor.</p>
           <p class="t-small">
-            An agreed price is set on a project, under Agreements. Every one with this vendor shows
-            here.
+            An agreed price is set on a project under Agreements. All agreements with this vendor
+            appear here.
           </p>
         </div>
       } @else {
         <div class="table">
           <div class="row agreement head-row">
-            <span class="t-micro">What was agreed</span>
+            <span class="t-micro">Agreement</span>
             <span class="t-micro right">Agreed</span>
             <span class="t-micro right">Paid</span>
-            <span class="t-micro right">Left</span>
+            <span class="t-micro right">Remaining</span>
           </div>
           @for (a of agreements(); track a.id) {
             <div class="row agreement">
@@ -150,8 +150,8 @@
     }
   } @else {
     <div class="card">
-      <p class="t-body">That vendor is not here.</p>
-      <p class="t-small"><a class="link" routerLink="/vendors">Back to all vendors</a></p>
+      <p class="t-body">Vendor not found.</p>
+      <p class="t-small"><a class="link" routerLink="/vendors">Back to Vendors</a></p>
     </div>
   }
 </div>

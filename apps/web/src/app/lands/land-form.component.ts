@@ -85,9 +85,9 @@ export class LandFormComponent {
   readonly edgeBy = signal('draw');
 
   readonly edgeWays: Chip[] = [
-    { value: 'draw', label: 'Draw it' },
-    { value: 'corners', label: 'Type corners' },
-    { value: 'survey', label: 'From a survey' },
+    { value: 'draw', label: 'Draw on Map' },
+    { value: 'corners', label: 'Enter Survey Points' },
+    { value: 'survey', label: 'From a Survey' },
   ];
 
   readonly countryChips = computed<Chip[]>(() =>
@@ -290,8 +290,8 @@ export class LandFormComponent {
 
   subtitle(): string {
     return this.isEdit()
-      ? 'Changing a plot here changes it on every project built on it.'
-      : 'A name is enough. The survey figure and the papers can follow.';
+      ? 'Changes here apply to every project that references this land.'
+      : 'A name is enough. The area and documents can be added later.';
   }
 
   value(event: Event): string {
@@ -313,13 +313,13 @@ export class LandFormComponent {
     const value = this.sizeValue().trim();
     const unit = this.sizeUnit();
     if (value && !unit) {
-      return 'Say what the figure is measured in.';
+      return 'Select a unit for the area.';
     }
     if (unit && !value) {
-      return 'Say how big it is, or clear the unit.';
+      return 'Enter an area, or clear the unit.';
     }
     if (value && Number(value) <= 0) {
-      return 'A size has to be more than nothing.';
+      return 'The area must be greater than zero.';
     }
     return '';
   }
@@ -356,7 +356,7 @@ export class LandFormComponent {
       this.toast.show(this.isEdit() ? 'Land saved.' : `${saved.name} added.`);
       void this.router.navigate(['/lands', saved.id]);
     } else {
-      this.toast.show(this.lands.error() ?? 'Could not save that land.', 'error');
+      this.toast.show(this.lands.error() ?? 'Could not save the land.', 'error');
     }
   }
 }

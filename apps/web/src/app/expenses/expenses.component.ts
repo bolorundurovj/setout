@@ -66,12 +66,12 @@ export class ExpensesComponent {
     if (percent > 0) {
       return `${rounded}% over`;
     }
-    return percent < 0 ? `${rounded}% under` : 'on plan';
+    return percent < 0 ? `${rounded}% under` : 'on budget';
   }
 
   scopeName(expense: ExpenseRead): string {
     if (!expense.scope_id) {
-      return 'Unfiled';
+      return 'Uncategorized';
     }
     return this.budget.scopes().find((s) => s.id === expense.scope_id)?.name ?? 'Unfiled';
   }
@@ -89,7 +89,7 @@ export class ExpensesComponent {
 
   photoTitle(expense: ExpenseRead): string {
     const count = expense.attachment_count;
-    return count === 1 ? 'One file kept beside this' : `${count} files kept beside this`;
+    return count === 1 ? 'One file attached' : `${count} files attached`;
   }
 
   openDrawer(): void {
@@ -159,7 +159,7 @@ export class ExpensesComponent {
       scope_id: this.bulkScopeId(),
     });
     if (count === null) {
-      this.toast.show(this.expenses.error() ?? 'Could not file those expenses.', 'error');
+      this.toast.show(this.expenses.error() ?? 'Could not assign those expenses.', 'error');
       return;
     }
     this.toast.show(`${count} expense${count === 1 ? '' : 's'} filed.`, 'success');
@@ -173,6 +173,6 @@ export class ExpensesComponent {
 
   async remove(expenseId: string): Promise<void> {
     await this.expenses.remove(this.project().id, expenseId);
-    this.toast.show('Expense taken off the record. It can be restored.');
+    this.toast.show('Expense removed. It can be restored.');
   }
 }

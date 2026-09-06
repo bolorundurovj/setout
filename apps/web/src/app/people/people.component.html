@@ -1,19 +1,16 @@
 <app-topbar title="People" [subtitle]="peopleCountLabel()">
-  <app-button (pressed)="addSomeone()">Add Someone</app-button>
+  <app-button (pressed)="addSomeone()">Add Person</app-button>
 </app-topbar>
 
 <div class="page">
-  <p class="prose">
-    Anyone who spends your money for you. Balances run across every project, because the same person
-    buys for more than one house.
-  </p>
+  <p class="prose">Anyone who spends money on your behalf. Balances run across every project.</p>
 
   <div class="controls">
     <input
       class="input-field search"
       type="search"
-      placeholder="Find somebody"
-      aria-label="Find somebody"
+      placeholder="Search people"
+      aria-label="Search people"
       [value]="search()"
       (input)="onSearch($event)"
     />
@@ -30,7 +27,7 @@
     <div class="card">
       <p class="t-body">{{ search() ? 'Nobody matches that.' : 'Nobody added yet.' }}</p>
       <p class="t-small">
-        Add whoever buys on your behalf, then record them as the payer on an expense.
+        Add anyone who buys on your behalf, then record them as the payer on an expense.
       </p>
     </div>
   } @else {
@@ -39,7 +36,7 @@
         <span class="t-micro">Person</span>
         <span class="t-micro right">Given</span>
         <span class="t-micro right">Spent</span>
-        <span class="t-micro right">Balance</span>
+        <span class="t-micro right">Outstanding Balance</span>
       </div>
 
       @for (person of people.people(); track person.id) {
@@ -84,8 +81,8 @@
     />
 
     <p class="t-small muted">
-      A minus balance is money you owe the person. A plus balance is money of yours still in their
-      hand. Given and Balance fill in with advances; only what they spent is on the record so far.
+      A negative balance is money you owe the person. A positive balance is your money they still
+      hold. Given and Outstanding Balance are filled in by advances.
     </p>
   }
 </div>

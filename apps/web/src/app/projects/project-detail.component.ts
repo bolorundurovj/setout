@@ -63,7 +63,7 @@ export class ProjectDetailComponent {
   readonly tabs: Tab[] = [
     { key: 'dashboard', name: 'Dashboard', ready: true },
     { key: 'expense', name: 'Expenses', ready: true },
-    { key: 'table', name: 'Budget vs Spend', ready: true },
+    { key: 'table', name: 'Budget vs Spent', ready: true },
     { key: 'months', name: 'Month by Month', ready: true },
     { key: 'budget', name: 'Budget', ready: true },
     { key: 'agreements', name: 'Agreements', ready: true },

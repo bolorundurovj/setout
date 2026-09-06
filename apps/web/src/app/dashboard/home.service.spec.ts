@@ -106,7 +106,7 @@ describe('HomeService', () => {
 
     expect(service.summary()).toBeNull();
     expect(service.months()).toBeNull();
-    expect(service.error()).toBe('Could not read what the record holds.');
+    expect(service.error()).toBe('Could not load the dashboard.');
   });
 
   it('keeps the sections it did get when only one read fails', async () => {
@@ -119,6 +119,6 @@ describe('HomeService', () => {
     expect(service.summary()?.projects).toBe(2);
     expect(service.months()).toBeNull();
     expect(service.latest()?.rows).toEqual([]);
-    expect(service.error()).toBe('Could not read what the record holds.');
+    expect(service.error()).toBe('Could not load the dashboard.');
   });
 });

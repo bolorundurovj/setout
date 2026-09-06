@@ -2,7 +2,7 @@
   <a class="link t-mono back" routerLink="/items">&#8592; Items</a>
 
   @if (loading()) {
-    <div class="card"><p class="t-body">Loading the price history…</p></div>
+    <div class="card"><p class="t-body">Loading price history…</p></div>
   } @else if (prices(); as detail) {
     <div class="head">
       <h1 class="t-display">{{ detail.name }}</h1>
@@ -11,9 +11,9 @@
 
     @if (series().length === 0) {
       <div class="card">
-        <p class="t-body">Nothing bought yet.</p>
+        <p class="t-body">No purchases yet.</p>
         <p class="t-small">
-          File a purchase against this item with a rate and its price history starts here.
+          Assign an expense with a rate to this item and its price history starts here.
         </p>
       </div>
     }
@@ -21,13 +21,13 @@
     @for (s of series(); track s.currency_code) {
       <section class="series">
         <div class="series-head">
-          <h2 class="t-heading">Price Paid over Time &middot; {{ s.currency_code }}</h2>
+          <h2 class="t-heading">Price Paid Over Time &middot; {{ s.currency_code }}</h2>
           <span class="t-micro">{{ countLabel(s) }}</span>
         </div>
 
         <div class="tiles">
           <div class="tile">
-            <span class="t-micro">Last paid</span>
+            <span class="t-micro">Last Paid</span>
             <span class="tile-figure t-mono">{{ money(s.last_price, s) }}</span>
             <span class="t-small muted">{{ s.last_paid_on }}</span>
           </div>
@@ -77,13 +77,13 @@
 
     @if (series().length > 1) {
       <p class="t-small muted">
-        Each currency is listed on its own. Prices from two currencies are never compared.
+        Each currency is listed separately. Prices in different currencies are never compared.
       </p>
     }
   } @else {
     <div class="card">
-      <p class="t-body">That item is not here.</p>
-      <p class="t-small"><a class="link" routerLink="/items">Back to the catalogue</a></p>
+      <p class="t-body">Item not found.</p>
+      <p class="t-small"><a class="link" routerLink="/items">Back to Items</a></p>
     </div>
   }
 </div>

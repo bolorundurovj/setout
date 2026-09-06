@@ -32,14 +32,14 @@
 
   <div class="by-scope">
     <div class="by-scope-head">
-      <h2 class="scope-title">Spend by Scope</h2>
-      <span class="t-micro">Spent {{ symbol() }} / budget {{ symbol() }}</span>
+      <h2 class="scope-title">Expenses by Category</h2>
+      <span class="t-micro">Spent {{ symbol() }} / Budget {{ symbol() }}</span>
     </div>
 
     @if (rows().length === 0) {
       <div class="card">
         <p class="t-body">Nothing to compare yet.</p>
-        <p class="t-small">Set a budget against a scope, or record what has been spent.</p>
+        <p class="t-small">Set a budget for a category, or add an expense.</p>
       </div>
     } @else {
       <div class="scopes">
@@ -84,8 +84,7 @@
 
       @if (unfiled() > 0) {
         <p class="t-small note">
-          {{ bare(unfiled()) }} of the spend is filed to no scope, so it is in none of the bars
-          above.
+          {{ bare(unfiled()) }} of expenses are uncategorized and not included in the bars above.
         </p>
       }
     }
