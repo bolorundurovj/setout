@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/bolorundurovj/setout/compare/v1.4.1...v1.4.2) (2026-09-06)
+
+
+### Refactoring
+
+* Refactor mobile web layout and fix responsive issues ([#38](https://github.com/bolorundurovj/setout/issues/38)) ([6905c98](https://github.com/bolorundurovj/setout/commit/6905c98489724059759b0115cc1883dc20d5773c))
+
 ## [1.4.1](https://github.com/bolorundurovj/setout/compare/v1.4.0...v1.4.1) (2026-09-05)
 
 
