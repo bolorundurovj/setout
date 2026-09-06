@@ -18,10 +18,7 @@
   <img src="assets/setout-banner.png" alt="Setout overview" width="1080" />
 </p>
 
-Setout is a self-hosted web app for tracking construction spend on personal
-building projects. It replaces a spreadsheet whose budget numbers were typed in
-after the money was spent. In Setout a budget belongs to a scope and is set
-deliberately; an expense records spend and can never write a budget value.
+Setout is a self-hosted web app for tracking construction expenses on personal building projects. It replaces a spreadsheet whose budget figures were entered after the money was spent. In Setout a budget belongs to a category and is set deliberately. An expense records spending and can never write a budget value.
 
 - Backend: Python, FastAPI, Tortoise ORM (with its built-in migration CLI).
 - Frontend: Angular, consuming a TypeScript SDK generated from the OpenAPI schema.
@@ -40,8 +37,7 @@ docker compose -f docker/docker-compose.yml up -d
 ```
 
 That pulls the published image, `ghcr.io/bolorundurovj/setout` for amd64 and
-arm64, and brings up the app on 8474 with Postgres for the record and MinIO for
-the attachments. The same image is on Docker Hub as `bolorundurovj/setout` if you
+arm64, and brings up the app on 8474 with Postgres for the database and MinIO for attachments. The same image is on Docker Hub as `bolorundurovj/setout` if you
 would rather pull from there. From a checkout instead:
 
 ```bash
@@ -50,42 +46,31 @@ make dev      # run the API and the web app together
 ```
 
 Open the web app. The first run guides you through setting up the local admin
-account with a passphrase. There are no roles and no email is required: one
-person, one passphrase, and a session cookie on your device.
+account with a passphrase. There are no roles and no email is required: one passphrase and a session cookie on your device.
 
 Windows works from cmd.exe, Cmder and Git Bash, with one constraint about WSL
 covered in [installation](docs/installation.md).
 
 Before putting Setout anywhere other people can reach, read
-[deployment](docs/deployment.md). The defaults exist so the stack comes up on one
-command, not because they are safe.
+[deployment](docs/deployment.md). The defaults exist so the stack starts with one command. They are not production defaults.
 
-## Recording spend
+## Recording expenses
 
-Open a project and pick **Add expense**. Three fields are required: what it was,
-what it cost, and when. The screen is built to be used one handed on a phone at
-the merchant's counter, so everything else sits behind **More details**.
+Open a project and select **Add Expense**. Three fields are required: description, amount and date. The screen is designed for one-handed use on a phone, so everything else sits behind **More details**.
 
-- Give a **quantity** and a **rate each** and the total is calculated for you,
-  the way a receipt reads: 600 nine inch blocks at 250 each. Fill in only one of
-  them and you type the total yourself; what you entered is still kept.
-- A **scope** is optional. Spend that has not been filed anywhere is still real
-  spend, it counts towards the project total, and it is listed as unfiled so you
-  can file it later. Recording a purchase is never blocked by a missing budget.
-- A scope with children holds no spend of its own. File against the child.
+- Enter a **quantity** and a **rate each** and the total is calculated for you: 600 nine inch blocks at 250 each. Enter only one of them and you type the total yourself. What you entered is still stored.
+- A **category** is optional. An expense with no category still counts towards the project total, and is listed as Uncategorized so you
+  can categorize it later. An expense is never blocked by a missing budget.
+- A category with subcategories has no expenses of its own. Assign to the subcategory.
 - Amounts are stored as whole numbers in the currency's minor units, so nothing
   is lost to rounding. NGN 11,000.00 is stored as 1100000.
-- Removing an expense is a soft delete. The row is kept and can be restored.
+- Removing an expense is a soft delete. The row is retained and can be restored.
 
-Behind **More details** an expense can also record what was bought, who it was
-bought from, and who handed over the money. All three are optional.
+Behind **More details** an expense can also record the item, the vendor and who paid. All three are optional.
 
 ## Items, vendors and people
 
-These three belong to the installation, not to a project, because the same
-supplier and the same bag of cement serve every house you build. Their money is
-always reported per project, and figures from two currencies are never added
-together.
+These three belong to the installation, not to a project, because the same vendor and the same item are used across projects. Their amounts are always reported per project, and amounts in two currencies are never added together.
 
 - An **item** is something you buy more than once. It holds no prices of its
   own: every purchase filed against it with a rate builds its price history, so
@@ -106,11 +91,11 @@ together.
 | [Installation](docs/installation.md)             | Docker, bare metal, the first run                   |
 | [Configuration](docs/configuration.md)           | Every environment variable, app and compose         |
 | [Deployment](docs/deployment.md)                 | Postgres, S3 or MinIO, HTTPS, upgrades              |
-| [Backup and restore](docs/backup-and-restore.md) | The two kinds of copy, and when each applies        |
-| [Troubleshooting](docs/troubleshooting.md)       | The failures that come up more than once            |
-| [Architecture](docs/architecture.md)             | How a request travels, and why the SDK is generated |
+| [Backup and restore](docs/backup-and-restore.md) | The two kinds of backup, and when each applies      |
+| [Troubleshooting](docs/troubleshooting.md)       | Common failures and their fixes                     |
+| [Architecture](docs/architecture.md)             | Request flow, and why the SDK is generated          |
 | [Development](docs/development.md)               | The Makefile, the test layers, migrations, the SDK  |
-| [Roadmap](docs/roadmap.md)                       | What is designed but not built                      |
+| [Roadmap](docs/roadmap.md)                       | Designed but not yet built                          |
 | [Changelog](CHANGELOG.md)                        | What changed in each release                        |
 
 ## Repository layout
@@ -124,24 +109,19 @@ docker               Dockerfile and the compose stack
 docs                 documentation
 ```
 
-## The Makefile is the interface
+## The Makefile
 
-`make setup`, `make dev`, `make check`. That last one is the gate: lint, types,
-the whole test suite against a coverage floor, and a check that the committed
-SDK still matches the schema. The full list of targets is in
+`make setup`, `make dev`, `make check`. The last is the gate: lint, types, the full test suite against a coverage floor, and a check that the committed SDK still matches the schema. The full list of targets is in
 [development](docs/development.md), or run `make help`.
 
 ## Contributing
 
-Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers
-setup, the rules that matter, and what the checklist is asking for. The project
+Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers setup, the project rules, and what the checklist asks for. The project
 follows the [Contributor Covenant](CODE_OF_CONDUCT.md).
 
-Found a security problem? Please report it privately: see
+Report security issues privately: see
 [SECURITY.md](SECURITY.md).
 
 ## Licence
 
-[GNU Affero General Public License v3.0 or later](LICENSE). You may run, study,
-change and share it. If you offer a modified version to other people over a
-network, you must publish your source too.
+[GNU Affero General Public License v3.0 or later](LICENSE). You may run, study, change and share it. If you offer a modified version over a network, you must publish your source as well.

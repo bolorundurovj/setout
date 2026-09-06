@@ -1,17 +1,16 @@
 # Deployment
 
-Setout ships as one image: the API serves the built frontend, applies migrations
-on start, runs as a non-root user, and persists `SETOUT_DATA_DIR` on a volume.
+Setout ships as one image: the API serves the built frontend, applies migrations on startup, runs as a non-root user, and persists `SETOUT_DATA_DIR` on a volume.
 
 ## Before you expose it
 
 | Do this | Why |
 | --- | --- |
-| Set `SETOUT_SECRET_KEY` to a long random value | It signs session cookies; anyone who knows it can forge a session. The app warns on startup while it is the default |
-| Set `SETOUT_COOKIE_SECURE=true` | Otherwise the session cookie travels over plain HTTP |
-| Change `MINIO_ROOT_PASSWORD` and the Postgres password | The compose defaults exist so the stack comes up in one command, not because they are safe |
+| Set `SETOUT_SECRET_KEY` to a long random value | It signs session cookies, so anyone who knows it can forge a session. The app warns on startup while it is the default |
+| Set `SETOUT_COOKIE_SECURE=true` | Otherwise the session cookie is sent over plain HTTP |
+| Change `MINIO_ROOT_PASSWORD` and the Postgres password | The compose defaults exist so the stack starts with one command. They are not production defaults |
 | Put it behind HTTPS | See below |
-| Set `SETOUT_CORS_ORIGINS` to the origin you actually serve from | It defaults to the local dev server |
+| Set `SETOUT_CORS_ORIGINS` to the origin you serve from | It defaults to the local dev server |
 
 ## Behind a reverse proxy
 
@@ -26,12 +25,9 @@ Set `SETOUT_COOKIE_SECURE=true` once TLS is in front, and keep
 ## Postgres
 
 Point `SETOUT_DATABASE_URL` at `postgres://user:password@host:5432/setout`. The
-compose stack publishes Postgres on host port 5433 by default, kept off 5432 so
-it does not fight a Postgres already installed on the machine.
+compose stack publishes Postgres on host port 5433 by default, kept off 5432 to avoid clashing with an existing Postgres on the machine.
 
-Moving an existing SQLite install to Postgres is a data move, not a file copy:
-use the record export in [Backup and restore](backup-and-restore.md). A restore
-refuses a mismatched engine on purpose.
+Moving an existing SQLite installation to Postgres is a data migration, not a file copy. Use the data export in [Backup and restore](backup-and-restore.md). A restore refuses a mismatched engine by design.
 
 ## Attachments in a bucket
 
@@ -39,40 +35,33 @@ Set `SETOUT_STORAGE_BACKEND=s3` with the bucket, credentials and, for anything
 that is not Amazon, `SETOUT_S3_ENDPOINT_URL`. MinIO also wants
 `SETOUT_S3_USE_PATH_STYLE=true`.
 
-A bucket is outside the backup archive. Back it up where it lives.
+A bucket is not included in the backup archive. Back it up separately.
 
 ## Upgrades
 
-Pull the new image and restart. Migrations run on start and the log reports when
-the database was behind. Take a backup first: the shell archive, not the record
-export, since that is the copy that can put the install back exactly as it was.
+Pull the new image and restart. Migrations run on startup and the log reports when the database was behind. Take a backup first: use the shell archive rather than the data export, because only the archive restores the installation exactly as it was.
 
-Pin a version rather than tracking `latest`, so an upgrade is something you
-choose:
+Pin a version rather than tracking `latest`, so upgrades are deliberate:
 
 ```bash
 SETOUT_IMAGE_TAG=1.2.3 docker compose -f docker/docker-compose.yml up -d
 ```
 
-Read [the release notes](https://github.com/bolorundurovj/setout/releases)
-before moving between versions. Every image carries
-`org.opencontainers.image.version` and `.revision` labels, so
-`docker inspect` tells you exactly which commit is running:
+Read [the release notes](https://github.com/bolorundurovj/setout/releases) before upgrading. Every image carries
+`org.opencontainers.image.version` and `.revision` labels, so `docker inspect` reports exactly which commit is running:
 
 ```bash
 docker inspect ghcr.io/bolorundurovj/setout:1.2.3 \
   --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'
 ```
 
-`edge` exists for trying a fix before it is released. It is whatever last landed
-on `master`, so it is not the thing to point a household at.
+`edge` exists for testing a fix before it is released. It is the latest commit on `master` and is not suitable for production.
 
 Every tag goes to Docker Hub as `bolorundurovj/setout` as well, pushed as the
 same manifest, so a digest pinned against one registry matches the other.
 
 Each GHCR image also carries a signed record of which workflow built it, from
-which repository and at which commit. It separates an image built from this
-source from one pushed by whoever got hold of a token:
+which repository and at which commit. It distinguishes an image built from this source from one pushed with a stolen token:
 
 ```bash
 gh attestation verify oci://ghcr.io/bolorundurovj/setout:1.2.3 \
@@ -83,7 +72,6 @@ The record is attached to the image in GHCR rather than stored inside it, so it
 does not follow the copy to Docker Hub. Verification runs against GHCR, and the
 digests are identical, so the result covers the Docker Hub copy as well.
 
-## Checking on it
+## Health checks
 
-`/healthz` answers with the version and the database status, which is the right
-thing to point a monitor at.
+`/healthz` returns the version and the database status. Point your monitoring at it.
