@@ -1,5 +1,5 @@
 import type { LandDocumentKind, LandRead, LandSizeUnit } from '@setout/api-client';
-import { formatMoney } from '../budget/money';
+import { formatMoney, formatNumber } from '../budget/money';
 
 const KIND_NAMES: Record<string, string> = {
   certificate_of_occupancy: 'Certificate of Occupancy',
@@ -44,7 +44,7 @@ export function sizeLabel(land: Pick<LandRead, 'size_value' | 'size_unit'>): str
   if (!value || !unit) {
     return '';
   }
-  return `${value} ${unitName(unit, value)}`;
+  return `${formatNumber(value)} ${unitName(unit, value)}`;
 }
 
 export function worthLabel(

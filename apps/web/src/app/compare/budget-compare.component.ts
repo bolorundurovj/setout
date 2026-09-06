@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import type { ExpenseRead, ProjectRead } from '@setout/api-client';
 import { BudgetService } from '../budget/budget.service';
-import { formatMoney } from '../budget/money';
+import { formatMoney, formatNumber } from '../budget/money';
 import { ExpenseService, UNFILED, type Nested } from '../expenses/expense.service';
 import { currencySymbol } from '../ui/currency-pill.component';
 import { PaginationComponent } from '../ui/pagination.component';
@@ -181,7 +181,7 @@ export class BudgetCompareComponent {
       parts.push(expense.cost_type);
     }
     if (expense.quantity !== null && expense.unit_rate !== null) {
-      parts.push(`${Number(expense.quantity)} × ${this.money(expense.unit_rate)}`);
+      parts.push(`${formatNumber(expense.quantity)} × ${this.money(expense.unit_rate)}`);
     }
     return parts.join(' · ');
   }

@@ -3,7 +3,7 @@ import type { ProjectRead, ScopeRead } from '@setout/api-client';
 import { AgreementService } from '../agreements/agreement.service';
 import { BudgetService } from '../budget/budget.service';
 import { DeliveryService } from '../deliveries/delivery.service';
-import { formatMoney } from '../budget/money';
+import { formatMoney, formatNumber } from '../budget/money';
 import { ExpenseService } from '../expenses/expense.service';
 import { currencySymbol } from '../ui/currency-pill.component';
 import { tintFor } from '../ui/tints';
@@ -58,7 +58,8 @@ export class ProjectDashboardComponent {
     if (percent === null || percent === undefined) {
       return '';
     }
-    return this.isOver() ? `${percent}% over budget.` : `${Math.abs(percent)}% under budget.`;
+    const shown = formatNumber(Math.abs(percent), 1);
+    return this.isOver() ? `${shown}% over budget.` : `${shown}% under budget.`;
   });
 
   readonly budgetNote = computed(() =>
