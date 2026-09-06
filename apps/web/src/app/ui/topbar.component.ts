@@ -40,7 +40,8 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       .titles {
         display: flex;
         align-items: baseline;
-        gap: 12px;
+        flex-wrap: wrap;
+        gap: 2px 12px;
         min-width: 0;
       }
 
@@ -71,6 +72,17 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
         .topbar-row {
           flex-direction: column;
           align-items: flex-start;
+          gap: 10px;
+        }
+
+        .titles {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .actions {
+          width: 100%;
+          flex-wrap: wrap;
         }
       }
     `,
