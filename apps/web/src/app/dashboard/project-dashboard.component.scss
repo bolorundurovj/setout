@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 .dashboard {
   display: flex;
   flex-direction: column;
@@ -5,7 +7,7 @@
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   border: 1.5px solid var(--rule);
   border-radius: 14px;
   overflow: hidden;
@@ -254,13 +256,13 @@
   color: var(--over-ink);
 }
 
-@media (max-width: 899px) {
+@media (max-width: bp.$lap) {
   .alerts {
     grid-template-columns: 1fr;
   }
 
   .stats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .stat:nth-child(2) {

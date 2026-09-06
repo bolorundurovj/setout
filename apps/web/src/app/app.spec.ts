@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import type { Counts } from '@setout/api-client';
 import { App } from './app';
 import { AuthService } from './auth/auth.service';
@@ -92,6 +92,108 @@ describe('App', () => {
       expect(home?.path).toBe('/');
       expect(home?.exact).toBe(true);
       expect(app.appNav.filter((item) => item.exact).length).toBe(1);
+    });
+  });
+
+  describe('the menu on a narrow screen', () => {
+    function render() {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [App],
+        providers: [
+          provideRouter([{ path: 'vendors', children: [] }]),
+          { provide: AuthService, useValue: { isAuthenticated: () => true } },
+          {
+            provide: CountsService,
+            useValue: {
+              projects: () => 0,
+              vendors: () => 0,
+              items: () => 0,
+              people: () => 0,
+              lands: () => 0,
+              load: () => Promise.resolve(),
+            },
+          },
+        ],
+      });
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    afterEach(() => {
+      document.body.classList.remove('nav-locked');
+    });
+
+    it('names the toggle for a reader rather than spelling it on screen', () => {
+      const element = render().nativeElement as HTMLElement;
+      const toggle = element.querySelector('.sidebar-toggle');
+
+      expect(toggle?.getAttribute('aria-label')).toBe('Menu');
+      expect(toggle?.querySelector('app-icon svg')).toBeTruthy();
+      expect(toggle?.textContent?.trim()).toBe('');
+    });
+
+    it('seats the toggle in a bar with the brand rather than floating it alone', () => {
+      const element = render().nativeElement as HTMLElement;
+      const bar = element.querySelector('.mobile-bar');
+
+      expect(bar?.querySelector('.sidebar-toggle')).toBeTruthy();
+      expect(bar?.querySelector('.mobile-brand')).toBeTruthy();
+      expect(element.querySelector('.shell > .sidebar-toggle')).toBeNull();
+
+      const inBar = [...(bar?.children ?? [])].map((child) => child.className);
+      expect(inBar).toEqual(['mobile-brand', 'sidebar-toggle']);
+    });
+
+    it('lays nothing over the page until the menu is opened', () => {
+      const fixture = render();
+      const element = fixture.nativeElement as HTMLElement;
+
+      expect(element.querySelector('.nav-backdrop')).toBeNull();
+      expect(document.body.classList.contains('nav-locked')).toBe(false);
+
+      fixture.componentInstance.toggleNav();
+      fixture.detectChanges();
+
+      expect(element.querySelector('.nav-backdrop')).toBeTruthy();
+      expect(document.body.classList.contains('nav-locked')).toBe(true);
+    });
+
+    it('closes when the page behind it is pressed', () => {
+      const fixture = render();
+      const element = fixture.nativeElement as HTMLElement;
+      fixture.componentInstance.toggleNav();
+      fixture.detectChanges();
+
+      element.querySelector<HTMLButtonElement>('.nav-backdrop')?.click();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.navOpen()).toBe(false);
+      expect(document.body.classList.contains('nav-locked')).toBe(false);
+    });
+
+    it('closes on Escape', () => {
+      const fixture = render();
+      fixture.componentInstance.toggleNav();
+      fixture.detectChanges();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.navOpen()).toBe(false);
+    });
+
+    it('closes itself once a destination is reached', async () => {
+      const fixture = render();
+      fixture.componentInstance.toggleNav();
+      fixture.detectChanges();
+
+      await TestBed.inject(Router).navigate(['/vendors']);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.navOpen()).toBe(false);
+      expect(document.body.classList.contains('nav-locked')).toBe(false);
     });
   });
 });

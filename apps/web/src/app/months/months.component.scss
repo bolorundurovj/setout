@@ -1,3 +1,6 @@
+@use '../shared/breakpoints' as bp;
+@use '../shared/rows' as rows;
+
 .months {
   display: flex;
   flex-direction: column;
@@ -248,7 +251,7 @@
   border: none;
 }
 
-@media (max-width: 899px) {
+@media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
   .row {
     grid-template-columns: 92px 1fr 120px;
   }
@@ -258,3 +261,5 @@
     display: none;
   }
 }
+
+@include rows.stacked-rows;

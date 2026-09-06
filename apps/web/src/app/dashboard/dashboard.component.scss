@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 .intro {
   display: flex;
   flex-direction: column;
@@ -46,7 +48,7 @@
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   background: var(--surface);
   border: 1.5px solid var(--rule);
   border-radius: 14px;
@@ -376,9 +378,9 @@
   gap: 12px;
 }
 
-@media (max-width: 899px) {
+@media (max-width: bp.$lap) {
   .stats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .stat:nth-child(2) {

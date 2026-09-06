@@ -1,3 +1,5 @@
+@use 'app/shared/breakpoints' as bp;
+
 // Fonts are listed in angular.json so they are bundled rather than fetched
 // from a CDN, which keeps a self-hosted Setout working offline.
 
@@ -260,9 +262,15 @@ body {
   }
 }
 
+@media (max-width: bp.$lap) {
+  body.nav-locked {
+    overflow: hidden;
+  }
+}
+
 // Desktop is the default. Phones still have to work: the expense screen must
 // be usable one handed at 360px.
-@media (max-width: 599px) {
+@media (max-width: bp.$phone) {
   .page {
     padding: 20px 16px;
   }

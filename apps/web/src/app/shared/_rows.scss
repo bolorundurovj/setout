@@ -1,0 +1,62 @@
+@use 'breakpoints' as bp;
+
+// A row stops being a line of columns and becomes a card: the name leads, the
+// figure sits beside it, and the rest pairs up underneath. Cells are ordered
+// rather than reordered in the markup, because the columns differ per screen.
+//
+// The variants are named because each carries its own grid-template-columns and
+// would otherwise out-specify a bare .row. Include this last in a stylesheet so
+// equally specific rules resolve here.
+@mixin stacked-rows {
+  @media (max-width: bp.$phone) {
+    .row,
+    .row:is(.head, .head-row, .total, .archived, .agreement) {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: baseline;
+      gap: 6px 12px;
+      padding: 14px;
+    }
+
+    .row.head,
+    .row.head-row {
+      display: none;
+    }
+
+    .row > * {
+      order: 3;
+    }
+
+    .main,
+    .name-cell,
+    .description {
+      grid-column: 1;
+      order: 1;
+      min-width: 0;
+    }
+
+    .figure {
+      grid-column: 2;
+      order: 2;
+      text-align: right;
+    }
+
+    .chip {
+      grid-column: 1;
+      order: 4;
+      justify-self: start;
+    }
+
+    .muted {
+      grid-column: 2;
+      order: 5;
+      text-align: right;
+    }
+
+    .row-actions {
+      grid-column: 1 / -1;
+      order: 6;
+      justify-content: flex-start;
+      padding-top: 2px;
+    }
+  }
+}

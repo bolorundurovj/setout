@@ -1,3 +1,6 @@
+@use '../shared/breakpoints' as bp;
+@use '../shared/rows' as rows;
+
 .controls {
   display: flex;
   align-items: center;
@@ -102,7 +105,7 @@ button.row {
   color: var(--over);
 }
 
-@media (max-width: 720px) {
+@media (max-width: bp.$narrow) {
   .row {
     grid-template-columns: 1fr auto;
     row-gap: 6px;
@@ -112,3 +115,5 @@ button.row {
     display: none;
   }
 }
+
+@include rows.stacked-rows;

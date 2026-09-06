@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 .intro {
   display: flex;
   flex-direction: column;
@@ -29,7 +31,7 @@
 }
 
 .fields.three {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .field {
@@ -95,7 +97,7 @@
   max-width: 80ch;
 }
 
-@media (max-width: 599px) {
+@media (max-width: bp.$phone) {
   .fields,
   .fields.three {
     grid-template-columns: 1fr;

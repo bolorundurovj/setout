@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 :host {
   display: flex;
   flex-direction: column;
@@ -23,7 +25,7 @@
   color: var(--ink-3);
 }
 
-@media (max-width: 719px) {
+@media (max-width: bp.$narrow) {
   .canvas {
     height: 260px;
   }

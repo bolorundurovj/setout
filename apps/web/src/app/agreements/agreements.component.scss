@@ -1,3 +1,6 @@
+@use '../shared/breakpoints' as bp;
+@use '../shared/rows' as rows;
+
 .agreements {
   display: flex;
   flex-direction: column;
@@ -113,7 +116,7 @@
 
 .figures {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -317,11 +320,13 @@
   color: var(--over);
 }
 
-@media (max-width: 899px) {
+@media (max-width: bp.$lap) {
   .intro {
     flex-direction: column;
   }
+}
 
+@media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
   .row,
   .row.head {
     grid-template-columns: 1fr 120px 110px;
@@ -337,3 +342,16 @@
   padding: 8px 0;
   text-align: center;
 }
+
+@media (max-width: bp.$phone) {
+  .figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 10px;
+  }
+
+  .figure-value {
+    font-size: 17px;
+  }
+}
+
+@include rows.stacked-rows;

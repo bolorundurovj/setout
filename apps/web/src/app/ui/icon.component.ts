@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-export type IconName = 'home' | 'projects' | 'land' | 'vendors' | 'items' | 'people' | 'settings';
+export type IconName =
+  'home' | 'projects' | 'land' | 'vendors' | 'items' | 'people' | 'settings' | 'menu';
 
 @Component({
   selector: 'app-icon',
@@ -53,6 +54,12 @@ export type IconName = 'home' | 'projects' | 'land' | 'vendors' | 'items' | 'peo
           <path d="M2.3 11h11.4" />
           <circle cx="6" cy="5" r="1.7" />
           <circle cx="10.6" cy="11" r="1.7" />
+        }
+        @case ('menu') {
+          <rect x="2.4" y="2.4" width="4.6" height="4.6" rx="1.1" />
+          <rect x="9" y="2.4" width="4.6" height="4.6" rx="1.1" />
+          <rect x="2.4" y="9" width="4.6" height="4.6" rx="1.1" />
+          <rect x="9" y="9" width="4.6" height="4.6" rx="1.1" />
         }
       }
     </svg>

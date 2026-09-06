@@ -1,14 +1,31 @@
 @if (auth.isAuthenticated()) {
   <div class="shell">
-    <button
-      type="button"
-      class="sidebar-toggle btn-minor"
-      [attr.aria-expanded]="navOpen()"
-      aria-controls="app-sidebar"
-      (click)="toggleNav()"
-    >
-      Menu
-    </button>
+    <div class="mobile-bar">
+      <a class="mobile-brand" routerLink="/">
+        <app-logo [size]="22" />
+        <span class="brand-name">Setout</span>
+      </a>
+
+      <button
+        type="button"
+        class="sidebar-toggle"
+        aria-label="Menu"
+        [attr.aria-expanded]="navOpen()"
+        aria-controls="app-sidebar"
+        (click)="toggleNav()"
+      >
+        <app-icon name="menu" [size]="18" />
+      </button>
+    </div>
+
+    @if (navOpen()) {
+      <button
+        type="button"
+        class="nav-backdrop"
+        aria-label="Close the menu"
+        (click)="closeNav()"
+      ></button>
+    }
 
     <aside id="app-sidebar" class="sidebar" [class.open]="navOpen()">
       <a class="brand" routerLink="/">

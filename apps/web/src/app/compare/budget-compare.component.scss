@@ -1,3 +1,6 @@
+@use '../shared/breakpoints' as bp;
+@use '../shared/rows' as rows;
+
 .compare {
   display: flex;
   flex-direction: column;
@@ -209,7 +212,7 @@
   color: var(--ink-2);
 }
 
-@media (max-width: 899px) {
+@media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
   .row {
     grid-template-columns: 1fr 110px 110px 80px;
   }
@@ -218,3 +221,5 @@
     display: none;
   }
 }
+
+@include rows.stacked-rows;

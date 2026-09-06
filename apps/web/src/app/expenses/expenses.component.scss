@@ -1,3 +1,6 @@
+@use '../shared/breakpoints' as bp;
+@use '../shared/rows' as rows;
+
 .expenses {
   display: flex;
   flex-direction: column;
@@ -205,7 +208,7 @@
   color: var(--over);
 }
 
-@media (max-width: 899px) {
+@media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
   .row,
   .row.head {
     grid-template-columns: 1fr 120px 140px;
@@ -218,3 +221,34 @@
     display: none;
   }
 }
+
+@media (max-width: bp.$phone) {
+  .table.bulk .row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .table.bulk .row > input[type='checkbox'] {
+    order: 0;
+    grid-column: 1;
+    align-self: center;
+  }
+
+  .table.bulk .main {
+    grid-column: 2;
+  }
+
+  .table.bulk .figure {
+    grid-column: 3;
+  }
+
+  .table.bulk .muted {
+    grid-column: 2 / -1;
+    text-align: left;
+  }
+
+  .bulk-actions {
+    margin-left: 0;
+  }
+}
+
+@include rows.stacked-rows;
