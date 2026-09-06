@@ -16,10 +16,10 @@ from setout.services.sheets.parsed import BudgetRead, OwedRead, Problem, SpendRe
 # Columns Setout keeps nowhere, named in the report rather than dropped in silence.
 LEFT_BEHIND = {
     Shape.BUDGET: [
-        "Labor, Material and Fixed Costs: the plan holds one figure per line, not a split by kind",
-        "Actual Cost, Under/Over and Delta: Setout works these out from the spend",
+        "Labor, Material and Fixed Costs: the budget holds one amount per line, not a split",
+        "Actual Cost, Under/Over and Delta: Setout calculates these from expenses",
     ],
-    Shape.EXPENSES: ["Documents: the file itself is not in the workbook, only its name"],
+    Shape.EXPENSES: ["Documents: the workbook holds only the file name, not the file"],
     Shape.OUTSTANDING: ["Location"],
 }
 

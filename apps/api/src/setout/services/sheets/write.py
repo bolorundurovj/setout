@@ -43,11 +43,11 @@ SPEND_HEAD = [
     "Date Paid",
     "Notes",
 ]
-OWED_HEAD = ["Item", "Vendor", "Qty", "Location", "status"]
+OWED_HEAD = ["Item", "Vendor", "Qty", "Location", "Status"]
 PEOPLE_HEAD = ["Person", "Role", "Phone", "Notes"]
-AGREEMENT_HEAD = ["Vendor", "Work agreed", "Agreed", "Paid", "Left", "Notes"]
-PRICE_HEAD = ["Item name", "Unit", "Last price", "Bought from", "When"]
-FILE_HEAD = ["File", "Kept against", "Size in bytes", "Checksum"]
+AGREEMENT_HEAD = ["Vendor", "Work Agreed", "Agreed", "Paid", "Remaining", "Notes"]
+PRICE_HEAD = ["Item Name", "Unit", "Last Price", "Purchased From", "Date"]
+FILE_HEAD = ["File", "Attached To", "Size in Bytes", "Checksum"]
 
 
 COST_COLUMN = {"labour": 0, "material": 1, "fixed": 2}
