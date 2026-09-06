@@ -1,3 +1,5 @@
+@use '../shared/breakpoints' as bp;
+
 :host {
   display: flex;
   flex-direction: column;
@@ -116,4 +118,21 @@
 
 .muted {
   color: var(--ink-3);
+}
+
+@media (max-width: bp.$phone) {
+  .entry {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 14px;
+  }
+
+  .entry-actions {
+    width: 100%;
+  }
+
+  .amount-input {
+    font-size: 22px;
+    height: 50px;
+  }
 }
