@@ -1,4 +1,5 @@
 @use '../shared/breakpoints' as bp;
+@use '../shared/rows' as rows;
 
 .budget {
   display: flex;
@@ -190,7 +191,7 @@
   color: var(--over);
 }
 
-@media (max-width: bp.$lap) {
+@media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
   .row,
   .row.head,
   .row.total {
@@ -203,7 +204,9 @@
   .row.head .t-micro:nth-child(4) {
     display: none;
   }
+}
 
+@media (max-width: bp.$lap) {
   .add-scope,
   .add-item {
     flex-direction: column;
@@ -224,3 +227,5 @@
 .split-choice {
   grid-column: 1 / -1;
 }
+
+@include rows.stacked-rows;

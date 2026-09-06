@@ -1,4 +1,5 @@
 @use '../shared/breakpoints' as bp;
+@use '../shared/rows' as rows;
 
 .controls {
   display: flex;
@@ -114,3 +115,5 @@ button.row {
     display: none;
   }
 }
+
+@include rows.stacked-rows;

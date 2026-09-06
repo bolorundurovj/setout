@@ -1,4 +1,5 @@
 @use '../shared/breakpoints' as bp;
+@use '../shared/rows' as rows;
 
 .back {
   align-self: flex-start;
@@ -152,7 +153,9 @@
   .pair {
     grid-template-columns: 1fr;
   }
+}
 
+@media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
   .row,
   .row.head-row {
     grid-template-columns: 1fr 130px;
@@ -163,3 +166,5 @@
     display: none;
   }
 }
+
+@include rows.stacked-rows;
