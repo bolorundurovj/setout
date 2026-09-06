@@ -1,5 +1,7 @@
-import { Component, effect, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Component, HostListener, effect, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs';
 import { AuthService } from './auth/auth.service';
 import { CountsService } from './counts.service';
 import { ToastService } from './toast.service';
@@ -78,6 +80,23 @@ export class App {
         void this.counts.load();
       }
     });
+
+    // The drawer sits over the page, so the page behind it must not scroll.
+    effect(() => {
+      document.body.classList.toggle('nav-locked', this.navOpen());
+    });
+
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.closeNav());
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closeNav();
   }
 
   private count(total: number): string {

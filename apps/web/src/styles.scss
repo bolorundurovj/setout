@@ -262,6 +262,12 @@ body {
   }
 }
 
+@media (max-width: bp.$lap) {
+  body.nav-locked {
+    overflow: hidden;
+  }
+}
+
 // Desktop is the default. Phones still have to work: the expense screen must
 // be usable one handed at 360px.
 @media (max-width: bp.$phone) {
