@@ -157,11 +157,13 @@ async def get_auth_status(
 @router.post(
     "/setup",
     operation_id="setupAdmin",
-    responses={status.HTTP_409_CONFLICT: {"description": "Already setup"}},
+    responses={status.HTTP_409_CONFLICT: {"description": "This server is already set up"}},
 )
 async def setup_admin(req: SetupRequest, response: Response) -> UserResponse:
     if await User.all().exists():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Already setup")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="This server is already set up"
+        )
 
     hashed = hash_password(req.password)
     user = await User.create(name=req.name, email=req.email, password_hash=hashed)

@@ -23,7 +23,7 @@ from setout.schemas.scope import (
 from setout.utils.cascade import delete_under_scope, restore_under_scope
 from setout.utils.scopes import to_reads
 
-NOT_FOUND_SCOPE = "Scope not found"
+NOT_FOUND_SCOPE = "Category not found"
 NOT_FOUND_ITEM = "Budget item not found"
 
 
@@ -67,7 +67,7 @@ class ScopeController:
             if parent_id == scope.id:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail="A scope cannot be its own parent",
+                    detail="A category cannot be its own parent",
                 )
             await self._scope_or_404(parent_id, project_id=scope.project_id)
         if changes:
@@ -109,7 +109,7 @@ class ScopeController:
         if await Scope.filter(parent_id=scope.id, deleted_at__isnull=True).exists():
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="A scope with children holds no budget of its own",
+                detail="A category with subcategories has no budget of its own",
             )
         item = await BudgetItem.create(
             scope_id=scope_id,
@@ -140,7 +140,7 @@ class ScopeController:
         if await Expense.filter(scope_id__in=branch, deleted_at__isnull=True).exists():
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="A scope with expenses cannot be deleted, only renamed",
+                detail="A category with expenses cannot be deleted, only renamed",
             )
 
     async def _below(self, scope: Scope) -> list[str]:

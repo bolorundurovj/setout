@@ -44,7 +44,7 @@ def read(found: Found, exponent: int) -> BudgetRead:
                 Problem(
                     kind=Trouble.NO_SCOPE_YET,
                     row=number,
-                    detail=f"{name or code} sits above every scope heading",
+                    detail=f"{name or code} sits above every category heading",
                 )
             )
             continue
@@ -54,7 +54,7 @@ def read(found: Found, exponent: int) -> BudgetRead:
                 Problem(
                     kind=Trouble.NO_DESCRIPTION,
                     row=number,
-                    detail=f"a figure under {current.name} with nothing said about it",
+                    detail=f"an amount under {current.name} with no description",
                 )
             )
 

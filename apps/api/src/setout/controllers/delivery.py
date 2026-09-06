@@ -62,7 +62,7 @@ class DeliveryController:
         if await Delivery.filter(expense_id=expense.id, deleted_at__isnull=True).exists():
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="That expense is already waiting on a delivery",
+                detail="That expense already has a pending delivery",
             )
         delivery = await Delivery.create(
             project_id=project_id,

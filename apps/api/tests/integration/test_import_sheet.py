@@ -526,7 +526,7 @@ async def test_a_sheet_that_names_no_currency_asks_for_one(client: AsyncClient) 
     )
 
     assert resp.status_code == 422
-    assert "does not say what currency" in resp.json()["detail"]
+    assert "does not specify a currency" in resp.json()["detail"]
 
 
 async def test_importing_the_same_sheet_twice_says_how_many_scopes_there_are(

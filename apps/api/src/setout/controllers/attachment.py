@@ -67,7 +67,7 @@ class AttachmentController:
         if kind not in ALLOWED:
             raise HTTPException(
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                detail="A receipt can be a photograph or a PDF, nothing else",
+                detail="A receipt must be a photograph or a PDF",
             )
         if not data:
             raise HTTPException(
@@ -108,7 +108,7 @@ class AttachmentController:
         except FileNotFoundError as e:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="The record has this file but the store does not",
+                detail="The record references a file that is missing from storage",
             ) from e
         return AttachmentFile(filename=row.filename, content_type=row.content_type, data=data)
 

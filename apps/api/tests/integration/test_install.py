@@ -163,7 +163,7 @@ async def test_a_file_of_another_layout_is_refused(client: AsyncClient) -> None:
     resp = await _restore(client, backup, accept=True)
 
     assert resp.status_code == 422
-    assert "layout 99" in resp.json()["detail"]
+    assert "format 99" in resp.json()["detail"]
 
 
 async def test_a_file_naming_a_table_this_setout_does_not_know_is_refused(
