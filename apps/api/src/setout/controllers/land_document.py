@@ -69,7 +69,7 @@ class LandDocumentController:
         if media_type not in ALLOWED:
             raise HTTPException(
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                detail="A land document can be a photograph or a PDF, nothing else",
+                detail="A land document must be a photograph or a PDF",
             )
         if not data:
             raise HTTPException(

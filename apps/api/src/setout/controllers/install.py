@@ -39,13 +39,13 @@ class InstallController:
         if backup.format != FORMAT:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail=f"That file is layout {backup.format}. This Setout reads layout {FORMAT}",
+                detail=f"That file uses format {backup.format}. Setout reads format {FORMAT}",
             )
         unknown = sorted(set(backup.tables) - set(TABLES))
         if unknown:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail=f"That file holds tables this Setout does not know: {', '.join(unknown)}",
+                detail=f"That file holds tables Setout does not recognise: {', '.join(unknown)}",
             )
         await self._same_shape_or_confirmed(backup, req.accept_version_change)
 

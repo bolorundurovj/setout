@@ -51,7 +51,7 @@ def read(found: Found, exponent: int) -> SpendRead:
                 Problem(
                     kind=Trouble.NO_DESCRIPTION,
                     row=number,
-                    detail="an amount with nothing said about it",
+                    detail="an amount with no description",
                 )
             )
             description = MISSING

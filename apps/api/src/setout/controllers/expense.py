@@ -280,7 +280,7 @@ class ExpenseController:
         if entered is None:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail="Give an amount, or a quantity and a unit rate",
+                detail="Enter an amount, or a quantity and a unit rate",
             )
         return entered
 
@@ -336,11 +336,11 @@ class ExpenseController:
     async def _fileable_scope(self, scope_id: str, project_id: str) -> Scope:
         scope = await Scope.get_or_none(id=scope_id, project_id=project_id, deleted_at__isnull=True)
         if scope is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scope not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
         if await Scope.filter(parent_id=scope.id, deleted_at__isnull=True).exists():
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="A scope with children holds no spend of its own",
+                detail="A category with subcategories has no expenses of its own",
             )
         return scope
 

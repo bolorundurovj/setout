@@ -79,7 +79,7 @@ class ImportController:
         if not currency_code:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail="This sheet does not say what currency it is in, so pick one",
+                detail="This spreadsheet does not specify a currency, so select one",
             )
         currency = await Currency.get_or_none(code=currency_code)
         if currency is None:
@@ -251,7 +251,7 @@ class ImportController:
         if blocking:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail=f"Settle this first: {blocking[0].detail}",
+                detail=f"Resolve this first: {blocking[0].detail}",
             )
 
         async with in_transaction():

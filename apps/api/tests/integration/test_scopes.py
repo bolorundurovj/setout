@@ -334,7 +334,7 @@ async def test_a_scope_with_expenses_cannot_be_deleted(client: AsyncClient) -> N
     resp = await client.delete(f"/api/scopes/{scope['id']}")
 
     assert resp.status_code == 409
-    assert resp.json()["detail"] == "A scope with expenses cannot be deleted, only renamed"
+    assert resp.json()["detail"] == "A category with expenses cannot be deleted, only renamed"
 
 
 async def test_a_scope_with_nothing_spent_on_it_can_be_deleted(client: AsyncClient) -> None:
