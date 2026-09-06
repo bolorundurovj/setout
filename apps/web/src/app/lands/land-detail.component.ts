@@ -1,3 +1,4 @@
+import { formatNumber } from '../budget/money';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -137,7 +138,7 @@ export class LandDetailComponent {
       return this.notSet;
     }
     const unit = land.size_unit && land.size_unit !== 'plot' ? land.size_unit : 'sqm';
-    return `${asSize(sqm, unit)} ${unit === 'sqm' ? 'sqm' : unit + 's'}`;
+    return `${formatNumber(asSize(sqm, unit) ?? 0)} ${unit === 'sqm' ? 'sqm' : unit + 's'}`;
   }
 
   /** How far the drawn edge is from what the survey said, when both exist. */

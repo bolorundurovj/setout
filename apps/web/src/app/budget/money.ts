@@ -14,6 +14,15 @@ export function formatMoney(minor: number, code: string, exponent: number): stri
   }
 }
 
+/** Numbers that are not money: thousands separators, and never a long float. */
+export function formatNumber(value: number | string, maxDecimals = 2): string {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(parsed)) {
+    return String(value);
+  }
+  return new Intl.NumberFormat('en', { maximumFractionDigits: maxDecimals }).format(parsed);
+}
+
 /** Parse what someone typed into minor units. Returns null when it is not a number. */
 export function parseMoney(input: string, exponent: number): number | null {
   const cleaned = input.replace(/[\s,]/g, '');
