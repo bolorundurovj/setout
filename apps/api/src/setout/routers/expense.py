@@ -37,7 +37,7 @@ NOT_FOUND: dict[int | str, dict[str, Any]] = {
 async def list_expenses(
     project_id: str,
     user: CurrentUser,
-    scope_id: Annotated[str | None, Query(description="Only this scope")] = None,
+    scope_id: Annotated[str | None, Query(description="Only this category")] = None,
     agreement_id: Annotated[
         str | None, Query(description="Only payments on this agreement")
     ] = None,
@@ -48,9 +48,9 @@ async def list_expenses(
             description="Only this calendar month, as YYYY-MM",
         ),
     ] = None,
-    unfiled_only: Annotated[bool, Query(description="Only spend with no scope")] = False,
+    unfiled_only: Annotated[bool, Query(description="Only expenses with no category")] = False,
     agreement_only: Annotated[
-        bool, Query(description="Only payments filed against some agreement")
+        bool, Query(description="Only payments assigned to an agreement")
     ] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,

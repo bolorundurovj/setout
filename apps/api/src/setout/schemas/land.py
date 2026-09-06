@@ -144,7 +144,7 @@ class LandRead(BaseModel):
     valuation_count: int = Field(0, description="Not counting removed ones")
     document_count: int = Field(..., description="Not counting removed ones")
     missing_kinds: list[str] = Field(
-        ..., description="The papers worth having that have not been uploaded yet"
+        ..., description="Required documents that have not been uploaded yet"
     )
     projects: list[LandProject] = Field(..., description="What is being built on it")
     created_at: datetime

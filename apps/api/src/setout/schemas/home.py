@@ -26,7 +26,7 @@ class HomeSummary(BaseModel):
     currencies: list[CurrencyChoice]
     currency_code: str | None
     currency_exponent: int | None
-    currency_projects: int = Field(0, description="Projects kept in this currency")
+    currency_projects: int = Field(0, description="Projects using this currency")
     planned_amount: int
     spent_amount: int
     alerts: list[HomeAlert]

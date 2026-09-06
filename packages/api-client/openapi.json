@@ -280,7 +280,7 @@
             }
           },
           "409": {
-            "description": "Already setup"
+            "description": "This server is already set up"
           },
           "422": {
             "description": "Validation Error",
@@ -2038,10 +2038,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Only this scope",
+              "description": "Only this category",
               "title": "Scope Id"
             },
-            "description": "Only this scope"
+            "description": "Only this category"
           },
           {
             "name": "agreement_id",
@@ -2086,11 +2086,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Only spend with no scope",
+              "description": "Only expenses with no category",
               "default": false,
               "title": "Unfiled Only"
             },
-            "description": "Only spend with no scope"
+            "description": "Only expenses with no category"
           },
           {
             "name": "agreement_only",
@@ -2098,11 +2098,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Only payments filed against some agreement",
+              "description": "Only payments assigned to an agreement",
               "default": false,
               "title": "Agreement Only"
             },
-            "description": "Only payments filed against some agreement"
+            "description": "Only payments assigned to an agreement"
           },
           {
             "name": "limit",
@@ -9068,7 +9068,7 @@
           },
           "kind": {
             "$ref": "#/components/schemas/LandDocumentKind",
-            "description": "What the paper is",
+            "description": "The document type",
             "default": "other"
           },
           "note": {
@@ -9371,12 +9371,12 @@
             "type": "array",
             "minItems": 1,
             "title": "Expense Ids",
-            "description": "Unfiled expenses to file"
+            "description": "Uncategorized expenses to assign"
           },
           "scope_id": {
             "type": "string",
             "title": "Scope Id",
-            "description": "The scope they should all be filed under"
+            "description": "The category they should all be assigned to"
           }
         },
         "type": "object",
@@ -9391,7 +9391,7 @@
           "filed_count": {
             "type": "integer",
             "title": "Filed Count",
-            "description": "How many unfiled expenses were filed"
+            "description": "How many uncategorized expenses were assigned"
           }
         },
         "type": "object",
@@ -9880,7 +9880,7 @@
               }
             ],
             "title": "Paid By Id",
-            "description": "Who handed over the money"
+            "description": "Who paid"
           },
           "quantity": {
             "anyOf": [
@@ -9935,7 +9935,7 @@
           "auto_scope": {
             "type": "boolean",
             "title": "Auto Scope",
-            "description": "Let history choose the scope when none is given",
+            "description": "Use past purchases to choose the category when none is given",
             "default": true
           }
         },
@@ -10100,7 +10100,7 @@
           "attachment_count": {
             "type": "integer",
             "title": "Attachment Count",
-            "description": "How many files are kept beside it"
+            "description": "How many files are attached"
           },
           "created_at": {
             "type": "string",
@@ -10770,7 +10770,7 @@
           "currency_projects": {
             "type": "integer",
             "title": "Currency Projects",
-            "description": "Projects kept in this currency",
+            "description": "Projects using this currency",
             "default": 0
           },
           "planned_amount": {
@@ -10889,7 +10889,7 @@
             },
             "type": "array",
             "title": "Sample",
-            "description": "The first spend rows as they would be filed"
+            "description": "The first expense rows as they would be imported"
           },
           "left_behind": {
             "items": {
@@ -10897,7 +10897,7 @@
             },
             "type": "array",
             "title": "Left Behind",
-            "description": "Columns the sheet holds that Setout keeps nowhere"
+            "description": "Columns in the spreadsheet that Setout does not store"
           }
         },
         "type": "object",
@@ -12223,7 +12223,7 @@
             },
             "type": "array",
             "title": "Missing Kinds",
-            "description": "The papers worth having that have not been uploaded yet"
+            "description": "Required documents that have not been uploaded yet"
           },
           "projects": {
             "items": {
@@ -12730,7 +12730,7 @@
               }
             ],
             "title": "Scope Id",
-            "description": "Null for spend that reached no scope"
+            "description": "Null for expenses with no category"
           },
           "name": {
             "type": "string",
@@ -12770,7 +12770,7 @@
             },
             "type": "array",
             "title": "Scopes",
-            "description": "Split by the scope at the top of each branch, in budget order"
+            "description": "Split by the top-level category, in budget order"
           }
         },
         "type": "object",
@@ -13281,7 +13281,7 @@
             },
             "type": "array",
             "title": "Months",
-            "description": "Oldest first. A month with nothing spent in it is left out"
+            "description": "Oldest first. Months with no expenses are omitted"
           },
           "busiest_month": {
             "anyOf": [
@@ -13760,7 +13760,7 @@
               }
             ],
             "title": "Matched To",
-            "description": "Name of the scope already here, if any"
+            "description": "Name of the existing category, if any"
           }
         },
         "type": "object",
@@ -13919,7 +13919,7 @@
               }
             ],
             "title": "Scope Id",
-            "description": "The scope that past purchases used most often"
+            "description": "The category past purchases used most often"
           },
           "reason": {
             "anyOf": [
@@ -13931,7 +13931,7 @@
               }
             ],
             "title": "Reason",
-            "description": "Why this scope was suggested"
+            "description": "Why this category was suggested"
           }
         },
         "type": "object",

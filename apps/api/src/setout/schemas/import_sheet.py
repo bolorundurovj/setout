@@ -32,7 +32,7 @@ class ScopeMatch(BaseModel):
     name: str
     lines: int
     planned_amount: int
-    matched_to: str | None = Field(None, description="Name of the scope already here, if any")
+    matched_to: str | None = Field(None, description="Name of the existing category, if any")
 
 
 class Decision(BaseModel):
@@ -79,9 +79,11 @@ class ImportReport(BaseModel):
     vendors_known: int
     owed_rows: int
     decisions: list[Decision]
-    sample: list[SampleRow] = Field(..., description="The first spend rows as they would be filed")
+    sample: list[SampleRow] = Field(
+        ..., description="The first expense rows as they would be imported"
+    )
     left_behind: list[str] = Field(
-        ..., description="Columns the sheet holds that Setout keeps nowhere"
+        ..., description="Columns in the spreadsheet that Setout does not store"
     )
 
 
