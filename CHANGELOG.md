@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.0.0](https://github.com/bolorundurovj/setout/compare/v1.4.2...v2.0.0) (2026-09-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* **api:** /scopes becomes /categories, scope_id becomes category_id, planned_amount becomes budgeted_amount, unfiled_count becomes uncategorized_count, auto_scope becomes auto_categorize, and seven SDK methods are renamed. Backups written before this release still restore.
+
+### Features
+
+* **api:** rename scope to category ([#42](https://github.com/bolorundurovj/setout/issues/42)) ([91986db](https://github.com/bolorundurovj/setout/commit/91986db14e2ea20d9b26b73395521f9636cf336a))
+
+
+### Bug Fixes
+
+* **web:** format every number the same way ([074b3e5](https://github.com/bolorundurovj/setout/commit/074b3e59b8f247e49890928af4d70843a3f8d048))
+
+
+### Refactoring
+
+* **api:** plain wording in error and import messages ([cdb80be](https://github.com/bolorundurovj/setout/commit/cdb80befec713520175699b6479aaba1c2c31788))
+* **api:** plain wording in the exported workbook ([c31dac2](https://github.com/bolorundurovj/setout/commit/c31dac25ba4831fca108414a626e3068e414ef9f))
+* **api:** plain wording in the schema descriptions ([5aa9214](https://github.com/bolorundurovj/setout/commit/5aa9214aa8d99b618a41136fcf5e1d7a0d11dbb6))
+* **web:** plain wording in the interface ([88efbb2](https://github.com/bolorundurovj/setout/commit/88efbb22404d811b9fb63a5a9188a24311c4b5ff))
+
+
+### Documentation
+
+* plain wording ([dc74d5c](https://github.com/bolorundurovj/setout/commit/dc74d5c9011945a27a5dcee7e0389e7d17ec3231))
+
 ## [1.4.2](https://github.com/bolorundurovj/setout/compare/v1.4.1...v1.4.2) (2026-09-06)
 
 
