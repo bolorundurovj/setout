@@ -53,7 +53,7 @@ This is the transpose, surfaced as two more tabs. Nothing new is stored.
 
 ## Project analytics
 
-The project screen answers how much is planned, how much is spent, and how far
+The project screen answers how much is budgeted, how much is spent, and how far
 off you are. It cannot answer why. Where the money is actually going, whether
 the rate of spending is sustainable, and which parts of the budget were wrong.
 Budget items and expenses already carry a cost type (labour, material, fixed)
