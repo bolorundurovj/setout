@@ -79,7 +79,7 @@
   }
 }
 
-.scope {
+.category {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -94,7 +94,7 @@
   border: 1px solid transparent;
 }
 
-.scope-name {
+.category-name {
   font-size: 13px;
   color: var(--ink);
   overflow: hidden;
@@ -120,14 +120,14 @@
   border-radius: 999px;
 }
 
-.scope-count {
+.category-count {
   font-family: 'DM Mono', monospace;
   font-size: 13px;
   color: var(--ink-2);
   flex: none;
 }
 
-.body.unfiled .scope-name {
+.body.uncategorized .category-name {
   color: var(--ink-2);
 }
 

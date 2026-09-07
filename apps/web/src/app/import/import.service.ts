@@ -16,7 +16,7 @@ export interface Target {
 }
 
 export interface Answers {
-  createMissingScopes: boolean;
+  createMissingCategories: boolean;
   skipDuplicates: boolean;
   takeUnpaid: boolean;
   severalCodes: string;
@@ -61,7 +61,7 @@ export class ImportService {
           project_id: target.projectId,
           name: target.name,
           currency_code: target.currencyCode,
-          create_missing_scopes: answers.createMissingScopes,
+          create_missing_categories: answers.createMissingCategories,
           skip_duplicates: answers.skipDuplicates,
           take_unpaid: answers.takeUnpaid,
           several_codes: answers.severalCodes,

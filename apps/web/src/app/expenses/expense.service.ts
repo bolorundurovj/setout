@@ -8,7 +8,7 @@ import {
   ExpenseRead,
   ProjectMonths,
   ProjectSpend,
-  ScopeSuggestion,
+  CategorySuggestion,
   addExpense,
   deleteExpense,
   fileExpenses,
@@ -16,13 +16,13 @@ import {
   getProjectSpend,
   listExpenses,
   restoreExpense,
-  suggestScope,
+  suggestCategory,
   updateExpense,
 } from '@setout/api-client';
 import { PAGE_SIZE, offsetOf } from '../ui/paging';
 
-/** Stands in for a scope on rows that hold spend which reached no scope. */
-export const UNFILED = 'unfiled';
+/** Stands in for a category on rows that hold spend which reached no category. */
+export const UNFILED = 'uncategorized';
 
 export interface Nested {
   rows: ExpenseRead[];
@@ -40,14 +40,14 @@ export class ExpenseService {
   private readonly spendState = signal<ProjectSpend | null>(null);
   private readonly totalState = signal(0);
   private readonly pageState = signal(1);
-  private readonly byScopeState = signal<Record<string, Nested>>({});
+  private readonly byCategoryState = signal<Record<string, Nested>>({});
   private readonly monthsState = signal<ProjectMonths | null>(null);
   private readonly byMonthState = signal<Record<string, Nested>>({});
 
   readonly expenses = this.state.asReadonly();
   readonly spend = this.spendState.asReadonly();
   readonly total = this.totalState.asReadonly();
-  readonly byScope = this.byScopeState.asReadonly();
+  readonly byCategory = this.byCategoryState.asReadonly();
   readonly months = this.monthsState.asReadonly();
   readonly byMonth = this.byMonthState.asReadonly();
   readonly saving = signal(false);
@@ -84,21 +84,24 @@ export class ExpenseService {
     }
   }
 
-  async loadForScope(projectId: string, scopeId: string, page = 1): Promise<void> {
+  async loadForCategory(projectId: string, categoryId: string, page = 1): Promise<void> {
     try {
       const rows = await this.api.invoke(listExpenses, {
         project_id: projectId,
-        scope_id: scopeId === UNFILED ? undefined : scopeId,
-        unfiled_only: scopeId === UNFILED,
+        category_id: categoryId === UNFILED ? undefined : categoryId,
+        uncategorized_only: categoryId === UNFILED,
         limit: PAGE_SIZE,
         offset: offsetOf(page),
       });
-      this.byScopeState.update((all) => ({
+      this.byCategoryState.update((all) => ({
         ...all,
-        [scopeId]: { rows: rows.items, total: rows.total, page },
+        [categoryId]: { rows: rows.items, total: rows.total, page },
       }));
     } catch {
-      this.byScopeState.update((all) => ({ ...all, [scopeId]: { rows: [], total: 0, page: 1 } }));
+      this.byCategoryState.update((all) => ({
+        ...all,
+        [categoryId]: { rows: [], total: 0, page: 1 },
+      }));
     }
   }
 
@@ -129,13 +132,13 @@ export class ExpenseService {
     }
   }
 
-  async suggestScope(
+  async suggestCategory(
     projectId: string,
     itemId?: string,
     vendorId?: string,
-  ): Promise<ScopeSuggestion | null> {
+  ): Promise<CategorySuggestion | null> {
     try {
-      return await this.api.invoke(suggestScope, {
+      return await this.api.invoke(suggestCategory, {
         project_id: projectId,
         item_id: itemId || undefined,
         vendor_id: vendorId || undefined,

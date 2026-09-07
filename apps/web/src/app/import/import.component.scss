@@ -158,13 +158,13 @@
   }
 }
 
-.scopes {
+.categories {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.scope {
+.category {
   display: grid;
   grid-template-columns: 1fr 130px 140px 90px;
   gap: 12px;
@@ -177,7 +177,7 @@
   }
 }
 
-.scope-name {
+.category-name {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -246,7 +246,7 @@
 }
 
 @media (max-width: bp.$phone) {
-  .scope,
+  .category,
   .row {
     grid-template-columns: 1fr 1fr;
   }

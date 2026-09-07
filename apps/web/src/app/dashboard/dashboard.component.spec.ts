@@ -18,7 +18,7 @@ function summary(over: Partial<HomeSummary> = {}): HomeSummary {
     currency_code: 'NGN',
     currency_exponent: 2,
     currency_projects: 2,
-    planned_amount: 592_830_000,
+    budgeted_amount: 592_830_000,
     spent_amount: 536_930_000,
     alerts: [],
     ...over,
@@ -41,7 +41,7 @@ function project(over: Partial<HomeProject> = {}): HomeProject {
     name: 'Jacaranda Close, Ewuru',
     currency_code: 'NGN',
     currency_exponent: 2,
-    planned_amount: 100_000_00,
+    budgeted_amount: 100_000_00,
     spent_amount: 40_000_00,
     expense_count: 9,
     ...over,
@@ -103,8 +103,8 @@ describe('DashboardComponent', () => {
       summary: summary({
         alerts: [
           {
-            kind: 'unfiled',
-            title: 'Spend with no scope',
+            kind: 'uncategorized',
+            title: 'Spend with no category',
             detail: '1 receipt across 2 projects',
             amount: 53_000_00,
             urgent: true,
@@ -130,7 +130,7 @@ describe('DashboardComponent', () => {
   });
 
   it('says over by rather than left once the plan is passed', () => {
-    const component = render({ summary: summary({ planned_amount: 100, spent_amount: 150 }) });
+    const component = render({ summary: summary({ budgeted_amount: 100, spent_amount: 150 }) });
 
     expect(component.over()).toBe(true);
     expect(component.leftLabel()).toBe('Over by');
@@ -221,12 +221,12 @@ describe('DashboardComponent', () => {
 
     expect(component.rowStanding(project())).toBe('₦60,000.00 left');
     expect(component.rowStanding(project({ spent_amount: 150_000_00 }))).toContain('Over by');
-    expect(component.rowStanding(project({ planned_amount: 0 }))).toBe('No budget set');
+    expect(component.rowStanding(project({ budgeted_amount: 0 }))).toBe('No budget set');
   });
 
   it('fills a project bar to the spend and marks the overspend past it', () => {
     const component = render();
-    const over = project({ planned_amount: 100, spent_amount: 150 });
+    const over = project({ budgeted_amount: 100, spent_amount: 150 });
 
     expect(component.rowFill(project())).toBe(40);
     expect(component.rowFill(over)).toBe(100);
@@ -234,7 +234,7 @@ describe('DashboardComponent', () => {
     expect(component.rowOverFill(project())).toBe(0);
   });
 
-  it('names the scope a recent expense was filed to, or says it was not', () => {
+  it('names the category a recent expense was filed to, or says it was not', () => {
     const component = render();
     const row = {
       id: 'e1',
@@ -242,14 +242,16 @@ describe('DashboardComponent', () => {
       project_name: 'Jacaranda Close',
       currency_code: 'NGN',
       currency_exponent: 2,
-      scope_name: 'Foundation',
+      category_name: 'Foundation',
       description: 'Cement',
       amount: 100,
       spent_on: '2026-08-14',
     };
 
     expect(component.where(row)).toBe('Jacaranda Close · Foundation');
-    expect(component.where({ ...row, scope_name: null })).toBe('Jacaranda Close · Uncategorized');
+    expect(component.where({ ...row, category_name: null })).toBe(
+      'Jacaranda Close · Uncategorized',
+    );
   });
 
   it('opens a project, its expense tab, and the whole list', () => {
@@ -269,7 +271,7 @@ describe('DashboardComponent', () => {
   it('sends each alert to the tab that answers it', () => {
     const component = render({ projects: { rows: [project()] } });
 
-    component.openAlert({ kind: 'unfiled', title: '', detail: '', amount: 0, urgent: true });
+    component.openAlert({ kind: 'uncategorized', title: '', detail: '', amount: 0, urgent: true });
     component.openAlert({ kind: 'deliveries', title: '', detail: '', amount: 0, urgent: false });
 
     expect(navigations.map((call) => call[0])).toEqual([
@@ -282,13 +284,19 @@ describe('DashboardComponent', () => {
     const component = render();
 
     expect(
-      component.alertMoney({ kind: 'unfiled', title: '', detail: '', amount: 0, urgent: true }),
+      component.alertMoney({
+        kind: 'uncategorized',
+        title: '',
+        detail: '',
+        amount: 0,
+        urgent: true,
+      }),
     ).toBe('');
   });
 
   it('says what to do first when there are no projects', () => {
     const component = render({
-      summary: summary({ projects: 0, currencies: [], currency_code: null, planned_amount: 0 }),
+      summary: summary({ projects: 0, currencies: [], currency_code: null, budgeted_amount: 0 }),
     });
 
     expect(component.standing()).toContain('No projects yet');

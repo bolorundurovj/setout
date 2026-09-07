@@ -13,7 +13,7 @@
   gap: 6px;
 }
 
-.add-scope {
+.add-category {
   display: flex;
   gap: 8px;
 }
@@ -52,7 +52,7 @@
   white-space: nowrap;
 }
 
-.scope-cell {
+.category-cell {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -80,7 +80,7 @@
   border: 1px solid var(--tile-ink);
 }
 
-.scope-name {
+.category-name {
   font:
     400 13px/1.45 'DM Sans',
     sans-serif;
@@ -207,7 +207,7 @@
 }
 
 @media (max-width: bp.$lap) {
-  .add-scope,
+  .add-category,
   .add-item {
     flex-direction: column;
     grid-template-columns: 1fr;

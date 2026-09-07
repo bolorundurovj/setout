@@ -68,10 +68,10 @@ async def run_import(
     project_id: Annotated[str | None, Form()] = None,
     name: Annotated[str, Form()] = "",
     currency_code: Annotated[str, Form()] = "",
-    create_missing_scopes: Annotated[bool, Form()] = True,
+    create_missing_categories: Annotated[bool, Form()] = True,
     skip_duplicates: Annotated[bool, Form()] = True,
     take_unpaid: Annotated[bool, Form()] = True,
-    several_codes: Annotated[str, Form(pattern="^(first|unfiled)$")] = "first",
+    several_codes: Annotated[str, Form(pattern="^(first|uncategorized)$")] = "first",
 ) -> ImportResult:
     try:
         return await controller.bring_in(
@@ -81,7 +81,7 @@ async def run_import(
             name=name,
             currency_code=currency_code,
             answers=Answers(
-                create_missing_scopes=create_missing_scopes,
+                create_missing_categories=create_missing_categories,
                 skip_duplicates=skip_duplicates,
                 take_unpaid=take_unpaid,
                 several_codes=several_codes,

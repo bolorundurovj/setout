@@ -1,40 +1,46 @@
 from __future__ import annotations
 
 from setout.services.sheets.detect import Found
-from setout.services.sheets.parsed import BudgetRead, PlannedLine, PlannedScope, Problem, Trouble
-from setout.services.sheets.values import as_code, as_minor, as_text, is_scope_code
+from setout.services.sheets.parsed import (
+    BudgetedCategory,
+    BudgetedLine,
+    BudgetRead,
+    Problem,
+    Trouble,
+)
+from setout.services.sheets.values import as_code, as_minor, as_text, is_category_code
 
 MISSING = "MISSING"
 
 
 def read(found: Found, exponent: int) -> BudgetRead:
-    """The budget sheet as scopes and their lines. A heading total is not read twice."""
+    """The budget sheet as categories and their lines. A heading total is not read twice."""
     out = BudgetRead()
     code_at = found.columns.get("cost codes", 0)
     name_at = found.columns.get("activities", 1)
-    planned_at = found.columns.get("budget", 5)
+    budgeted_at = found.columns.get("budget", 5)
     split_at = {
         "labour": found.columns.get("labor costs", found.columns.get("labour costs", -1)),
         "material": found.columns.get("material costs", -1),
         "fixed": found.columns.get("fixed costs", -1),
     }
 
-    current: PlannedScope | None = None
+    current: BudgetedCategory | None = None
     for offset, row in enumerate(found.sheet.rows[found.header_row + 1 :]):
         number = found.header_row + offset + 2
         code = as_code(_cell(row, code_at))
         name = as_text(_cell(row, name_at))
-        planned = as_minor(_cell(row, planned_at), exponent)
+        budgeted = as_minor(_cell(row, budgeted_at), exponent)
 
         if not code and not name:
             continue
 
-        if is_scope_code(code):
-            current = PlannedScope(row=number, code=code, name=name or code)
-            out.scopes.append(current)
+        if is_category_code(code):
+            current = BudgetedCategory(row=number, code=code, name=name or code)
+            out.categories.append(current)
             continue
 
-        if planned is None or planned == 0:
+        if budgeted is None or budgeted == 0:
             if not name:
                 out.blank_rows += 1
             continue
@@ -42,7 +48,7 @@ def read(found: Found, exponent: int) -> BudgetRead:
         if current is None:
             out.problems.append(
                 Problem(
-                    kind=Trouble.NO_SCOPE_YET,
+                    kind=Trouble.NO_CATEGORY_YET,
                     row=number,
                     detail=f"{name or code} sits above every category heading",
                 )
@@ -59,11 +65,11 @@ def read(found: Found, exponent: int) -> BudgetRead:
             )
 
         current.lines.append(
-            PlannedLine(
+            BudgetedLine(
                 row=number,
                 code=code,
                 description=name or MISSING,
-                planned_amount=planned,
+                budgeted_amount=budgeted,
                 cost_type=_split(row, split_at, exponent),
             )
         )

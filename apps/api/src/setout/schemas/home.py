@@ -27,7 +27,7 @@ class HomeSummary(BaseModel):
     currency_code: str | None
     currency_exponent: int | None
     currency_projects: int = Field(0, description="Projects using this currency")
-    planned_amount: int
+    budgeted_amount: int
     spent_amount: int
     alerts: list[HomeAlert]
 
@@ -49,7 +49,7 @@ class HomeProject(BaseModel):
     name: str
     currency_code: str
     currency_exponent: int
-    planned_amount: int
+    budgeted_amount: int
     spent_amount: int
     expense_count: int
 
@@ -64,7 +64,7 @@ class HomeSpend(BaseModel):
     project_name: str
     currency_code: str
     currency_exponent: int
-    scope_name: str | None
+    category_name: str | None
     description: str
     amount: int
     spent_on: date

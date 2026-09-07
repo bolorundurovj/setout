@@ -19,7 +19,7 @@ from setout.schemas.home import (
     HomeSpend,
     HomeSummary,
 )
-from setout.utils.budgets import planned_by_project, spent_by_project
+from setout.utils.budgets import budgeted_by_project, spent_by_project
 from setout.utils.placeholders import bound
 
 LATEST = 6
@@ -41,14 +41,14 @@ class HomeController:
                 currencies=choices,
                 currency_code=None,
                 currency_exponent=None,
-                planned_amount=0,
+                budgeted_amount=0,
                 spent_amount=0,
                 alerts=[],
             )
 
         here = [project for project in projects if project.currency_id == code]
         ids = [project.id for project in here]
-        planned = await planned_by_project(ids)
+        budgeted = await budgeted_by_project(ids)
         spent = await spent_by_project(ids)
         return HomeSummary(
             projects=len(projects),
@@ -56,7 +56,7 @@ class HomeController:
             currency_code=code,
             currency_exponent=here[0].currency.exponent,
             currency_projects=len(here),
-            planned_amount=sum(planned.values()),
+            budgeted_amount=sum(budgeted.values()),
             spent_amount=sum(spent.values()),
             alerts=await self._alerts(ids),
         )
@@ -83,7 +83,7 @@ class HomeController:
         code = self._code(self._choices(projects), wanted, base)
         here = [project for project in projects if code is None or project.currency_id == code]
         ids = [project.id for project in here]
-        planned = await planned_by_project(ids)
+        budgeted = await budgeted_by_project(ids)
         spent = await spent_by_project(ids)
         counts = await self._counts(ids)
         return HomeProjects(
@@ -93,7 +93,7 @@ class HomeController:
                     name=project.name,
                     currency_code=project.currency_id,
                     currency_exponent=project.currency.exponent,
-                    planned_amount=planned.get(project.id, 0),
+                    budgeted_amount=budgeted.get(project.id, 0),
                     spent_amount=spent.get(project.id, 0),
                     expense_count=counts.get(project.id, 0),
                 )
@@ -109,7 +109,7 @@ class HomeController:
             await Expense.filter(project_id__in=ids, deleted_at__isnull=True)
             .order_by("-spent_on", "-created_at")
             .limit(LATEST)
-            .prefetch_related("project__currency", "scope")
+            .prefetch_related("project__currency", "category")
         )
         return HomeLatest(
             rows=[
@@ -119,7 +119,7 @@ class HomeController:
                     project_name=row.project.name,
                     currency_code=row.project.currency_id,
                     currency_exponent=row.project.currency.exponent,
-                    scope_name=row.scope.name if row.scope else None,
+                    category_name=row.category.name if row.category else None,
                     description=row.description,
                     amount=row.amount,
                     spent_on=row.spent_on,
@@ -192,20 +192,21 @@ class HomeController:
     async def _alerts(self, project_ids: list[str]) -> list[HomeAlert]:
         alerts: list[HomeAlert] = []
 
-        unfiled = await Expense.filter(
-            project_id__in=project_ids, deleted_at__isnull=True, scope_id__isnull=True
+        uncategorized = await Expense.filter(
+            project_id__in=project_ids, deleted_at__isnull=True, category_id__isnull=True
         ).values_list("project_id", "amount")
-        if unfiled:
-            projects = len({project_id for project_id, _ in unfiled})
+        if uncategorized:
+            projects = len({project_id for project_id, _ in uncategorized})
             alerts.append(
                 HomeAlert(
-                    kind="unfiled",
-                    title="Spend with no scope",
+                    kind="uncategorized",
+                    title="Spend with no category",
                     detail=(
-                        f"{len(unfiled)} {'receipt' if len(unfiled) == 1 else 'receipts'} "
+                        f"{len(uncategorized)} "
+                        f"{'receipt' if len(uncategorized) == 1 else 'receipts'} "
                         f"across {projects} {'project' if projects == 1 else 'projects'}"
                     ),
-                    amount=sum(amount for _, amount in unfiled),
+                    amount=sum(amount for _, amount in uncategorized),
                     urgent=True,
                 )
             )

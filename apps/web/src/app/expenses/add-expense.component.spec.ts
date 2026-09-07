@@ -19,7 +19,7 @@ const project: ProjectRead = {
   land_name: null,
   status: 'active',
   notes: null,
-  planned_amount: 0,
+  budgeted_amount: 0,
   spent_amount: 0,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
@@ -54,7 +54,7 @@ describe('AddExpenseComponent', () => {
       error: () => null,
       load: async () => undefined,
       loadSpend: async () => undefined,
-      suggestScope: async () => ({ scope_id: 's1', reason: 'Past purchases of this item' }),
+      suggestCategory: async () => ({ category_id: 's1', reason: 'Past purchases of this item' }),
       add: async (...args: unknown[]) => {
         saves.push(args);
         return { id: 'e1', description: 'Cement' };
@@ -65,7 +65,7 @@ describe('AddExpenseComponent', () => {
       },
     };
     const empty = {
-      scopes: () => [],
+      categories: () => [],
       items: () => [],
       vendors: () => [],
       people: () => [],
@@ -78,7 +78,7 @@ describe('AddExpenseComponent', () => {
     };
     const budget = {
       ...empty,
-      scopes: () => [{ id: 's1', name: 'Concrete foundation', is_group: false }],
+      categories: () => [{ id: 's1', name: 'Concrete foundation', is_group: false }],
     };
 
     TestBed.resetTestingModule();
@@ -176,7 +176,7 @@ describe('AddExpenseComponent', () => {
   const existing = {
     id: 'e1',
     project_id: 'p1',
-    scope_id: null,
+    category_id: null,
     item_id: null,
     vendor_id: null,
     paid_by_id: null,
@@ -347,7 +347,7 @@ describe('AddExpenseComponent', () => {
     expect(uploads).toEqual([]);
   });
 
-  it('suggests a scope when an item is picked', async () => {
+  it('suggests a category when an item is picked', async () => {
     const fixture = render();
     const component = fixture.componentInstance;
 
@@ -355,76 +355,76 @@ describe('AddExpenseComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(component.scopeId()).toBe('s1');
-    expect(component.suggestedScopeId()).toBe('s1');
-    expect(component.scopeExplicitlyCleared()).toBe(false);
-    expect(component.scopeNote()).toContain('Suggested from past purchases');
+    expect(component.categoryId()).toBe('s1');
+    expect(component.suggestedCategoryId()).toBe('s1');
+    expect(component.categoryExplicitlyCleared()).toBe(false);
+    expect(component.categoryNote()).toContain('Suggested from past purchases');
   });
 
-  it('does not override a scope the user already chose', async () => {
+  it('does not override a category the user already chose', async () => {
     const fixture = render();
     const component = fixture.componentInstance;
-    component.pickScope('s2');
+    component.pickCategory('s2');
 
     await component.pickItem('i1');
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(component.scopeId()).toBe('s2');
-    expect(component.suggestedScopeId()).toBeNull();
-    expect(component.scopeExplicitlyCleared()).toBe(false);
-    expect(component.scopeNote()).not.toContain('Suggested');
+    expect(component.categoryId()).toBe('s2');
+    expect(component.suggestedCategoryId()).toBeNull();
+    expect(component.categoryExplicitlyCleared()).toBe(false);
+    expect(component.categoryNote()).not.toContain('Suggested');
   });
 
-  it('remembers when the user explicitly leaves a scope unfiled', () => {
+  it('remembers when the user explicitly leaves a category uncategorized', () => {
     const component = render().componentInstance;
-    component.pickScope('');
+    component.pickCategory('');
 
-    expect(component.scopeId()).toBe('');
-    expect(component.scopeExplicitlyCleared()).toBe(true);
-    expect(component.suggestedScopeId()).toBeNull();
+    expect(component.categoryId()).toBe('');
+    expect(component.categoryExplicitlyCleared()).toBe(true);
+    expect(component.suggestedCategoryId()).toBeNull();
   });
 
-  it('asks the backend to auto-assign when the scope was not explicitly cleared', async () => {
+  it('asks the backend to auto-assign when the category was not explicitly cleared', async () => {
     const component = render().componentInstance;
     component.description.set('Cement');
     component.amount.set('11000');
-    component.pickScope('');
-    component.pickScope('s1');
+    component.pickCategory('');
+    component.pickCategory('s1');
 
     await component.save(false);
 
     expect(saves[0][1]).toEqual(
       expect.objectContaining({
-        scope_id: 's1',
-        auto_scope: true,
+        category_id: 's1',
+        auto_categorize: true,
       }),
     );
   });
 
-  it('asks the backend not to auto-assign when the scope was explicitly cleared', async () => {
+  it('asks the backend not to auto-assign when the category was explicitly cleared', async () => {
     const component = render().componentInstance;
     component.description.set('Cement');
     component.amount.set('11000');
-    component.pickScope('');
+    component.pickCategory('');
 
     await component.save(false);
 
     expect(saves[0][1]).toEqual(
       expect.objectContaining({
-        scope_id: null,
-        auto_scope: false,
+        category_id: null,
+        auto_categorize: false,
       }),
     );
   });
 
-  it('does not send auto_scope when changing an existing expense', async () => {
+  it('does not send auto_categorize when changing an existing expense', async () => {
     const component = render(existing).componentInstance;
     component.amount.set('12000');
 
     await component.save(false);
 
     expect(updates[0][1]).toBe('e1');
-    expect(updates[0][2]).not.toHaveProperty('auto_scope');
+    expect(updates[0][2]).not.toHaveProperty('auto_categorize');
   });
 });

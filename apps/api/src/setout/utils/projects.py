@@ -14,14 +14,14 @@ def require_archived(project: Project) -> None:
         )
 
 
-def to_read(project: Project, planned_amount: int = 0, spent_amount: int = 0) -> ProjectRead:
+def to_read(project: Project, budgeted_amount: int = 0, spent_amount: int = 0) -> ProjectRead:
     land = project.land if project.land_id is not None else None
     return ProjectRead(
         id=project.id,
         name=project.name,
         currency_code=project.currency_id,
         currency_exponent=project.currency.exponent,
-        planned_amount=planned_amount,
+        budgeted_amount=budgeted_amount,
         spent_amount=spent_amount,
         status=project.status,
         land_id=project.land_id,

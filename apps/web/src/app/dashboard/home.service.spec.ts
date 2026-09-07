@@ -36,7 +36,7 @@ describe('HomeService', () => {
     currency_code: 'NGN',
     currency_exponent: 2,
     currency_projects: 1,
-    planned_amount: 100,
+    budgeted_amount: 100,
     spent_amount: 40,
     alerts: [],
   };

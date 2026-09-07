@@ -8,7 +8,7 @@
       </p>
     </div>
     <div class="intro-actions">
-      @if (!filing() && expenses.spend()?.unfiled_count) {
+      @if (!filing() && expenses.spend()?.uncategorized_count) {
         <app-button variant="secondary" (pressed)="startFiling()">Assign Uncategorized</app-button>
       }
       <app-button (pressed)="openDrawer()">Add Expense</app-button>
@@ -20,10 +20,10 @@
       <span class="t-micro">Spent</span>
       <span class="summary-figure t-mono">{{ money(spend.spent_amount) }}</span>
       <span class="t-micro">Budgeted</span>
-      <span class="summary-figure t-mono">{{ money(spend.planned_amount) }}</span>
-      @if (spend.unfiled_amount > 0) {
+      <span class="summary-figure t-mono">{{ money(spend.budgeted_amount) }}</span>
+      @if (spend.uncategorized_amount > 0) {
         <span class="t-micro">Uncategorized</span>
-        <span class="summary-figure t-mono">{{ money(spend.unfiled_amount) }}</span>
+        <span class="summary-figure t-mono">{{ money(spend.uncategorized_amount) }}</span>
       }
       @if (spend.variance_percent !== null) {
         <span class="t-micro">Against Budget</span>
@@ -50,13 +50,13 @@
         <span class="t-small">{{ selectedCount() }} selected</span>
       </label>
       <select
-        class="bulk-scope"
-        [ngModel]="bulkScopeId()"
-        (ngModelChange)="bulkScopeId.set($event)"
+        class="bulk-category"
+        [ngModel]="bulkCategoryId()"
+        (ngModelChange)="bulkCategoryId.set($event)"
       >
         <option value="">Select a category</option>
-        @for (scope of fileableScopes(); track scope.id) {
-          <option [value]="scope.id">{{ scope.name }}</option>
+        @for (category of fileableCategories(); track category.id) {
+          <option [value]="category.id">{{ category.name }}</option>
         }
       </select>
       <div class="bulk-actions">
@@ -67,7 +67,7 @@
       </div>
     </div>
 
-    @if (unfiled().length === 0) {
+    @if (uncategorized().length === 0) {
       <div class="card">
         <p class="t-body">Nothing left to assign.</p>
       </div>
@@ -80,7 +80,7 @@
           <span class="t-micro right">Date</span>
         </div>
 
-        @for (expense of unfiled(); track expense.id) {
+        @for (expense of uncategorized(); track expense.id) {
           <div class="row">
             <input
               type="checkbox"
@@ -105,10 +105,10 @@
       </div>
 
       <app-pagination
-        [total]="unfiledTotal()"
-        [page]="unfiledPage()"
+        [total]="uncategorizedTotal()"
+        [page]="uncategorizedPage()"
         noun="expenses"
-        (pageChange)="goToUnfiled($event)"
+        (pageChange)="goToUncategorized($event)"
       />
     }
   } @else if (expenses.expenses().length === 0) {
@@ -139,8 +139,8 @@
               <span class="t-micro">{{ meta(expense) }}</span>
             }
           </span>
-          <span class="chip t-micro" [class.unfiled]="!expense.scope_id">
-            {{ scopeName(expense) }}
+          <span class="chip t-micro" [class.uncategorized]="!expense.category_id">
+            {{ categoryName(expense) }}
           </span>
           <span class="right t-mono figure">{{ money(expense.amount) }}</span>
           <span class="right t-mono muted">{{ expense.spent_on }}</span>

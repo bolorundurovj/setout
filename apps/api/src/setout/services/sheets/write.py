@@ -16,7 +16,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 TITLE_FONT = Font(name="Calibri", size=14, bold=True, color="1E2226")
 HEAD_FONT = Font(name="Calibri", size=11, bold=True, color="1E2226")
 HEAD_FILL = PatternFill("solid", fgColor="ECEFF3")
-SCOPE_FONT = Font(name="Calibri", size=11, bold=True)
+CATEGORY_FONT = Font(name="Calibri", size=11, bold=True)
 MONEY_FORMAT = "#,##0.00"
 XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 DATE_FORMAT = "dd mmm yyyy"
@@ -57,19 +57,19 @@ COST_COLUMN = {"labour": 0, "material": 1, "fixed": 2}
 class PlanLine:
     code: str
     name: str
-    planned_amount: int
+    budgeted_amount: int
     cost_type: str | None = None
 
 
 @dataclass
-class PlanScope:
+class PlanCategory:
     code: str
     name: str
     lines: list[PlanLine] = field(default_factory=list)
 
     @property
-    def planned_amount(self) -> int:
-        return sum(line.planned_amount for line in self.lines)
+    def budgeted_amount(self) -> int:
+        return sum(line.budgeted_amount for line in self.lines)
 
 
 @dataclass
@@ -140,7 +140,7 @@ class Book:
     project_name: str
     exponent: int
     currency_code: str = ""
-    scopes: list[PlanScope] = field(default_factory=list)
+    categories: list[PlanCategory] = field(default_factory=list)
     vendors: list[VendorRow] = field(default_factory=list)
     spend: list[SpendRow] = field(default_factory=list)
     owed: list[OwedRow] = field(default_factory=list)
@@ -241,27 +241,27 @@ def _budget(sheet: Worksheet, book: Book) -> None:
     def figure(minor: int) -> Decimal:
         return major(minor, book.exponent)
 
-    for scope in book.scopes:
+    for category in book.categories:
         # Setout adds the lines up itself, so a re-import reads them alone.
-        totals = _by_cost_type(scope.lines)
+        totals = _by_cost_type(category.lines)
         sheet.append(
             [
-                scope.code,
-                scope.name,
+                category.code,
+                category.name,
                 figure(totals["labour"]) if totals["labour"] else "",
                 figure(totals["material"]) if totals["material"] else "",
                 figure(totals["fixed"]) if totals["fixed"] else "",
-                figure(scope.planned_amount),
+                figure(category.budgeted_amount),
             ]
         )
-        sheet.cell(row=sheet.max_row, column=1).font = SCOPE_FONT
-        sheet.cell(row=sheet.max_row, column=2).font = SCOPE_FONT
-        sheet.cell(row=sheet.max_row, column=6).font = SCOPE_FONT
-        for line in scope.lines:
+        sheet.cell(row=sheet.max_row, column=1).font = CATEGORY_FONT
+        sheet.cell(row=sheet.max_row, column=2).font = CATEGORY_FONT
+        sheet.cell(row=sheet.max_row, column=6).font = CATEGORY_FONT
+        for line in category.lines:
             split: list[object] = ["", "", ""]
             if line.cost_type in COST_COLUMN:
-                split[COST_COLUMN[line.cost_type]] = figure(line.planned_amount)
-            sheet.append([line.code, line.name, *split, figure(line.planned_amount)])
+                split[COST_COLUMN[line.cost_type]] = figure(line.budgeted_amount)
+            sheet.append([line.code, line.name, *split, figure(line.budgeted_amount)])
 
     _widths(sheet, [14, 40, 15, 15, 15, 16])
     _format(sheet, money=[2, 3, 4, 5], money_format=_money_format(book))
@@ -271,7 +271,7 @@ def _by_cost_type(lines: list[PlanLine]) -> dict[str, int]:
     totals = {"labour": 0, "material": 0, "fixed": 0}
     for line in lines:
         if line.cost_type in totals:
-            totals[line.cost_type] += line.planned_amount
+            totals[line.cost_type] += line.budgeted_amount
     return totals
 
 
@@ -368,15 +368,15 @@ HOW_TO = [
     "Each sheet below is recognised by its headings, so keep the heading row as it is.",
     "Add rows underneath. Delete a sheet you have nothing for.",
     "",
-    "Budget: a cost code ending in 000 is a scope heading. Anything else is a line",
-    "under the heading above it, so 3000 is a scope and 3001 sits inside it.",
+    "Budget: a cost code ending in 000 is a category heading. Anything else is a line",
+    "under the heading above it, so 3000 is a category and 3001 sits inside it.",
     "Only the lines are read; a heading total is worked out from them.",
     "",
-    "Put a planned figure in one of the labour, material or fixed columns and it is",
+    "Put a budgeted figure in one of the labour, material or fixed columns and it is",
     "kept under that heading. The last column is the figure that counts either way.",
     "",
-    "Invoices and Purchases: one row is one payment. The cost code says which scope",
-    "it belongs to; leave it empty and the spending arrives unfiled, which is allowed.",
+    "Invoices and Purchases: one row is one payment. The cost code says which category",
+    "it belongs to; leave it empty and the spending arrives uncategorized, which is allowed.",
     "",
     "Amounts are plain numbers. No currency symbols, no thousands separators.",
     "Dates can be written any way a spreadsheet understands.",
@@ -393,8 +393,8 @@ def example_book(currency_code: str = "NGN") -> Book:
         project_name="Jacaranda Close, Ewuru",
         exponent=2,
         currency_code=currency_code,
-        scopes=[
-            PlanScope(
+        categories=[
+            PlanCategory(
                 code="1000",
                 name="Administrative expenses",
                 lines=[
@@ -402,7 +402,7 @@ def example_book(currency_code: str = "NGN") -> Book:
                     PlanLine("1002", "Beacons", 30_000_00, "material"),
                 ],
             ),
-            PlanScope(
+            PlanCategory(
                 code="2000",
                 name="Concrete foundation",
                 lines=[
@@ -458,7 +458,7 @@ def example_book(currency_code: str = "NGN") -> Book:
                 amount=8_400_00,
                 document="",
                 paid_by="",
-                notes="No cost code, so this arrives unfiled",
+                notes="No cost code, so this arrives uncategorized",
             ),
         ],
         owed=[
@@ -533,13 +533,15 @@ def as_csv(rows: list[list[object]]) -> bytes:
 def budget_csv(filled: bool = False) -> bytes:
     rows: list[list[object]] = [list(BUDGET_HEAD)]
     if filled:
-        for scope in example_book().scopes:
-            rows.append([scope.code, scope.name, "", "", "", major(scope.planned_amount, 2)])
-            for line in scope.lines:
+        for category in example_book().categories:
+            rows.append(
+                [category.code, category.name, "", "", "", major(category.budgeted_amount, 2)]
+            )
+            for line in category.lines:
                 split: list[object] = ["", "", ""]
                 if line.cost_type in COST_COLUMN:
-                    split[COST_COLUMN[line.cost_type]] = major(line.planned_amount, 2)
-                rows.append([line.code, line.name, *split, major(line.planned_amount, 2)])
+                    split[COST_COLUMN[line.cost_type]] = major(line.budgeted_amount, 2)
+                rows.append([line.code, line.name, *split, major(line.budgeted_amount, 2)])
     return as_csv(rows)
 
 

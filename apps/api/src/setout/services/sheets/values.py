@@ -108,16 +108,16 @@ def codes_in(value: object) -> list[str]:
     return codes
 
 
-def is_scope_code(code: str) -> bool:
-    """A code ending in three noughts heads a scope; the rest sit under one."""
+def is_category_code(code: str) -> bool:
+    """A code ending in three noughts heads a category; the rest sit under one."""
     return len(code) > 3 and code.endswith("000")
 
 
-def scope_code_for(code: str) -> str:
-    """The heading a cost code sits under. 3001 belongs to scope 3000."""
+def category_code_for(code: str) -> str:
+    """The heading a cost code sits under. 3001 belongs to category 3000."""
     if not code or not code.isdigit():
         return code
-    if is_scope_code(code):
+    if is_category_code(code):
         return code
     if len(code) <= 3:
         return code

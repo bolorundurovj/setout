@@ -18,7 +18,7 @@ const project: ProjectRead = {
   currency_exponent: 2,
   land_id: null,
   land_name: null,
-  planned_amount: 0,
+  budgeted_amount: 0,
   spent_amount: 0,
   status: 'active',
   notes: null,
@@ -39,22 +39,22 @@ describe('ProjectDetailComponent', () => {
       page: () => 1,
       months: () => null,
       byMonth: () => ({}),
-      byScope: () => ({}),
+      byCategory: () => ({}),
       saving: () => false,
       error: () => null,
       load: async () => undefined,
       goTo: async () => undefined,
       loadMonths: async () => undefined,
       loadForMonth: async () => undefined,
-      loadForScope: async () => undefined,
+      loadForCategory: async () => undefined,
       add: async () => null,
       remove: async () => undefined,
     };
     const budget = {
-      scopes: () => [],
+      categories: () => [],
       items: () => ({}),
       presetNames: () => [],
-      plannedTotal: () => 0,
+      budgetedTotal: () => 0,
       error: () => null,
       loading: () => false,
       load: async () => undefined,
@@ -199,7 +199,7 @@ describe('ProjectDetailComponent', () => {
     expect(title.getTitle()).toBe('Jacaranda Close, Ewuru · Agreements · Setout');
   });
 
-  it('sends a pressed scope to the table, naming it in the address', () => {
+  it('sends a pressed category to the table, naming it in the address', () => {
     const component = render();
     const router = TestBed.inject(Router);
     const went: unknown[][] = [];
@@ -208,10 +208,10 @@ describe('ProjectDetailComponent', () => {
       return true;
     };
 
-    component.openScope('s1');
+    component.openCategory('s1');
 
     expect(component.activeTab()).toBe('table');
     expect(went[0][0]).toEqual(['/projects', 'p1', 'table']);
-    expect(went[0][1]).toEqual({ queryParams: { scope: 's1' } });
+    expect(went[0][1]).toEqual({ queryParams: { category: 's1' } });
   });
 });

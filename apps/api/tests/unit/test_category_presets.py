@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from setout.utils.scope_presets import SCOPE_PRESETS
+from setout.utils.category_presets import CATEGORY_PRESETS
 
 pytestmark = pytest.mark.unit
 
@@ -17,19 +17,19 @@ FROM_THE_BRIEF = [
 ]
 
 
-def test_the_scopes_named_in_the_brief_are_present() -> None:
-    assert set(FROM_THE_BRIEF) <= set(SCOPE_PRESETS)
+def test_the_categories_named_in_the_brief_are_present() -> None:
+    assert set(FROM_THE_BRIEF) <= set(CATEGORY_PRESETS)
 
 
 def test_names_are_unique() -> None:
-    assert len(SCOPE_PRESETS) == len(set(SCOPE_PRESETS))
+    assert len(CATEGORY_PRESETS) == len(set(CATEGORY_PRESETS))
 
 
 def test_names_are_not_blank() -> None:
-    assert all(name.strip() for name in SCOPE_PRESETS)
+    assert all(name.strip() for name in CATEGORY_PRESETS)
 
 
 def test_administrative_comes_before_finalization() -> None:
-    assert SCOPE_PRESETS.index("Administrative expenses") < SCOPE_PRESETS.index(
+    assert CATEGORY_PRESETS.index("Administrative expenses") < CATEGORY_PRESETS.index(
         "Finalization and inspections"
     )

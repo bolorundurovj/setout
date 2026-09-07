@@ -183,12 +183,12 @@ async def _archive_and_delete(client: AsyncClient, project_id: str) -> None:
 async def test_deleting_a_project_takes_everything_it_owns(client: AsyncClient) -> None:
     await _sign_in(client)
     project = await _create(client)
-    scope = (
-        await client.post(f"/api/projects/{project['id']}/scopes", json={"name": "Foundation"})
+    category = (
+        await client.post(f"/api/projects/{project['id']}/categories", json={"name": "Foundation"})
     ).json()
     await client.post(
-        f"/api/scopes/{scope['id']}/budget-items",
-        json={"description": "Sand", "planned_amount": 100_000_00},
+        f"/api/categories/{category['id']}/budget-items",
+        json={"description": "Sand", "budgeted_amount": 100_000_00},
     )
     vendor = (await client.post("/api/vendors", json={"name": "Segun Blocks"})).json()
     spend = (
@@ -197,7 +197,7 @@ async def test_deleting_a_project_takes_everything_it_owns(client: AsyncClient) 
             json={
                 "description": "Cement",
                 "amount": 40_000_00,
-                "scope_id": scope["id"],
+                "category_id": category["id"],
                 "vendor_id": vendor["id"],
             },
         )
@@ -211,8 +211,8 @@ async def test_deleting_a_project_takes_everything_it_owns(client: AsyncClient) 
 
     spent = (await client.get(f"/api/vendors/{vendor['id']}/spend")).json()
     assert spent["projects"] == []
-    scopes = await client.get(f"/api/projects/{project['id']}/scopes")
-    assert scopes.status_code == 404
+    categories = await client.get(f"/api/projects/{project['id']}/categories")
+    assert categories.status_code == 404
     assert (await client.get("/api/deliveries")).json()["items"] == []
 
 

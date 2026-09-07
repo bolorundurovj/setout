@@ -6,10 +6,10 @@ from tortoise import fields
 from tortoise.models import Model
 
 from setout.models.agreement import Agreement
+from setout.models.category import Category
 from setout.models.item import Item
 from setout.models.person import Person
 from setout.models.project import Project
-from setout.models.scope import Scope
 from setout.models.vendor import Vendor
 from setout.utils.ids import short_id
 
@@ -28,14 +28,14 @@ class Expense(Model):
         on_delete=fields.CASCADE,
     )
     project_id: str
-    scope: fields.ForeignKeyNullableRelation[Scope] = fields.ForeignKeyField(
-        "models.Scope",
+    category: fields.ForeignKeyNullableRelation[Category] = fields.ForeignKeyField(
+        "models.Category",
         related_name="expenses",
         null=True,
         default=None,
         on_delete=fields.SET_NULL,
     )
-    scope_id: str | None
+    category_id: str | None
     item: fields.ForeignKeyNullableRelation[Item] = fields.ForeignKeyField(
         "models.Item",
         related_name="expenses",

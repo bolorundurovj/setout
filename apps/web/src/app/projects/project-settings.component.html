@@ -111,51 +111,51 @@
   <section class="card block">
     <span class="t-micro">Categories</span>
 
-    @if (budget.scopes().length === 0) {
+    @if (budget.categories().length === 0) {
       <p class="t-small note">No categories yet. Add them on the Budget tab.</p>
     } @else {
-      <div class="scopes">
-        @for (scope of budget.scopes(); track scope.id) {
-          <div class="scope" [class.child]="scope.parent_id">
-            @if (renaming() === scope.id) {
+      <div class="categories">
+        @for (category of budget.categories(); track category.id) {
+          <div class="category" [class.child]="category.parent_id">
+            @if (renaming() === category.id) {
               <input
                 class="input-field rename"
                 type="text"
                 autocomplete="off"
-                [attr.aria-label]="'Rename ' + scope.name"
+                [attr.aria-label]="'Rename ' + category.name"
                 [value]="newName()"
                 (input)="newName.set(value($event))"
-                (keyup.enter)="rename(scope)"
+                (keyup.enter)="rename(category)"
                 (keyup.escape)="cancelRename()"
               />
-              <button type="button" class="link-action" (click)="rename(scope)">Save</button>
+              <button type="button" class="link-action" (click)="rename(category)">Save</button>
               <button type="button" class="link-action" (click)="cancelRename()">Cancel</button>
-            } @else if (removing() === scope.id) {
-              <span class="swatch" [class]="tint(scope)"></span>
-              <span class="scope-name">{{ scope.name }}</span>
+            } @else if (removing() === category.id) {
+              <span class="swatch" [class]="tint(category)"></span>
+              <span class="category-name">{{ category.name }}</span>
               <span class="t-small confirm">Remove this category?</span>
-              <button type="button" class="link-action destructive" (click)="remove(scope)">
+              <button type="button" class="link-action destructive" (click)="remove(category)">
                 Yes, Remove
               </button>
               <button type="button" class="link-action" (click)="cancelRemove()">Cancel</button>
             } @else {
-              <span class="swatch" [class]="tint(scope)"></span>
-              <span class="scope-name">{{ scope.name }}</span>
-              <span class="scope-count t-mono">{{ countLabel(scope) }}</span>
+              <span class="swatch" [class]="tint(category)"></span>
+              <span class="category-name">{{ category.name }}</span>
+              <span class="category-count t-mono">{{ countLabel(category) }}</span>
               <button
                 type="button"
                 class="link-action"
-                [attr.aria-label]="'Rename ' + scope.name"
-                (click)="startRename(scope)"
+                [attr.aria-label]="'Rename ' + category.name"
+                (click)="startRename(category)"
               >
                 Rename
               </button>
-              @if (canRemove(scope)) {
+              @if (canRemove(category)) {
                 <button
                   type="button"
                   class="link-action destructive"
-                  [attr.aria-label]="'Remove ' + scope.name"
-                  (click)="ask(scope)"
+                  [attr.aria-label]="'Remove ' + category.name"
+                  (click)="ask(category)"
                 >
                   Remove
                 </button>
@@ -168,7 +168,7 @@
       @if (justRemoved(); as gone) {
         <p class="t-small note">
           {{ gone.name }} was removed.
-          <button type="button" class="link-action" (click)="putScopeBack()">Undo</button>
+          <button type="button" class="link-action" (click)="putCategoryBack()">Undo</button>
         </p>
       }
 

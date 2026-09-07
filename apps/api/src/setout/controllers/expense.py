@@ -9,22 +9,22 @@ from tortoise.queryset import QuerySet
 
 from setout.models.agreement import Agreement
 from setout.models.budget import BudgetItem
+from setout.models.category import Category
 from setout.models.expense import Expense
 from setout.models.item import Item
 from setout.models.person import Person
 from setout.models.project import Project
-from setout.models.scope import Scope
 from setout.models.vendor import Vendor
 from setout.schemas.expense import (
     BulkFileExpenses,
     BulkFileResult,
+    CategorySuggestion,
     ExpenseCreate,
     ExpensePage,
     ExpenseRead,
     ExpenseUpdate,
     ProjectMonths,
     ProjectSpend,
-    ScopeSuggestion,
 )
 from setout.utils.attachments import counts_for
 from setout.utils.cascade import delete_under_expense, restore_under_expense
@@ -37,20 +37,20 @@ class ExpenseController:
         self,
         project_id: str,
         *,
-        scope_id: str | None,
+        category_id: str | None,
         agreement_id: str | None,
         month: str | None,
-        unfiled_only: bool,
+        uncategorized_only: bool,
         agreement_only: bool,
         limit: int,
         offset: int,
     ) -> ExpensePage:
         await self._project_or_404(project_id)
         query = Expense.filter(project_id=project_id, deleted_at__isnull=True)
-        if unfiled_only:
-            query = query.filter(scope_id__isnull=True)
-        elif scope_id is not None:
-            query = query.filter(scope_id=scope_id)
+        if uncategorized_only:
+            query = query.filter(category_id__isnull=True)
+        elif category_id is not None:
+            query = query.filter(category_id=category_id)
         if agreement_id is not None:
             query = query.filter(agreement_id=agreement_id)
         elif agreement_only:
@@ -70,15 +70,15 @@ class ExpenseController:
 
     async def create(self, project_id: str, req: ExpenseCreate) -> ExpenseRead:
         await self._project_or_404(project_id)
-        scope_id = await self._resolve_scope(project_id, req)
-        if scope_id is not None:
-            await self._fileable_scope(scope_id, project_id)
+        category_id = await self._resolve_category(project_id, req)
+        if category_id is not None:
+            await self._fileable_category(category_id, project_id)
         await self._attribution_or_404(req.item_id, req.vendor_id, req.paid_by_id)
         await self._agreement_or_404(req.agreement_id, project_id)
         amount = self._amount(req.quantity, req.unit_rate, req.amount)
         expense = await Expense.create(
             project_id=project_id,
-            scope_id=scope_id,
+            category_id=category_id,
             item_id=req.item_id,
             vendor_id=req.vendor_id,
             agreement_id=req.agreement_id,
@@ -95,47 +95,51 @@ class ExpenseController:
 
     async def bulk_file(self, project_id: str, req: BulkFileExpenses) -> BulkFileResult:
         await self._project_or_404(project_id)
-        await self._fileable_scope(req.scope_id, project_id)
+        await self._fileable_category(req.category_id, project_id)
         filed = await Expense.filter(
             project_id=project_id,
             id__in=req.expense_ids,
             deleted_at__isnull=True,
-            scope_id__isnull=True,
-        ).update(scope_id=req.scope_id)
+            category_id__isnull=True,
+        ).update(category_id=req.category_id)
         return BulkFileResult(filed_count=filed)
 
-    async def _resolve_scope(self, project_id: str, req: ExpenseCreate) -> str | None:
-        if req.scope_id is not None:
-            return req.scope_id
-        if not req.auto_scope:
+    async def _resolve_category(self, project_id: str, req: ExpenseCreate) -> str | None:
+        if req.category_id is not None:
+            return req.category_id
+        if not req.auto_categorize:
             return None
         if req.item_id:
-            scope_id = await self._strong_scope(project_id, item_id=req.item_id)
-            if scope_id:
-                return scope_id
+            category_id = await self._strong_category(project_id, item_id=req.item_id)
+            if category_id:
+                return category_id
         if req.vendor_id:
-            return await self._strong_scope(project_id, vendor_id=req.vendor_id)
+            return await self._strong_category(project_id, vendor_id=req.vendor_id)
         return None
 
-    async def suggest_scope(
+    async def suggest_category(
         self, project_id: str, item_id: str | None, vendor_id: str | None
-    ) -> ScopeSuggestion:
+    ) -> CategorySuggestion:
         await self._project_or_404(project_id)
         if item_id:
-            scope_id = await self._most_common_scope(project_id, item_id=item_id)
-            if scope_id:
-                return ScopeSuggestion(scope_id=scope_id, reason="Past purchases of this item")
+            category_id = await self._most_common_category(project_id, item_id=item_id)
+            if category_id:
+                return CategorySuggestion(
+                    category_id=category_id, reason="Past purchases of this item"
+                )
         if vendor_id:
-            scope_id = await self._most_common_scope(project_id, vendor_id=vendor_id)
-            if scope_id:
-                return ScopeSuggestion(scope_id=scope_id, reason="Past purchases from this vendor")
-        return ScopeSuggestion(scope_id=None, reason=None)
+            category_id = await self._most_common_category(project_id, vendor_id=vendor_id)
+            if category_id:
+                return CategorySuggestion(
+                    category_id=category_id, reason="Past purchases from this vendor"
+                )
+        return CategorySuggestion(category_id=None, reason=None)
 
-    async def _scope_counts(
+    async def _category_counts(
         self, project_id: str, *, item_id: str | None = None, vendor_id: str | None = None
     ) -> tuple[dict[str, int], int]:
         query = Expense.filter(
-            project_id=project_id, deleted_at__isnull=True, scope_id__isnull=False
+            project_id=project_id, deleted_at__isnull=True, category_id__isnull=False
         )
         if item_id is not None:
             query = query.filter(item_id=item_id)
@@ -144,30 +148,32 @@ class ExpenseController:
         else:
             return {}, 0
         counts: dict[str, int] = {}
-        for expense in await query.only("scope_id"):
-            scope_id = expense.scope_id
-            assert scope_id is not None
-            counts[scope_id] = counts.get(scope_id, 0) + 1
+        for expense in await query.only("category_id"):
+            category_id = expense.category_id
+            assert category_id is not None
+            counts[category_id] = counts.get(category_id, 0) + 1
         return counts, sum(counts.values())
 
-    async def _most_common_scope(
+    async def _most_common_category(
         self, project_id: str, *, item_id: str | None = None, vendor_id: str | None = None
     ) -> str | None:
-        counts, _ = await self._scope_counts(project_id, item_id=item_id, vendor_id=vendor_id)
+        counts, _ = await self._category_counts(project_id, item_id=item_id, vendor_id=vendor_id)
         if not counts:
             return None
         max_count = max(counts.values())
-        winners = [scope_id for scope_id, count in counts.items() if count == max_count]
+        winners = [category_id for category_id, count in counts.items() if count == max_count]
         return winners[0] if len(winners) == 1 else None
 
-    async def _strong_scope(
+    async def _strong_category(
         self, project_id: str, *, item_id: str | None = None, vendor_id: str | None = None
     ) -> str | None:
-        counts, total = await self._scope_counts(project_id, item_id=item_id, vendor_id=vendor_id)
+        counts, total = await self._category_counts(
+            project_id, item_id=item_id, vendor_id=vendor_id
+        )
         if not counts or total < 2:
             return None
         max_count = max(counts.values())
-        winners = [scope_id for scope_id, count in counts.items() if count == max_count]
+        winners = [category_id for category_id, count in counts.items() if count == max_count]
         if len(winners) != 1:
             return None
         return winners[0] if max_count == total else None
@@ -180,8 +186,8 @@ class ExpenseController:
     async def update(self, expense_id: str, req: ExpenseUpdate) -> ExpenseRead:
         expense = await self._expense_or_404(expense_id)
         changes = req.model_dump(exclude_unset=True)
-        if changes.get("scope_id") is not None:
-            await self._fileable_scope(changes["scope_id"], expense.project_id)
+        if changes.get("category_id") is not None:
+            await self._fileable_category(changes["category_id"], expense.project_id)
         await self._attribution_or_404(
             changes.get("item_id"), changes.get("vendor_id"), changes.get("paid_by_id")
         )
@@ -223,29 +229,30 @@ class ExpenseController:
 
     async def spend(self, project_id: str) -> ProjectSpend:
         project = await self._project_or_404(project_id)
-        # Filtered by scope id rather than through a join, which would make the
-        # database group the sum per scope.
-        scope_ids = await Scope.filter(project_id=project_id, deleted_at__isnull=True).values_list(
-            "id", flat=True
-        )
-        planned = await self._total(
-            BudgetItem.filter(scope_id__in=scope_ids, deleted_at__isnull=True), "planned_amount"
+        # Filtered by category id rather than through a join, which would make the
+        # database group the sum per category.
+        category_ids = await Category.filter(
+            project_id=project_id, deleted_at__isnull=True
+        ).values_list("id", flat=True)
+        budgeted = await self._total(
+            BudgetItem.filter(category_id__in=category_ids, deleted_at__isnull=True),
+            "budgeted_amount",
         )
         filed = Expense.filter(project_id=project_id, deleted_at__isnull=True)
         spent = await self._total(filed, "amount")
-        unfiled = await self._total(filed.filter(scope_id__isnull=True), "amount")
-        unfiled_count = await filed.filter(scope_id__isnull=True).count()
+        uncategorized = await self._total(filed.filter(category_id__isnull=True), "amount")
+        uncategorized_count = await filed.filter(category_id__isnull=True).count()
         removed = await Expense.filter(project_id=project_id, deleted_at__isnull=False).count()
         return ProjectSpend(
             project_id=project.id,
             currency_code=project.currency_id,
             currency_exponent=project.currency.exponent,
-            planned_amount=planned,
+            budgeted_amount=budgeted,
             spent_amount=spent,
-            unfiled_amount=unfiled,
-            unfiled_count=unfiled_count,
+            uncategorized_amount=uncategorized,
+            uncategorized_count=uncategorized_count,
             removed_count=removed,
-            variance_percent=round((spent - planned) / planned * 100, 2) if planned else None,
+            variance_percent=round((spent - budgeted) / budgeted * 100, 2) if budgeted else None,
         )
 
     async def months(self, project_id: str) -> ProjectMonths:
@@ -253,10 +260,10 @@ class ExpenseController:
         # Shaped in Python: the segments follow budget order and roll up to the
         # top of each branch, which one query cannot say.
         expenses = await Expense.filter(project_id=project_id, deleted_at__isnull=True).only(
-            "id", "spent_on", "scope_id", "amount"
+            "id", "spent_on", "category_id", "amount"
         )
-        scopes = await Scope.filter(project_id=project_id, deleted_at__isnull=True)
-        months = to_months(expenses, scopes)
+        categories = await Category.filter(project_id=project_id, deleted_at__isnull=True)
+        months = to_months(expenses, categories)
         # Ties go to the earlier month, which is the one already on the page.
         busiest = max(months, key=lambda month: month.amount).month if months else None
         return ProjectMonths(
@@ -333,16 +340,18 @@ class ExpenseController:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
         return project
 
-    async def _fileable_scope(self, scope_id: str, project_id: str) -> Scope:
-        scope = await Scope.get_or_none(id=scope_id, project_id=project_id, deleted_at__isnull=True)
-        if scope is None:
+    async def _fileable_category(self, category_id: str, project_id: str) -> Category:
+        category = await Category.get_or_none(
+            id=category_id, project_id=project_id, deleted_at__isnull=True
+        )
+        if category is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
-        if await Scope.filter(parent_id=scope.id, deleted_at__isnull=True).exists():
+        if await Category.filter(parent_id=category.id, deleted_at__isnull=True).exists():
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="A category with subcategories has no expenses of its own",
             )
-        return scope
+        return category
 
     async def _expense_or_404(self, expense_id: str, *, include_deleted: bool = False) -> Expense:
         expense = await Expense.get_or_none(id=expense_id)

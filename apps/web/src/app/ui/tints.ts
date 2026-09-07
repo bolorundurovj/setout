@@ -11,7 +11,7 @@ const TINTS: Tint[] = [
   { fill: '#f0ded7', ink: '#8b503c' },
 ];
 
-/** The same scope keeps the same colour everywhere it is drawn. */
+/** The same category keeps the same colour everywhere it is drawn. */
 export function tintFor(id: string): Tint {
   let sum = 0;
   for (let index = 0; index < id.length; index += 1) {

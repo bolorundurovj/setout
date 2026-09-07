@@ -17,7 +17,7 @@ function project(over: Partial<ProjectRead> = {}): ProjectRead {
     notes: null,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    planned_amount: 0,
+    budgeted_amount: 0,
     spent_amount: 0,
     deleted_at: null,
     ...over,
@@ -110,9 +110,9 @@ describe('ProjectsComponent', () => {
     expect(component.varianceLabel(project())).toBe('Left');
   });
 
-  it('shows the planned budget once it is set', () => {
-    const component = render([project({ planned_amount: 215000000 })]);
-    expect(component.budget(project({ planned_amount: 215000000 }))).toContain('2,150,000');
+  it('shows the budgeted budget once it is set', () => {
+    const component = render([project({ budgeted_amount: 215000000 })]);
+    expect(component.budget(project({ budgeted_amount: 215000000 }))).toContain('2,150,000');
   });
 
   it('says the budget is not set when there is none', () => {
@@ -128,7 +128,7 @@ describe('ProjectsComponent', () => {
 
   it('says what is left while under budget', () => {
     const c = render([project()]);
-    const p = project({ planned_amount: 1000_00, spent_amount: 400_00 });
+    const p = project({ budgeted_amount: 1000_00, spent_amount: 400_00 });
     expect(c.varianceLabel(p)).toBe('Left');
     expect(c.isOver(p)).toBe(false);
     expect(c.variance(p)).toContain('600');
@@ -136,7 +136,7 @@ describe('ProjectsComponent', () => {
 
   it('says how far over once spend passes the budget', () => {
     const c = render([project()]);
-    const p = project({ planned_amount: 215000000, spent_amount: 232630000 });
+    const p = project({ budgeted_amount: 215000000, spent_amount: 232630000 });
     expect(c.varianceLabel(p)).toBe('Over by');
     expect(c.isOver(p)).toBe(true);
     expect(c.variance(p)).toContain('176,300');
@@ -144,22 +144,22 @@ describe('ProjectsComponent', () => {
 
   it('will not claim anything is left when no budget is set', () => {
     const c = render([project()]);
-    const p = project({ planned_amount: 0, spent_amount: 50_000 });
+    const p = project({ budgeted_amount: 0, spent_amount: 50_000 });
     expect(c.variance(p)).toBe('—');
     expect(c.isOver(p)).toBe(false);
   });
 
   it('fills the meter in proportion, and never past full', () => {
     const c = render([project()]);
-    expect(c.usedPercent(project({ planned_amount: 1000, spent_amount: 250 }))).toBe(25);
-    expect(c.usedPercent(project({ planned_amount: 1000, spent_amount: 5000 }))).toBe(100);
-    expect(c.usedPercent(project({ planned_amount: 0, spent_amount: 500 }))).toBe(0);
+    expect(c.usedPercent(project({ budgeted_amount: 1000, spent_amount: 250 }))).toBe(25);
+    expect(c.usedPercent(project({ budgeted_amount: 1000, spent_amount: 5000 }))).toBe(100);
+    expect(c.usedPercent(project({ budgeted_amount: 0, spent_amount: 500 }))).toBe(0);
   });
 
   it('shows the overspend as its own segment', () => {
     const c = render([project()]);
-    expect(c.overPercent(project({ planned_amount: 1000, spent_amount: 1200 }))).toBe(0);
-    expect(c.overPercent(project({ planned_amount: 1000, spent_amount: 900 }))).toBe(0);
+    expect(c.overPercent(project({ budgeted_amount: 1000, spent_amount: 1200 }))).toBe(0);
+    expect(c.overPercent(project({ budgeted_amount: 1000, spent_amount: 900 }))).toBe(0);
   });
   it('opens the new project form when sent there to make one', () => {
     expect(render([project()]).showForm()).toBe(false);

@@ -50,7 +50,7 @@
   min-width: 120px;
 }
 
-.bulk-scope {
+.bulk-category {
   min-width: 180px;
   padding: 9px 12px;
   border-radius: 9px;
@@ -137,7 +137,7 @@
   color: var(--ink-3);
 }
 
-.chip.unfiled {
+.chip.uncategorized {
   background: var(--warn-surface);
   border-color: var(--warn-edge);
   color: var(--warn-ink);

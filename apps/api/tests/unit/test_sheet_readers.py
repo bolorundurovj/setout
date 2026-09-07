@@ -74,7 +74,7 @@ class TestWorkingOutWhatASheetHolds:
 
 
 class TestReadingThePlan:
-    def test_the_scope_heading_total_is_not_counted_again(self) -> None:
+    def test_the_category_heading_total_is_not_counted_again(self) -> None:
         f = found(
             "Budget",
             BUDGET_HEAD,
@@ -84,12 +84,12 @@ class TestReadingThePlan:
         )
         read = read_budget.read(f, exponent=2)
 
-        assert [s.code for s in read.scopes] == ["1000"]
+        assert [s.code for s in read.categories] == ["1000"]
         # 68,500 is the heading's own total. Only the two lines are counted.
-        assert read.planned_amount == 21_000_00
-        assert len(read.scopes[0].lines) == 2
+        assert read.budgeted_amount == 21_000_00
+        assert len(read.categories[0].lines) == 2
 
-    def test_lines_sit_under_the_scope_above_them(self) -> None:
+    def test_lines_sit_under_the_category_above_them(self) -> None:
         f = found(
             "Budget",
             BUDGET_HEAD,
@@ -100,10 +100,10 @@ class TestReadingThePlan:
         )
         read = read_budget.read(f, exponent=2)
 
-        assert [s.name for s in read.scopes] == ["Admin", "Concrete Foundation"]
-        assert [line.description for line in read.scopes[1].lines] == ["Pegging"]
+        assert [s.name for s in read.categories] == ["Admin", "Concrete Foundation"]
+        assert [line.description for line in read.categories[1].lines] == ["Pegging"]
 
-    def test_a_line_with_nothing_planned_is_left_out(self) -> None:
+    def test_a_line_with_nothing_budgeted_is_left_out(self) -> None:
         f = found(
             "Budget",
             BUDGET_HEAD,
@@ -112,8 +112,8 @@ class TestReadingThePlan:
         )
         read = read_budget.read(f, exponent=2)
 
-        assert read.scopes[0].lines == []
-        assert read.planned_amount == 0
+        assert read.categories[0].lines == []
+        assert read.budgeted_amount == 0
 
     def test_a_figure_with_no_words_comes_in_as_missing(self) -> None:
         f = found(
@@ -121,15 +121,15 @@ class TestReadingThePlan:
         )
         read = read_budget.read(f, exponent=2)
 
-        assert read.scopes[0].lines[0].description == read_budget.MISSING
+        assert read.categories[0].lines[0].description == read_budget.MISSING
         assert read.problems[0].kind is Trouble.NO_DESCRIPTION
 
-    def test_a_line_before_any_scope_is_reported(self) -> None:
+    def test_a_line_before_any_category_is_reported(self) -> None:
         f = found("Budget", BUDGET_HEAD, ["1001", "Orphan", "", "", "", 500])
         read = read_budget.read(f, exponent=2)
 
-        assert read.scopes == []
-        assert read.problems[0].kind is Trouble.NO_SCOPE_YET
+        assert read.categories == []
+        assert read.problems[0].kind is Trouble.NO_CATEGORY_YET
 
 
 class TestReadingSpend:

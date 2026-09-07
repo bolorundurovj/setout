@@ -7,26 +7,26 @@ from fastapi import HTTPException, status
 from tortoise.transactions import in_transaction
 
 from setout.models.budget import BudgetItem
+from setout.models.category import Category
 from setout.models.currency import Currency
 from setout.models.expense import Expense
 from setout.models.person import Person
 from setout.models.project import Project
-from setout.models.scope import Scope
 from setout.models.vendor import Vendor
 from setout.schemas.import_sheet import (
     Answers,
+    CategoryMatch,
     Decision,
     DecisionKind,
     ImportReport,
     ImportResult,
     SampleRow,
-    ScopeMatch,
     SheetSeen,
     SheetSkipped,
 )
 from setout.services.sheets.gather import Gathered, gather
 from setout.services.sheets.parsed import Trouble
-from setout.services.sheets.values import scope_code_for
+from setout.services.sheets.values import category_code_for
 from setout.services.sheets.workbook import Sheet, currency_in
 from setout.services.sheets.workbook import read as read_sheets
 
@@ -95,19 +95,20 @@ class ImportController:
         )
 
     async def _report(self, found: Gathered, target: Target) -> ImportReport:
-        known_scopes = await self._known_scopes(target.project)
+        known_categories = await self._known_categories(target.project)
         known_vendors = {v.casefold() for v in await self._known_vendor_names()}
         duplicates = await self._duplicates(found, target.project)
 
-        scopes = [
-            ScopeMatch(
-                code=scope.code,
-                name=scope.name,
-                lines=len(scope.lines),
-                planned_amount=scope.planned_amount,
-                matched_to=known_scopes.get(scope.code) or known_scopes.get(scope.name.casefold()),
+        categories = [
+            CategoryMatch(
+                code=category.code,
+                name=category.name,
+                lines=len(category.lines),
+                budgeted_amount=category.budgeted_amount,
+                matched_to=known_categories.get(category.code)
+                or known_categories.get(category.name.casefold()),
             )
-            for scope in found.budget.scopes
+            for category in found.budget.categories
         ]
         new_vendors = [v for v in found.vendors.vendors if v.name.casefold() not in known_vendors]
 
@@ -118,29 +119,31 @@ class ImportController:
             currency_exponent=target.exponent,
             read=[SheetSeen(name=n, holds=h, rows=r) for n, h, r in found.read],
             skipped=[SheetSkipped(name=n, why=w) for n, w in found.skipped],
-            scopes=scopes,
-            planned_amount=found.budget.planned_amount,
-            planned_lines=sum(len(s.lines) for s in found.budget.scopes),
+            categories=categories,
+            budgeted_amount=found.budget.budgeted_amount,
+            budgeted_lines=sum(len(s.lines) for s in found.budget.categories),
             spend_rows=len(found.spend.spend),
             spend_amount=found.spend.amount,
             vendors_new=len(new_vendors),
             vendors_known=len(found.vendors.vendors) - len(new_vendors),
             owed_rows=len([o for o in found.owed.owed if not o.resolved]),
-            decisions=self._decisions(found, scopes, duplicates),
-            sample=self._sample(found, known_scopes),
+            decisions=self._decisions(found, categories, duplicates),
+            sample=self._sample(found, known_categories),
             left_behind=sorted(set(found.left_behind)),
         )
 
-    def _sample(self, found: Gathered, known_scopes: dict[str, str]) -> list[SampleRow]:
-        headings = {scope.code: scope.name for scope in found.budget.scopes}
+    def _sample(self, found: Gathered, known_categories: dict[str, str]) -> list[SampleRow]:
+        headings = {category.code: category.name for category in found.budget.categories}
         rows = []
         for line in found.spend.spend[:5]:
-            heading = scope_code_for(line.codes[0]) if line.codes else ""
+            heading = category_code_for(line.codes[0]) if line.codes else ""
             rows.append(
                 SampleRow(
                     spent_on=line.spent_on,
                     description=line.description,
-                    scope=headings.get(heading) or known_scopes.get(heading) or "Unfiled",
+                    category=headings.get(heading)
+                    or known_categories.get(heading)
+                    or "Uncategorized",
                     amount=line.amount,
                 )
             )
@@ -150,18 +153,18 @@ class ImportController:
         return [decision for decision in self._decisions(found, [], 0) if decision.blocking]
 
     def _decisions(
-        self, found: Gathered, scopes: list[ScopeMatch], duplicates: int
+        self, found: Gathered, categories: list[CategoryMatch], duplicates: int
     ) -> list[Decision]:
         out: list[Decision] = []
 
-        unmatched = [s for s in scopes if s.matched_to is None]
+        unmatched = [s for s in categories if s.matched_to is None]
         if unmatched:
             out.append(
                 Decision(
-                    kind=DecisionKind.NEW_SCOPES,
+                    kind=DecisionKind.NEW_CATEGORIES,
                     count=len(unmatched),
                     detail=", ".join(s.name for s in unmatched[:4]),
-                    amount=sum(s.planned_amount for s in unmatched),
+                    amount=sum(s.budgeted_amount for s in unmatched),
                 )
             )
 
@@ -169,7 +172,11 @@ class ImportController:
             (Trouble.SEVERAL_CODES, DecisionKind.SEVERAL_CODES, "name more than one cost code"),
             (Trouble.NOT_PAID, DecisionKind.UNPAID, "are not marked paid"),
             (Trouble.NO_DESCRIPTION, DecisionKind.NO_DESCRIPTION, "carry a figure and no words"),
-            (Trouble.NO_SCOPE_YET, DecisionKind.ABOVE_ANY_SCOPE, "sit above every scope heading"),
+            (
+                Trouble.NO_CATEGORY_YET,
+                DecisionKind.ABOVE_ANY_CATEGORY,
+                "sit above every category heading",
+            ),
         ):
             rows = [p for p in found.problems if p.kind is kind]
             if rows:
@@ -178,7 +185,7 @@ class ImportController:
                         kind=key,
                         count=len(rows),
                         detail=f"{len(rows)} rows {wording}",
-                        blocking=kind is Trouble.NO_SCOPE_YET,
+                        blocking=kind is Trouble.NO_CATEGORY_YET,
                     )
                 )
 
@@ -205,15 +212,15 @@ class ImportController:
             )
         return out
 
-    async def _known_scopes(self, project: Project | None) -> dict[str, str]:
+    async def _known_categories(self, project: Project | None) -> dict[str, str]:
         if project is None:
             return {}
-        rows = await Scope.filter(project_id=project.id, deleted_at__isnull=True)
+        rows = await Category.filter(project_id=project.id, deleted_at__isnull=True)
         out: dict[str, str] = {}
-        for scope in rows:
-            if scope.code:
-                out[scope.code] = scope.name
-            out[scope.name.casefold()] = scope.name
+        for category in rows:
+            if category.code:
+                out[category.code] = category.name
+            out[category.name.casefold()] = category.name
         return out
 
     async def _known_vendor_names(self) -> list[str]:
@@ -264,17 +271,17 @@ class ImportController:
 
         vendors, vendors_made = await self._vendors(found)
         people = await self._people(found)
-        scopes, landed, items, planned = await self._plan(found, project, answers)
+        categories, landed, items, budgeted = await self._plan(found, project, answers)
         expenses, spent, skipped = await self._spend(
-            found, project, vendors, people, scopes, answers
+            found, project, vendors, people, categories, answers
         )
 
         return ImportResult(
             project_id=project.id,
             project_name=project.name,
-            scopes=len(landed),
+            categories=len(landed),
             budget_items=items,
-            planned_amount=planned,
+            budgeted_amount=budgeted,
             expenses=expenses,
             spend_amount=spent,
             vendors=vendors_made,
@@ -320,38 +327,38 @@ class ImportController:
         self, found: Gathered, project: Project, answers: Answers
     ) -> tuple[dict[str, str], set[str], int, int]:
         by_code: dict[str, str] = {}
-        for known in await Scope.filter(project_id=project.id, deleted_at__isnull=True):
+        for known in await Category.filter(project_id=project.id, deleted_at__isnull=True):
             if known.code:
                 by_code[known.code] = known.id
             by_code.setdefault(known.name.casefold(), known.id)
 
-        # by_code holds a key per scope name as well as per code.
+        # by_code holds a key per category name as well as per code.
         landed: set[str] = set()
         items = 0
-        planned = 0
-        for order, heading in enumerate(found.budget.scopes):
-            scope_id = by_code.get(heading.code) or by_code.get(heading.name.casefold())
-            if scope_id is None:
-                if not answers.create_missing_scopes:
+        budgeted = 0
+        for order, heading in enumerate(found.budget.categories):
+            category_id = by_code.get(heading.code) or by_code.get(heading.name.casefold())
+            if category_id is None:
+                if not answers.create_missing_categories:
                     continue
-                made = await Scope.create(
+                made = await Category.create(
                     project_id=project.id, name=heading.name, code=heading.code, sort_order=order
                 )
-                scope_id = made.id
-                by_code[heading.code] = scope_id
-            landed.add(scope_id)
+                category_id = made.id
+                by_code[heading.code] = category_id
+            landed.add(category_id)
 
             for line in heading.lines:
                 await BudgetItem.create(
-                    scope_id=scope_id,
+                    category_id=category_id,
                     description=line.description,
-                    planned_amount=line.planned_amount,
+                    budgeted_amount=line.budgeted_amount,
                     cost_type=line.cost_type,
                     set_at=datetime.now(UTC),
                 )
                 items += 1
-                planned += line.planned_amount
-        return by_code, landed, items, planned
+                budgeted += line.budgeted_amount
+        return by_code, landed, items, budgeted
 
     async def _spend(
         self,
@@ -359,7 +366,7 @@ class ImportController:
         project: Project,
         vendors: dict[str, str],
         people: dict[str, str],
-        scopes: dict[str, str],
+        categories: dict[str, str],
         answers: Answers,
     ) -> tuple[int, int, int]:
         existing = {
@@ -379,14 +386,16 @@ class ImportController:
                 skipped += 1
                 continue
 
-            scope_id = None
-            if line.codes and not (len(line.codes) > 1 and answers.several_codes == "unfiled"):
+            category_id = None
+            if line.codes and not (
+                len(line.codes) > 1 and answers.several_codes == "uncategorized"
+            ):
                 first = line.codes[0]
-                scope_id = scopes.get(first) or scopes.get(scope_code_for(first))
+                category_id = categories.get(first) or categories.get(category_code_for(first))
 
             await Expense.create(
                 project_id=project.id,
-                scope_id=scope_id,
+                category_id=category_id,
                 vendor_id=vendors.get(line.vendor.casefold()),
                 paid_by_id=people.get(line.paid_by.casefold()),
                 spent_on=spent_on,

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import type { ProjectRead, ScopeRead } from '@setout/api-client';
+import type { ProjectRead, CategoryRead } from '@setout/api-client';
 import { AgreementService } from '../agreements/agreement.service';
 import { BudgetService } from '../budget/budget.service';
 import { DeliveryService } from '../deliveries/delivery.service';
@@ -15,14 +15,14 @@ const project: ProjectRead = {
   land_name: null,
   status: 'active',
   notes: null,
-  planned_amount: 0,
+  budgeted_amount: 0,
   spent_amount: 0,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
   deleted_at: null,
 };
 
-function scope(over: Partial<ScopeRead> = {}): ScopeRead {
+function category(over: Partial<CategoryRead> = {}): CategoryRead {
   return {
     id: 's1',
     project_id: 'p1',
@@ -31,8 +31,8 @@ function scope(over: Partial<ScopeRead> = {}): ScopeRead {
     parent_id: null,
     sort_order: 0,
     is_group: false,
-    planned_amount: 0,
-    own_planned_amount: 0,
+    budgeted_amount: 0,
+    own_budgeted_amount: 0,
     spent_amount: 0,
     own_spent_amount: 0,
     expense_count: 0,
@@ -47,7 +47,7 @@ function scope(over: Partial<ScopeRead> = {}): ScopeRead {
 describe('ProjectDashboardComponent', () => {
   function render(
     spend: Record<string, unknown> | null,
-    scopes: ScopeRead[] = [],
+    categories: CategoryRead[] = [],
     expenseCount = 0,
     agreements: unknown[] = [],
     balances: unknown[] = [],
@@ -79,7 +79,7 @@ describe('ProjectDashboardComponent', () => {
         },
         {
           provide: BudgetService,
-          useValue: { scopes: () => scopes, load: async () => undefined },
+          useValue: { categories: () => categories, load: async () => undefined },
         },
         {
           provide: ExpenseService,
@@ -97,10 +97,15 @@ describe('ProjectDashboardComponent', () => {
     return fixture.componentInstance;
   }
 
-  const spend = (planned: number, spent: number, unfiled = 0, variance: number | null = null) => ({
-    planned_amount: planned,
+  const spend = (
+    budgeted: number,
+    spent: number,
+    uncategorized = 0,
+    variance: number | null = null,
+  ) => ({
+    budgeted_amount: budgeted,
     spent_amount: spent,
-    unfiled_amount: unfiled,
+    uncategorized_amount: uncategorized,
     variance_percent: variance,
   });
 
@@ -112,7 +117,7 @@ describe('ProjectDashboardComponent', () => {
   });
 
   it('says how far over once the plan is passed', () => {
-    // The seeded project: planned 2,150,000, spent 2,326,300.
+    // The seeded project: budgeted 2,150,000, spent 2,326,300.
     const c = render(spend(215_000_000, 232_630_000, 6_100_000, 8.2));
     expect(c.isOver()).toBe(true);
     expect(c.varianceLabel()).toBe('Over by');
@@ -134,48 +139,50 @@ describe('ProjectDashboardComponent', () => {
     expect(render(spend(0, 500)).usedPercent()).toBe(0);
   });
 
-  it('counts the expenses and names the unfiled spend', () => {
+  it('counts the expenses and names the uncategorized spend', () => {
     const c = render(spend(1000, 500, 200), [], 3);
     expect(c.spentNote()).toContain('3 expenses');
-    expect(c.spentNote()).toContain('unfiled');
+    expect(c.spentNote()).toContain('uncategorized');
   });
 
-  it('leaves out scopes with nothing planned and nothing spent', () => {
+  it('leaves out categories with nothing budgeted and nothing spent', () => {
     const c = render(spend(1000, 500), [
-      scope({ id: 's1', planned_amount: 1000 }),
-      scope({ id: 's2', name: 'Untouched' }),
+      category({ id: 's1', budgeted_amount: 1000 }),
+      category({ id: 's2', name: 'Untouched' }),
     ]);
     expect(c.rows().map((s) => s.id)).toEqual(['s1']);
   });
 
   it('puts the worst overspend first', () => {
     const c = render(spend(1000, 900), [
-      scope({ id: 'under', planned_amount: 500, spent_amount: 100 }),
-      scope({ id: 'over', planned_amount: 100, spent_amount: 800 }),
+      category({ id: 'under', budgeted_amount: 500, spent_amount: 100 }),
+      category({ id: 'over', budgeted_amount: 100, spent_amount: 800 }),
     ]);
     expect(c.rows()[0].id).toBe('over');
   });
 
-  it('marks a scope that has gone past its budget', () => {
+  it('marks a category that has gone past its budget', () => {
     const c = render(spend(1000, 500));
-    expect(c.scopeOver(scope({ planned_amount: 100, spent_amount: 800 }))).toBe(true);
-    expect(c.scopeOver(scope({ planned_amount: 800, spent_amount: 100 }))).toBe(false);
-    expect(c.scopeOver(scope({ planned_amount: 0, spent_amount: 800 }))).toBe(false);
+    expect(c.categoryOver(category({ budgeted_amount: 100, spent_amount: 800 }))).toBe(true);
+    expect(c.categoryOver(category({ budgeted_amount: 800, spent_amount: 100 }))).toBe(false);
+    expect(c.categoryOver(category({ budgeted_amount: 0, spent_amount: 800 }))).toBe(false);
   });
 
-  it('shows spend against budget on a scope, and says when there is none', () => {
+  it('shows spend against budget on a category, and says when there is none', () => {
     const c = render(spend(1000, 500));
-    expect(c.scopeNote(scope({ planned_amount: 100_000, spent_amount: 50_000 }))).toBe(
+    expect(c.categoryNote(category({ budgeted_amount: 100_000, spent_amount: 50_000 }))).toBe(
       '500 / 1,000',
     );
-    expect(c.scopeNote(scope({ planned_amount: 0, spent_amount: 50_000 }))).toBe('No budget set');
+    expect(c.categoryNote(category({ budgeted_amount: 0, spent_amount: 50_000 }))).toBe(
+      'No budget set',
+    );
   });
 
   it('says nothing needs attention when nothing does', () => {
     expect(render(spend(1000, 500)).alerts()).toEqual([]);
   });
 
-  it('flags spend that is filed to no scope', () => {
+  it('flags spend that is filed to no category', () => {
     const alerts = render(spend(1000, 500, 5_300_000)).alerts();
     expect(alerts.length).toBe(1);
     expect(alerts[0].title).toBe('Uncategorized expenses');
@@ -291,10 +298,10 @@ describe('ProjectDashboardComponent', () => {
     expect(tabFor('Owed to')).toBe('agreements');
   });
 
-  it('draws every bar to one scale, so two scopes can be compared', () => {
+  it('draws every bar to one scale, so two categories can be compared', () => {
     const c = render(spend(3000, 1500), [
-      scope({ id: 'big', planned_amount: 2000, spent_amount: 1000 }),
-      scope({ id: 'small', planned_amount: 500, spent_amount: 500 }),
+      category({ id: 'big', budgeted_amount: 2000, spent_amount: 1000 }),
+      category({ id: 'small', budgeted_amount: 500, spent_amount: 500 }),
     ]);
 
     const big = c.rows().find((row) => row.id === 'big')!;
@@ -307,26 +314,26 @@ describe('ProjectDashboardComponent', () => {
 
   it('marks where the budget sits and draws the overspend past it', () => {
     const c = render(spend(1000, 1500), [
-      scope({ id: 's1', planned_amount: 1000, spent_amount: 1500 }),
+      category({ id: 's1', budgeted_amount: 1000, spent_amount: 1500 }),
     ]);
     const row = c.rows()[0];
 
     expect(c.budgetMarkPercent(row)).toBe(66.66666666666666);
     expect(c.fillPercent(row)).toBe(66.66666666666666);
-    expect(c.scopeOverPercent(row)).toBe(33.33333333333333);
+    expect(c.categoryOverPercent(row)).toBe(33.33333333333333);
   });
 
   it('has no budget mark where no budget was set', () => {
-    const c = render(spend(0, 500), [scope({ id: 's1', spent_amount: 500 })]);
+    const c = render(spend(0, 500), [category({ id: 's1', spent_amount: 500 })]);
     const row = c.rows()[0];
 
     expect(c.budgetMarkPercent(row)).toBeNull();
     expect(c.fillPercent(row)).toBe(100);
-    expect(c.scopeOverPercent(row)).toBe(0);
+    expect(c.categoryOverPercent(row)).toBe(0);
   });
 
-  it('gives a scope the same colour wherever it is drawn', () => {
-    const c = render(spend(1000, 500), [scope({ id: 's1', planned_amount: 1000 })]);
+  it('gives a category the same colour wherever it is drawn', () => {
+    const c = render(spend(1000, 500), [category({ id: 's1', budgeted_amount: 1000 })]);
     const row = c.rows()[0];
 
     expect(c.tint(row)).toBe(c.tint(row));
@@ -334,12 +341,12 @@ describe('ProjectDashboardComponent', () => {
     expect(c.tintEdge(row)).not.toBe(c.tint(row));
   });
 
-  it('sends a pressed scope to the table rather than just the tab', () => {
-    const c = render(spend(1000, 500), [scope({ id: 's1', planned_amount: 1000 })]);
+  it('sends a pressed category to the table rather than just the tab', () => {
+    const c = render(spend(1000, 500), [category({ id: 's1', budgeted_amount: 1000 })]);
     const asked: string[] = [];
-    c.openScope.subscribe((id: string) => asked.push(id));
+    c.openCategory.subscribe((id: string) => asked.push(id));
 
-    c.openScope.emit('s1');
+    c.openCategory.emit('s1');
 
     expect(asked).toEqual(['s1']);
   });

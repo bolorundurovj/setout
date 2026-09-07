@@ -167,7 +167,7 @@
   color: var(--ink);
 }
 
-.entry-scope {
+.entry-category {
   font:
     400 13px/1.45 'DM Sans',
     sans-serif;
@@ -241,9 +241,9 @@
   border: 1px solid var(--tint-5-ink);
 }
 
-.tint-unfiled {
-  background: var(--tint-unfiled);
-  border: 1px solid var(--tint-unfiled-ink);
+.tint-uncategorized {
+  background: var(--tint-uncategorized);
+  border: 1px solid var(--tint-uncategorized-ink);
 }
 
 // Bar segments sit edge to edge, so only the legend swatches carry an outline.

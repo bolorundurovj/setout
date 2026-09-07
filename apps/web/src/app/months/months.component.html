@@ -24,7 +24,7 @@
           <span class="label">{{ row.label }}</span>
           <span class="track">
             <span class="fill" [style.width]="row.barWidth">
-              @for (part of row.parts; track part.scopeId) {
+              @for (part of row.parts; track part.categoryId) {
                 <span class="segment" [class]="part.tint" [style.width]="part.width"></span>
               }
             </span>
@@ -37,7 +37,7 @@
           @let filed = monthExpenses(row);
           <div class="detail">
             <div class="legend">
-              @for (part of row.parts; track part.scopeId) {
+              @for (part of row.parts; track part.categoryId) {
                 <div class="legend-row">
                   <span class="swatch" [class]="part.tint"></span>
                   <span class="legend-name">{{ part.name }}</span>
@@ -54,7 +54,7 @@
                   <div class="entry">
                     <span class="entry-text">
                       <span class="description">{{ expense.description }}</span>
-                      <span class="entry-scope">{{ scopeName(expense) }}</span>
+                      <span class="entry-category">{{ categoryName(expense) }}</span>
                     </span>
                     <span class="figure right">{{ bare(expense.amount) }}</span>
                   </div>

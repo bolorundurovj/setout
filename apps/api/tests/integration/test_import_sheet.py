@@ -102,8 +102,8 @@ async def test_the_report_says_what_the_file_holds(client: AsyncClient) -> None:
     body = await preview(client, sample())
 
     assert {s["holds"] for s in body["read"]} == {"budget", "vendors", "expenses"}
-    assert body["planned_amount"] == 58_500_00
-    assert body["planned_lines"] == 3
+    assert body["budgeted_amount"] == 58_500_00
+    assert body["budgeted_lines"] == 3
     assert body["spend_rows"] == 1
     assert body["spend_amount"] == 500_000_00
     assert body["vendors_new"] == 1
@@ -118,14 +118,14 @@ async def test_looking_at_a_file_writes_nothing(client: AsyncClient) -> None:
     assert (await client.get("/api/vendors")).json()["total"] == 0
 
 
-async def test_the_scope_heading_total_is_not_counted_twice(client: AsyncClient) -> None:
+async def test_the_category_heading_total_is_not_counted_twice(client: AsyncClient) -> None:
     await setup(client)
 
     body = await run(client, sample())
 
-    # 68,500 heads the admin scope and 58,500 is the sum of the three lines.
-    assert body["planned_amount"] == 58_500_00
-    assert body["scopes"] == 2
+    # 68,500 heads the admin category and 58,500 is the sum of the three lines.
+    assert body["budgeted_amount"] == 58_500_00
+    assert body["categories"] == 2
     assert body["budget_items"] == 3
 
 
@@ -136,24 +136,26 @@ async def test_it_brings_in_the_plan_the_spend_and_the_vendors(client: AsyncClie
     project_id = body["project_id"]
 
     spend = (await client.get(f"/api/projects/{project_id}/spend")).json()
-    assert spend["planned_amount"] == 58_500_00
+    assert spend["budgeted_amount"] == 58_500_00
     assert spend["spent_amount"] == 500_000_00
 
-    scopes = (await client.get(f"/api/projects/{project_id}/scopes")).json()
-    assert {s["code"] for s in scopes} == {"1000", "3000"}
+    categories = (await client.get(f"/api/projects/{project_id}/categories")).json()
+    assert {s["code"] for s in categories} == {"1000", "3000"}
 
     vendor = (await client.get("/api/vendors")).json()["items"][0]
     assert vendor["name"] == "Bright Star Aluminium"
     assert vendor["email"] == "a@b.com"
 
 
-async def test_the_spend_lands_against_the_scope_its_cost_code_names(client: AsyncClient) -> None:
+async def test_the_spend_lands_against_the_category_its_cost_code_names(
+    client: AsyncClient,
+) -> None:
     await setup(client)
 
     project_id = (await run(client, sample()))["project_id"]
 
-    scopes = (await client.get(f"/api/projects/{project_id}/scopes")).json()
-    foundation = next(s for s in scopes if s["code"] == "3000")
+    categories = (await client.get(f"/api/projects/{project_id}/categories")).json()
+    foundation = next(s for s in categories if s["code"] == "3000")
     assert foundation["spent_amount"] == 500_000_00
 
 
@@ -181,7 +183,7 @@ async def test_a_sheet_of_spending_can_never_write_a_budget(client: AsyncClient)
     body = await run(client, only_spend)
 
     assert body["spend_amount"] == 900_000_00
-    assert body["planned_amount"] == 0
+    assert body["budgeted_amount"] == 0
     assert body["budget_items"] == 0
 
 
@@ -193,7 +195,7 @@ async def test_a_plan_sheet_records_no_spending(client: AsyncClient) -> None:
 
     body = await run(client, only_plan)
 
-    assert body["planned_amount"] == 500_00
+    assert body["budgeted_amount"] == 500_00
     assert body["expenses"] == 0
     assert body["spend_amount"] == 0
 
@@ -211,7 +213,7 @@ async def test_the_template_sheet_a_workbook_carries_is_left_out(client: AsyncCl
 
     body = await preview(client, with_template)
 
-    assert body["planned_amount"] == 500_00
+    assert body["budgeted_amount"] == 500_00
     assert any("Base" in s["name"] for s in body["skipped"])
 
 
@@ -276,7 +278,7 @@ async def test_a_csv_of_one_sheet_is_read_too(client: AsyncClient) -> None:
     )
 
     assert resp.status_code == 201, resp.text
-    assert resp.json()["planned_amount"] == 1_000_00
+    assert resp.json()["budgeted_amount"] == 1_000_00
 
 
 async def test_the_report_shows_the_first_rows_as_they_would_be_filed(
@@ -289,7 +291,7 @@ async def test_the_report_shows_the_first_rows_as_they_would_be_filed(
     assert len(body["sample"]) == 1
     row = body["sample"][0]
     assert row["description"] == "Bright Star Aluminium invoice 3835"
-    assert row["scope"] == "Concrete Foundation"
+    assert row["category"] == "Concrete Foundation"
     assert row["amount"] == 500_000_00
     assert row["spent_on"] == "2022-05-10"
 
@@ -324,9 +326,9 @@ async def test_what_comes_out_goes_back_in_with_the_same_totals(client: AsyncCli
     again = await run(client, book, name="Round trip")
 
     after = (await client.get(f"/api/projects/{again['project_id']}/spend")).json()
-    assert after["planned_amount"] == before["planned_amount"]
+    assert after["budgeted_amount"] == before["budgeted_amount"]
     assert after["spent_amount"] == before["spent_amount"]
-    assert again["scopes"] == made["scopes"]
+    assert again["categories"] == made["categories"]
     assert again["budget_items"] == made["budget_items"]
 
 
@@ -343,7 +345,7 @@ async def test_the_workbook_says_what_each_expense_was_for(client: AsyncClient) 
     ]
 
 
-async def test_the_spending_lands_under_the_same_scope_it_came_from(client: AsyncClient) -> None:
+async def test_the_spending_lands_under_the_same_category_it_came_from(client: AsyncClient) -> None:
     await setup(client)
     made = await run(
         client,
@@ -361,7 +363,7 @@ async def test_the_spending_lands_under_the_same_scope_it_came_from(client: Asyn
     )
 
     filed = (await client.get(f"/api/projects/{made['project_id']}/expenses")).json()["items"][0]
-    assert filed["scope_id"] is not None
+    assert filed["category_id"] is not None
 
     round_trip = await run(
         client,
@@ -369,7 +371,7 @@ async def test_the_spending_lands_under_the_same_scope_it_came_from(client: Asyn
         name="Round trip",
     )
     landed = (await client.get(f"/api/projects/{round_trip['project_id']}/expenses")).json()
-    assert landed["items"][0]["scope_id"] is not None
+    assert landed["items"][0]["category_id"] is not None
 
 
 async def test_a_blank_sheet_can_be_had_to_start_from(client: AsyncClient) -> None:
@@ -396,7 +398,7 @@ async def test_the_blank_sheet_reads_back_as_nothing_rather_than_as_junk(
         "expenses",
         "outstanding",
     }
-    assert report["planned_amount"] == 0
+    assert report["budgeted_amount"] == 0
     assert report["spend_rows"] == 0
     assert report["decisions"] == []
 
@@ -416,8 +418,10 @@ async def test_the_plan_keeps_which_of_the_three_a_figure_was_under(client: Asyn
         ),
     )
 
-    scopes = (await client.get(f"/api/projects/{made['project_id']}/scopes")).json()
-    lines = (await client.get(f"/api/scopes/{scopes[0]['id']}/budget-items")).json()["items"]
+    categories = (await client.get(f"/api/projects/{made['project_id']}/categories")).json()
+    lines = (await client.get(f"/api/categories/{categories[0]['id']}/budget-items")).json()[
+        "items"
+    ]
 
     assert {line["description"]: line["cost_type"] for line in lines} == {
         "Pegging": "labour",
@@ -446,8 +450,10 @@ async def test_the_three_columns_survive_the_round_trip(client: AsyncClient) -> 
         name="Round trip",
     )
 
-    scopes = (await client.get(f"/api/projects/{again['project_id']}/scopes")).json()
-    lines = (await client.get(f"/api/scopes/{scopes[0]['id']}/budget-items")).json()["items"]
+    categories = (await client.get(f"/api/projects/{again['project_id']}/categories")).json()
+    lines = (await client.get(f"/api/categories/{categories[0]['id']}/budget-items")).json()[
+        "items"
+    ]
     assert {line["description"]: line["cost_type"] for line in lines} == {
         "Pegging": "labour",
         "Cement": "material",
@@ -486,9 +492,9 @@ async def test_the_filled_example_brings_in_what_it_shows(client: AsyncClient) -
     # It names its own currency, so nothing has to be chosen for it.
     made = await run(client, filled, name="From the example", currency_code="")
 
-    assert made["scopes"] == 2
+    assert made["categories"] == 2
     assert made["budget_items"] == 4
-    assert made["planned_amount"] == 780_000_00
+    assert made["budgeted_amount"] == 780_000_00
     assert made["expenses"] == 3
     assert made["spend_amount"] == 144_900_00
     assert made["vendors"] == 2
@@ -501,7 +507,7 @@ async def test_a_csv_sample_holds_the_one_sheet_a_csv_can(client: AsyncClient) -
     report = await preview(client, budget_only)
 
     assert [s["holds"] for s in report["read"]] == ["budget"]
-    assert report["planned_amount"] == 780_000_00
+    assert report["budgeted_amount"] == 780_000_00
     assert report["spend_rows"] == 0
 
 
@@ -529,7 +535,7 @@ async def test_a_sheet_that_names_no_currency_asks_for_one(client: AsyncClient) 
     assert "does not specify a currency" in resp.json()["detail"]
 
 
-async def test_importing_the_same_sheet_twice_says_how_many_scopes_there_are(
+async def test_importing_the_same_sheet_twice_says_how_many_categories_there_are(
     client: AsyncClient,
 ) -> None:
     await setup(client)
@@ -537,9 +543,9 @@ async def test_importing_the_same_sheet_twice_says_how_many_scopes_there_are(
 
     again = await run(client, sample(), project_id=first["project_id"])
 
-    scopes = (await client.get(f"/api/projects/{first['project_id']}/scopes")).json()
-    assert first["scopes"] == len(scopes)
-    assert again["scopes"] == len(scopes)
+    categories = (await client.get(f"/api/projects/{first['project_id']}/categories")).json()
+    assert first["categories"] == len(categories)
+    assert again["categories"] == len(categories)
 
 
 async def test_what_has_arrived_survives_being_exported_and_read_again(

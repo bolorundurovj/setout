@@ -10,13 +10,13 @@ from setout.routers.auth import get_current_user
 from setout.schemas.expense import (
     BulkFileExpenses,
     BulkFileResult,
+    CategorySuggestion,
     ExpenseCreate,
     ExpensePage,
     ExpenseRead,
     ExpenseUpdate,
     ProjectMonths,
     ProjectSpend,
-    ScopeSuggestion,
 )
 
 router = APIRouter(
@@ -37,7 +37,7 @@ NOT_FOUND: dict[int | str, dict[str, Any]] = {
 async def list_expenses(
     project_id: str,
     user: CurrentUser,
-    scope_id: Annotated[str | None, Query(description="Only this category")] = None,
+    category_id: Annotated[str | None, Query(description="Only this category")] = None,
     agreement_id: Annotated[
         str | None, Query(description="Only payments on this agreement")
     ] = None,
@@ -48,7 +48,9 @@ async def list_expenses(
             description="Only this calendar month, as YYYY-MM",
         ),
     ] = None,
-    unfiled_only: Annotated[bool, Query(description="Only expenses with no category")] = False,
+    uncategorized_only: Annotated[
+        bool, Query(description="Only expenses with no category")
+    ] = False,
     agreement_only: Annotated[
         bool, Query(description="Only payments assigned to an agreement")
     ] = False,
@@ -57,10 +59,10 @@ async def list_expenses(
 ) -> ExpensePage:
     return await controller.list(
         project_id,
-        scope_id=scope_id,
+        category_id=category_id,
         agreement_id=agreement_id,
         month=month,
-        unfiled_only=unfiled_only,
+        uncategorized_only=uncategorized_only,
         agreement_only=agreement_only,
         limit=limit,
         offset=offset,
@@ -72,7 +74,7 @@ async def list_expenses(
     operation_id="fileExpenses",
     responses={
         **NOT_FOUND,
-        status.HTTP_409_CONFLICT: {"description": "Scope holds no spend of its own"},
+        status.HTTP_409_CONFLICT: {"description": "Category holds no spend of its own"},
     },
 )
 async def file_expenses(
@@ -87,7 +89,7 @@ async def file_expenses(
     status_code=status.HTTP_201_CREATED,
     responses={
         **NOT_FOUND,
-        status.HTTP_409_CONFLICT: {"description": "Scope holds no spend of its own"},
+        status.HTTP_409_CONFLICT: {"description": "Category holds no spend of its own"},
     },
 )
 async def add_expense(project_id: str, req: ExpenseCreate, user: CurrentUser) -> ExpenseRead:
@@ -95,17 +97,17 @@ async def add_expense(project_id: str, req: ExpenseCreate, user: CurrentUser) ->
 
 
 @router.get(
-    "/projects/{project_id}/suggest-scope",
-    operation_id="suggestScope",
+    "/projects/{project_id}/suggest-category",
+    operation_id="suggestCategory",
     responses=NOT_FOUND,
 )
-async def suggest_scope(
+async def suggest_category(
     project_id: str,
     user: CurrentUser,
     item_id: Annotated[str | None, Query(description="What was bought")] = None,
     vendor_id: Annotated[str | None, Query(description="Who it was bought from")] = None,
-) -> ScopeSuggestion:
-    return await controller.suggest_scope(project_id, item_id, vendor_id)
+) -> CategorySuggestion:
+    return await controller.suggest_category(project_id, item_id, vendor_id)
 
 
 @router.get("/projects/{project_id}/spend", operation_id="getProjectSpend", responses=NOT_FOUND)

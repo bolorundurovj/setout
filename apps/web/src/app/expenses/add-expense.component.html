@@ -5,11 +5,11 @@
     <span class="t-micro">Category</span>
     <app-chip-group
       label="Category"
-      [chips]="scopeChips()"
-      [value]="scopeId()"
-      (valueChange)="pickScope($event)"
+      [chips]="categoryChips()"
+      [value]="categoryId()"
+      (valueChange)="pickCategory($event)"
     />
-    <span class="t-small muted">{{ scopeNote() }}</span>
+    <span class="t-small muted">{{ categoryNote() }}</span>
   </div>
 
   <label class="field">

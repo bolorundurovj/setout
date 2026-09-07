@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import type { ExpenseRead, ProjectRead, ScopeRead } from '@setout/api-client';
+import type { ExpenseRead, ProjectRead, CategoryRead } from '@setout/api-client';
 import { BudgetService } from '../budget/budget.service';
 import { ToastService } from '../toast.service';
 import { ExpenseService, UNFILED } from './expense.service';
@@ -9,7 +9,7 @@ function expense(id: string, over: Partial<ExpenseRead> = {}): ExpenseRead {
   return {
     id,
     project_id: 'p1',
-    scope_id: null,
+    category_id: null,
     item_id: null,
     vendor_id: null,
     agreement_id: null,
@@ -29,7 +29,7 @@ function expense(id: string, over: Partial<ExpenseRead> = {}): ExpenseRead {
   };
 }
 
-function scope(id: string, name: string, isGroup = false): ScopeRead {
+function category(id: string, name: string, isGroup = false): CategoryRead {
   return {
     id,
     project_id: 'p1',
@@ -38,8 +38,8 @@ function scope(id: string, name: string, isGroup = false): ScopeRead {
     parent_id: null,
     sort_order: 0,
     is_group: isGroup,
-    planned_amount: 0,
-    own_planned_amount: 0,
+    budgeted_amount: 0,
+    own_budgeted_amount: 0,
     spent_amount: 0,
     own_spent_amount: 0,
     expense_count: 0,
@@ -59,7 +59,7 @@ describe('ExpensesComponent', () => {
     land_id: null,
     land_name: null,
     notes: null,
-    planned_amount: 0,
+    budgeted_amount: 0,
     spent_amount: 15_000_00,
     status: 'active',
     created_at: '2026-08-01T00:00:00Z',
@@ -68,21 +68,21 @@ describe('ExpensesComponent', () => {
   };
 
   let expenses: ExpenseRead[];
-  let unfiled: ExpenseRead[];
-  let scopes: ScopeRead[];
-  let filed: { projectId: string; body: { expense_ids: string[]; scope_id: string } } | null;
+  let uncategorized: ExpenseRead[];
+  let categories: CategoryRead[];
+  let filed: { projectId: string; body: { expense_ids: string[]; category_id: string } } | null;
   let loaded: string[];
-  let unfiledPages: number[];
+  let uncategorizedPages: number[];
   let toasts: { message: string; type: string }[];
   let fileResult: number | null;
 
   function render() {
     expenses = [expense('e1'), expense('e2', { description: 'Sand' })];
-    unfiled = [...expenses];
-    scopes = [scope('s1', 'Concrete foundation')];
+    uncategorized = [...expenses];
+    categories = [category('s1', 'Concrete foundation')];
     filed = null;
     loaded = [];
-    unfiledPages = [];
+    uncategorizedPages = [];
     toasts = [];
     fileResult = 2;
 
@@ -90,17 +90,21 @@ describe('ExpensesComponent', () => {
       expenses: () => expenses,
       total: () => expenses.length,
       page: () => 1,
-      byScope: () => ({
-        [UNFILED]: { rows: unfiled, total: unfiled.length, page: unfiledPages.at(-1) ?? 1 },
+      byCategory: () => ({
+        [UNFILED]: {
+          rows: uncategorized,
+          total: uncategorized.length,
+          page: uncategorizedPages.at(-1) ?? 1,
+        },
       }),
       spend: () => ({
         project_id: 'p1',
         currency_code: 'NGN',
         currency_exponent: 2,
-        planned_amount: 0,
+        budgeted_amount: 0,
         spent_amount: 15_000_00,
-        unfiled_amount: 15_000_00,
-        unfiled_count: 2,
+        uncategorized_amount: 15_000_00,
+        uncategorized_count: 2,
         removed_count: 0,
         variance_percent: null,
       }),
@@ -108,11 +112,11 @@ describe('ExpensesComponent', () => {
       error: () => null,
       load: async (projectId: string) => void loaded.push(projectId),
       goTo: async (projectId: string) => void loaded.push(projectId),
-      loadForScope: async (projectId: string, scopeId: string, page = 1) => {
+      loadForCategory: async (projectId: string, categoryId: string, page = 1) => {
         loaded.push(projectId);
-        unfiledPages.push(page);
+        uncategorizedPages.push(page);
       },
-      file: async (projectId: string, body: { expense_ids: string[]; scope_id: string }) => {
+      file: async (projectId: string, body: { expense_ids: string[]; category_id: string }) => {
         filed = { projectId, body };
         return fileResult;
       },
@@ -120,7 +124,7 @@ describe('ExpensesComponent', () => {
     };
 
     const budgetService = {
-      scopes: () => scopes,
+      categories: () => categories,
       load: async () => undefined,
     };
 
@@ -148,13 +152,13 @@ describe('ExpensesComponent', () => {
     expect(loaded).toContain('p1');
   });
 
-  it('starts bulk filing and loads the unfiled list', async () => {
+  it('starts bulk filing and loads the uncategorized list', async () => {
     const component = render();
     component.startFiling();
 
     expect(component.filing()).toBe(true);
     expect(loaded).toContain('p1');
-    expect(unfiledPages).toContain(1);
+    expect(uncategorizedPages).toContain(1);
   });
 
   it('selects and deselects individual expenses', () => {
@@ -169,7 +173,7 @@ describe('ExpensesComponent', () => {
     expect(component.selected().has('e1')).toBe(false);
   });
 
-  it('selects all visible unfiled expenses at once', () => {
+  it('selects all visible uncategorized expenses at once', () => {
     const component = render();
     component.startFiling();
 
@@ -182,19 +186,19 @@ describe('ExpensesComponent', () => {
     expect(component.selectedCount()).toBe(0);
   });
 
-  it('files selected expenses to the chosen scope', async () => {
+  it('files selected expenses to the chosen category', async () => {
     const component = render();
     component.startFiling();
     component.toggleOne('e1');
-    component.bulkScopeId.set('s1');
+    component.bulkCategoryId.set('s1');
 
     await component.fileSelected();
 
-    expect(filed?.body).toEqual({ expense_ids: ['e1'], scope_id: 's1' });
+    expect(filed?.body).toEqual({ expense_ids: ['e1'], category_id: 's1' });
     expect(toasts[0].type).toBe('success');
   });
 
-  it('does not file when no scope is chosen', async () => {
+  it('does not file when no category is chosen', async () => {
     const component = render();
     component.startFiling();
     component.toggleOne('e1');
@@ -209,30 +213,30 @@ describe('ExpensesComponent', () => {
     fileResult = null;
     component.startFiling();
     component.toggleOne('e1');
-    component.bulkScopeId.set('s1');
+    component.bulkCategoryId.set('s1');
 
     await component.fileSelected();
 
-    expect(filed?.body).toEqual({ expense_ids: ['e1'], scope_id: 's1' });
+    expect(filed?.body).toEqual({ expense_ids: ['e1'], category_id: 's1' });
     expect(toasts[0].type).toBe('error');
   });
 
-  it('stops filing when the last unfiled expense is gone', async () => {
+  it('stops filing when the last uncategorized expense is gone', async () => {
     const component = render();
-    unfiled = [];
+    uncategorized = [];
     component.startFiling();
     component.toggleOne('e1');
-    component.bulkScopeId.set('s1');
+    component.bulkCategoryId.set('s1');
 
     await component.fileSelected();
 
     expect(component.filing()).toBe(false);
   });
 
-  it('only offers leaf scopes in the bulk filing picker', () => {
+  it('only offers leaf categories in the bulk filing picker', () => {
     const component = render();
-    scopes = [scope('s1', 'Structure', true), scope('s2', 'Blockwork')];
+    categories = [category('s1', 'Structure', true), category('s2', 'Blockwork')];
 
-    expect(component.fileableScopes().map((s) => s.id)).toEqual(['s2']);
+    expect(component.fileableCategories().map((s) => s.id)).toEqual(['s2']);
   });
 });

@@ -30,7 +30,7 @@
 
   <div class="page">
     @if (activeTab() === 'table') {
-      <app-budget-compare [project]="p" [openScope]="scope()" />
+      <app-budget-compare [project]="p" [openCategory]="category()" />
     } @else if (activeTab() === 'budget') {
       <app-budget [project]="p" />
     } @else if (activeTab() === 'expense') {
@@ -47,7 +47,7 @@
       <app-project-dashboard
         [project]="p"
         (openTab)="selectTab($event)"
-        (openScope)="openScope($event)"
+        (openCategory)="openCategory($event)"
       />
     }
   </div>

@@ -31,8 +31,8 @@
   --warn-edge: #e6dfc8;
   --warn-ink: #766333;
 
-  // Scope tints. Five of them, handed out in budget order and cycled, so a
-  // scope keeps its colour everywhere it is drawn.
+  // Category tints. Five of them, handed out in budget order and cycled, so a
+  // category keeps its colour everywhere it is drawn.
   --tint-1: #dde2f2;
   --tint-1-ink: #4e5a86;
   --tint-2: #e7dff0;
@@ -43,8 +43,8 @@
   --tint-4-ink: #8b503c;
   --tint-5: #dbe8de;
   --tint-5-ink: #416b55;
-  --tint-unfiled: #e3e7ec;
-  --tint-unfiled-ink: #666e77;
+  --tint-uncategorized: #e3e7ec;
+  --tint-uncategorized-ink: #666e77;
 
   // Content column. The topbar caps its own row to the same width so a title
   // sits above the content it names.
@@ -85,8 +85,8 @@
   --tint-4-ink: #d9a793;
   --tint-5: #1f2e26;
   --tint-5-ink: #9ccbb0;
-  --tint-unfiled: #2a3038;
-  --tint-unfiled-ink: #8b939c;
+  --tint-uncategorized: #2a3038;
+  --tint-uncategorized-ink: #8b939c;
 }
 
 *,

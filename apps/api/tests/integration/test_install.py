@@ -166,6 +166,40 @@ async def test_a_file_of_another_layout_is_refused(client: AsyncClient) -> None:
     assert "format 99" in resp.json()["detail"]
 
 
+async def test_a_format_one_copy_is_read_under_the_old_names(client: AsyncClient) -> None:
+    await _signed_in(client)
+    project = (await _project(client))["id"]
+    created = await client.post(f"/api/projects/{project}/categories", json={"name": "Foundation"})
+    assert created.status_code == 201, created.text
+    category_id = created.json()["id"]
+    item = await client.post(
+        f"/api/categories/{category_id}/budget-items",
+        json={"description": "Blocks", "budgeted_amount": 500000},
+    )
+    assert item.status_code in (200, 201), item.text
+    backup = await _export(client)
+
+    backup["format"] = 1
+    backup["tables"]["scope"] = backup["tables"].pop("category")
+    backup["tables"]["scope_preset"] = backup["tables"].pop("category_preset")
+    for row in backup["tables"]["budget_item"]:
+        row["scope_id"] = row.pop("category_id")
+        row["planned_amount"] = row.pop("budgeted_amount")
+    for row in backup["tables"]["expense"]:
+        row["scope_id"] = row.pop("category_id")
+
+    resp = await _restore(client, backup, accept=True)
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["row_counts"]["category"] == 1
+
+    back = await client.post("/api/auth/login", json={"password": "password123"})
+    assert back.status_code == 200, back.text
+    page = await client.get(f"/api/categories/{category_id}/budget-items")
+    assert page.status_code == 200, page.text
+    assert [item["budgeted_amount"] for item in page.json()["items"]] == [500000]
+
+
 async def test_a_file_naming_a_table_this_setout_does_not_know_is_refused(
     client: AsyncClient,
 ) -> None:

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import type { BudgetItemRead, CostType, ProjectRead, ScopeRead } from '@setout/api-client';
+import type { BudgetItemRead, CostType, ProjectRead, CategoryRead } from '@setout/api-client';
 import { ButtonComponent } from '../ui/button.component';
 import { Chip, ChipGroupComponent } from '../ui/chip-group.component';
 import { ComboboxComponent } from '../ui/combobox.component';
@@ -23,18 +23,18 @@ export class BudgetComponent {
   readonly budget = inject(BudgetService);
   private readonly toast = inject(ToastService);
 
-  readonly openScope = signal<string | null>(null);
-  readonly newScopeName = signal('');
+  readonly openCategory = signal<string | null>(null);
+  readonly newCategoryName = signal('');
   private readonly drafts = signal<Record<string, string>>({});
   readonly itemDescription = signal('');
   readonly itemAmount = signal('');
   readonly itemCostType = signal('');
 
   readonly symbol = computed(() => currencySymbol(this.project().currency_code));
-  readonly plannedTotal = computed(() => this.money(this.budget.plannedTotal()));
+  readonly budgetedTotal = computed(() => this.money(this.budget.budgetedTotal()));
 
   readonly availablePresets = computed(() => {
-    const used = new Set(this.budget.scopes().map((scope) => scope.name.toLowerCase()));
+    const used = new Set(this.budget.categories().map((category) => category.name.toLowerCase()));
     return this.budget.presetNames().filter((name) => !used.has(name.toLowerCase()));
   });
 
@@ -47,8 +47,8 @@ export class BudgetComponent {
 
   private async load(): Promise<void> {
     await this.budget.load(this.project().id);
-    for (const scope of this.budget.scopes()) {
-      await this.budget.loadItems(scope.id);
+    for (const category of this.budget.categories()) {
+      await this.budget.loadItems(category.id);
     }
     this.syncDrafts();
   }
@@ -56,9 +56,9 @@ export class BudgetComponent {
   private syncDrafts(): void {
     const exponent = this.project().currency_exponent;
     const next: Record<string, string> = {};
-    for (const scope of this.budget.scopes()) {
-      const amount = scope.own_planned_amount;
-      next[scope.id] = amount ? (amount / 10 ** exponent).toFixed(exponent) : '';
+    for (const category of this.budget.categories()) {
+      const amount = category.own_budgeted_amount;
+      next[category.id] = amount ? (amount / 10 ** exponent).toFixed(exponent) : '';
     }
     this.drafts.set(next);
   }
@@ -79,21 +79,21 @@ export class BudgetComponent {
   }
 
   canAddItem(): boolean {
-    const planned = parseMoney(this.itemAmount(), this.project().currency_exponent);
-    return this.itemDescription().trim().length > 0 && planned !== null && planned >= 0;
+    const budgeted = parseMoney(this.itemAmount(), this.project().currency_exponent);
+    return this.itemDescription().trim().length > 0 && budgeted !== null && budgeted >= 0;
   }
 
-  /** Several items can sit under one scope, which is what the row total sums. */
-  async addLineItem(scope: ScopeRead): Promise<void> {
-    const planned = parseMoney(this.itemAmount(), this.project().currency_exponent);
-    if (!this.canAddItem() || planned === null) {
+  /** Several items can sit under one category, which is what the row total sums. */
+  async addLineItem(category: CategoryRead): Promise<void> {
+    const budgeted = parseMoney(this.itemAmount(), this.project().currency_exponent);
+    if (!this.canAddItem() || budgeted === null) {
       return;
     }
     await this.budget.addItem(
       this.project().id,
-      scope.id,
+      category.id,
       this.itemDescription().trim(),
-      planned,
+      budgeted,
       (this.itemCostType() as CostType) || null,
     );
     this.itemDescription.set('');
@@ -108,22 +108,22 @@ export class BudgetComponent {
     return formatMoney(minor, project.currency_code, project.currency_exponent);
   }
 
-  itemsFor(scopeId: string): BudgetItemRead[] {
-    return this.budget.items()[scopeId] ?? [];
+  itemsFor(categoryId: string): BudgetItemRead[] {
+    return this.budget.items()[categoryId] ?? [];
   }
 
-  draftFor(scopeId: string): string {
-    return this.drafts()[scopeId] ?? '';
+  draftFor(categoryId: string): string {
+    return this.drafts()[categoryId] ?? '';
   }
 
   /** The day the number was last set on purpose. */
-  setOn(scopeId: string): string {
-    const items = this.itemsFor(scopeId);
+  setOn(categoryId: string): string {
+    const items = this.itemsFor(categoryId);
     return items.length ? this.day(items[0].set_at) : '—';
   }
 
-  changed(scopeId: string): string {
-    const items = this.itemsFor(scopeId);
+  changed(categoryId: string): string {
+    const items = this.itemsFor(categoryId);
     if (!items.length) {
       return '—';
     }
@@ -139,37 +139,37 @@ export class BudgetComponent {
     });
   }
 
-  onAmountInput(scopeId: string, event: Event): void {
+  onAmountInput(categoryId: string, event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this.drafts.update((all) => ({ ...all, [scopeId]: value }));
+    this.drafts.update((all) => ({ ...all, [categoryId]: value }));
   }
 
-  async toggleScope(scope: ScopeRead): Promise<void> {
-    if (this.openScope() === scope.id) {
-      this.openScope.set(null);
+  async toggleCategory(category: CategoryRead): Promise<void> {
+    if (this.openCategory() === category.id) {
+      this.openCategory.set(null);
       return;
     }
-    this.openScope.set(scope.id);
+    this.openCategory.set(category.id);
     this.itemDescription.set('');
     this.itemAmount.set('');
     this.itemCostType.set('');
-    await this.budget.loadItems(scope.id);
+    await this.budget.loadItems(category.id);
   }
 
   /** One row, one number. Extra detail lives in the items under the row. */
-  async commit(scope: ScopeRead): Promise<void> {
-    const typed = this.draftFor(scope.id).trim();
-    const items = this.itemsFor(scope.id);
+  async commit(category: CategoryRead): Promise<void> {
+    const typed = this.draftFor(category.id).trim();
+    const items = this.itemsFor(category.id);
     if (typed === '') {
       return;
     }
-    const planned = parseMoney(typed, this.project().currency_exponent);
-    if (planned === null) {
+    const budgeted = parseMoney(typed, this.project().currency_exponent);
+    if (budgeted === null) {
       this.toast.show('That is not an amount.', 'error');
       this.syncDrafts();
       return;
     }
-    if (planned === scope.own_planned_amount) {
+    if (budgeted === category.own_budgeted_amount) {
       return;
     }
     if (items.length > 1) {
@@ -179,27 +179,27 @@ export class BudgetComponent {
     }
 
     if (items.length === 1) {
-      await this.budget.updateItem(this.project().id, scope.id, items[0].id, planned);
+      await this.budget.updateItem(this.project().id, category.id, items[0].id, budgeted);
     } else {
-      await this.budget.addItem(this.project().id, scope.id, scope.name, planned);
+      await this.budget.addItem(this.project().id, category.id, category.name, budgeted);
     }
     await this.load();
-    this.toast.show(`${scope.name} budgeted at ${this.money(planned)}.`);
+    this.toast.show(`${category.name} budgeted at ${this.money(budgeted)}.`);
   }
 
-  async addScope(): Promise<void> {
-    const name = this.newScopeName().trim();
+  async addCategory(): Promise<void> {
+    const name = this.newCategoryName().trim();
     if (!name) {
       return;
     }
-    await this.budget.addScope(this.project().id, { name });
-    this.newScopeName.set('');
+    await this.budget.addCategory(this.project().id, { name });
+    this.newCategoryName.set('');
     await this.load();
     this.toast.show(`${name} added.`);
   }
 
-  async removeItem(scope: ScopeRead, itemId: string): Promise<void> {
-    await this.budget.removeItem(this.project().id, scope.id, itemId);
+  async removeItem(category: CategoryRead, itemId: string): Promise<void> {
+    await this.budget.removeItem(this.project().id, category.id, itemId);
     await this.load();
     this.toast.show('Budget item removed.');
   }

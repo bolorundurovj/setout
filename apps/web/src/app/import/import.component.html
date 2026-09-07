@@ -141,9 +141,9 @@
       <div class="counts">
         <div class="count">
           <span class="t-micro">Budgeted</span>
-          <span class="count-value t-mono">{{ money(found.planned_amount) }}</span>
+          <span class="count-value t-mono">{{ money(found.budgeted_amount) }}</span>
           <span class="t-small muted">
-            {{ found.planned_lines }} lines across {{ found.scopes.length }} categories
+            {{ found.budgeted_lines }} lines across {{ found.categories.length }} categories
           </span>
         </div>
         <div class="count">
@@ -174,19 +174,19 @@
       </div>
     </section>
 
-    @if (found.scopes.length > 0) {
+    @if (found.categories.length > 0) {
       <section class="card block">
         <span class="t-micro">Categories found in the spreadsheet</span>
-        <div class="scopes">
-          @for (scope of found.scopes; track scope.code) {
-            <div class="scope">
-              <span class="scope-name">
-                <span class="t-mono code">{{ scope.code }}</span>
-                {{ scope.name }}
+        <div class="categories">
+          @for (category of found.categories; track category.code) {
+            <div class="category">
+              <span class="category-name">
+                <span class="t-mono code">{{ category.code }}</span>
+                {{ category.name }}
               </span>
-              <span class="t-small muted">{{ scopeMatch(scope.matched_to) }}</span>
-              <span class="t-mono figure">{{ money(scope.planned_amount) }}</span>
-              <span class="t-small muted">{{ scope.lines }} lines</span>
+              <span class="t-small muted">{{ categoryMatch(category.matched_to) }}</span>
+              <span class="t-mono figure">{{ money(category.budgeted_amount) }}</span>
+              <span class="t-small muted">{{ category.lines }} lines</span>
             </div>
           }
         </div>
@@ -237,7 +237,7 @@
             <div class="row">
               <span class="t-small">{{ sampleDay(row) }}</span>
               <span class="t-small">{{ row.description }}</span>
-              <span class="t-small muted">{{ row.scope }}</span>
+              <span class="t-small muted">{{ row.category }}</span>
               <span class="t-mono figure right">{{ money(row.amount) }}</span>
             </div>
           }
@@ -278,10 +278,10 @@
       <h2 class="t-heading">{{ done.project_name }}</h2>
       <div class="counts">
         <div class="count">
-          <span class="t-micro">Planned</span>
-          <span class="count-value t-mono">{{ money(done.planned_amount) }}</span>
+          <span class="t-micro">Budgeted</span>
+          <span class="count-value t-mono">{{ money(done.budgeted_amount) }}</span>
           <span class="t-small muted">
-            {{ done.budget_items }} lines across {{ done.scopes }} categories
+            {{ done.budget_items }} lines across {{ done.categories }} categories
           </span>
         </div>
         <div class="count">

@@ -46,7 +46,7 @@ class ProjectRead(BaseModel):
     currency_code: str
     currency_exponent: int
     # Both summed from the rows beneath the project, never stored.
-    planned_amount: int
+    budgeted_amount: int
     spent_amount: int
     status: ProjectStatus
     land_id: str | None

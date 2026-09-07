@@ -12,11 +12,11 @@ TABLES: tuple[str, ...] = (
     "currency",
     "country",
     "state",
-    "scope_preset",
+    "category_preset",
     "user",
     "land",
     "project",
-    "scope",
+    "category",
     "budget_item",
     "item",
     "vendor",
@@ -34,7 +34,30 @@ TABLES: tuple[str, ...] = (
 # the copy was written, not to the record.
 SKIPPED: tuple[str, ...] = ("session", "tortoise_migrations")
 
-FORMAT = 1
+FORMAT = 2
+
+# Format 1 wrote the category tables and columns under their old names.
+RENAMED_TABLES: dict[str, str] = {"scope": "category", "scope_preset": "category_preset"}
+RENAMED_COLUMNS: dict[str, dict[str, str]] = {
+    "budget_item": {"scope_id": "category_id", "planned_amount": "budgeted_amount"},
+    "expense": {"scope_id": "category_id"},
+}
+
+
+Rows = dict[str, list[dict[str, Any]]]
+
+
+def forward(tables: Rows, format: int) -> Rows:
+    """Read an older copy by moving its names to the current ones."""
+    if format >= FORMAT:
+        return tables
+    renamed = {RENAMED_TABLES.get(name, name): rows for name, rows in tables.items()}
+    for table, columns in RENAMED_COLUMNS.items():
+        for row in renamed.get(table, []):
+            for old, new in columns.items():
+                if old in row:
+                    row[new] = row.pop(old)
+    return renamed
 
 
 def plain(value: Any) -> Any:

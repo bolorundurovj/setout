@@ -20,8 +20,8 @@ async def _project(client: AsyncClient) -> str:
     return str(resp.json()["id"])
 
 
-async def _scope(client: AsyncClient, project_id: str, name: str, **extra: object) -> dict:
-    resp = await client.post(f"/api/projects/{project_id}/scopes", json={"name": name, **extra})
+async def _category(client: AsyncClient, project_id: str, name: str, **extra: object) -> dict:
+    resp = await client.post(f"/api/projects/{project_id}/categories", json={"name": name, **extra})
     return resp.json()
 
 
@@ -41,7 +41,7 @@ async def test_three_fields_are_enough(client: AsyncClient) -> None:
     spend = await _spend(client, project_id, description="1 truck of sand", amount=50_000_00)
 
     assert spend["amount"] == 50_000_00
-    assert spend["scope_id"] is None
+    assert spend["category_id"] is None
     assert spend["cost_type"] is None
     assert spend["spent_on"]
 
@@ -98,28 +98,32 @@ async def test_something_has_to_say_what_it_cost(client: AsyncClient) -> None:
     assert resp.status_code == 422
 
 
-async def test_spend_with_no_scope_is_kept_and_counted_as_unfiled(client: AsyncClient) -> None:
+async def test_spend_with_no_category_is_kept_and_counted_as_uncategorized(
+    client: AsyncClient,
+) -> None:
     project_id = await _project(client)
     await _spend(client, project_id, description="MISSING", amount=53_000_00)
 
-    unfiled = (
-        await client.get(f"/api/projects/{project_id}/expenses", params={"unfiled_only": True})
+    uncategorized = (
+        await client.get(
+            f"/api/projects/{project_id}/expenses", params={"uncategorized_only": True}
+        )
     ).json()
-    assert unfiled["total"] == 1
+    assert uncategorized["total"] == 1
 
     spend = (await client.get(f"/api/projects/{project_id}/spend")).json()
-    assert spend["unfiled_amount"] == 53_000_00
+    assert spend["uncategorized_amount"] == 53_000_00
     assert spend["spent_amount"] == 53_000_00
 
 
-async def test_a_group_scope_holds_no_spend_of_its_own(client: AsyncClient) -> None:
+async def test_a_group_category_holds_no_spend_of_its_own(client: AsyncClient) -> None:
     project_id = await _project(client)
-    group = await _scope(client, project_id, "Structure and exterior")
-    await _scope(client, project_id, "Blockwork", parent_id=group["id"])
+    group = await _category(client, project_id, "Structure and exterior")
+    await _category(client, project_id, "Blockwork", parent_id=group["id"])
 
     resp = await client.post(
         f"/api/projects/{project_id}/expenses",
-        json={"description": "Blocks", "amount": 100, "scope_id": group["id"]},
+        json={"description": "Blocks", "amount": 100, "category_id": group["id"]},
     )
     assert resp.status_code == 409
 
@@ -129,11 +133,11 @@ async def test_spend_cannot_be_filed_against_another_project(client: AsyncClient
     other = (
         await client.post("/api/projects", json={"name": "Owode Bungalow", "currency_code": "NGN"})
     ).json()
-    stranger = await _scope(client, other["id"], "Interior work")
+    stranger = await _category(client, other["id"], "Interior work")
 
     resp = await client.post(
         f"/api/projects/{project_id}/expenses",
-        json={"description": "Tiles", "amount": 100, "scope_id": stranger["id"]},
+        json={"description": "Tiles", "amount": 100, "category_id": stranger["id"]},
     )
     assert resp.status_code == 404
 
@@ -143,33 +147,33 @@ async def test_variance_is_null_without_a_budget(client: AsyncClient) -> None:
     await _spend(client, project_id, amount=10_000_00)
 
     spend = (await client.get(f"/api/projects/{project_id}/spend")).json()
-    assert spend["planned_amount"] == 0
+    assert spend["budgeted_amount"] == 0
     assert spend["variance_percent"] is None
 
 
 async def test_variance_reports_going_over(client: AsyncClient) -> None:
     project_id = await _project(client)
-    scope = await _scope(client, project_id, "Concrete foundation")
+    category = await _category(client, project_id, "Concrete foundation")
     await client.post(
-        f"/api/scopes/{scope['id']}/budget-items",
-        json={"description": "Planned", "planned_amount": 100_000},
+        f"/api/categories/{category['id']}/budget-items",
+        json={"description": "Budgeted", "budgeted_amount": 100_000},
     )
-    await _spend(client, project_id, amount=150_000, scope_id=scope["id"])
+    await _spend(client, project_id, amount=150_000, category_id=category["id"])
 
     spend = (await client.get(f"/api/projects/{project_id}/spend")).json()
-    assert spend["planned_amount"] == 100_000
+    assert spend["budgeted_amount"] == 100_000
     assert spend["spent_amount"] == 150_000
     assert spend["variance_percent"] == 50.0
 
 
 async def test_an_expense_can_be_filed_later(client: AsyncClient) -> None:
     project_id = await _project(client)
-    scope = await _scope(client, project_id, "Concrete foundation")
+    category = await _category(client, project_id, "Concrete foundation")
     spend = await _spend(client, project_id, description="MISSING", amount=53_000_00)
 
-    filed = await client.patch(f"/api/expenses/{spend['id']}", json={"scope_id": scope["id"]})
+    filed = await client.patch(f"/api/expenses/{spend['id']}", json={"category_id": category["id"]})
     assert filed.status_code == 200
-    assert filed.json()["scope_id"] == scope["id"]
+    assert filed.json()["category_id"] == category["id"]
 
 
 async def test_an_expense_is_soft_deleted_and_restorable(client: AsyncClient) -> None:
@@ -257,24 +261,26 @@ async def test_an_edit_cannot_point_at_a_vendor_that_is_not_there(client: AsyncC
 
 async def test_the_project_card_figures_follow_the_spend(client: AsyncClient) -> None:
     project_id = await _project(client)
-    scope = await _scope(client, project_id, "Concrete foundation")
+    category = await _category(client, project_id, "Concrete foundation")
     await client.post(
-        f"/api/scopes/{scope['id']}/budget-items",
-        json={"description": "Planned", "planned_amount": 3_828_300},
+        f"/api/categories/{category['id']}/budget-items",
+        json={"description": "Budgeted", "budgeted_amount": 3_828_300},
     )
 
     listed = (await client.get("/api/projects")).json()["items"][0]
-    assert listed["planned_amount"] == 3_828_300
+    assert listed["budgeted_amount"] == 3_828_300
     assert listed["spent_amount"] == 0
 
-    await _spend(client, project_id, description="Blocks", amount=4_889_300, scope_id=scope["id"])
+    await _spend(
+        client, project_id, description="Blocks", amount=4_889_300, category_id=category["id"]
+    )
 
     listed = (await client.get("/api/projects")).json()["items"][0]
     assert listed["spent_amount"] == 4_889_300
     assert (await client.get(f"/api/projects/{project_id}")).json()["spent_amount"] == 4_889_300
 
 
-async def test_unfiled_spend_still_counts_on_the_card(client: AsyncClient) -> None:
+async def test_uncategorized_spend_still_counts_on_the_card(client: AsyncClient) -> None:
     project_id = await _project(client)
     await _spend(client, project_id, description="MISSING", amount=53_000_00)
 
@@ -372,68 +378,72 @@ async def test_a_null_amount_on_its_own_leaves_the_amount_alone(client: AsyncCli
     assert changed.json()["description"] == "1 truck of sand"
 
 
-async def test_a_scope_carries_what_was_spent_on_it(client: AsyncClient) -> None:
+async def test_a_category_carries_what_was_spent_on_it(client: AsyncClient) -> None:
     project_id = await _project(client)
-    scope = await _scope(client, project_id, "Concrete foundation")
-    other = await _scope(client, project_id, "Interior work")
+    category = await _category(client, project_id, "Concrete foundation")
+    other = await _category(client, project_id, "Interior work")
 
-    await _spend(client, project_id, description="Sand", amount=96_000, scope_id=scope["id"])
-    await _spend(client, project_id, description="Tiles", amount=340_000, scope_id=other["id"])
+    await _spend(client, project_id, description="Sand", amount=96_000, category_id=category["id"])
+    await _spend(client, project_id, description="Tiles", amount=340_000, category_id=other["id"])
     await _spend(client, project_id, description="MISSING", amount=61_000)
 
-    scopes = {s["id"]: s for s in (await client.get(f"/api/projects/{project_id}/scopes")).json()}
-    assert scopes[scope["id"]]["spent_amount"] == 96_000
-    assert scopes[other["id"]]["spent_amount"] == 340_000
-    # Unfiled spend belongs to no scope, so it is in neither.
-    assert sum(s["spent_amount"] for s in scopes.values()) == 436_000
+    categories = {
+        s["id"]: s for s in (await client.get(f"/api/projects/{project_id}/categories")).json()
+    }
+    assert categories[category["id"]]["spent_amount"] == 96_000
+    assert categories[other["id"]]["spent_amount"] == 340_000
+    # Uncategorized spend belongs to no category, so it is in neither.
+    assert sum(s["spent_amount"] for s in categories.values()) == 436_000
 
 
-async def test_spend_rolls_up_to_the_group_scope(client: AsyncClient) -> None:
+async def test_spend_rolls_up_to_the_group_category(client: AsyncClient) -> None:
     project_id = await _project(client)
-    group = await _scope(client, project_id, "Structure and exterior")
-    child = await _scope(client, project_id, "Blockwork", parent_id=group["id"])
+    group = await _category(client, project_id, "Structure and exterior")
+    child = await _category(client, project_id, "Blockwork", parent_id=group["id"])
 
-    await _spend(client, project_id, description="Blocks", amount=124_800, scope_id=child["id"])
+    await _spend(client, project_id, description="Blocks", amount=124_800, category_id=child["id"])
 
-    scopes = {s["id"]: s for s in (await client.get(f"/api/projects/{project_id}/scopes")).json()}
-    assert scopes[group["id"]]["spent_amount"] == 124_800
-    assert scopes[group["id"]]["own_spent_amount"] == 0
-    assert scopes[child["id"]]["own_spent_amount"] == 124_800
+    categories = {
+        s["id"]: s for s in (await client.get(f"/api/projects/{project_id}/categories")).json()
+    }
+    assert categories[group["id"]]["spent_amount"] == 124_800
+    assert categories[group["id"]]["own_spent_amount"] == 0
+    assert categories[child["id"]]["own_spent_amount"] == 124_800
 
 
-async def test_a_deleted_expense_leaves_the_scope_total(client: AsyncClient) -> None:
+async def test_a_deleted_expense_leaves_the_category_total(client: AsyncClient) -> None:
     project_id = await _project(client)
-    scope = await _scope(client, project_id, "Roofing")
-    spend = await _spend(client, project_id, amount=820_000, scope_id=scope["id"])
+    category = await _category(client, project_id, "Roofing")
+    spend = await _spend(client, project_id, amount=820_000, category_id=category["id"])
 
     await client.delete(f"/api/expenses/{spend['id']}")
 
-    scopes = (await client.get(f"/api/projects/{project_id}/scopes")).json()
-    assert scopes[0]["spent_amount"] == 0
+    categories = (await client.get(f"/api/projects/{project_id}/categories")).json()
+    assert categories[0]["spent_amount"] == 0
 
 
-async def test_a_scope_says_how_many_expenses_are_filed_to_it(client: AsyncClient) -> None:
+async def test_a_category_says_how_many_expenses_are_filed_to_it(client: AsyncClient) -> None:
     project_id = await _project(client)
-    scope = await _scope(client, project_id, "Structure and exterior")
+    category = await _category(client, project_id, "Structure and exterior")
 
     for amount in (10_000_00, 25_000_00):
-        await _spend(client, project_id, scope_id=scope["id"], amount=amount)
+        await _spend(client, project_id, category_id=category["id"], amount=amount)
 
-    scopes = (await client.get(f"/api/projects/{project_id}/scopes")).json()
-    row = next(s for s in scopes if s["id"] == scope["id"])
+    categories = (await client.get(f"/api/projects/{project_id}/categories")).json()
+    row = next(s for s in categories if s["id"] == category["id"])
     assert row["expense_count"] == 2
     assert row["own_expense_count"] == 2
 
 
-async def test_a_group_scope_counts_the_expenses_below_it(client: AsyncClient) -> None:
+async def test_a_group_category_counts_the_expenses_below_it(client: AsyncClient) -> None:
     project_id = await _project(client)
-    parent = await _scope(client, project_id, "Structure")
-    child = await _scope(client, project_id, "Roof", parent_id=parent["id"])
+    parent = await _category(client, project_id, "Structure")
+    child = await _category(client, project_id, "Roof", parent_id=parent["id"])
 
-    await _spend(client, project_id, scope_id=child["id"], amount=10_000_00)
+    await _spend(client, project_id, category_id=child["id"], amount=10_000_00)
 
-    scopes = (await client.get(f"/api/projects/{project_id}/scopes")).json()
-    group = next(s for s in scopes if s["id"] == parent["id"])
+    categories = (await client.get(f"/api/projects/{project_id}/categories")).json()
+    group = next(s for s in categories if s["id"] == parent["id"])
     assert group["expense_count"] == 1
     # A group holds nothing itself, so the count of its own stays at nothing.
     assert group["own_expense_count"] == 0
@@ -441,26 +451,26 @@ async def test_a_group_scope_counts_the_expenses_below_it(client: AsyncClient) -
 
 async def test_a_deleted_expense_leaves_the_count(client: AsyncClient) -> None:
     project_id = await _project(client)
-    scope = await _scope(client, project_id, "Interior work")
-    kept = await _spend(client, project_id, scope_id=scope["id"], amount=10_000_00)
-    gone = await _spend(client, project_id, scope_id=scope["id"], amount=25_000_00)
+    category = await _category(client, project_id, "Interior work")
+    kept = await _spend(client, project_id, category_id=category["id"], amount=10_000_00)
+    gone = await _spend(client, project_id, category_id=category["id"], amount=25_000_00)
 
     await client.delete(f"/api/expenses/{gone['id']}")
 
-    scopes = (await client.get(f"/api/projects/{project_id}/scopes")).json()
-    row = next(s for s in scopes if s["id"] == scope["id"])
+    categories = (await client.get(f"/api/projects/{project_id}/categories")).json()
+    row = next(s for s in categories if s["id"] == category["id"])
     assert row["expense_count"] == 1
     assert row["spent_amount"] == kept["amount"]
 
 
-async def test_spend_says_how_many_expenses_reached_no_scope(client: AsyncClient) -> None:
+async def test_spend_says_how_many_expenses_reached_no_category(client: AsyncClient) -> None:
     project_id = await _project(client)
     await _spend(client, project_id, amount=61_000_00)
     await _spend(client, project_id, amount=5_000_00)
 
     spend = (await client.get(f"/api/projects/{project_id}/spend")).json()
-    assert spend["unfiled_count"] == 2
-    assert spend["unfiled_amount"] == 66_000_00
+    assert spend["uncategorized_count"] == 2
+    assert spend["uncategorized_amount"] == 66_000_00
 
 
 async def test_months_gather_spend_into_the_months_it_happened_in(client: AsyncClient) -> None:
@@ -480,17 +490,19 @@ async def test_months_gather_spend_into_the_months_it_happened_in(client: AsyncC
 
 async def test_a_month_splits_by_the_top_of_each_branch(client: AsyncClient) -> None:
     project_id = await _project(client)
-    parent = await _scope(client, project_id, "Structure and exterior")
-    child = await _scope(client, project_id, "Blockwork", parent_id=parent["id"])
-    await _spend(client, project_id, scope_id=child["id"], amount=30_000_00, spent_on="2026-06-11")
+    parent = await _category(client, project_id, "Structure and exterior")
+    child = await _category(client, project_id, "Blockwork", parent_id=parent["id"])
+    await _spend(
+        client, project_id, category_id=child["id"], amount=30_000_00, spent_on="2026-06-11"
+    )
     await _spend(client, project_id, amount=6_000_00, spent_on="2026-06-12")
 
     months = (await client.get(f"/api/projects/{project_id}/months")).json()
-    parts = months["months"][0]["scopes"]
+    parts = months["months"][0]["categories"]
 
-    assert [(p["scope_id"], p["name"], p["amount"]) for p in parts] == [
+    assert [(p["category_id"], p["name"], p["amount"]) for p in parts] == [
         (parent["id"], "Structure and exterior", 30_000_00),
-        (None, "Not filed to a scope", 6_000_00),
+        (None, "Not filed to a category", 6_000_00),
     ]
 
 
@@ -597,26 +609,26 @@ async def test_the_spend_adds_up_the_same_however_many_rows_there_are(
     client: AsyncClient,
 ) -> None:
     project_id = await _project(client)
-    scope = await _scope(client, project_id, "Concrete foundation")
+    category = await _category(client, project_id, "Concrete foundation")
     await client.post(
-        f"/api/scopes/{scope['id']}/budget-items",
-        json={"description": "Sand", "planned_amount": 50_000_00},
+        f"/api/categories/{category['id']}/budget-items",
+        json={"description": "Sand", "budgeted_amount": 50_000_00},
     )
     await client.post(
-        f"/api/scopes/{scope['id']}/budget-items",
-        json={"description": "Cement", "planned_amount": 30_000_00},
+        f"/api/categories/{category['id']}/budget-items",
+        json={"description": "Cement", "budgeted_amount": 30_000_00},
     )
-    await _spend(client, project_id, amount=10_000_00, scope_id=scope["id"])
+    await _spend(client, project_id, amount=10_000_00, category_id=category["id"])
     await _spend(client, project_id, amount=5_000_00)
     gone = await _spend(client, project_id, amount=999_00)
     await client.delete(f"/api/expenses/{gone['id']}")
 
     spend = (await client.get(f"/api/projects/{project_id}/spend")).json()
 
-    assert spend["planned_amount"] == 80_000_00
+    assert spend["budgeted_amount"] == 80_000_00
     assert spend["spent_amount"] == 15_000_00
-    assert spend["unfiled_amount"] == 5_000_00
-    assert spend["unfiled_count"] == 1
+    assert spend["uncategorized_amount"] == 5_000_00
+    assert spend["uncategorized_count"] == 1
     assert spend["removed_count"] == 1
 
 
@@ -627,9 +639,9 @@ async def test_a_project_with_nothing_in_it_totals_zero_rather_than_nothing(
 
     spend = (await client.get(f"/api/projects/{project_id}/spend")).json()
 
-    assert spend["planned_amount"] == 0
+    assert spend["budgeted_amount"] == 0
     assert spend["spent_amount"] == 0
-    assert spend["unfiled_amount"] == 0
+    assert spend["uncategorized_amount"] == 0
     assert spend["variance_percent"] is None
 
 
@@ -675,40 +687,40 @@ async def test_restoring_an_expense_brings_its_delivery_and_files_back(
 
 async def test_suggestion_from_item_history(client: AsyncClient) -> None:
     project_id = await _project(client)
-    scope = await _scope(client, project_id, "Concrete foundation")
+    category = await _category(client, project_id, "Concrete foundation")
     item = (await client.post("/api/items", json={"name": "Cement", "unit": "bag"})).json()
 
-    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
-    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+    await _spend(client, project_id, item_id=item["id"], category_id=category["id"])
+    await _spend(client, project_id, item_id=item["id"], category_id=category["id"])
 
     resp = await client.get(
-        f"/api/projects/{project_id}/suggest-scope", params={"item_id": item["id"]}
+        f"/api/projects/{project_id}/suggest-category", params={"item_id": item["id"]}
     )
     assert resp.status_code == 200
-    assert resp.json()["scope_id"] == scope["id"]
+    assert resp.json()["category_id"] == category["id"]
     assert "item" in resp.json()["reason"].casefold()
 
 
 async def test_suggestion_from_vendor_history(client: AsyncClient) -> None:
     project_id = await _project(client)
-    scope = await _scope(client, project_id, "Blockwork")
+    category = await _category(client, project_id, "Blockwork")
     vendor = (await client.post("/api/vendors", json={"name": "Segun Blocks"})).json()
 
-    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=scope["id"])
-    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=scope["id"])
+    await _spend(client, project_id, vendor_id=vendor["id"], category_id=category["id"])
+    await _spend(client, project_id, vendor_id=vendor["id"], category_id=category["id"])
 
     resp = await client.get(
-        f"/api/projects/{project_id}/suggest-scope", params={"vendor_id": vendor["id"]}
+        f"/api/projects/{project_id}/suggest-category", params={"vendor_id": vendor["id"]}
     )
     assert resp.status_code == 200
-    assert resp.json()["scope_id"] == scope["id"]
+    assert resp.json()["category_id"] == category["id"]
     assert "vendor" in resp.json()["reason"].casefold()
 
 
 async def test_suggestion_prefers_item_over_vendor(client: AsyncClient) -> None:
     project_id = await _project(client)
-    item_scope = await _scope(client, project_id, "Concrete foundation")
-    vendor_scope = await _scope(client, project_id, "Blockwork")
+    item_category = await _category(client, project_id, "Concrete foundation")
+    vendor_category = await _category(client, project_id, "Blockwork")
     item = (await client.post("/api/items", json={"name": "Cement"})).json()
     vendor = (await client.post("/api/vendors", json={"name": "Segun Blocks"})).json()
 
@@ -717,38 +729,38 @@ async def test_suggestion_prefers_item_over_vendor(client: AsyncClient) -> None:
         project_id,
         item_id=item["id"],
         vendor_id=vendor["id"],
-        scope_id=item_scope["id"],
+        category_id=item_category["id"],
     )
     await _spend(
         client,
         project_id,
         item_id=item["id"],
         vendor_id=vendor["id"],
-        scope_id=item_scope["id"],
+        category_id=item_category["id"],
     )
-    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=vendor_scope["id"])
+    await _spend(client, project_id, vendor_id=vendor["id"], category_id=vendor_category["id"])
 
     resp = await client.get(
-        f"/api/projects/{project_id}/suggest-scope",
+        f"/api/projects/{project_id}/suggest-category",
         params={"item_id": item["id"], "vendor_id": vendor["id"]},
     )
-    assert resp.json()["scope_id"] == item_scope["id"]
+    assert resp.json()["category_id"] == item_category["id"]
 
 
 async def test_suggestion_tie_returns_null(client: AsyncClient) -> None:
     project_id = await _project(client)
-    first = await _scope(client, project_id, "Concrete foundation")
-    second = await _scope(client, project_id, "Blockwork")
+    first = await _category(client, project_id, "Concrete foundation")
+    second = await _category(client, project_id, "Blockwork")
     item = (await client.post("/api/items", json={"name": "Cement"})).json()
 
-    await _spend(client, project_id, item_id=item["id"], scope_id=first["id"])
-    await _spend(client, project_id, item_id=item["id"], scope_id=second["id"])
+    await _spend(client, project_id, item_id=item["id"], category_id=first["id"])
+    await _spend(client, project_id, item_id=item["id"], category_id=second["id"])
 
     resp = await client.get(
-        f"/api/projects/{project_id}/suggest-scope", params={"item_id": item["id"]}
+        f"/api/projects/{project_id}/suggest-category", params={"item_id": item["id"]}
     )
     assert resp.status_code == 200
-    assert resp.json()["scope_id"] is None
+    assert resp.json()["category_id"] is None
     assert resp.json()["reason"] is None
 
 
@@ -757,47 +769,47 @@ async def test_suggestion_empty_returns_null(client: AsyncClient) -> None:
     item = (await client.post("/api/items", json={"name": "Cement"})).json()
 
     resp = await client.get(
-        f"/api/projects/{project_id}/suggest-scope", params={"item_id": item["id"]}
+        f"/api/projects/{project_id}/suggest-category", params={"item_id": item["id"]}
     )
     assert resp.status_code == 200
-    assert resp.json()["scope_id"] is None
+    assert resp.json()["category_id"] is None
     assert resp.json()["reason"] is None
 
 
 async def test_suggestion_missing_project_404(client: AsyncClient) -> None:
     await _project(client)
-    resp = await client.get("/api/projects/nope/suggest-scope")
+    resp = await client.get("/api/projects/nope/suggest-category")
     assert resp.status_code == 404
 
 
-async def test_auto_assigns_scope_from_strong_item_pattern(client: AsyncClient) -> None:
+async def test_auto_assigns_category_from_strong_item_pattern(client: AsyncClient) -> None:
     project_id = await _project(client)
-    scope = await _scope(client, project_id, "Concrete foundation")
+    category = await _category(client, project_id, "Concrete foundation")
     item = (await client.post("/api/items", json={"name": "Cement"})).json()
 
-    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
-    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+    await _spend(client, project_id, item_id=item["id"], category_id=category["id"])
+    await _spend(client, project_id, item_id=item["id"], category_id=category["id"])
 
     spend = await _spend(client, project_id, item_id=item["id"])
-    assert spend["scope_id"] == scope["id"]
+    assert spend["category_id"] == category["id"]
 
 
-async def test_auto_assigns_scope_from_strong_vendor_pattern(client: AsyncClient) -> None:
+async def test_auto_assigns_category_from_strong_vendor_pattern(client: AsyncClient) -> None:
     project_id = await _project(client)
-    scope = await _scope(client, project_id, "Blockwork")
+    category = await _category(client, project_id, "Blockwork")
     vendor = (await client.post("/api/vendors", json={"name": "Segun Blocks"})).json()
 
-    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=scope["id"])
-    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=scope["id"])
+    await _spend(client, project_id, vendor_id=vendor["id"], category_id=category["id"])
+    await _spend(client, project_id, vendor_id=vendor["id"], category_id=category["id"])
 
     spend = await _spend(client, project_id, vendor_id=vendor["id"])
-    assert spend["scope_id"] == scope["id"]
+    assert spend["category_id"] == category["id"]
 
 
 async def test_auto_assign_prefers_item_over_vendor(client: AsyncClient) -> None:
     project_id = await _project(client)
-    item_scope = await _scope(client, project_id, "Concrete foundation")
-    vendor_scope = await _scope(client, project_id, "Blockwork")
+    item_category = await _category(client, project_id, "Concrete foundation")
+    vendor_category = await _category(client, project_id, "Blockwork")
     item = (await client.post("/api/items", json={"name": "Cement"})).json()
     vendor = (await client.post("/api/vendors", json={"name": "Segun Blocks"})).json()
 
@@ -806,87 +818,89 @@ async def test_auto_assign_prefers_item_over_vendor(client: AsyncClient) -> None
         project_id,
         item_id=item["id"],
         vendor_id=vendor["id"],
-        scope_id=item_scope["id"],
+        category_id=item_category["id"],
     )
     await _spend(
         client,
         project_id,
         item_id=item["id"],
         vendor_id=vendor["id"],
-        scope_id=item_scope["id"],
+        category_id=item_category["id"],
     )
-    await _spend(client, project_id, vendor_id=vendor["id"], scope_id=vendor_scope["id"])
+    await _spend(client, project_id, vendor_id=vendor["id"], category_id=vendor_category["id"])
 
     spend = await _spend(client, project_id, item_id=item["id"], vendor_id=vendor["id"])
-    assert spend["scope_id"] == item_scope["id"]
+    assert spend["category_id"] == item_category["id"]
 
 
 async def test_auto_assign_skips_split_history(client: AsyncClient) -> None:
     project_id = await _project(client)
-    first = await _scope(client, project_id, "Concrete foundation")
-    second = await _scope(client, project_id, "Blockwork")
+    first = await _category(client, project_id, "Concrete foundation")
+    second = await _category(client, project_id, "Blockwork")
     item = (await client.post("/api/items", json={"name": "Cement"})).json()
 
-    await _spend(client, project_id, item_id=item["id"], scope_id=first["id"])
-    await _spend(client, project_id, item_id=item["id"], scope_id=second["id"])
+    await _spend(client, project_id, item_id=item["id"], category_id=first["id"])
+    await _spend(client, project_id, item_id=item["id"], category_id=second["id"])
 
     spend = await _spend(client, project_id, item_id=item["id"])
-    assert spend["scope_id"] is None
+    assert spend["category_id"] is None
 
 
 async def test_auto_assign_needs_at_least_two_purchases(client: AsyncClient) -> None:
     project_id = await _project(client)
-    scope = await _scope(client, project_id, "Concrete foundation")
+    category = await _category(client, project_id, "Concrete foundation")
     item = (await client.post("/api/items", json={"name": "Cement"})).json()
 
-    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+    await _spend(client, project_id, item_id=item["id"], category_id=category["id"])
 
     spend = await _spend(client, project_id, item_id=item["id"])
-    assert spend["scope_id"] is None
+    assert spend["category_id"] is None
 
 
 async def test_auto_assign_can_be_disabled(client: AsyncClient) -> None:
     project_id = await _project(client)
-    scope = await _scope(client, project_id, "Concrete foundation")
+    category = await _category(client, project_id, "Concrete foundation")
     item = (await client.post("/api/items", json={"name": "Cement"})).json()
 
-    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
-    await _spend(client, project_id, item_id=item["id"], scope_id=scope["id"])
+    await _spend(client, project_id, item_id=item["id"], category_id=category["id"])
+    await _spend(client, project_id, item_id=item["id"], category_id=category["id"])
 
-    spend = await _spend(client, project_id, item_id=item["id"], auto_scope=False)
-    assert spend["scope_id"] is None
+    spend = await _spend(client, project_id, item_id=item["id"], auto_categorize=False)
+    assert spend["category_id"] is None
 
 
-async def test_bulk_files_unfiled_expenses_to_a_scope(client: AsyncClient) -> None:
+async def test_bulk_files_uncategorized_expenses_to_a_category(client: AsyncClient) -> None:
     project_id = await _project(client)
-    scope = await _scope(client, project_id, "Concrete foundation")
+    category = await _category(client, project_id, "Concrete foundation")
     first = await _spend(client, project_id, description="Cement", amount=10_000_00)
     second = await _spend(client, project_id, description="Sand", amount=5_000_00)
 
     resp = await client.patch(
         f"/api/projects/{project_id}/expenses",
-        json={"expense_ids": [first["id"], second["id"]], "scope_id": scope["id"]},
+        json={"expense_ids": [first["id"], second["id"]], "category_id": category["id"]},
     )
     assert resp.status_code == 200
     assert resp.json()["filed_count"] == 2
 
     page = (
-        await client.get(f"/api/projects/{project_id}/expenses", params={"unfiled_only": True})
+        await client.get(
+            f"/api/projects/{project_id}/expenses", params={"uncategorized_only": True}
+        )
     ).json()
     assert page["total"] == 0
 
     listed = (await client.get(f"/api/projects/{project_id}/expenses")).json()
-    filed = {row["id"]: row["scope_id"] for row in listed["items"]}
-    assert filed[first["id"]] == scope["id"]
-    assert filed[second["id"]] == scope["id"]
+    filed = {row["id"]: row["category_id"] for row in listed["items"]}
+    assert filed[first["id"]] == category["id"]
+    assert filed[second["id"]] == category["id"]
 
 
 async def test_bulk_file_ignores_expenses_already_filed_or_deleted(client: AsyncClient) -> None:
     project_id = await _project(client)
-    scope = await _scope(client, project_id, "Concrete foundation")
-    unfiled = await _spend(client, project_id, description="Cement", amount=10_000_00)
+    category = await _category(client, project_id, "Concrete foundation")
+    uncategorized = await _spend(client, project_id, description="Cement", amount=10_000_00)
     filed = await _spend(
-        client, project_id, description="Sand", amount=5_000_00, scope_id=scope["id"]
+        client, project_id, description="Sand", amount=5_000_00, category_id=category["id"]
     )
     gone = await _spend(client, project_id, description="Wood", amount=3_000_00)
     await client.delete(f"/api/expenses/{gone['id']}")
@@ -894,37 +908,37 @@ async def test_bulk_file_ignores_expenses_already_filed_or_deleted(client: Async
     resp = await client.patch(
         f"/api/projects/{project_id}/expenses",
         json={
-            "expense_ids": [unfiled["id"], filed["id"], gone["id"], "nope"],
-            "scope_id": scope["id"],
+            "expense_ids": [uncategorized["id"], filed["id"], gone["id"], "nope"],
+            "category_id": category["id"],
         },
     )
     assert resp.status_code == 200
     assert resp.json()["filed_count"] == 1
 
 
-async def test_bulk_file_rejects_a_group_scope(client: AsyncClient) -> None:
+async def test_bulk_file_rejects_a_group_category(client: AsyncClient) -> None:
     project_id = await _project(client)
-    group = await _scope(client, project_id, "Structure and exterior")
-    await _scope(client, project_id, "Blockwork", parent_id=group["id"])
+    group = await _category(client, project_id, "Structure and exterior")
+    await _category(client, project_id, "Blockwork", parent_id=group["id"])
     spend = await _spend(client, project_id, description="Cement", amount=10_000_00)
 
     resp = await client.patch(
         f"/api/projects/{project_id}/expenses",
-        json={"expense_ids": [spend["id"]], "scope_id": group["id"]},
+        json={"expense_ids": [spend["id"]], "category_id": group["id"]},
     )
     assert resp.status_code == 409
 
 
-async def test_bulk_file_rejects_a_scope_from_another_project(client: AsyncClient) -> None:
+async def test_bulk_file_rejects_a_category_from_another_project(client: AsyncClient) -> None:
     project_id = await _project(client)
     other = (
         await client.post("/api/projects", json={"name": "Owode Bungalow", "currency_code": "NGN"})
     ).json()
-    stranger = await _scope(client, other["id"], "Interior work")
+    stranger = await _category(client, other["id"], "Interior work")
     spend = await _spend(client, project_id, description="Cement", amount=10_000_00)
 
     resp = await client.patch(
         f"/api/projects/{project_id}/expenses",
-        json={"expense_ids": [spend["id"]], "scope_id": stranger["id"]},
+        json={"expense_ids": [spend["id"]], "category_id": stranger["id"]},
     )
     assert resp.status_code == 404
