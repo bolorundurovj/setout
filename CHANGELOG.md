@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/bolorundurovj/setout/compare/v2.0.0...v2.0.1) (2026-09-07)
+
+
+### Bug Fixes
+
+* **storage:** sign S3 presigned URLs with browser-facing host ([dc3fdce](https://github.com/bolorundurovj/setout/commit/dc3fdce98bfd5641e572c0985d5fa2c9634cfacf))
+
 ## [2.0.0](https://github.com/bolorundurovj/setout/compare/v1.4.2...v2.0.0) (2026-09-07)
 
 
