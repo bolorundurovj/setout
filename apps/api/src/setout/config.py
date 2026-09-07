@@ -64,6 +64,10 @@ class Settings(BaseSettings):
     s3_use_path_style: bool = False
     # How long a link straight to the bucket stays good for.
     s3_link_seconds: int = 300
+    # The address browsers use to reach the S3 bucket. Leave empty to use the
+    # endpoint_url, which is fine for AWS but not for a local MinIO that
+    # the API calls internally in Docker.
+    s3_public_url: str = ""
 
     # The largest file that can be attached. A photograph of a receipt from a
     # phone is a few megabytes.

@@ -26,6 +26,7 @@ def build_storage(settings: Settings) -> Storage:
             settings.s3_bucket,
             prefix=settings.s3_prefix,
             endpoint_url=settings.s3_endpoint_url or None,
+            public_url=settings.s3_public_url or None,
             region=settings.s3_region or None,
             access_key_id=settings.s3_access_key_id,
             secret_access_key=settings.s3_secret_access_key,

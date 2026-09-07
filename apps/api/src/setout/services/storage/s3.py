@@ -14,6 +14,27 @@ from setout.services.storage.base import Storage
 MISSING = ("404", "NoSuchKey", "NotFound")
 
 
+def _s3_client(
+    endpoint_url: str | None,
+    *,
+    region: str | None,
+    access_key_id: str | None,
+    secret_access_key: str | None,
+    use_path_style: bool,
+) -> Any:
+    return boto3.client(
+        "s3",
+        endpoint_url=endpoint_url,
+        region_name=region,
+        aws_access_key_id=access_key_id or None,
+        aws_secret_access_key=secret_access_key or None,
+        config=Config(
+            signature_version="s3v4",
+            s3={"addressing_style": "path" if use_path_style else "auto"},
+        ),
+    )
+
+
 class S3Storage(Storage):
     def __init__(
         self,
@@ -21,27 +42,35 @@ class S3Storage(Storage):
         *,
         prefix: str = "",
         endpoint_url: str | None = None,
+        public_url: str | None = None,
         region: str | None = None,
         access_key_id: str | None = None,
         secret_access_key: str | None = None,
         use_path_style: bool = False,
         link_seconds: int = 300,
         client: Any | None = None,
+        presign_client: Any | None = None,
     ) -> None:
         self.bucket = bucket
         self.prefix = prefix.strip("/")
         self.link_seconds = link_seconds
-        self.client = client or boto3.client(
-            "s3",
-            endpoint_url=endpoint_url,
-            region_name=region,
-            aws_access_key_id=access_key_id or None,
-            aws_secret_access_key=secret_access_key or None,
-            config=Config(
-                signature_version="s3v4",
-                s3={"addressing_style": "path" if use_path_style else "auto"},
-            ),
+        self.public_url = public_url.rstrip("/") if public_url else None
+        self.client = client or _s3_client(
+            endpoint_url,
+            region=region,
+            access_key_id=access_key_id,
+            secret_access_key=secret_access_key,
+            use_path_style=use_path_style,
         )
+        self.presign_client = presign_client or self.client
+        if public_url and presign_client is None and client is None:
+            self.presign_client = _s3_client(
+                self.public_url,
+                region=region,
+                access_key_id=access_key_id,
+                secret_access_key=secret_access_key,
+                use_path_style=use_path_style,
+            )
 
     async def put(self, key: str, data: bytes, *, content_type: str) -> None:
         await asyncio.to_thread(
@@ -79,7 +108,7 @@ class S3Storage(Storage):
     async def url(self, key: str, *, filename: str, content_type: str) -> str:
         """A link that expires, carrying the real name rather than the hash."""
         link: str = await asyncio.to_thread(
-            self.client.generate_presigned_url,
+            self.presign_client.generate_presigned_url,
             "get_object",
             Params={
                 "Bucket": self.bucket,

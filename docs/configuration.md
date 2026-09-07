@@ -17,6 +17,7 @@ and adjust. Local development defaults to `./data`.
 | `SETOUT_STORAGE_BACKEND` | `local` | Where attached files live: `local` or `s3` |
 | `SETOUT_S3_BUCKET` | empty | Bucket name when the backend is `s3` |
 | `SETOUT_S3_ENDPOINT_URL` | empty | Leave unset for Amazon; set it for MinIO, R2, B2, Spaces |
+| `SETOUT_S3_PUBLIC_URL` | empty | Address browsers use to reach the bucket; defaults to the endpoint URL |
 | `SETOUT_S3_REGION` | empty | Region, where the provider wants one |
 | `SETOUT_S3_ACCESS_KEY_ID` | empty | Access key |
 | `SETOUT_S3_SECRET_ACCESS_KEY` | empty | Secret key |

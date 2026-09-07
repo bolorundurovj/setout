@@ -35,6 +35,11 @@ Set `SETOUT_STORAGE_BACKEND=s3` with the bucket, credentials and, for anything
 that is not Amazon, `SETOUT_S3_ENDPOINT_URL`. MinIO also wants
 `SETOUT_S3_USE_PATH_STYLE=true`.
 
+When the API reaches MinIO on an internal address that browsers cannot resolve,
+set `SETOUT_S3_PUBLIC_URL` to the address they can reach. In the compose stack
+this is `http://<host>:9000` by default; change it when Setout is accessed from
+another machine.
+
 A bucket is not included in the backup archive. Back it up separately.
 
 ## Upgrades

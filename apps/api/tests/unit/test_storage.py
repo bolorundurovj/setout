@@ -104,8 +104,9 @@ class TestLocalStorage:
 class FakeS3:
     """Only the five calls the S3 backend makes."""
 
-    def __init__(self, missing: bool = False) -> None:
+    def __init__(self, missing: bool = False, endpoint: str = "http://minio:9000") -> None:
         self.missing = missing
+        self.endpoint = endpoint.rstrip("/")
         self.written: dict[str, bytes] = {}
         self.calls: list[tuple[str, dict]] = []
 
@@ -131,15 +132,29 @@ class FakeS3:
 
     def generate_presigned_url(self, op: str, **kw: object) -> str:
         self.calls.append((op, dict(kw)))
-        return "https://bucket.example/signed"
+        params = kw["Params"]
+        key = params["Key"]
+        return f"{self.endpoint}/a-bucket/{key}?X-Amz-Signature=signed"
 
     def _gone(self) -> ClientError:
         return ClientError({"Error": {"Code": "404", "Message": "Not Found"}}, "GetObject")
 
 
 class TestS3Storage:
-    def store(self, client: FakeS3, prefix: str = "attachments") -> S3Storage:
-        return S3Storage("a-bucket", prefix=prefix, client=client)
+    def store(
+        self,
+        client: FakeS3,
+        prefix: str = "attachments",
+        public_url: str | None = None,
+        presign_client: FakeS3 | None = None,
+    ) -> S3Storage:
+        return S3Storage(
+            "a-bucket",
+            prefix=prefix,
+            client=client,
+            public_url=public_url,
+            presign_client=presign_client,
+        )
 
     async def test_a_file_written_comes_back_whole(self) -> None:
         client = FakeS3()
@@ -182,11 +197,25 @@ class TestS3Storage:
             "ab/cd/x.jpg", filename="receipt_16aug.jpg", content_type="image/jpeg"
         )
 
-        assert link == "https://bucket.example/signed"
+        assert link.startswith("http://minio:9000/a-bucket/attachments/ab/cd/x.jpg")
         params = client.calls[0][1]["Params"]
         # The stored name is a hash, so the real name rides on the link.
         assert 'filename="receipt_16aug.jpg"' in params["ResponseContentDisposition"]
         assert params["ResponseContentType"] == "image/jpeg"
+
+    async def test_a_public_url_is_signed_with_the_browser_facing_host(self) -> None:
+        internal = FakeS3(endpoint="http://minio:9000")
+        public = FakeS3(endpoint="http://192.168.0.204:9000")
+        store = self.store(internal, public_url="http://192.168.0.204:9000", presign_client=public)
+
+        link = await store.url(
+            "ab/cd/x.jpg", filename="receipt_16aug.jpg", content_type="image/jpeg"
+        )
+
+        assert link.startswith("http://192.168.0.204:9000/a-bucket/attachments/ab/cd/x.jpg")
+        assert "X-Amz-Signature=signed" in link
+        # The operations client never saw the presign call.
+        assert not internal.calls
 
 
 class TestPickingABackend:
@@ -204,6 +233,7 @@ class TestPickingABackend:
                 storage_backend="s3",
                 s3_bucket="a-bucket",
                 s3_endpoint_url="https://minio.example",
+                s3_public_url="https://files.example",
                 s3_access_key_id="key",
                 s3_secret_access_key="secret",
                 s3_use_path_style=True,
@@ -212,3 +242,4 @@ class TestPickingABackend:
 
         assert isinstance(store, S3Storage)
         assert store.bucket == "a-bucket"
+        assert store.public_url == "https://files.example"
