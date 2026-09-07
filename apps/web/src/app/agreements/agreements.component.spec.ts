@@ -16,7 +16,7 @@ const project: ProjectRead = {
   land_name: null,
   status: 'active',
   notes: null,
-  planned_amount: 0,
+  budgeted_amount: 0,
   spent_amount: 0,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',

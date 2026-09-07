@@ -62,7 +62,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', fields.CharField(primary_key=True, default=short_id, unique=True, db_index=True, max_length=12)),
                 ('project', fields.ForeignKeyField('models.Project', source_field='project_id', db_constraint=True, to_field='id', related_name='expenses', on_delete=OnDelete.CASCADE)),
-                ('scope', fields.ForeignKeyField('models.Scope', source_field='scope_id', null=True, db_constraint=True, to_field='id', related_name='expenses', on_delete=OnDelete.SET_NULL)),
+                ('category', fields.ForeignKeyField('models.Category', source_field='category_id', null=True, db_constraint=True, to_field='id', related_name='expenses', on_delete=OnDelete.SET_NULL)),
                 ('item', fields.ForeignKeyField('models.Item', source_field='item_id', null=True, description='What was bought. This is what the price history is built from', db_constraint=True, to_field='id', related_name='expenses', on_delete=OnDelete.SET_NULL)),
                 ('vendor', fields.ForeignKeyField('models.Vendor', source_field='vendor_id', null=True, description='Who it was bought from', db_constraint=True, to_field='id', related_name='expenses', on_delete=OnDelete.SET_NULL)),
                 ('paid_by', fields.ForeignKeyField('models.Person', source_field='paid_by_id', null=True, description='Who handed over the money. Null means you paid it yourself', db_constraint=True, to_field='id', related_name='expenses_paid', on_delete=OnDelete.SET_NULL)),

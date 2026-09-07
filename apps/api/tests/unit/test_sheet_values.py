@@ -13,7 +13,7 @@ from setout.services.sheets.values import (
     as_text,
     codes_in,
     from_serial,
-    is_scope_code,
+    is_category_code,
 )
 
 pytestmark = pytest.mark.unit
@@ -86,12 +86,12 @@ class TestCostCodes:
         assert as_code(1000.0) == "1000"
         assert as_code("3001.0") == "3001"
 
-    def test_a_code_ending_in_three_noughts_heads_a_scope(self) -> None:
-        assert is_scope_code("1000") is True
-        assert is_scope_code("6000") is True
-        assert is_scope_code("3001") is False
-        # Not a scope: too short to be one of the X000 headings.
-        assert is_scope_code("000") is False
+    def test_a_code_ending_in_three_noughts_heads_a_category(self) -> None:
+        assert is_category_code("1000") is True
+        assert is_category_code("6000") is True
+        assert is_category_code("3001") is False
+        # Not a category: too short to be one of the X000 headings.
+        assert is_category_code("000") is False
 
     def test_a_row_may_name_several_codes(self) -> None:
         assert codes_in("2003, 2005, 3000") == ["2003", "2005", "3000"]

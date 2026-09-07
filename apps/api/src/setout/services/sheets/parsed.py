@@ -6,7 +6,7 @@ from enum import StrEnum
 
 
 class Trouble(StrEnum):
-    NO_SCOPE_YET = "no_scope_yet"
+    NO_CATEGORY_YET = "no_category_yet"
     NO_DESCRIPTION = "no_description"
     SEVERAL_CODES = "several_codes"
     NOT_PAID = "not_paid"
@@ -20,36 +20,36 @@ class Problem:
 
 
 @dataclass
-class PlannedLine:
+class BudgetedLine:
     row: int
     code: str
     description: str
-    planned_amount: int
+    budgeted_amount: int
     cost_type: str | None = None
 
 
 @dataclass
-class PlannedScope:
+class BudgetedCategory:
     row: int
     code: str
     name: str
-    lines: list[PlannedLine] = field(default_factory=list)
+    lines: list[BudgetedLine] = field(default_factory=list)
 
     @property
-    def planned_amount(self) -> int:
-        return sum(line.planned_amount for line in self.lines)
+    def budgeted_amount(self) -> int:
+        return sum(line.budgeted_amount for line in self.lines)
 
 
 @dataclass
 class BudgetRead:
-    scopes: list[PlannedScope] = field(default_factory=list)
+    categories: list[BudgetedCategory] = field(default_factory=list)
     problems: list[Problem] = field(default_factory=list)
     # Rows carrying nothing but a code, which the sheet keeps as spare lines.
     blank_rows: int = 0
 
     @property
-    def planned_amount(self) -> int:
-        return sum(scope.planned_amount for scope in self.scopes)
+    def budgeted_amount(self) -> int:
+        return sum(category.budgeted_amount for category in self.categories)
 
 
 @dataclass

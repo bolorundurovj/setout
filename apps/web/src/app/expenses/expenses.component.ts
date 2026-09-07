@@ -35,17 +35,19 @@ export class ExpensesComponent {
   readonly editingExpense = signal<ExpenseRead | null>(null);
   readonly filing = signal(false);
   readonly selected = signal<Set<string>>(new Set());
-  readonly bulkScopeId = signal<string>('');
+  readonly bulkCategoryId = signal<string>('');
 
-  readonly unfiled = computed(() => this.expenses.byScope()[UNFILED]?.rows ?? []);
-  readonly unfiledTotal = computed(() => this.expenses.byScope()[UNFILED]?.total ?? 0);
-  readonly unfiledPage = computed(() => this.expenses.byScope()[UNFILED]?.page ?? 1);
+  readonly uncategorized = computed(() => this.expenses.byCategory()[UNFILED]?.rows ?? []);
+  readonly uncategorizedTotal = computed(() => this.expenses.byCategory()[UNFILED]?.total ?? 0);
+  readonly uncategorizedPage = computed(() => this.expenses.byCategory()[UNFILED]?.page ?? 1);
   readonly allSelected = computed(
-    () => this.unfiled().length > 0 && this.unfiled().every((e) => this.selected().has(e.id)),
+    () =>
+      this.uncategorized().length > 0 &&
+      this.uncategorized().every((e) => this.selected().has(e.id)),
   );
   readonly selectedCount = computed(() => this.selected().size);
-  readonly canFile = computed(() => this.selectedCount() > 0 && this.bulkScopeId() !== '');
-  readonly fileableScopes = computed(() => this.budget.scopes().filter((s) => !s.is_group));
+  readonly canFile = computed(() => this.selectedCount() > 0 && this.bulkCategoryId() !== '');
+  readonly fileableCategories = computed(() => this.budget.categories().filter((s) => !s.is_group));
 
   readonly notSet = '—';
 
@@ -69,11 +71,13 @@ export class ExpensesComponent {
     return percent < 0 ? `${rounded}% under` : 'on budget';
   }
 
-  scopeName(expense: ExpenseRead): string {
-    if (!expense.scope_id) {
+  categoryName(expense: ExpenseRead): string {
+    if (!expense.category_id) {
       return 'Uncategorized';
     }
-    return this.budget.scopes().find((s) => s.id === expense.scope_id)?.name ?? 'Unfiled';
+    return (
+      this.budget.categories().find((s) => s.id === expense.category_id)?.name ?? 'Uncategorized'
+    );
   }
 
   meta(expense: ExpenseRead): string {
@@ -118,25 +122,25 @@ export class ExpensesComponent {
   startFiling(): void {
     this.filing.set(true);
     this.selected.set(new Set());
-    this.bulkScopeId.set('');
-    void this.expenses.loadForScope(this.project().id, UNFILED);
+    this.bulkCategoryId.set('');
+    void this.expenses.loadForCategory(this.project().id, UNFILED);
   }
 
   stopFiling(): void {
     this.filing.set(false);
     this.selected.set(new Set());
-    this.bulkScopeId.set('');
+    this.bulkCategoryId.set('');
   }
 
-  async goToUnfiled(page: number): Promise<void> {
-    await this.expenses.loadForScope(this.project().id, UNFILED, page);
+  async goToUncategorized(page: number): Promise<void> {
+    await this.expenses.loadForCategory(this.project().id, UNFILED, page);
   }
 
   toggleAll(): void {
     if (this.allSelected()) {
       this.selected.set(new Set());
     } else {
-      this.selected.set(new Set(this.unfiled().map((e) => e.id)));
+      this.selected.set(new Set(this.uncategorized().map((e) => e.id)));
     }
   }
 
@@ -156,7 +160,7 @@ export class ExpensesComponent {
     }
     const count = await this.expenses.file(this.project().id, {
       expense_ids: Array.from(this.selected()),
-      scope_id: this.bulkScopeId(),
+      category_id: this.bulkCategoryId(),
     });
     if (count === null) {
       this.toast.show(this.expenses.error() ?? 'Could not assign those expenses.', 'error');
@@ -164,9 +168,9 @@ export class ExpensesComponent {
     }
     this.toast.show(`${count} expense${count === 1 ? '' : 's'} filed.`, 'success');
     this.selected.set(new Set());
-    this.bulkScopeId.set('');
-    await this.expenses.loadForScope(this.project().id, UNFILED, this.unfiledPage());
-    if (this.unfiledTotal() === 0) {
+    this.bulkCategoryId.set('');
+    await this.expenses.loadForCategory(this.project().id, UNFILED, this.uncategorizedPage());
+    if (this.uncategorizedTotal() === 0) {
       this.stopFiling();
     }
   }

@@ -6,7 +6,7 @@ function expense(id: string, over: Record<string, unknown> = {}) {
   return {
     id,
     project_id: 'p1',
-    scope_id: null,
+    category_id: null,
     spent_on: '2026-08-01',
     description: 'MISSING',
     quantity: null,
@@ -26,9 +26,9 @@ const spend = {
   project_id: 'p1',
   currency_code: 'NGN',
   currency_exponent: 2,
-  planned_amount: 382_830_000,
+  budgeted_amount: 382_830_000,
   spent_amount: 488_930_000,
-  unfiled_amount: 5_300_000,
+  uncategorized_amount: 5_300_000,
   variance_percent: 27.72,
 };
 
@@ -107,15 +107,15 @@ describe('ExpenseService', () => {
     expect(calls.some((args) => (args as { offset?: number })?.offset === 20)).toBe(true);
   });
 
-  it('pages a scope and a month ten at a time, each keeping its own place', async () => {
+  it('pages a category and a month ten at a time, each keeping its own place', async () => {
     const service = configure((name) =>
       name === 'getProjectSpend' ? spend : page([expense('e1')], 24),
     );
-    await service.loadForScope('p1', 's1', 2);
+    await service.loadForCategory('p1', 's1', 2);
     await service.loadForMonth('p1', '2026-06', 3);
 
-    expect(service.byScope()['s1'].page).toBe(2);
-    expect(service.byScope()['s1'].total).toBe(24);
+    expect(service.byCategory()['s1'].page).toBe(2);
+    expect(service.byCategory()['s1'].total).toBe(24);
     expect(service.byMonth()['2026-06'].page).toBe(3);
     expect(service.byMonth()['2026-06'].rows.length).toBe(1);
   });
@@ -195,7 +195,7 @@ describe('ExpenseService', () => {
     expect(service.expenses().length).toBe(1);
   });
 
-  it('files many unfiled expenses and refreshes the list', async () => {
+  it('files many uncategorized expenses and refreshes the list', async () => {
     const service = configure((name) => {
       if (name === 'fileExpenses') {
         return { filed_count: 2 };
@@ -203,7 +203,7 @@ describe('ExpenseService', () => {
       return standard(name);
     });
 
-    const count = await service.file('p1', { expense_ids: ['e1', 'e2'], scope_id: 's1' });
+    const count = await service.file('p1', { expense_ids: ['e1', 'e2'], category_id: 's1' });
 
     expect(count).toBe(2);
     expect(names).toContain('fileExpenses');
@@ -215,15 +215,15 @@ describe('ExpenseService', () => {
   it('surfaces the reason the backend refused bulk filing', async () => {
     const service = configure((name) => {
       if (name === 'fileExpenses') {
-        throw { error: { detail: 'A scope with children holds no spend of its own' } };
+        throw { error: { detail: 'A category with children holds no spend of its own' } };
       }
       return standard(name);
     });
 
-    const count = await service.file('p1', { expense_ids: ['e1'], scope_id: 'sg' });
+    const count = await service.file('p1', { expense_ids: ['e1'], category_id: 'sg' });
 
     expect(count).toBeNull();
-    expect(service.error()).toBe('A scope with children holds no spend of its own');
+    expect(service.error()).toBe('A category with children holds no spend of its own');
     expect(service.saving()).toBe(false);
   });
 });

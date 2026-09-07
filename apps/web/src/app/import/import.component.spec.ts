@@ -18,9 +18,9 @@ function report(over: Partial<ImportReport> = {}): ImportReport {
     currency_exponent: 2,
     read: [{ name: 'Budget', holds: 'budget', rows: 5 }],
     skipped: [],
-    scopes: [],
-    planned_amount: 0,
-    planned_lines: 0,
+    categories: [],
+    budgeted_amount: 0,
+    budgeted_lines: 0,
     spend_rows: 0,
     spend_amount: 0,
     vendors_new: 0,
@@ -67,9 +67,9 @@ describe('ImportComponent', () => {
               return {
                 project_id: 'p1',
                 project_name: 'Jacaranda Close',
-                scopes: 6,
+                categories: 6,
                 budget_items: 65,
-                planned_amount: 382_830_000,
+                budgeted_amount: 382_830_000,
                 expenses: 2,
                 spend_amount: 75_000_000,
                 vendors: 14,
@@ -185,23 +185,23 @@ describe('ImportComponent', () => {
 
   it('changes an answer only to the one that was chosen', () => {
     const component = componentOf('p1');
-    const answer = decision('new_scopes', { count: 6, detail: 'six scopes' });
+    const answer = decision('new_categories', { count: 6, detail: 'six categories' });
 
     component.answer(answer, 'yes');
-    expect(component.createMissingScopes()).toBe(true);
+    expect(component.createMissingCategories()).toBe(true);
 
     component.answer(answer, 'no');
-    expect(component.createMissingScopes()).toBe(false);
+    expect(component.createMissingCategories()).toBe(false);
     expect(component.consequenceFor(answer)).toContain('No budget is written');
 
     component.answer(answer, 'no');
-    expect(component.createMissingScopes()).toBe(false);
+    expect(component.createMissingCategories()).toBe(false);
   });
 
-  it('keeps every scope by default, so a plan is never silently dropped', () => {
+  it('keeps every category by default, so a plan is never silently dropped', () => {
     const component = componentOf('p1');
-    expect(component.createMissingScopes()).toBe(true);
-    expect(component.answerFor({ kind: 'new_scopes', count: 6, detail: '', amount: 0 })).toBe(
+    expect(component.createMissingCategories()).toBe(true);
+    expect(component.answerFor({ kind: 'new_categories', count: 6, detail: '', amount: 0 })).toBe(
       'yes',
     );
   });
@@ -216,9 +216,9 @@ describe('ImportComponent', () => {
       'p1',
       report({
         decisions: [
-          decision('above_any_scope', {
+          decision('above_any_category', {
             count: 2,
-            detail: 'sit above every scope',
+            detail: 'sit above every category',
             blocking: true,
           }),
         ],
@@ -235,18 +235,18 @@ describe('ImportComponent', () => {
     component.file.set(sheet);
     await component.read();
     component.takeUnpaid.set(false);
-    component.severalCodes.set('unfiled');
+    component.severalCodes.set('uncategorized');
 
     await component.bringIn();
 
     expect(ran[0][2]).toEqual({
-      createMissingScopes: true,
+      createMissingCategories: true,
       skipDuplicates: true,
       takeUnpaid: false,
-      severalCodes: 'unfiled',
+      severalCodes: 'uncategorized',
     });
     expect(component.at('done')).toBe(true);
-    expect(component.result()?.scopes).toBe(6);
+    expect(component.result()?.categories).toBe(6);
   });
 
   it('opens the project it just filled', async () => {
@@ -285,7 +285,7 @@ describe('ImportComponent', () => {
 
   it('offers an answer to every decision the report can raise', () => {
     const component = componentOf('p1');
-    const kinds = ['new_scopes', 'duplicates', 'unpaid', 'several_codes'] as Decision['kind'][];
+    const kinds = ['new_categories', 'duplicates', 'unpaid', 'several_codes'] as Decision['kind'][];
 
     for (const kind of kinds) {
       const answer = decision(kind);

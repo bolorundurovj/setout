@@ -15,7 +15,7 @@ from setout.schemas.project import (
     ProjectSummary,
     ProjectUpdate,
 )
-from setout.utils.budgets import planned_by_project, spent_by_project
+from setout.utils.budgets import budgeted_by_project, spent_by_project
 from setout.utils.cascade import delete_under_project, restore_under_project
 from setout.utils.projects import require_archived, to_read
 
@@ -33,11 +33,11 @@ class ProjectController:
             .prefetch_related("currency", "land")
         )
         ids = [project.id for project in projects]
-        planned = await planned_by_project(ids)
+        budgeted = await budgeted_by_project(ids)
         spent = await spent_by_project(ids)
         return ProjectPage(
             items=[
-                to_read(project, planned.get(project.id, 0), spent.get(project.id, 0))
+                to_read(project, budgeted.get(project.id, 0), spent.get(project.id, 0))
                 for project in projects
             ],
             total=total,
@@ -77,9 +77,9 @@ class ProjectController:
 
     async def get(self, project_id: str) -> ProjectRead:
         project = await self._get_or_404(project_id)
-        planned = await planned_by_project([project.id])
+        budgeted = await budgeted_by_project([project.id])
         spent = await spent_by_project([project.id])
-        return to_read(project, planned.get(project.id, 0), spent.get(project.id, 0))
+        return to_read(project, budgeted.get(project.id, 0), spent.get(project.id, 0))
 
     async def update(self, project_id: str, req: ProjectUpdate) -> ProjectRead:
         project = await self._get_or_404(project_id)
@@ -90,9 +90,9 @@ class ProjectController:
             project.update_from_dict(changes)
             await project.save()
             await project.fetch_related("land")
-        planned = await planned_by_project([project.id])
+        budgeted = await budgeted_by_project([project.id])
         spent = await spent_by_project([project.id])
-        return to_read(project, planned.get(project.id, 0), spent.get(project.id, 0))
+        return to_read(project, budgeted.get(project.id, 0), spent.get(project.id, 0))
 
     async def delete(self, project_id: str) -> None:
         project = await self._get_or_404(project_id)
@@ -109,9 +109,9 @@ class ProjectController:
             project.deleted_at = None
             await project.save()
             await restore_under_project(project.id, deleted_at)
-        planned = await planned_by_project([project.id])
+        budgeted = await budgeted_by_project([project.id])
         spent = await spent_by_project([project.id])
-        return to_read(project, planned.get(project.id, 0), spent.get(project.id, 0))
+        return to_read(project, budgeted.get(project.id, 0), spent.get(project.id, 0))
 
     async def _land_or_422(self, land_id: str | None) -> str | None:
         # An empty string is how a form says "no land", so treat it as clearing.

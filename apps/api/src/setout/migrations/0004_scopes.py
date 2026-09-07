@@ -12,29 +12,29 @@ class Migration(migrations.Migration):
 
     operations = [
         ops.CreateModel(
-            name='Scope',
+            name='Category',
             fields=[
                 ('id', fields.CharField(primary_key=True, default=short_id, unique=True, db_index=True, max_length=12)),
-                ('project', fields.ForeignKeyField('models.Project', source_field='project_id', db_constraint=True, to_field='id', related_name='scopes', on_delete=OnDelete.CASCADE)),
+                ('project', fields.ForeignKeyField('models.Project', source_field='project_id', db_constraint=True, to_field='id', related_name='categories', on_delete=OnDelete.CASCADE)),
                 ('code', fields.CharField(null=True, max_length=32)),
                 ('name', fields.CharField(max_length=255)),
-                ('parent', fields.ForeignKeyField('models.Scope', source_field='parent_id', null=True, db_constraint=True, to_field='id', related_name='children', on_delete=OnDelete.CASCADE)),
+                ('parent', fields.ForeignKeyField('models.Category', source_field='parent_id', null=True, db_constraint=True, to_field='id', related_name='children', on_delete=OnDelete.CASCADE)),
                 ('sort_order', fields.IntField(default=0)),
                 ('created_at', fields.DatetimeField(auto_now=False, auto_now_add=True)),
                 ('updated_at', fields.DatetimeField(auto_now=True, auto_now_add=False)),
                 ('deleted_at', fields.DatetimeField(null=True, auto_now=False, auto_now_add=False)),
             ],
-            options={'table': 'scope', 'app': 'models', 'pk_attr': 'id'},
+            options={'table': 'category', 'app': 'models', 'pk_attr': 'id'},
             bases=['Model'],
         ),
         ops.CreateModel(
             name='BudgetItem',
             fields=[
                 ('id', fields.CharField(primary_key=True, default=short_id, unique=True, db_index=True, max_length=12)),
-                ('scope', fields.ForeignKeyField('models.Scope', source_field='scope_id', db_constraint=True, to_field='id', related_name='budget_items', on_delete=OnDelete.CASCADE)),
+                ('category', fields.ForeignKeyField('models.Category', source_field='category_id', db_constraint=True, to_field='id', related_name='budget_items', on_delete=OnDelete.CASCADE)),
                 ('description', fields.CharField(max_length=255)),
                 ('cost_type', fields.CharEnumField(null=True, description='Optional. Which of labour, material or fixed the plan puts this under', enum_type=CostType, max_length=16)),
-                ('planned_amount', fields.BigIntField()),
+                ('budgeted_amount', fields.BigIntField()),
                 ('set_at', fields.DatetimeField(auto_now=False, auto_now_add=False)),
                 ('created_at', fields.DatetimeField(auto_now=False, auto_now_add=True)),
                 ('updated_at', fields.DatetimeField(auto_now=True, auto_now_add=False)),

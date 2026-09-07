@@ -21,7 +21,7 @@ describe('ImportService', () => {
   const file = new File(['a sheet'], 'budget.xlsx', { type: 'application/vnd.ms-excel' });
 
   it('sends the file itself, and the project it is going into', async () => {
-    const service = configure(() => ({ planned_amount: 0 }));
+    const service = configure(() => ({ budgeted_amount: 0 }));
 
     await service.look(file, { projectId: 'p1', name: '', currencyCode: 'NGN' });
 
@@ -32,7 +32,7 @@ describe('ImportService', () => {
   });
 
   it('sends a name and a currency when there is no project yet', async () => {
-    const service = configure(() => ({ planned_amount: 0 }));
+    const service = configure(() => ({ budgeted_amount: 0 }));
 
     await service.look(file, { projectId: null, name: 'Jacaranda Close', currencyCode: 'NGN' });
 
@@ -49,19 +49,19 @@ describe('ImportService', () => {
       file,
       { projectId: 'p1', name: '', currencyCode: 'NGN' },
       {
-        createMissingScopes: false,
+        createMissingCategories: false,
         skipDuplicates: false,
         takeUnpaid: false,
-        severalCodes: 'unfiled',
+        severalCodes: 'uncategorized',
       },
     );
 
     const body = asked[0]['body'] as Record<string, unknown>;
     expect(asked[0]['call']).toBe('runImport');
-    expect(body['create_missing_scopes']).toBe(false);
+    expect(body['create_missing_categories']).toBe(false);
     expect(body['skip_duplicates']).toBe(false);
     expect(body['take_unpaid']).toBe(false);
-    expect(body['several_codes']).toBe('unfiled');
+    expect(body['several_codes']).toBe('uncategorized');
   });
 
   it('repeats what the server said about a file it could not read', async () => {
@@ -83,7 +83,12 @@ describe('ImportService', () => {
     await service.bringIn(
       file,
       { projectId: null, name: '', currencyCode: 'NGN' },
-      { createMissingScopes: true, skipDuplicates: true, takeUnpaid: true, severalCodes: 'first' },
+      {
+        createMissingCategories: true,
+        skipDuplicates: true,
+        takeUnpaid: true,
+        severalCodes: 'first',
+      },
     );
 
     expect(service.error()).toBe('A new project needs a name');

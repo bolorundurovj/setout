@@ -64,21 +64,21 @@
   background: var(--over);
 }
 
-.by-scope {
+.by-category {
   padding: 22px 0 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.by-scope-head {
+.by-category-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
 }
 
-.scope-title {
+.category-title {
   margin: 0;
   font:
     500 16px/1.2 'DM Sans',
@@ -87,13 +87,13 @@
   color: var(--ink);
 }
 
-.scopes {
+.categories {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-.scope-row {
+.category-row {
   display: grid;
   grid-template-columns: 230px 1fr 210px;
   gap: 16px;
@@ -119,7 +119,7 @@
   }
 }
 
-.scope-name {
+.category-name {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -168,13 +168,13 @@
   background: var(--ink-3);
 }
 
-.scope-figures {
+.category-figures {
   text-align: right;
   font-size: 13px;
   color: var(--ink-2);
 }
 
-.scope-figures.over-ink {
+.category-figures.over-ink {
   color: var(--over-ink);
 }
 
@@ -269,11 +269,11 @@
     border-right: none;
   }
 
-  .scope-row {
+  .category-row {
     grid-template-columns: 1fr 110px;
   }
 
-  .scope-row .bar {
+  .category-row .bar {
     display: none;
   }
 }

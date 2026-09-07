@@ -6,24 +6,26 @@ from typing import cast
 
 import pytest
 
+from setout.models.category import Category
 from setout.models.expense import Expense
-from setout.models.scope import Scope
 from setout.utils.months import month_key, month_range, to_months, top_of_branch
 
 pytestmark = pytest.mark.unit
 
 
-def _scope(scope_id: str, name: str, parent_id: str | None = None, sort_order: int = 0) -> Scope:
+def _category(
+    category_id: str, name: str, parent_id: str | None = None, sort_order: int = 0
+) -> Category:
     return cast(
-        Scope,
-        SimpleNamespace(id=scope_id, name=name, parent_id=parent_id, sort_order=sort_order),
+        Category,
+        SimpleNamespace(id=category_id, name=name, parent_id=parent_id, sort_order=sort_order),
     )
 
 
-def _spend(day: str, amount: int, scope_id: str | None = None) -> Expense:
+def _spend(day: str, amount: int, category_id: str | None = None) -> Expense:
     return cast(
         Expense,
-        SimpleNamespace(spent_on=date.fromisoformat(day), amount=amount, scope_id=scope_id),
+        SimpleNamespace(spent_on=date.fromisoformat(day), amount=amount, category_id=category_id),
     )
 
 
@@ -40,13 +42,13 @@ def test_december_rolls_into_the_next_year() -> None:
 
 
 def test_a_leaf_reports_the_top_of_its_branch() -> None:
-    scopes = [_scope("1", "Structure"), _scope("2", "Blockwork", parent_id="1")]
-    assert top_of_branch(scopes)["2"].id == "1"
+    categories = [_category("1", "Structure"), _category("2", "Blockwork", parent_id="1")]
+    assert top_of_branch(categories)["2"].id == "1"
 
 
 def test_a_parent_cycle_does_not_hang() -> None:
-    scopes = [_scope("1", "One", parent_id="2"), _scope("2", "Two", parent_id="1")]
-    assert top_of_branch(scopes)["1"].id in {"1", "2"}
+    categories = [_category("1", "One", parent_id="2"), _category("2", "Two", parent_id="1")]
+    assert top_of_branch(categories)["1"].id in {"1", "2"}
 
 
 def test_months_come_back_oldest_first() -> None:
@@ -66,25 +68,29 @@ def test_a_month_counts_and_totals_what_is_in_it() -> None:
 
 
 def test_spend_below_a_group_lands_on_the_group() -> None:
-    scopes = [_scope("1", "Structure"), _scope("2", "Blockwork", parent_id="1")]
-    months = to_months([_spend("2026-06-01", 500, scope_id="2")], scopes)
-    assert [(part.scope_id, part.name, part.amount) for part in months[0].scopes] == [
+    categories = [_category("1", "Structure"), _category("2", "Blockwork", parent_id="1")]
+    months = to_months([_spend("2026-06-01", 500, category_id="2")], categories)
+    assert [(part.category_id, part.name, part.amount) for part in months[0].categories] == [
         ("1", "Structure", 500)
     ]
 
 
-def test_segments_keep_budget_order_with_unfiled_last() -> None:
-    scopes = [_scope("1", "Late", sort_order=9), _scope("2", "Early", sort_order=1)]
+def test_segments_keep_budget_order_with_uncategorized_last() -> None:
+    categories = [_category("1", "Late", sort_order=9), _category("2", "Early", sort_order=1)]
     months = to_months(
         [
             _spend("2026-06-01", 100),
-            _spend("2026-06-02", 200, scope_id="1"),
-            _spend("2026-06-03", 300, scope_id="2"),
+            _spend("2026-06-02", 200, category_id="1"),
+            _spend("2026-06-03", 300, category_id="2"),
         ],
-        scopes,
+        categories,
     )
-    assert [part.name for part in months[0].scopes] == ["Early", "Late", "Not filed to a scope"]
+    assert [part.name for part in months[0].categories] == [
+        "Early",
+        "Late",
+        "Not filed to a category",
+    ]
 
 
 def test_nothing_spent_means_no_months() -> None:
-    assert to_months([], [_scope("1", "Structure")]) == []
+    assert to_months([], [_category("1", "Structure")]) == []

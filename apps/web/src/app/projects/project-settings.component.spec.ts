@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { Api } from '@setout/api-client';
-import type { ProjectRead, ScopeRead } from '@setout/api-client';
+import type { ProjectRead, CategoryRead } from '@setout/api-client';
 import { BudgetService } from '../budget/budget.service';
 import { ToastService } from '../toast.service';
 import { ProjectSettingsComponent } from './project-settings.component';
@@ -16,14 +16,14 @@ const project: ProjectRead = {
   land_id: null,
   land_name: null,
   notes: 'A three bedroom build, part way up.',
-  planned_amount: 0,
+  budgeted_amount: 0,
   spent_amount: 0,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
   deleted_at: null,
 };
 
-function scope(over: Partial<ScopeRead> = {}): ScopeRead {
+function category(over: Partial<CategoryRead> = {}): CategoryRead {
   return {
     id: 's1',
     project_id: 'p1',
@@ -32,8 +32,8 @@ function scope(over: Partial<ScopeRead> = {}): ScopeRead {
     parent_id: null,
     sort_order: 0,
     is_group: false,
-    planned_amount: 0,
-    own_planned_amount: 0,
+    budgeted_amount: 0,
+    own_budgeted_amount: 0,
     spent_amount: 0,
     own_spent_amount: 0,
     expense_count: 0,
@@ -54,9 +54,9 @@ describe('ProjectSettingsComponent', () => {
   let toasts: { message: string; type?: string }[];
   let changes: number;
   let saveResult: ProjectRead | null;
-  let scopeResult: boolean;
+  let categoryResult: boolean;
 
-  function render(scopes: ScopeRead[] = [], budgetError: string | null = null) {
+  function render(categories: CategoryRead[] = [], budgetError: string | null = null) {
     navigations = [];
     saved = [];
     renamed = [];
@@ -65,7 +65,7 @@ describe('ProjectSettingsComponent', () => {
     toasts = [];
     changes = 0;
     saveResult = project;
-    scopeResult = true;
+    categoryResult = true;
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -86,20 +86,20 @@ describe('ProjectSettingsComponent', () => {
         {
           provide: BudgetService,
           useValue: {
-            scopes: () => scopes,
+            categories: () => categories,
             error: () => budgetError,
             load: async () => undefined,
-            renameScope: async (_p: string, id: string, name: string) => {
+            renameCategory: async (_p: string, id: string, name: string) => {
               renamed.push({ id, name });
-              return scopeResult;
+              return categoryResult;
             },
-            removeScope: async (_p: string, id: string) => {
+            removeCategory: async (_p: string, id: string) => {
               removed.push(id);
-              return scopeResult;
+              return categoryResult;
             },
-            putScopeBack: async (_p: string, id: string) => {
+            putCategoryBack: async (_p: string, id: string) => {
               putBack.push(id);
-              return scopeResult;
+              return categoryResult;
             },
           },
         },
@@ -118,8 +118,8 @@ describe('ProjectSettingsComponent', () => {
     return fixture.componentInstance;
   }
 
-  async function ready(scopes: ScopeRead[] = [], budgetError: string | null = null) {
-    const component = render(scopes, budgetError);
+  async function ready(categories: CategoryRead[] = [], budgetError: string | null = null) {
+    const component = render(categories, budgetError);
     await Promise.resolve();
     return component;
   }
@@ -202,37 +202,37 @@ describe('ProjectSettingsComponent', () => {
     expect(component.preview()).toContain('48,893.00');
   });
 
-  it('counts what was spent against each scope', async () => {
+  it('counts what was spent against each category', async () => {
     const component = await ready();
-    expect(component.countLabel(scope({ expense_count: 0 }))).toBe('no expenses');
-    expect(component.countLabel(scope({ expense_count: 1 }))).toBe('1 expense');
-    expect(component.countLabel(scope({ expense_count: 4 }))).toBe('4 expenses');
+    expect(component.countLabel(category({ expense_count: 0 }))).toBe('no expenses');
+    expect(component.countLabel(category({ expense_count: 1 }))).toBe('1 expense');
+    expect(component.countLabel(category({ expense_count: 4 }))).toBe('4 expenses');
   });
 
-  it('only offers to remove a scope that nothing was spent on', async () => {
+  it('only offers to remove a category that nothing was spent on', async () => {
     const component = await ready();
-    expect(component.canRemove(scope({ expense_count: 0 }))).toBe(true);
-    expect(component.canRemove(scope({ expense_count: 1 }))).toBe(false);
+    expect(component.canRemove(category({ expense_count: 0 }))).toBe(true);
+    expect(component.canRemove(category({ expense_count: 1 }))).toBe(false);
   });
 
   it('gives each branch its own tint, and a child the tint of its parent', async () => {
     const component = await ready([
-      scope({ id: 'a' }),
-      scope({ id: 'b', sort_order: 1 }),
-      scope({ id: 'b1', parent_id: 'b' }),
+      category({ id: 'a' }),
+      category({ id: 'b', sort_order: 1 }),
+      category({ id: 'b1', parent_id: 'b' }),
     ]);
-    expect(component.tint(scope({ id: 'a' }))).toBe('tint-1');
-    expect(component.tint(scope({ id: 'b' }))).toBe('tint-2');
-    expect(component.tint(scope({ id: 'b1', parent_id: 'b' }))).toBe('tint-2');
+    expect(component.tint(category({ id: 'a' }))).toBe('tint-1');
+    expect(component.tint(category({ id: 'b' }))).toBe('tint-2');
+    expect(component.tint(category({ id: 'b1', parent_id: 'b' }))).toBe('tint-2');
   });
 
-  it('renames a scope and closes the box', async () => {
-    const component = await ready([scope({ id: 'a', name: 'Interior work' })]);
-    component.startRename(scope({ id: 'a', name: 'Interior work' }));
+  it('renames a category and closes the box', async () => {
+    const component = await ready([category({ id: 'a', name: 'Interior work' })]);
+    component.startRename(category({ id: 'a', name: 'Interior work' }));
     expect(component.newName()).toBe('Interior work');
 
     component.newName.set('Inside work');
-    await component.rename(scope({ id: 'a', name: 'Interior work' }));
+    await component.rename(category({ id: 'a', name: 'Interior work' }));
 
     expect(renamed).toEqual([{ id: 'a', name: 'Inside work' }]);
     expect(component.renaming()).toBeNull();
@@ -240,58 +240,58 @@ describe('ProjectSettingsComponent', () => {
 
   it('does not go to the server for a name that did not change', async () => {
     const component = await ready();
-    component.startRename(scope({ name: 'Interior work' }));
-    await component.rename(scope({ name: 'Interior work' }));
+    component.startRename(category({ name: 'Interior work' }));
+    await component.rename(category({ name: 'Interior work' }));
 
     expect(renamed).toEqual([]);
     expect(component.renaming()).toBeNull();
   });
 
   it('passes on why the server would not take the rename', async () => {
-    const component = await ready([], 'A scope with that name already exists');
-    scopeResult = false;
+    const component = await ready([], 'A category with that name already exists');
+    categoryResult = false;
     component.newName.set('Interior work');
 
-    await component.rename(scope({ name: 'Concrete foundation' }));
+    await component.rename(category({ name: 'Concrete foundation' }));
 
     expect(toasts[0]).toEqual({
-      message: 'A scope with that name already exists',
+      message: 'A category with that name already exists',
       type: 'error',
     });
   });
 
-  it('asks before removing a scope, and one at a time', async () => {
+  it('asks before removing a category, and one at a time', async () => {
     const component = await ready();
-    component.ask(scope({ id: 'a' }));
+    component.ask(category({ id: 'a' }));
     expect(component.removing()).toBe('a');
 
-    component.startRename(scope({ id: 'b' }));
+    component.startRename(category({ id: 'b' }));
     expect(component.removing()).toBeNull();
     expect(component.renaming()).toBe('b');
 
-    component.ask(scope({ id: 'a' }));
+    component.ask(category({ id: 'a' }));
     expect(component.renaming()).toBeNull();
   });
 
-  it('removes a scope once asked', async () => {
+  it('removes a category once asked', async () => {
     const component = await ready();
-    component.ask(scope({ id: 'a' }));
+    component.ask(category({ id: 'a' }));
 
-    await component.remove(scope({ id: 'a', name: 'Landscaping' }));
+    await component.remove(category({ id: 'a', name: 'Landscaping' }));
 
     expect(removed).toEqual(['a']);
     expect(component.removing()).toBeNull();
     expect(toasts[0].message).toBe('Landscaping removed.');
   });
 
-  it('passes on the reason a scope with expenses cannot go', async () => {
-    const component = await ready([], 'A scope with expenses cannot be deleted, only renamed');
-    scopeResult = false;
+  it('passes on the reason a category with expenses cannot go', async () => {
+    const component = await ready([], 'A category with expenses cannot be deleted, only renamed');
+    categoryResult = false;
 
-    await component.remove(scope({ name: 'Interior work' }));
+    await component.remove(category({ name: 'Interior work' }));
 
     expect(toasts[0]).toEqual({
-      message: 'A scope with expenses cannot be deleted, only renamed',
+      message: 'A category with expenses cannot be deleted, only renamed',
       type: 'error',
     });
   });

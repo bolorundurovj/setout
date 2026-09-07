@@ -14,7 +14,7 @@ function project(overrides: Partial<ProjectRead> = {}): ProjectRead {
     notes: null,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    planned_amount: 0,
+    budgeted_amount: 0,
     spent_amount: 0,
     deleted_at: null,
     ...overrides,

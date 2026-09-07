@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Api } from '@setout/api-client';
 import { BudgetService } from './budget.service';
 
-function scope(id: string, over: Record<string, unknown> = {}) {
+function category(id: string, over: Record<string, unknown> = {}) {
   return {
     id,
     project_id: 'p1',
@@ -11,8 +11,8 @@ function scope(id: string, over: Record<string, unknown> = {}) {
     parent_id: null,
     sort_order: 0,
     is_group: false,
-    planned_amount: 0,
-    own_planned_amount: 0,
+    budgeted_amount: 0,
+    own_budgeted_amount: 0,
     spent_amount: 0,
     own_spent_amount: 0,
     expense_count: 0,
@@ -40,17 +40,17 @@ describe('BudgetService', () => {
     return TestBed.inject(BudgetService);
   }
 
-  it('exposes the scopes and the planned total', async () => {
+  it('exposes the categories and the budgeted total', async () => {
     const service = configure(() => ({
       project_id: 'p1',
       currency_code: 'NGN',
       currency_exponent: 2,
-      planned_amount: 215000000,
-      scopes: [scope('s1', { planned_amount: 215000000 })],
+      budgeted_amount: 215000000,
+      categories: [category('s1', { budgeted_amount: 215000000 })],
     }));
     await service.load('p1');
-    expect(service.scopes().length).toBe(1);
-    expect(service.plannedTotal()).toBe(215000000);
+    expect(service.categories().length).toBe(1);
+    expect(service.budgetedTotal()).toBe(215000000);
   });
 
   it('reports a failure instead of throwing', async () => {
@@ -62,9 +62,9 @@ describe('BudgetService', () => {
     expect(service.loading()).toBe(false);
   });
 
-  it('keeps items per scope', async () => {
+  it('keeps items per category', async () => {
     const service = configure(() => ({
-      items: [{ id: 'i1', scope_id: 's1', description: 'Blocks', planned_amount: 100 }],
+      items: [{ id: 'i1', category_id: 's1', description: 'Blocks', budgeted_amount: 100 }],
       total: 1,
       limit: 100,
       offset: 0,
@@ -77,7 +77,7 @@ describe('BudgetService', () => {
     const service = configure(() => [{ id: 'sp1', name: 'Roofing', sort_order: 0 }]);
     await service.loadPresets();
     await service.loadPresets();
-    expect(names.filter((n) => n === 'listScopePresets').length).toBe(1);
+    expect(names.filter((n) => n === 'listCategoryPresets').length).toBe(1);
     expect(service.presetNames()).toEqual(['Roofing']);
   });
 
@@ -88,8 +88,8 @@ describe('BudgetService', () => {
             project_id: 'p1',
             currency_code: 'NGN',
             currency_exponent: 2,
-            planned_amount: 0,
-            scopes: [],
+            budgeted_amount: 0,
+            categories: [],
           }
         : { items: [], total: 0, limit: 100, offset: 0 },
     );

@@ -7,8 +7,8 @@ from tortoise import BaseDBAsyncClient
 from setout.utils.ids import short_id
 from setout.utils.placeholders import bound
 
-# The usual scopes of a house build, roughly in the order they happen.
-SCOPE_PRESETS: list[str] = [
+# The usual categories of a house build, roughly in the order they happen.
+CATEGORY_PRESETS: list[str] = [
     "Administrative expenses",
     "Land and site preparation",
     "Equipment rentals",
@@ -29,18 +29,18 @@ SCOPE_PRESETS: list[str] = [
     "Finalization and inspections",
 ]
 
-INSERT = "INSERT INTO scope_preset (id, name, sort_order) VALUES (?, ?, ?)"
+INSERT = "INSERT INTO category_preset (id, name, sort_order) VALUES (?, ?, ?)"
 
 
-async def seed_scope_presets(db: BaseDBAsyncClient) -> int:
-    rows = await db.execute_query_dict("SELECT name FROM scope_preset")
+async def seed_category_presets(db: BaseDBAsyncClient) -> int:
+    rows = await db.execute_query_dict("SELECT name FROM category_preset")
     known = {row["name"] for row in rows}
-    pending = [(name, order) for order, name in enumerate(SCOPE_PRESETS) if name not in known]
+    pending = [(name, order) for order, name in enumerate(CATEGORY_PRESETS) if name not in known]
     query = bound(INSERT, db)
     for name, order in pending:
         await db.execute_query(query, [short_id(), name, order])
     return len(pending)
 
 
-async def seed_scope_presets_migration(apps: Any, schema_editor: Any) -> None:
-    await seed_scope_presets(schema_editor.client)
+async def seed_category_presets_migration(apps: Any, schema_editor: Any) -> None:
+    await seed_category_presets(schema_editor.client)

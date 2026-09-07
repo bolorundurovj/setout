@@ -9,7 +9,7 @@ from tortoise.transactions import in_transaction
 from setout import __version__
 from setout.config import get_settings
 from setout.schemas.install import Backup, Install, RestoreRequest, RestoreResult
-from setout.utils.dump import FORMAT, TABLES, applied_migration, read_all, write_all
+from setout.utils.dump import FORMAT, TABLES, applied_migration, forward, read_all, write_all
 
 
 class InstallController:
@@ -36,12 +36,13 @@ class InstallController:
 
     async def restore(self, req: RestoreRequest) -> RestoreResult:
         backup = req.backup
-        if backup.format != FORMAT:
+        if backup.format > FORMAT:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"That file uses format {backup.format}. Setout reads format {FORMAT}",
             )
-        unknown = sorted(set(backup.tables) - set(TABLES))
+        tables = forward(dict(backup.tables), backup.format)
+        unknown = sorted(set(tables) - set(TABLES))
         if unknown:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -51,7 +52,7 @@ class InstallController:
 
         try:
             async with in_transaction():
-                written = await write_all(dict(backup.tables))
+                written = await write_all(tables)
         except HTTPException:
             raise
         except Exception as exc:  # noqa: BLE001

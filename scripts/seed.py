@@ -2,7 +2,7 @@
 
 Everything here is invented: made up places, made up traders, made up people.
 The figures are chosen so the app has something to show. The project is over
-its budget, one purchase has no scope, one agreement is part paid, and one
+its budget, one purchase has no category, one agreement is part paid, and one
 person is holding money. The spend runs across the last three months, so the
 month by month view has more than one bar in it.
 
@@ -39,7 +39,7 @@ from setout.models.expense import CostType, Expense  # noqa: E402
 from setout.models.item import Item  # noqa: E402
 from setout.models.person import Person  # noqa: E402
 from setout.models.project import Project  # noqa: E402
-from setout.models.scope import Scope  # noqa: E402
+from setout.models.category import Category  # noqa: E402
 from setout.models.vendor import Vendor  # noqa: E402
 from setout.services.storage import build_storage, checksum_of, key_for  # noqa: E402
 
@@ -48,7 +48,7 @@ NGN = 100  # Minor units per naira.
 PROJECT = "Jacaranda Close, Ewuru"
 SECOND_PROJECT = "Palm Ridge Bungalow"
 
-SCOPES = [
+CATEGORIES = [
     "Administrative expenses",
     "Equipment rentals",
     "Concrete foundation",
@@ -57,7 +57,7 @@ SCOPES = [
     "Finalization and inspections",
 ]
 
-# Scope, planned in naira. Adds up to 2,150,000, which the spend passes. A
+# Category, budgeted in naira. Adds up to 2,150,000, which the spend passes. A
 # budget that is already blown is the case worth being able to see.
 PLANNED = [
     ("Administrative expenses", 150_000),
@@ -90,7 +90,7 @@ When = tuple[int, int]
 
 BUDGET_WHEN: When = (2, 1)
 
-# Description, naira, scope, vendor, cost type, quantity, unit rate, when.
+# Description, naira, category, vendor, cost type, quantity, unit rate, when.
 Spend = tuple[str, int, str | None, str | None, CostType, int | None, int | None, When]
 
 EXPENSES: list[Spend] = [
@@ -269,18 +269,18 @@ async def seed() -> None:
         async with in_transaction():
             await _load()
 
-        planned = sum(naira for _, naira in PLANNED)
+        budgeted = sum(naira for _, naira in PLANNED)
         project = await Project.get(name=PROJECT)
         expenses = await Expense.filter(project_id=project.id).order_by("spent_on")
         spent = sum(e.amount for e in expenses) // NGN
-        difference = spent - planned
+        difference = spent - budgeted
         standing = f"over by {difference:,}" if difference > 0 else f"under by {-difference:,}"
         months: dict[str, int] = {}
         for expense in expenses:
             key = expense.spent_on.strftime("%b %Y")
             months[key] = months.get(key, 0) + expense.amount // NGN
-        print(f"Seeded {project.name}: planned {planned:,}, spent {spent:,}")
-        print(f"That is {standing}, with 61,000 of it unfiled.")
+        print(f"Seeded {project.name}: budgeted {budgeted:,}, spent {spent:,}")
+        print(f"That is {standing}, with 61,000 of it uncategorized.")
         print("Across " + ", ".join(f"{name} {amount:,}" for name, amount in months.items()) + ".")
         print(
             f"Kunle Bricklaying is owed {AGREEMENT_AGREED - sum(p for p, _ in AGREEMENT_PARTS):,}. "
@@ -301,16 +301,16 @@ async def _load() -> None:
         )
         await Project.create(name=SECOND_PROJECT, currency=ngn)
 
-        scopes = {
-            name: await Scope.create(project=project, name=name, sort_order=order)
-            for order, name in enumerate(SCOPES)
+        categories = {
+            name: await Category.create(project=project, name=name, sort_order=order)
+            for order, name in enumerate(CATEGORIES)
         }
 
-        for scope_name, naira in PLANNED:
+        for category_name, naira in PLANNED:
             await BudgetItem.create(
-                scope=scopes[scope_name],
-                description="Planned",
-                planned_amount=naira * NGN,
+                category=categories[category_name],
+                description="Budgeted",
+                budgeted_amount=naira * NGN,
                 set_at=at(BUDGET_WHEN),
             )
 
@@ -335,7 +335,7 @@ async def _load() -> None:
         for part, when in AGREEMENT_PARTS:
             await Expense.create(
                 project=project,
-                scope=scopes["Structure and exterior"],
+                category=categories["Structure and exterior"],
                 vendor=vendors["Kunle Bricklaying"],
                 agreement=agreement,
                 spent_on=on(when),
@@ -348,7 +348,7 @@ async def _load() -> None:
             description, naira, filed_to, bought_from, cost_type, quantity, rate, when = spend
             expense = await Expense.create(
                 project=project,
-                scope=scopes[filed_to] if filed_to else None,
+                category=categories[filed_to] if filed_to else None,
                 vendor=vendors[bought_from] if bought_from else None,
                 spent_on=on(when),
                 description=description,
@@ -373,7 +373,7 @@ async def _load() -> None:
         )
         await Expense.create(
             project=project,
-            scope=scopes["Administrative expenses"],
+            category=categories["Administrative expenses"],
             paid_by=keeper,
             spent_on=on(PAID_ON_SITE_WHEN),
             description="Paid on site",

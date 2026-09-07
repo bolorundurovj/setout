@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import type { ExpenseRead, ProjectMonths, ProjectRead, ScopeRead } from '@setout/api-client';
+import type { ExpenseRead, ProjectMonths, ProjectRead, CategoryRead } from '@setout/api-client';
 import { BudgetService } from '../budget/budget.service';
 import { ExpenseService } from '../expenses/expense.service';
 import { MonthsComponent, type MonthRow } from './months.component';
@@ -13,14 +13,14 @@ const project: ProjectRead = {
   land_name: null,
   status: 'active',
   notes: null,
-  planned_amount: 0,
+  budgeted_amount: 0,
   spent_amount: 0,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
   deleted_at: null,
 };
 
-function scope(over: Partial<ScopeRead> = {}): ScopeRead {
+function category(over: Partial<CategoryRead> = {}): CategoryRead {
   return {
     id: 's1',
     project_id: 'p1',
@@ -29,8 +29,8 @@ function scope(over: Partial<ScopeRead> = {}): ScopeRead {
     parent_id: null,
     sort_order: 0,
     is_group: false,
-    planned_amount: 0,
-    own_planned_amount: 0,
+    budgeted_amount: 0,
+    own_budgeted_amount: 0,
     spent_amount: 0,
     own_spent_amount: 0,
     expense_count: 0,
@@ -46,7 +46,7 @@ function expense(over: Partial<ExpenseRead> = {}): ExpenseRead {
   return {
     id: 'e1',
     project_id: 'p1',
-    scope_id: null,
+    category_id: null,
     item_id: null,
     vendor_id: null,
     agreement_id: null,
@@ -93,7 +93,7 @@ describe('MonthsComponent', () => {
 
   function render(
     payload: ProjectMonths | null = null,
-    scopes: ScopeRead[] = [],
+    categories: CategoryRead[] = [],
     byMonth: Record<string, ExpenseRead[]> = {},
     error: string | null = null,
   ) {
@@ -104,7 +104,7 @@ describe('MonthsComponent', () => {
       providers: [
         {
           provide: BudgetService,
-          useValue: { scopes: () => scopes, load: async () => undefined },
+          useValue: { categories: () => categories, load: async () => undefined },
         },
         {
           provide: ExpenseService,
@@ -141,8 +141,8 @@ describe('MonthsComponent', () => {
     const c = render(
       months({
         months: [
-          { month: '2026-06', amount: 1_000_000, expense_count: 1, scopes: [] },
-          { month: '2026-07', amount: 4_000_000, expense_count: 2, scopes: [] },
+          { month: '2026-06', amount: 1_000_000, expense_count: 1, categories: [] },
+          { month: '2026-07', amount: 4_000_000, expense_count: 2, categories: [] },
         ],
         total_amount: 5_000_000,
       }),
@@ -159,20 +159,20 @@ describe('MonthsComponent', () => {
             month: '2026-06',
             amount: 1_000_000,
             expense_count: 2,
-            scopes: [
-              { scope_id: 'a', name: 'Groundwork', amount: 750_000 },
-              { scope_id: null, name: 'Uncategorized', amount: 250_000 },
+            categories: [
+              { category_id: 'a', name: 'Groundwork', amount: 750_000 },
+              { category_id: null, name: 'Uncategorized', amount: 250_000 },
             ],
           },
-          { month: '2026-07', amount: 4_000_000, expense_count: 1, scopes: [] },
+          { month: '2026-07', amount: 4_000_000, expense_count: 1, categories: [] },
         ],
       }),
-      [scope({ id: 'a', name: 'Groundwork' })],
+      [category({ id: 'a', name: 'Groundwork' })],
     );
     expect(c.rows()[0].parts.map((p) => p.width)).toEqual(['75%', '25%']);
   });
 
-  it('hands out a tint per top level scope, in budget order', () => {
+  it('hands out a tint per top level category, in budget order', () => {
     const c = render(
       months({
         months: [
@@ -180,20 +180,24 @@ describe('MonthsComponent', () => {
             month: '2026-06',
             amount: 300,
             expense_count: 3,
-            scopes: [
-              { scope_id: 'a', name: 'Groundwork', amount: 100 },
-              { scope_id: 'b', name: 'Roof', amount: 100 },
-              { scope_id: null, name: 'Uncategorized', amount: 100 },
+            categories: [
+              { category_id: 'a', name: 'Groundwork', amount: 100 },
+              { category_id: 'b', name: 'Roof', amount: 100 },
+              { category_id: null, name: 'Uncategorized', amount: 100 },
             ],
           },
         ],
       }),
-      [scope({ id: 'a' }), scope({ id: 'b', sort_order: 1 })],
+      [category({ id: 'a' }), category({ id: 'b', sort_order: 1 })],
     );
-    expect(c.rows()[0].parts.map((p) => p.tint)).toEqual(['tint-1', 'tint-2', 'tint-unfiled']);
+    expect(c.rows()[0].parts.map((p) => p.tint)).toEqual([
+      'tint-1',
+      'tint-2',
+      'tint-uncategorized',
+    ]);
   });
 
-  it('gives a scope it has never heard of the unfiled tint rather than nothing', () => {
+  it('gives a category it has never heard of the uncategorized tint rather than nothing', () => {
     const c = render(
       months({
         months: [
@@ -201,12 +205,12 @@ describe('MonthsComponent', () => {
             month: '2026-06',
             amount: 100,
             expense_count: 1,
-            scopes: [{ scope_id: 'gone', name: 'Vanished', amount: 100 }],
+            categories: [{ category_id: 'gone', name: 'Vanished', amount: 100 }],
           },
         ],
       }),
     );
-    expect(c.rows()[0].parts[0].tint).toBe('tint-unfiled');
+    expect(c.rows()[0].parts[0].tint).toBe('tint-uncategorized');
   });
 
   it('counts the expenses in a month, singular when there is one', () => {
@@ -220,8 +224,8 @@ describe('MonthsComponent', () => {
     const c = render(
       months({
         months: [
-          { month: '2026-06', amount: 1_000_000, expense_count: 1, scopes: [] },
-          { month: '2026-07', amount: 4_000_000, expense_count: 1, scopes: [] },
+          { month: '2026-06', amount: 1_000_000, expense_count: 1, categories: [] },
+          { month: '2026-07', amount: 4_000_000, expense_count: 1, categories: [] },
         ],
         busiest_month: '2026-07',
       }),
@@ -236,7 +240,7 @@ describe('MonthsComponent', () => {
 
   it('fetches a month on first open, and not again on reopen', () => {
     const c = render(
-      months({ months: [{ month: '2026-06', amount: 100, expense_count: 1, scopes: [] }] }),
+      months({ months: [{ month: '2026-06', amount: 100, expense_count: 1, categories: [] }] }),
     );
     c.toggle(row());
     expect(c.isOpen(row())).toBe(true);
@@ -267,11 +271,11 @@ describe('MonthsComponent', () => {
     expect(c.monthExpenses(row({ month: '2026-07' }))).toBeUndefined();
   });
 
-  it('names the scope an expense was filed to, and says so when it was not', () => {
-    const c = render(months(), [scope({ id: 'a', name: 'Groundwork' })]);
-    expect(c.scopeName(expense({ scope_id: 'a' }))).toBe('Groundwork');
-    expect(c.scopeName(expense({ scope_id: null }))).toBe('Uncategorized');
-    expect(c.scopeName(expense({ scope_id: 'gone' }))).toBe('Uncategorized');
+  it('names the category an expense was filed to, and says so when it was not', () => {
+    const c = render(months(), [category({ id: 'a', name: 'Groundwork' })]);
+    expect(c.categoryName(expense({ category_id: 'a' }))).toBe('Groundwork');
+    expect(c.categoryName(expense({ category_id: null }))).toBe('Uncategorized');
+    expect(c.categoryName(expense({ category_id: 'gone' }))).toBe('Uncategorized');
   });
 
   it('drops the symbol from figures in the table and keeps it in the note', () => {

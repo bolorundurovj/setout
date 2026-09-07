@@ -56,7 +56,7 @@ export class ImportComponent {
   readonly report = signal<ImportReport | null>(null);
   readonly result = signal<ImportResult | null>(null);
 
-  readonly createMissingScopes = signal(true);
+  readonly createMissingCategories = signal(true);
   readonly skipDuplicates = signal(true);
   readonly takeUnpaid = signal(true);
   readonly severalCodes = signal('first');
@@ -165,7 +165,7 @@ export class ImportComponent {
     return `${rows} ${what} of ${holds}`;
   }
 
-  scopeMatch(matchedTo: string | null | undefined): string {
+  categoryMatch(matchedTo: string | null | undefined): string {
     return matchedTo ? `into ${matchedTo}` : 'new category';
   }
 
@@ -182,7 +182,7 @@ export class ImportComponent {
 
   choicesFor(decision: Decision): Chip[] {
     switch (decision.kind) {
-      case 'new_scopes':
+      case 'new_categories':
         return [
           { value: 'yes', label: 'Create them' },
           { value: 'no', label: 'Leave them out' },
@@ -200,7 +200,7 @@ export class ImportComponent {
       case 'several_codes':
         return [
           { value: 'first', label: 'Assign to the first' },
-          { value: 'unfiled', label: 'Leave uncategorized' },
+          { value: 'uncategorized', label: 'Leave uncategorized' },
         ];
       default:
         return [];
@@ -209,8 +209,8 @@ export class ImportComponent {
 
   answerFor(decision: Decision): string {
     switch (decision.kind) {
-      case 'new_scopes':
-        return this.createMissingScopes() ? 'yes' : 'no';
+      case 'new_categories':
+        return this.createMissingCategories() ? 'yes' : 'no';
       case 'duplicates':
         return this.skipDuplicates() ? 'yes' : 'no';
       case 'unpaid':
@@ -224,8 +224,8 @@ export class ImportComponent {
 
   answer(decision: Decision, chosen: string): void {
     switch (decision.kind) {
-      case 'new_scopes':
-        this.createMissingScopes.set(chosen === 'yes');
+      case 'new_categories':
+        this.createMissingCategories.set(chosen === 'yes');
         break;
       case 'duplicates':
         this.skipDuplicates.set(chosen === 'yes');
@@ -245,8 +245,8 @@ export class ImportComponent {
 
   consequenceFor(decision: Decision): string {
     switch (decision.kind) {
-      case 'new_scopes':
-        return this.createMissingScopes()
+      case 'new_categories':
+        return this.createMissingCategories()
           ? 'The budget is imported against these categories.'
           : 'No budget is written, and expenses arrive uncategorized.';
       case 'duplicates':
@@ -290,7 +290,7 @@ export class ImportComponent {
       return;
     }
     const done = await this.sheets.bringIn(chosen, this.target(), {
-      createMissingScopes: this.createMissingScopes(),
+      createMissingCategories: this.createMissingCategories(),
       skipDuplicates: this.skipDuplicates(),
       takeUnpaid: this.takeUnpaid(),
       severalCodes: this.severalCodes(),

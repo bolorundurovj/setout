@@ -5,12 +5,12 @@ import { formatMoney } from '../budget/money';
 import { ExpenseService, type Nested } from '../expenses/expense.service';
 import { PaginationComponent } from '../ui/pagination.component';
 
-/** How many scope tints are declared in the stylesheet before they repeat. */
+/** How many category tints are declared in the stylesheet before they repeat. */
 const TINTS = 5;
 
-/** One scope's share of a month, sized as a percentage of that month's bar. */
+/** One category's share of a month, sized as a percentage of that month's bar. */
 export interface MonthPart {
-  scopeId: string | null;
+  categoryId: string | null;
   name: string;
   amount: number;
   width: string;
@@ -43,15 +43,15 @@ export class MonthsComponent {
   readonly openMonth = signal<string | null>(null);
 
   /**
-   * A tint per top level scope, handed out in budget order so a scope keeps the
+   * A tint per top level category, handed out in budget order so a category keeps the
    * same colour in every bar however the months are read.
    */
   private readonly tints = computed(() => {
     const tints = new Map<string, string>();
     this.budget
-      .scopes()
-      .filter((scope) => scope.parent_id === null)
-      .forEach((scope, index) => tints.set(scope.id, `tint-${(index % TINTS) + 1}`));
+      .categories()
+      .filter((category) => category.parent_id === null)
+      .forEach((category, index) => tints.set(category.id, `tint-${(index % TINTS) + 1}`));
     return tints;
   });
 
@@ -69,12 +69,14 @@ export class MonthsComponent {
       amount: month.amount,
       count: month.expense_count,
       barWidth: `${(month.amount / heaviest) * 100}%`,
-      parts: month.scopes.map((part) => ({
-        scopeId: part.scope_id,
+      parts: month.categories.map((part) => ({
+        categoryId: part.category_id,
         name: part.name,
         amount: part.amount,
         width: month.amount ? `${(part.amount / month.amount) * 100}%` : '0%',
-        tint: part.scope_id ? (tints.get(part.scope_id) ?? 'tint-unfiled') : 'tint-unfiled',
+        tint: part.category_id
+          ? (tints.get(part.category_id) ?? 'tint-uncategorized')
+          : 'tint-uncategorized',
       })),
     }));
   });
@@ -143,12 +145,13 @@ export class MonthsComponent {
     await this.expenses.loadForMonth(this.project().id, row.month, page);
   }
 
-  scopeName(expense: ExpenseRead): string {
-    if (!expense.scope_id) {
+  categoryName(expense: ExpenseRead): string {
+    if (!expense.category_id) {
       return 'Uncategorized';
     }
     return (
-      this.budget.scopes().find((scope) => scope.id === expense.scope_id)?.name ?? 'Uncategorized'
+      this.budget.categories().find((category) => category.id === expense.category_id)?.name ??
+      'Uncategorized'
     );
   }
 }

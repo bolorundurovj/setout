@@ -18,19 +18,19 @@
         type="button"
         class="row body"
         [class.open]="isOpen(row)"
-        [class.unfiled]="row.isUnfiled"
+        [class.uncategorized]="row.isUncategorized"
         [class.over]="over(row)"
         [attr.aria-expanded]="isOpen(row)"
         (click)="toggle(row)"
       >
-        <span class="scope">
+        <span class="category">
           <span
             class="swatch"
             [style.background]="tint(row)"
             [style.border-color]="tintEdge(row)"
           ></span>
-          <span class="scope-name" [class.over]="over(row)">{{ row.name }}</span>
-          <span class="scope-count">{{ rowCount(row) }}</span>
+          <span class="category-name" [class.over]="over(row)">{{ row.name }}</span>
+          <span class="category-count">{{ rowCount(row) }}</span>
         </span>
         <span class="figure right">{{ budgetCell(row) }}</span>
         <span class="figure right" [class.over]="over(row)">{{ bare(row.spent) }}</span>
@@ -85,10 +85,10 @@
 
   <div class="row total">
     <span class="total-label">Project Total · {{ countLabel() }}</span>
-    <span class="figure right">{{ plannedTotal() ? bare(plannedTotal()) : '—' }}</span>
+    <span class="figure right">{{ budgetedTotal() ? bare(budgetedTotal()) : '—' }}</span>
     <span class="figure right">{{ bare(spentTotal()) }}</span>
     <span class="figure right" [class.over]="totalOver()">{{
-      plannedTotal() ? bare(totalLeft()) : '—'
+      budgetedTotal() ? bare(totalLeft()) : '—'
     }}</span>
     <span class="figure right" [class.over]="totalOver()">{{ totalUsed() }}</span>
   </div>

@@ -1245,13 +1245,13 @@
         }
       }
     },
-    "/api/scope-presets": {
+    "/api/category-presets": {
       "get": {
         "tags": [
-          "scopes"
+          "categories"
         ],
-        "summary": "List Scope Presets",
-        "operationId": "listScopePresets",
+        "summary": "List Category Presets",
+        "operationId": "listCategoryPresets",
         "parameters": [
           {
             "name": "setout_session",
@@ -1278,9 +1278,9 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ScopePresetRead"
+                    "$ref": "#/components/schemas/CategoryPresetRead"
                   },
-                  "title": "Response Listscopepresets"
+                  "title": "Response Listcategorypresets"
                 }
               }
             }
@@ -1301,13 +1301,13 @@
         }
       }
     },
-    "/api/projects/{project_id}/scopes": {
+    "/api/projects/{project_id}/categories": {
       "get": {
         "tags": [
-          "scopes"
+          "categories"
         ],
-        "summary": "List Scopes",
-        "operationId": "listScopes",
+        "summary": "List Categories",
+        "operationId": "listCategories",
         "parameters": [
           {
             "name": "project_id",
@@ -1343,9 +1343,9 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ScopeRead"
+                    "$ref": "#/components/schemas/CategoryRead"
                   },
-                  "title": "Response Listscopes"
+                  "title": "Response Listcategories"
                 }
               }
             }
@@ -1370,10 +1370,10 @@
       },
       "post": {
         "tags": [
-          "scopes"
+          "categories"
         ],
-        "summary": "Create Scope",
-        "operationId": "createScope",
+        "summary": "Create Category",
+        "operationId": "createCategory",
         "parameters": [
           {
             "name": "project_id",
@@ -1406,7 +1406,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ScopeCreate"
+                "$ref": "#/components/schemas/CategoryCreate"
               }
             }
           }
@@ -1417,7 +1417,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ScopeRead"
+                  "$ref": "#/components/schemas/CategoryRead"
                 }
               }
             }
@@ -1447,7 +1447,7 @@
     "/api/projects/{project_id}/budget": {
       "get": {
         "tags": [
-          "scopes"
+          "categories"
         ],
         "summary": "Get Project Budget",
         "operationId": "getProjectBudget",
@@ -1508,21 +1508,21 @@
         }
       }
     },
-    "/api/scopes/{scope_id}": {
+    "/api/categories/{category_id}": {
       "patch": {
         "tags": [
-          "scopes"
+          "categories"
         ],
-        "summary": "Update Scope",
-        "operationId": "updateScope",
+        "summary": "Update Category",
+        "operationId": "updateCategory",
         "parameters": [
           {
-            "name": "scope_id",
+            "name": "category_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Scope Id"
+              "title": "Category Id"
             }
           },
           {
@@ -1547,7 +1547,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ScopeUpdate"
+                "$ref": "#/components/schemas/CategoryUpdate"
               }
             }
           }
@@ -1558,7 +1558,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ScopeRead"
+                  "$ref": "#/components/schemas/CategoryRead"
                 }
               }
             }
@@ -1586,18 +1586,18 @@
       },
       "delete": {
         "tags": [
-          "scopes"
+          "categories"
         ],
-        "summary": "Delete Scope",
-        "operationId": "deleteScope",
+        "summary": "Delete Category",
+        "operationId": "deleteCategory",
         "parameters": [
           {
-            "name": "scope_id",
+            "name": "category_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Scope Id"
+              "title": "Category Id"
             }
           },
           {
@@ -1628,7 +1628,7 @@
             "description": "Not found"
           },
           "409": {
-            "description": "The scope holds expenses"
+            "description": "The category holds expenses"
           },
           "422": {
             "description": "Validation Error",
@@ -1643,21 +1643,21 @@
         }
       }
     },
-    "/api/scopes/{scope_id}/restore": {
+    "/api/categories/{category_id}/restore": {
       "post": {
         "tags": [
-          "scopes"
+          "categories"
         ],
-        "summary": "Restore Scope",
-        "operationId": "restoreScope",
+        "summary": "Restore Category",
+        "operationId": "restoreCategory",
         "parameters": [
           {
-            "name": "scope_id",
+            "name": "category_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Scope Id"
+              "title": "Category Id"
             }
           },
           {
@@ -1683,7 +1683,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ScopeRead"
+                  "$ref": "#/components/schemas/CategoryRead"
                 }
               }
             }
@@ -1707,21 +1707,21 @@
         }
       }
     },
-    "/api/scopes/{scope_id}/budget-items": {
+    "/api/categories/{category_id}/budget-items": {
       "get": {
         "tags": [
-          "scopes"
+          "categories"
         ],
         "summary": "List Budget Items",
         "operationId": "listBudgetItems",
         "parameters": [
           {
-            "name": "scope_id",
+            "name": "category_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Scope Id"
+              "title": "Category Id"
             }
           },
           {
@@ -1799,18 +1799,18 @@
       },
       "post": {
         "tags": [
-          "scopes"
+          "categories"
         ],
         "summary": "Add Budget Item",
         "operationId": "addBudgetItem",
         "parameters": [
           {
-            "name": "scope_id",
+            "name": "category_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Scope Id"
+              "title": "Category Id"
             }
           },
           {
@@ -1858,7 +1858,7 @@
             "description": "Not found"
           },
           "409": {
-            "description": "Scope holds no budget of its own"
+            "description": "Category holds no budget of its own"
           },
           "422": {
             "description": "Validation Error",
@@ -1879,7 +1879,7 @@
     "/api/budget-items/{item_id}": {
       "patch": {
         "tags": [
-          "scopes"
+          "categories"
         ],
         "summary": "Update Budget Item",
         "operationId": "updateBudgetItem",
@@ -1954,7 +1954,7 @@
       },
       "delete": {
         "tags": [
-          "scopes"
+          "categories"
         ],
         "summary": "Delete Budget Item",
         "operationId": "deleteBudgetItem",
@@ -2026,7 +2026,7 @@
             }
           },
           {
-            "name": "scope_id",
+            "name": "category_id",
             "in": "query",
             "required": false,
             "schema": {
@@ -2039,7 +2039,7 @@
                 }
               ],
               "description": "Only this category",
-              "title": "Scope Id"
+              "title": "Category Id"
             },
             "description": "Only this category"
           },
@@ -2081,14 +2081,14 @@
             "description": "Only this calendar month, as YYYY-MM"
           },
           {
-            "name": "unfiled_only",
+            "name": "uncategorized_only",
             "in": "query",
             "required": false,
             "schema": {
               "type": "boolean",
               "description": "Only expenses with no category",
               "default": false,
-              "title": "Unfiled Only"
+              "title": "Uncategorized Only"
             },
             "description": "Only expenses with no category"
           },
@@ -2238,7 +2238,7 @@
             "description": "Not found"
           },
           "409": {
-            "description": "Scope holds no spend of its own"
+            "description": "Category holds no spend of its own"
           },
           "422": {
             "description": "Validation Error",
@@ -2316,7 +2316,7 @@
             "description": "Not found"
           },
           "409": {
-            "description": "Scope holds no spend of its own"
+            "description": "Category holds no spend of its own"
           },
           "422": {
             "description": "Validation Error",
@@ -2334,13 +2334,13 @@
         }
       }
     },
-    "/api/projects/{project_id}/suggest-scope": {
+    "/api/projects/{project_id}/suggest-category": {
       "get": {
         "tags": [
           "expenses"
         ],
-        "summary": "Suggest Scope",
-        "operationId": "suggestScope",
+        "summary": "Suggest Category",
+        "operationId": "suggestCategory",
         "parameters": [
           {
             "name": "project_id",
@@ -2410,7 +2410,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ScopeSuggestion"
+                  "$ref": "#/components/schemas/CategorySuggestion"
                 }
               }
             }
@@ -9159,9 +9159,9 @@
             "title": "Currency Code",
             "default": ""
           },
-          "create_missing_scopes": {
+          "create_missing_categories": {
             "type": "boolean",
-            "title": "Create Missing Scopes",
+            "title": "Create Missing Categories",
             "default": true
           },
           "skip_duplicates": {
@@ -9176,7 +9176,7 @@
           },
           "several_codes": {
             "type": "string",
-            "pattern": "^(first|unfiled)$",
+            "pattern": "^(first|uncategorized)$",
             "title": "Several Codes",
             "default": "first"
           }
@@ -9195,10 +9195,10 @@
             "minLength": 1,
             "title": "Description"
           },
-          "planned_amount": {
+          "budgeted_amount": {
             "type": "integer",
             "minimum": 0.0,
-            "title": "Planned Amount",
+            "title": "Budgeted Amount",
             "description": "Minor units of the project currency"
           },
           "cost_type": {
@@ -9215,7 +9215,7 @@
         "type": "object",
         "required": [
           "description",
-          "planned_amount"
+          "budgeted_amount"
         ],
         "title": "BudgetItemCreate"
       },
@@ -9256,17 +9256,17 @@
             "type": "string",
             "title": "Id"
           },
-          "scope_id": {
+          "category_id": {
             "type": "string",
-            "title": "Scope Id"
+            "title": "Category Id"
           },
           "description": {
             "type": "string",
             "title": "Description"
           },
-          "planned_amount": {
+          "budgeted_amount": {
             "type": "integer",
-            "title": "Planned Amount"
+            "title": "Budgeted Amount"
           },
           "cost_type": {
             "anyOf": [
@@ -9309,9 +9309,9 @@
         "type": "object",
         "required": [
           "id",
-          "scope_id",
+          "category_id",
           "description",
-          "planned_amount",
+          "budgeted_amount",
           "cost_type",
           "set_at",
           "created_at",
@@ -9335,7 +9335,7 @@
             ],
             "title": "Description"
           },
-          "planned_amount": {
+          "budgeted_amount": {
             "anyOf": [
               {
                 "type": "integer",
@@ -9345,7 +9345,7 @@
                 "type": "null"
               }
             ],
-            "title": "Planned Amount"
+            "title": "Budgeted Amount"
           },
           "cost_type": {
             "anyOf": [
@@ -9373,16 +9373,16 @@
             "title": "Expense Ids",
             "description": "Uncategorized expenses to assign"
           },
-          "scope_id": {
+          "category_id": {
             "type": "string",
-            "title": "Scope Id",
+            "title": "Category Id",
             "description": "The category they should all be assigned to"
           }
         },
         "type": "object",
         "required": [
           "expense_ids",
-          "scope_id"
+          "category_id"
         ],
         "title": "BulkFileExpenses"
       },
@@ -9399,6 +9399,308 @@
           "filed_count"
         ],
         "title": "BulkFileResult"
+      },
+      "CategoryCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CategoryCreate"
+      },
+      "CategoryMatch": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "lines": {
+            "type": "integer",
+            "title": "Lines"
+          },
+          "budgeted_amount": {
+            "type": "integer",
+            "title": "Budgeted Amount"
+          },
+          "matched_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched To",
+            "description": "Name of the existing category, if any"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "lines",
+          "budgeted_amount"
+        ],
+        "title": "CategoryMatch"
+      },
+      "CategoryPresetRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "sort_order"
+        ],
+        "title": "CategoryPresetRead"
+      },
+      "CategoryRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order"
+          },
+          "is_group": {
+            "type": "boolean",
+            "title": "Is Group"
+          },
+          "budgeted_amount": {
+            "type": "integer",
+            "title": "Budgeted Amount"
+          },
+          "own_budgeted_amount": {
+            "type": "integer",
+            "title": "Own Budgeted Amount"
+          },
+          "spent_amount": {
+            "type": "integer",
+            "title": "Spent Amount"
+          },
+          "own_spent_amount": {
+            "type": "integer",
+            "title": "Own Spent Amount"
+          },
+          "expense_count": {
+            "type": "integer",
+            "title": "Expense Count"
+          },
+          "own_expense_count": {
+            "type": "integer",
+            "title": "Own Expense Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "code",
+          "name",
+          "parent_id",
+          "sort_order",
+          "is_group",
+          "budgeted_amount",
+          "own_budgeted_amount",
+          "spent_amount",
+          "own_spent_amount",
+          "expense_count",
+          "own_expense_count",
+          "created_at",
+          "updated_at",
+          "deleted_at"
+        ],
+        "title": "CategoryRead"
+      },
+      "CategorySuggestion": {
+        "properties": {
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id",
+            "description": "The category past purchases used most often"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Why this category was suggested"
+          }
+        },
+        "type": "object",
+        "title": "CategorySuggestion"
+      },
+      "CategoryUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CategoryUpdate"
       },
       "CostType": {
         "type": "string",
@@ -9546,11 +9848,11 @@
       "DecisionKind": {
         "type": "string",
         "enum": [
-          "new_scopes",
+          "new_categories",
           "several_codes",
           "unpaid",
           "no_description",
-          "above_any_scope",
+          "above_any_category",
           "owed_not_importable",
           "duplicates"
         ],
@@ -9822,7 +10124,7 @@
             "title": "Spent On",
             "description": "Defaults to today"
           },
-          "scope_id": {
+          "category_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -9831,7 +10133,7 @@
                 "type": "null"
               }
             ],
-            "title": "Scope Id",
+            "title": "Category Id",
             "description": "Leave empty to file it later"
           },
           "item_id": {
@@ -9932,9 +10234,9 @@
             ],
             "title": "Notes"
           },
-          "auto_scope": {
+          "auto_categorize": {
             "type": "boolean",
-            "title": "Auto Scope",
+            "title": "Auto Categorize",
             "description": "Use past purchases to choose the category when none is given",
             "default": true
           }
@@ -9986,7 +10288,7 @@
             "type": "string",
             "title": "Project Id"
           },
-          "scope_id": {
+          "category_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -9995,7 +10297,7 @@
                 "type": "null"
               }
             ],
-            "title": "Scope Id"
+            "title": "Category Id"
           },
           "item_id": {
             "anyOf": [
@@ -10129,7 +10431,7 @@
         "required": [
           "id",
           "project_id",
-          "scope_id",
+          "category_id",
           "item_id",
           "vendor_id",
           "agreement_id",
@@ -10187,7 +10489,7 @@
             ],
             "title": "Spent On"
           },
-          "scope_id": {
+          "category_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -10196,7 +10498,7 @@
                 "type": "null"
               }
             ],
-            "title": "Scope Id"
+            "title": "Category Id"
           },
           "item_id": {
             "anyOf": [
@@ -10629,9 +10931,9 @@
             "type": "integer",
             "title": "Currency Exponent"
           },
-          "planned_amount": {
+          "budgeted_amount": {
             "type": "integer",
-            "title": "Planned Amount"
+            "title": "Budgeted Amount"
           },
           "spent_amount": {
             "type": "integer",
@@ -10648,7 +10950,7 @@
           "name",
           "currency_code",
           "currency_exponent",
-          "planned_amount",
+          "budgeted_amount",
           "spent_amount",
           "expense_count"
         ],
@@ -10692,7 +10994,7 @@
             "type": "integer",
             "title": "Currency Exponent"
           },
-          "scope_name": {
+          "category_name": {
             "anyOf": [
               {
                 "type": "string"
@@ -10701,7 +11003,7 @@
                 "type": "null"
               }
             ],
-            "title": "Scope Name"
+            "title": "Category Name"
           },
           "description": {
             "type": "string",
@@ -10724,7 +11026,7 @@
           "project_name",
           "currency_code",
           "currency_exponent",
-          "scope_name",
+          "category_name",
           "description",
           "amount",
           "spent_on"
@@ -10773,9 +11075,9 @@
             "description": "Projects using this currency",
             "default": 0
           },
-          "planned_amount": {
+          "budgeted_amount": {
             "type": "integer",
-            "title": "Planned Amount"
+            "title": "Budgeted Amount"
           },
           "spent_amount": {
             "type": "integer",
@@ -10795,7 +11097,7 @@
           "currencies",
           "currency_code",
           "currency_exponent",
-          "planned_amount",
+          "budgeted_amount",
           "spent_amount",
           "alerts"
         ],
@@ -10841,20 +11143,20 @@
             "type": "array",
             "title": "Skipped"
           },
-          "scopes": {
+          "categories": {
             "items": {
-              "$ref": "#/components/schemas/ScopeMatch"
+              "$ref": "#/components/schemas/CategoryMatch"
             },
             "type": "array",
-            "title": "Scopes"
+            "title": "Categories"
           },
-          "planned_amount": {
+          "budgeted_amount": {
             "type": "integer",
-            "title": "Planned Amount"
+            "title": "Budgeted Amount"
           },
-          "planned_lines": {
+          "budgeted_lines": {
             "type": "integer",
-            "title": "Planned Lines"
+            "title": "Budgeted Lines"
           },
           "spend_rows": {
             "type": "integer",
@@ -10908,9 +11210,9 @@
           "currency_exponent",
           "read",
           "skipped",
-          "scopes",
-          "planned_amount",
-          "planned_lines",
+          "categories",
+          "budgeted_amount",
+          "budgeted_lines",
           "spend_rows",
           "spend_amount",
           "vendors_new",
@@ -10932,17 +11234,17 @@
             "type": "string",
             "title": "Project Name"
           },
-          "scopes": {
+          "categories": {
             "type": "integer",
-            "title": "Scopes"
+            "title": "Categories"
           },
           "budget_items": {
             "type": "integer",
             "title": "Budget Items"
           },
-          "planned_amount": {
+          "budgeted_amount": {
             "type": "integer",
-            "title": "Planned Amount"
+            "title": "Budgeted Amount"
           },
           "expenses": {
             "type": "integer",
@@ -10969,9 +11271,9 @@
         "required": [
           "project_id",
           "project_name",
-          "scopes",
+          "categories",
           "budget_items",
-          "planned_amount",
+          "budgeted_amount",
           "expenses",
           "spend_amount",
           "vendors",
@@ -12718,9 +13020,9 @@
         ],
         "title": "MapSettings"
       },
-      "MonthScopeSpend": {
+      "MonthCategorySpend": {
         "properties": {
-          "scope_id": {
+          "category_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -12729,7 +13031,7 @@
                 "type": "null"
               }
             ],
-            "title": "Scope Id",
+            "title": "Category Id",
             "description": "Null for expenses with no category"
           },
           "name": {
@@ -12743,11 +13045,11 @@
         },
         "type": "object",
         "required": [
-          "scope_id",
+          "category_id",
           "name",
           "amount"
         ],
-        "title": "MonthScopeSpend"
+        "title": "MonthCategorySpend"
       },
       "MonthSpend": {
         "properties": {
@@ -12764,12 +13066,12 @@
             "type": "integer",
             "title": "Expense Count"
           },
-          "scopes": {
+          "categories": {
             "items": {
-              "$ref": "#/components/schemas/MonthScopeSpend"
+              "$ref": "#/components/schemas/MonthCategorySpend"
             },
             "type": "array",
-            "title": "Scopes",
+            "title": "Categories",
             "description": "Split by the top-level category, in budget order"
           }
         },
@@ -12778,7 +13080,7 @@
           "month",
           "amount",
           "expense_count",
-          "scopes"
+          "categories"
         ],
         "title": "MonthSpend"
       },
@@ -13186,16 +13488,16 @@
             "type": "integer",
             "title": "Currency Exponent"
           },
-          "planned_amount": {
+          "budgeted_amount": {
             "type": "integer",
-            "title": "Planned Amount"
+            "title": "Budgeted Amount"
           },
-          "scopes": {
+          "categories": {
             "items": {
-              "$ref": "#/components/schemas/ScopeRead"
+              "$ref": "#/components/schemas/CategoryRead"
             },
             "type": "array",
-            "title": "Scopes"
+            "title": "Categories"
           }
         },
         "type": "object",
@@ -13203,8 +13505,8 @@
           "project_id",
           "currency_code",
           "currency_exponent",
-          "planned_amount",
-          "scopes"
+          "budgeted_amount",
+          "categories"
         ],
         "title": "ProjectBudget"
       },
@@ -13356,9 +13658,9 @@
             "type": "integer",
             "title": "Currency Exponent"
           },
-          "planned_amount": {
+          "budgeted_amount": {
             "type": "integer",
-            "title": "Planned Amount"
+            "title": "Budgeted Amount"
           },
           "spent_amount": {
             "type": "integer",
@@ -13429,7 +13731,7 @@
           "name",
           "currency_code",
           "currency_exponent",
-          "planned_amount",
+          "budgeted_amount",
           "spent_amount",
           "status",
           "land_id",
@@ -13455,21 +13757,21 @@
             "type": "integer",
             "title": "Currency Exponent"
           },
-          "planned_amount": {
+          "budgeted_amount": {
             "type": "integer",
-            "title": "Planned Amount"
+            "title": "Budgeted Amount"
           },
           "spent_amount": {
             "type": "integer",
             "title": "Spent Amount"
           },
-          "unfiled_amount": {
+          "uncategorized_amount": {
             "type": "integer",
-            "title": "Unfiled Amount"
+            "title": "Uncategorized Amount"
           },
-          "unfiled_count": {
+          "uncategorized_count": {
             "type": "integer",
-            "title": "Unfiled Count"
+            "title": "Uncategorized Count"
           },
           "removed_count": {
             "type": "integer",
@@ -13494,10 +13796,10 @@
           "project_id",
           "currency_code",
           "currency_exponent",
-          "planned_amount",
+          "budgeted_amount",
           "spent_amount",
-          "unfiled_amount",
-          "unfiled_count",
+          "uncategorized_amount",
+          "uncategorized_count",
           "removed_count",
           "variance_percent"
         ],
@@ -13671,9 +13973,9 @@
             "type": "string",
             "title": "Description"
           },
-          "scope": {
+          "category": {
             "type": "string",
-            "title": "Scope"
+            "title": "Category"
           },
           "amount": {
             "type": "integer",
@@ -13684,312 +13986,10 @@
         "required": [
           "spent_on",
           "description",
-          "scope",
+          "category",
           "amount"
         ],
         "title": "SampleRow"
-      },
-      "ScopeCreate": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Name"
-          },
-          "code": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 32
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Code"
-          },
-          "parent_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Id"
-          },
-          "sort_order": {
-            "type": "integer",
-            "title": "Sort Order",
-            "default": 0
-          }
-        },
-        "type": "object",
-        "required": [
-          "name"
-        ],
-        "title": "ScopeCreate"
-      },
-      "ScopeMatch": {
-        "properties": {
-          "code": {
-            "type": "string",
-            "title": "Code"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "lines": {
-            "type": "integer",
-            "title": "Lines"
-          },
-          "planned_amount": {
-            "type": "integer",
-            "title": "Planned Amount"
-          },
-          "matched_to": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Matched To",
-            "description": "Name of the existing category, if any"
-          }
-        },
-        "type": "object",
-        "required": [
-          "code",
-          "name",
-          "lines",
-          "planned_amount"
-        ],
-        "title": "ScopeMatch"
-      },
-      "ScopePresetRead": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "sort_order": {
-            "type": "integer",
-            "title": "Sort Order"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "sort_order"
-        ],
-        "title": "ScopePresetRead"
-      },
-      "ScopeRead": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "project_id": {
-            "type": "string",
-            "title": "Project Id"
-          },
-          "code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Code"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "parent_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Id"
-          },
-          "sort_order": {
-            "type": "integer",
-            "title": "Sort Order"
-          },
-          "is_group": {
-            "type": "boolean",
-            "title": "Is Group"
-          },
-          "planned_amount": {
-            "type": "integer",
-            "title": "Planned Amount"
-          },
-          "own_planned_amount": {
-            "type": "integer",
-            "title": "Own Planned Amount"
-          },
-          "spent_amount": {
-            "type": "integer",
-            "title": "Spent Amount"
-          },
-          "own_spent_amount": {
-            "type": "integer",
-            "title": "Own Spent Amount"
-          },
-          "expense_count": {
-            "type": "integer",
-            "title": "Expense Count"
-          },
-          "own_expense_count": {
-            "type": "integer",
-            "title": "Own Expense Count"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At"
-          },
-          "deleted_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Deleted At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "project_id",
-          "code",
-          "name",
-          "parent_id",
-          "sort_order",
-          "is_group",
-          "planned_amount",
-          "own_planned_amount",
-          "spent_amount",
-          "own_spent_amount",
-          "expense_count",
-          "own_expense_count",
-          "created_at",
-          "updated_at",
-          "deleted_at"
-        ],
-        "title": "ScopeRead"
-      },
-      "ScopeSuggestion": {
-        "properties": {
-          "scope_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Scope Id",
-            "description": "The category past purchases used most often"
-          },
-          "reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reason",
-            "description": "Why this category was suggested"
-          }
-        },
-        "type": "object",
-        "title": "ScopeSuggestion"
-      },
-      "ScopeUpdate": {
-        "properties": {
-          "name": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 255,
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          },
-          "code": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 32
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Code"
-          },
-          "parent_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Id"
-          },
-          "sort_order": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sort Order"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "ScopeUpdate"
       },
       "SearchKind": {
         "type": "string",

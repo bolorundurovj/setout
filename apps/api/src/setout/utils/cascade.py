@@ -16,27 +16,27 @@ from setout.models.advance import Advance
 from setout.models.agreement import Agreement
 from setout.models.attachment import Attachment
 from setout.models.budget import BudgetItem
+from setout.models.category import Category
 from setout.models.delivery import Delivery
 from setout.models.expense import Expense
 from setout.models.land_document import LandDocument
 from setout.models.land_valuation import LandValuation
-from setout.models.scope import Scope
 
-PROJECT_OWNED = (Scope, Expense, Delivery, Attachment, Advance, Agreement)
+PROJECT_OWNED = (Category, Expense, Delivery, Attachment, Advance, Agreement)
 EXPENSE_OWNED = (Delivery, Attachment)
 LAND_OWNED = (LandDocument, LandValuation)
 
 
 async def delete_under_project(project_id: str, deleted_at: datetime) -> None:
-    scope_ids = await _scope_ids_of_project(project_id)
-    await _mark_deleted(BudgetItem, deleted_at, scope_id__in=scope_ids)
+    category_ids = await _category_ids_of_project(project_id)
+    await _mark_deleted(BudgetItem, deleted_at, category_id__in=category_ids)
     for owned_model in PROJECT_OWNED:
         await _mark_deleted(owned_model, deleted_at, project_id=project_id)
 
 
 async def restore_under_project(project_id: str, deleted_at: datetime) -> None:
-    scope_ids = await _scope_ids_of_project(project_id)
-    await _clear_deleted(BudgetItem, deleted_at, scope_id__in=scope_ids)
+    category_ids = await _category_ids_of_project(project_id)
+    await _clear_deleted(BudgetItem, deleted_at, category_id__in=category_ids)
     for owned_model in PROJECT_OWNED:
         await _clear_deleted(owned_model, deleted_at, project_id=project_id)
 
@@ -61,12 +61,12 @@ async def restore_under_land(land_id: str, deleted_at: datetime) -> None:
         await _clear_deleted(owned_model, deleted_at, land_id=land_id)
 
 
-async def delete_under_scope(scope_id: str, deleted_at: datetime) -> None:
-    await _mark_deleted(BudgetItem, deleted_at, scope_id=scope_id)
+async def delete_under_category(category_id: str, deleted_at: datetime) -> None:
+    await _mark_deleted(BudgetItem, deleted_at, category_id=category_id)
 
 
-async def restore_under_scope(scope_id: str, deleted_at: datetime) -> None:
-    await _clear_deleted(BudgetItem, deleted_at, scope_id=scope_id)
+async def restore_under_category(category_id: str, deleted_at: datetime) -> None:
+    await _clear_deleted(BudgetItem, deleted_at, category_id=category_id)
 
 
 async def _mark_deleted(
@@ -81,7 +81,7 @@ async def _clear_deleted(
     await owned_model.filter(deleted_at=deleted_at, **owner_filters).update(deleted_at=None)
 
 
-async def _scope_ids_of_project(project_id: str) -> list[str]:
-    """Every scope of the project, deleted or not, so their items follow either way."""
-    scope_ids = await Scope.filter(project_id=project_id).values_list("id", flat=True)
-    return [str(scope_id) for scope_id in scope_ids]
+async def _category_ids_of_project(project_id: str) -> list[str]:
+    """Every category of the project, deleted or not, so their items follow either way."""
+    category_ids = await Category.filter(project_id=project_id).values_list("id", flat=True)
+    return [str(category_id) for category_id in category_ids]

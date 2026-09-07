@@ -6,13 +6,13 @@ from tortoise.models import Model
 from setout.utils.ids import short_id
 
 
-class ScopePreset(Model):
+class CategoryPreset(Model):
     id = fields.CharField(max_length=12, primary_key=True, default=short_id)
     name = fields.CharField(max_length=255, unique=True)
     sort_order = fields.IntField(default=0)
 
     class Meta:
-        table = "scope_preset"
+        table = "category_preset"
         ordering = ["sort_order", "id"]
 
     def __str__(self) -> str:

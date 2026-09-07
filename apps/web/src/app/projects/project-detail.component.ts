@@ -55,7 +55,7 @@ export class ProjectDetailComponent {
 
   readonly id = input.required<string>();
   readonly tab = input('');
-  readonly scope = input('');
+  readonly category = input('');
 
   readonly project = signal<ProjectRead | null>(null);
   readonly activeTab = signal('dashboard');
@@ -108,10 +108,10 @@ export class ProjectDetailComponent {
     void this.router.navigate(['/projects', this.id(), key]);
   }
 
-  openScope(scopeId: string): void {
+  openCategory(categoryId: string): void {
     this.activeTab.set('table');
     void this.router.navigate(['/projects', this.id(), 'table'], {
-      queryParams: { scope: scopeId },
+      queryParams: { category: categoryId },
     });
   }
 }

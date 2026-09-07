@@ -4,19 +4,19 @@ import {
   CostType,
   BudgetItemRead,
   ProjectBudget,
-  ScopeCreate,
-  ScopePresetRead,
-  ScopeRead,
+  CategoryCreate,
+  CategoryPresetRead,
+  CategoryRead,
   addBudgetItem,
-  restoreScope,
+  restoreCategory,
   updateBudgetItem,
-  createScope,
+  createCategory,
   deleteBudgetItem,
-  deleteScope,
+  deleteCategory,
   getProjectBudget,
   listBudgetItems,
-  listScopePresets,
-  updateScope,
+  listCategoryPresets,
+  updateCategory,
 } from '@setout/api-client';
 import { detailOf } from '../api-error';
 
@@ -28,7 +28,7 @@ export class BudgetService {
 
   private readonly budgetState = signal<ProjectBudget | null>(null);
   private readonly itemState = signal<Record<string, BudgetItemRead[]>>({});
-  private readonly presetState = signal<ScopePresetRead[]>([]);
+  private readonly presetState = signal<CategoryPresetRead[]>([]);
 
   readonly budget = this.budgetState.asReadonly();
   readonly items = this.itemState.asReadonly();
@@ -36,8 +36,8 @@ export class BudgetService {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
-  readonly scopes = computed<ScopeRead[]>(() => this.budgetState()?.scopes ?? []);
-  readonly plannedTotal = computed(() => this.budgetState()?.planned_amount ?? 0);
+  readonly categories = computed<CategoryRead[]>(() => this.budgetState()?.categories ?? []);
+  readonly budgetedTotal = computed(() => this.budgetState()?.budgeted_amount ?? 0);
 
   async load(projectId: string): Promise<void> {
     this.loading.set(true);
@@ -56,30 +56,30 @@ export class BudgetService {
       return;
     }
     try {
-      this.presetState.set(await this.api.invoke(listScopePresets));
+      this.presetState.set(await this.api.invoke(listCategoryPresets));
     } catch {
       this.presetState.set([]);
     }
   }
 
-  async loadItems(scopeId: string): Promise<void> {
+  async loadItems(categoryId: string): Promise<void> {
     try {
-      const page = await this.api.invoke(listBudgetItems, { scope_id: scopeId, limit: 100 });
-      this.itemState.update((all) => ({ ...all, [scopeId]: page.items }));
+      const page = await this.api.invoke(listBudgetItems, { category_id: categoryId, limit: 100 });
+      this.itemState.update((all) => ({ ...all, [categoryId]: page.items }));
     } catch {
       this.error.set('Could not load the budget items.');
     }
   }
 
-  async addScope(projectId: string, body: ScopeCreate): Promise<void> {
-    await this.api.invoke(createScope, { project_id: projectId, body });
+  async addCategory(projectId: string, body: CategoryCreate): Promise<void> {
+    await this.api.invoke(createCategory, { project_id: projectId, body });
     await this.load(projectId);
   }
 
-  async renameScope(projectId: string, scopeId: string, name: string): Promise<boolean> {
+  async renameCategory(projectId: string, categoryId: string, name: string): Promise<boolean> {
     this.error.set(null);
     try {
-      await this.api.invoke(updateScope, { scope_id: scopeId, body: { name } });
+      await this.api.invoke(updateCategory, { category_id: categoryId, body: { name } });
       await this.load(projectId);
       return true;
     } catch (e: unknown) {
@@ -88,10 +88,10 @@ export class BudgetService {
     }
   }
 
-  async removeScope(projectId: string, scopeId: string): Promise<boolean> {
+  async removeCategory(projectId: string, categoryId: string): Promise<boolean> {
     this.error.set(null);
     try {
-      await this.api.invoke(deleteScope, { scope_id: scopeId });
+      await this.api.invoke(deleteCategory, { category_id: categoryId });
       await this.load(projectId);
       return true;
     } catch (e: unknown) {
@@ -100,9 +100,9 @@ export class BudgetService {
     }
   }
 
-  async putScopeBack(projectId: string, scopeId: string): Promise<boolean> {
+  async putCategoryBack(projectId: string, categoryId: string): Promise<boolean> {
     try {
-      await this.api.invoke(restoreScope, { scope_id: scopeId });
+      await this.api.invoke(restoreCategory, { category_id: categoryId });
       await this.load(projectId);
       return true;
     } catch (e: unknown) {
@@ -113,36 +113,36 @@ export class BudgetService {
 
   async addItem(
     projectId: string,
-    scopeId: string,
+    categoryId: string,
     description: string,
-    plannedAmount: number,
+    budgetedAmount: number,
     costType: CostType | null = null,
   ): Promise<void> {
     await this.api.invoke(addBudgetItem, {
-      scope_id: scopeId,
-      body: { description, planned_amount: plannedAmount, cost_type: costType },
+      category_id: categoryId,
+      body: { description, budgeted_amount: budgetedAmount, cost_type: costType },
     });
-    await this.loadItems(scopeId);
+    await this.loadItems(categoryId);
     await this.load(projectId);
   }
 
   async updateItem(
     projectId: string,
-    scopeId: string,
+    categoryId: string,
     itemId: string,
-    plannedAmount: number,
+    budgetedAmount: number,
   ): Promise<void> {
     await this.api.invoke(updateBudgetItem, {
       item_id: itemId,
-      body: { planned_amount: plannedAmount },
+      body: { budgeted_amount: budgetedAmount },
     });
-    await this.loadItems(scopeId);
+    await this.loadItems(categoryId);
     await this.load(projectId);
   }
 
-  async removeItem(projectId: string, scopeId: string, itemId: string): Promise<void> {
+  async removeItem(projectId: string, categoryId: string, itemId: string): Promise<void> {
     await this.api.invoke(deleteBudgetItem, { item_id: itemId });
-    await this.loadItems(scopeId);
+    await this.loadItems(categoryId);
     await this.load(projectId);
   }
 }

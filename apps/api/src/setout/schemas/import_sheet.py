@@ -7,11 +7,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class DecisionKind(StrEnum):
-    NEW_SCOPES = "new_scopes"
+    NEW_CATEGORIES = "new_categories"
     SEVERAL_CODES = "several_codes"
     UNPAID = "unpaid"
     NO_DESCRIPTION = "no_description"
-    ABOVE_ANY_SCOPE = "above_any_scope"
+    ABOVE_ANY_CATEGORY = "above_any_category"
     OWED_NOT_IMPORTABLE = "owed_not_importable"
     DUPLICATES = "duplicates"
 
@@ -27,11 +27,11 @@ class SheetSkipped(BaseModel):
     why: str
 
 
-class ScopeMatch(BaseModel):
+class CategoryMatch(BaseModel):
     code: str
     name: str
     lines: int
-    planned_amount: int
+    budgeted_amount: int
     matched_to: str | None = Field(None, description="Name of the existing category, if any")
 
 
@@ -46,7 +46,7 @@ class Decision(BaseModel):
 class SampleRow(BaseModel):
     spent_on: date | None
     description: str
-    scope: str
+    category: str
     amount: int
 
 
@@ -55,12 +55,12 @@ class Answers(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    create_missing_scopes: bool = True
+    create_missing_categories: bool = True
     skip_duplicates: bool = True
     take_unpaid: bool = True
     # Where a row names several cost codes: "first" files it under the first,
-    # "unfiled" leaves it against no scope at all.
-    several_codes: str = Field("first", pattern="^(first|unfiled)$")
+    # "uncategorized" leaves it against no category at all.
+    several_codes: str = Field("first", pattern="^(first|uncategorized)$")
 
 
 class ImportReport(BaseModel):
@@ -70,9 +70,9 @@ class ImportReport(BaseModel):
     currency_exponent: int
     read: list[SheetSeen]
     skipped: list[SheetSkipped]
-    scopes: list[ScopeMatch]
-    planned_amount: int
-    planned_lines: int
+    categories: list[CategoryMatch]
+    budgeted_amount: int
+    budgeted_lines: int
     spend_rows: int
     spend_amount: int
     vendors_new: int
@@ -90,9 +90,9 @@ class ImportReport(BaseModel):
 class ImportResult(BaseModel):
     project_id: str
     project_name: str
-    scopes: int
+    categories: int
     budget_items: int
-    planned_amount: int
+    budgeted_amount: int
     expenses: int
     spend_amount: int
     vendors: int

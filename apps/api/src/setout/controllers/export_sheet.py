@@ -5,12 +5,12 @@ from fastapi import HTTPException, status
 from setout.models.agreement import Agreement
 from setout.models.attachment import Attachment
 from setout.models.budget import BudgetItem
+from setout.models.category import Category
 from setout.models.delivery import Delivery
 from setout.models.expense import Expense
 from setout.models.project import Project
-from setout.models.scope import Scope
 from setout.services.sheets import write
-from setout.services.sheets.values import is_scope_code
+from setout.services.sheets.values import is_category_code
 from setout.utils.balances import paid_by_agreement
 
 
@@ -35,30 +35,36 @@ class ExportController:
         return project.name, write.build(book)
 
     async def _plan(self, project: Project, book: write.Book) -> dict[str, str]:
-        scopes = await Scope.filter(project_id=project.id, deleted_at__isnull=True).order_by(
+        categories = await Category.filter(project_id=project.id, deleted_at__isnull=True).order_by(
             "sort_order", "id"
         )
         items = await BudgetItem.filter(
-            scope__project_id=project.id, scope__deleted_at__isnull=True, deleted_at__isnull=True
+            category__project_id=project.id,
+            category__deleted_at__isnull=True,
+            deleted_at__isnull=True,
         )
-        by_scope: dict[str, list[BudgetItem]] = {}
+        by_category: dict[str, list[BudgetItem]] = {}
         for item in items:
-            by_scope.setdefault(item.scope_id, []).append(item)
+            by_category.setdefault(item.category_id, []).append(item)
 
         codes: dict[str, str] = {}
-        for order, scope in enumerate(scopes, start=1):
-            code = scope.code if scope.code and is_scope_code(scope.code) else f"{order}000"
-            codes[scope.id] = code
+        for order, category in enumerate(categories, start=1):
+            code = (
+                category.code
+                if category.code and is_category_code(category.code)
+                else f"{order}000"
+            )
+            codes[category.id] = code
             lines = [
                 write.PlanLine(
                     code=f"{code[:-3]}{number:03d}",
                     name=item.description,
-                    planned_amount=item.planned_amount,
+                    budgeted_amount=item.budgeted_amount,
                     cost_type=item.cost_type.value if item.cost_type else None,
                 )
-                for number, item in enumerate(by_scope.get(scope.id, []), start=1)
+                for number, item in enumerate(by_category.get(category.id, []), start=1)
             ]
-            book.scopes.append(write.PlanScope(code=code, name=scope.name, lines=lines))
+            book.categories.append(write.PlanCategory(code=code, name=category.name, lines=lines))
         return codes
 
     async def _spend(self, project: Project, book: write.Book, codes: dict[str, str]) -> None:
@@ -107,7 +113,7 @@ class ExportController:
             book.spend.append(
                 write.SpendRow(
                     vendor=vendor.name if vendor else "",
-                    code=codes.get(expense.scope_id or "", ""),
+                    code=codes.get(expense.category_id or "", ""),
                     description=expense.description,
                     spent_on=expense.spent_on,
                     amount=expense.amount,

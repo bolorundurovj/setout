@@ -7,18 +7,18 @@ from setout.models.project import Project
 from setout.utils.ids import short_id
 
 
-class Scope(Model):
+class Category(Model):
     id = fields.CharField(max_length=12, primary_key=True, default=short_id)
     project: fields.ForeignKeyRelation[Project] = fields.ForeignKeyField(
         "models.Project",
-        related_name="scopes",
+        related_name="categories",
         on_delete=fields.CASCADE,
     )
     project_id: str
     code = fields.CharField(max_length=32, null=True, default=None)
     name = fields.CharField(max_length=255)
-    parent: fields.ForeignKeyNullableRelation[Scope] = fields.ForeignKeyField(
-        "models.Scope",
+    parent: fields.ForeignKeyNullableRelation[Category] = fields.ForeignKeyField(
+        "models.Category",
         related_name="children",
         null=True,
         default=None,
@@ -31,7 +31,7 @@ class Scope(Model):
     deleted_at = fields.DatetimeField(null=True, default=None)
 
     class Meta:
-        table = "scope"
+        table = "category"
         ordering = ["sort_order", "id"]
 
     def __str__(self) -> str:

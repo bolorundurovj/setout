@@ -11,18 +11,20 @@
     <p class="t-small error">{{ budget.error() }}</p>
   }
 
-  <div class="add-scope">
+  <div class="add-category">
     <app-combobox
       [options]="availablePresets()"
-      [value]="newScopeName()"
+      [value]="newCategoryName()"
       placeholder="Select a category or type your own"
-      (valueChange)="newScopeName.set($event)"
-      (submitted)="addScope()"
+      (valueChange)="newCategoryName.set($event)"
+      (submitted)="addCategory()"
     />
-    <app-button [disabled]="!newScopeName().trim()" (pressed)="addScope()">Add Category</app-button>
+    <app-button [disabled]="!newCategoryName().trim()" (pressed)="addCategory()"
+      >Add Category</app-button
+    >
   </div>
 
-  @if (budget.scopes().length === 0) {
+  @if (budget.categories().length === 0) {
     <div class="card">
       <p class="t-body">No categories yet.</p>
       <p class="t-small">Add the parts of the project you want to budget and track.</p>
@@ -36,41 +38,41 @@
         <span class="t-micro right">Changed</span>
       </div>
 
-      @for (scope of budget.scopes(); track scope.id) {
+      @for (category of budget.categories(); track category.id) {
         <div class="group">
           <div class="row">
-            <button type="button" class="scope-cell" (click)="toggleScope(scope)">
+            <button type="button" class="category-cell" (click)="toggleCategory(category)">
               <span class="swatch"></span>
-              <span class="scope-name">{{ scope.name }}</span>
-              @if (scope.is_group) {
+              <span class="category-name">{{ category.name }}</span>
+              @if (category.is_group) {
                 <span class="t-micro">group</span>
               }
             </button>
 
-            @if (scope.is_group) {
-              <span class="amount-readonly t-mono">{{ money(scope.planned_amount) }}</span>
+            @if (category.is_group) {
+              <span class="amount-readonly t-mono">{{ money(category.budgeted_amount) }}</span>
             } @else {
               <span class="amount">
                 <span class="amount-prefix t-mono">{{ symbol() }}</span>
                 <input
                   class="amount-input t-mono"
                   inputmode="decimal"
-                  [value]="draftFor(scope.id)"
-                  [attr.aria-label]="'Planned amount for ' + scope.name"
-                  (input)="onAmountInput(scope.id, $event)"
-                  (blur)="commit(scope)"
-                  (keyup.enter)="commit(scope)"
+                  [value]="draftFor(category.id)"
+                  [attr.aria-label]="'Budgeted amount for ' + category.name"
+                  (input)="onAmountInput(category.id, $event)"
+                  (blur)="commit(category)"
+                  (keyup.enter)="commit(category)"
                 />
               </span>
             }
 
-            <span class="right t-mono muted">{{ setOn(scope.id) }}</span>
-            <span class="right t-mono muted">{{ changed(scope.id) }}</span>
+            <span class="right t-mono muted">{{ setOn(category.id) }}</span>
+            <span class="right t-mono muted">{{ changed(category.id) }}</span>
           </div>
 
-          @if (openScope() === scope.id && !scope.is_group) {
+          @if (openCategory() === category.id && !category.is_group) {
             <div class="items">
-              @for (item of itemsFor(scope.id); track item.id) {
+              @for (item of itemsFor(category.id); track item.id) {
                 <div class="item">
                   <span class="t-small">
                     {{ item.description }}
@@ -78,17 +80,17 @@
                       <span class="split t-mono">{{ item.cost_type }}</span>
                     }
                   </span>
-                  <span class="right t-mono muted">{{ money(item.planned_amount) }}</span>
+                  <span class="right t-mono muted">{{ money(item.budgeted_amount) }}</span>
                   <button
                     type="button"
                     class="link-action t-mono"
-                    (click)="removeItem(scope, item.id)"
+                    (click)="removeItem(category, item.id)"
                   >
                     Remove
                   </button>
                 </div>
               }
-              @if (itemsFor(scope.id).length === 0) {
+              @if (itemsFor(category.id).length === 0) {
                 <p class="t-small muted">No budget set here yet.</p>
               }
 
@@ -108,7 +110,7 @@
                     aria-label="Budgeted amount for this item"
                     [value]="itemAmount()"
                     (input)="itemAmount.set(asValue($event))"
-                    (keyup.enter)="addLineItem(scope)"
+                    (keyup.enter)="addLineItem(category)"
                   />
                 </span>
                 <app-chip-group
@@ -118,7 +120,7 @@
                   label="Cost Type"
                   (valueChange)="itemCostType.set($event)"
                 />
-                <app-button [disabled]="!canAddItem()" (pressed)="addLineItem(scope)">
+                <app-button [disabled]="!canAddItem()" (pressed)="addLineItem(category)">
                   + Budget Item
                 </app-button>
               </div>
@@ -129,8 +131,8 @@
 
       <div class="row total">
         <span class="total-label">Budgeted Total</span>
-        <span class="right t-mono total-figure">{{ plannedTotal() }}</span>
-        <span class="right t-mono muted">{{ budget.scopes().length }} scopes</span>
+        <span class="right t-mono total-figure">{{ budgetedTotal() }}</span>
+        <span class="right t-mono muted">{{ budget.categories().length }} categories</span>
         <span></span>
       </div>
     </div>

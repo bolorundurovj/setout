@@ -50,18 +50,18 @@ export class DashboardComponent {
   readonly showing = computed(() => this.home.summary()?.currency_code ?? null);
   readonly split = computed(() => this.choices().length > 1);
 
-  readonly planned = computed(() => this.home.summary()?.planned_amount ?? 0);
+  readonly budgeted = computed(() => this.home.summary()?.budgeted_amount ?? 0);
   readonly spent = computed(() => this.home.summary()?.spent_amount ?? 0);
-  readonly left = computed(() => Math.abs(this.planned() - this.spent()));
-  readonly over = computed(() => this.planned() > 0 && this.spent() > this.planned());
+  readonly left = computed(() => Math.abs(this.budgeted() - this.spent()));
+  readonly over = computed(() => this.budgeted() > 0 && this.spent() > this.budgeted());
   readonly leftLabel = computed(() => (this.over() ? 'Over by' : 'Remaining'));
 
   readonly usedLabel = computed(() =>
-    this.planned() ? `${Math.round((this.spent() / this.planned()) * 100)}%` : '—',
+    this.budgeted() ? `${Math.round((this.spent() / this.budgeted()) * 100)}%` : '—',
   );
 
   readonly usedPercent = computed(() =>
-    this.planned() ? Math.min(100, (this.spent() / this.planned()) * 100) : 0,
+    this.budgeted() ? Math.min(100, (this.spent() / this.budgeted()) * 100) : 0,
   );
 
   readonly alerts = computed(() => this.home.summary()?.alerts ?? []);
@@ -169,29 +169,29 @@ export class DashboardComponent {
   }
 
   rowOver(row: HomeProject): boolean {
-    return row.planned_amount > 0 && row.spent_amount > row.planned_amount;
+    return row.budgeted_amount > 0 && row.spent_amount > row.budgeted_amount;
   }
 
   rowFill(row: HomeProject): number {
-    if (!row.planned_amount) {
+    if (!row.budgeted_amount) {
       return row.spent_amount > 0 ? 100 : 0;
     }
-    return Math.min(100, (row.spent_amount / row.planned_amount) * 100);
+    return Math.min(100, (row.spent_amount / row.budgeted_amount) * 100);
   }
 
   rowOverFill(row: HomeProject): number {
     if (!this.rowOver(row)) {
       return 0;
     }
-    const over = row.spent_amount - row.planned_amount;
-    return Math.min(100 - this.rowFill(row), (over / row.planned_amount) * 100);
+    const over = row.spent_amount - row.budgeted_amount;
+    return Math.min(100 - this.rowFill(row), (over / row.budgeted_amount) * 100);
   }
 
   rowStanding(row: HomeProject): string {
-    if (!row.planned_amount) {
+    if (!row.budgeted_amount) {
       return 'No budget set';
     }
-    const gap = Math.abs(row.planned_amount - row.spent_amount);
+    const gap = Math.abs(row.budgeted_amount - row.spent_amount);
     return this.rowOver(row)
       ? `Over by ${this.rowMoney(row, gap)}`
       : `${this.rowMoney(row, gap)} left`;
@@ -214,7 +214,7 @@ export class DashboardComponent {
   }
 
   where(row: HomeSpend): string {
-    return `${row.project_name} · ${row.scope_name ?? 'Uncategorized'}`;
+    return `${row.project_name} · ${row.category_name ?? 'Uncategorized'}`;
   }
 
   barTitle(bar: MonthBar): string {
@@ -241,7 +241,7 @@ export class DashboardComponent {
     void this.router.navigate([
       '/projects',
       row.id,
-      alert.kind === 'unfiled' ? 'table' : 'deliveries',
+      alert.kind === 'uncategorized' ? 'table' : 'deliveries',
     ]);
   }
 

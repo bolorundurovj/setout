@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
+from setout.utils.category_presets import INSERT as PRESET_INSERT
 from setout.utils.currencies import INSERT as CURRENCY_INSERT
 from setout.utils.placeholders import bind
-from setout.utils.scope_presets import INSERT as PRESET_INSERT
 
 pytestmark = pytest.mark.unit
 

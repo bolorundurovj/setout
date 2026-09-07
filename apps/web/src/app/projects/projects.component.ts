@@ -123,10 +123,10 @@ export class ProjectsComponent {
   }
 
   budget(project: ProjectRead): string {
-    if (!project.planned_amount) {
+    if (!project.budgeted_amount) {
       return 'Not set';
     }
-    return formatMoney(project.planned_amount, project.currency_code, project.currency_exponent);
+    return formatMoney(project.budgeted_amount, project.currency_code, project.currency_exponent);
   }
 
   initials(name: string): string {
@@ -142,7 +142,7 @@ export class ProjectsComponent {
     if (project.deleted_at) {
       return 'Deleted. Restore it to bring it back.';
     }
-    if (project.status === 'active' && !project.planned_amount) {
+    if (project.status === 'active' && !project.budgeted_amount) {
       return 'Active. No budget set yet.';
     }
     return STATUS_LINES[project.status];
@@ -192,7 +192,7 @@ export class ProjectsComponent {
   }
 
   isOver(project: ProjectRead): boolean {
-    return project.planned_amount > 0 && project.spent_amount > project.planned_amount;
+    return project.budgeted_amount > 0 && project.spent_amount > project.budgeted_amount;
   }
 
   varianceLabel(project: ProjectRead): string {
@@ -201,26 +201,26 @@ export class ProjectsComponent {
 
   // Nothing to be left of, and nothing to be over, without a budget.
   variance(project: ProjectRead): string {
-    if (!project.planned_amount) {
+    if (!project.budgeted_amount) {
       return this.notSet;
     }
-    const difference = Math.abs(project.planned_amount - project.spent_amount);
+    const difference = Math.abs(project.budgeted_amount - project.spent_amount);
     return formatMoney(difference, project.currency_code, project.currency_exponent);
   }
 
   usedPercent(project: ProjectRead): number {
-    if (!project.planned_amount) {
+    if (!project.budgeted_amount) {
       return 0;
     }
-    return Math.min(100, (project.spent_amount / project.planned_amount) * 100);
+    return Math.min(100, (project.spent_amount / project.budgeted_amount) * 100);
   }
 
   overPercent(project: ProjectRead): number {
-    if (!project.planned_amount || project.spent_amount <= project.planned_amount) {
+    if (!project.budgeted_amount || project.spent_amount <= project.budgeted_amount) {
       return 0;
     }
-    const over = project.spent_amount - project.planned_amount;
-    return Math.min(100 - this.usedPercent(project), (over / project.planned_amount) * 100);
+    const over = project.spent_amount - project.budgeted_amount;
+    return Math.min(100 - this.usedPercent(project), (over / project.budgeted_amount) * 100);
   }
 
   ask(id: string, action: 'archive' | 'delete'): void {

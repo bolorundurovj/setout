@@ -2,7 +2,7 @@
   <div class="stats">
     <div class="stat">
       <span class="t-micro">Budget {{ symbol() }}</span>
-      <span class="stat-value t-mono">{{ bare(planned()) }}</span>
+      <span class="stat-value t-mono">{{ bare(budgeted()) }}</span>
       <span class="t-small note">{{ budgetNote() }}</span>
     </div>
 
@@ -30,9 +30,9 @@
     </div>
   </div>
 
-  <div class="by-scope">
-    <div class="by-scope-head">
-      <h2 class="scope-title">Expenses by Category</h2>
+  <div class="by-category">
+    <div class="by-category-head">
+      <h2 class="category-title">Expenses by Category</h2>
       <span class="t-micro">Spent {{ symbol() }} / Budget {{ symbol() }}</span>
     </div>
 
@@ -42,49 +42,50 @@
         <p class="t-small">Set a budget for a category, or add an expense.</p>
       </div>
     } @else {
-      <div class="scopes">
-        @for (scope of rows(); track scope.id) {
+      <div class="categories">
+        @for (category of rows(); track category.id) {
           <button
             type="button"
-            class="scope-row"
-            [attr.aria-label]="'Open ' + scope.name + ' in the budget versus spend table'"
-            (click)="openScope.emit(scope.id)"
+            class="category-row"
+            [attr.aria-label]="'Open ' + category.name + ' in the budget versus spend table'"
+            (click)="openCategory.emit(category.id)"
           >
-            <span class="scope-name" [class.over-ink]="scopeOver(scope)">
+            <span class="category-name" [class.over-ink]="categoryOver(category)">
               <span
                 class="swatch"
-                [style.background]="tint(scope)"
-                [style.border-color]="tintEdge(scope)"
+                [style.background]="tint(category)"
+                [style.border-color]="tintEdge(category)"
               ></span>
-              {{ scope.name }}
+              {{ category.name }}
             </span>
             <span class="bar">
               <span
                 class="bar-fill"
-                [style.background]="tint(scope)"
-                [style.width.%]="fillPercent(scope)"
+                [style.background]="tint(category)"
+                [style.width.%]="fillPercent(category)"
               ></span>
-              @if (scopeOver(scope)) {
+              @if (categoryOver(category)) {
                 <span
                   class="bar-over"
-                  [style.left.%]="fillPercent(scope)"
-                  [style.width.%]="scopeOverPercent(scope)"
+                  [style.left.%]="fillPercent(category)"
+                  [style.width.%]="categoryOverPercent(category)"
                 ></span>
               }
-              @if (budgetMarkPercent(scope) !== null) {
-                <span class="bar-mark" [style.left.%]="budgetMarkPercent(scope)"></span>
+              @if (budgetMarkPercent(category) !== null) {
+                <span class="bar-mark" [style.left.%]="budgetMarkPercent(category)"></span>
               }
             </span>
-            <span class="scope-figures t-mono" [class.over-ink]="scopeOver(scope)">
-              {{ scopeNote(scope) }}
+            <span class="category-figures t-mono" [class.over-ink]="categoryOver(category)">
+              {{ categoryNote(category) }}
             </span>
           </button>
         }
       </div>
 
-      @if (unfiled() > 0) {
+      @if (uncategorized() > 0) {
         <p class="t-small note">
-          {{ bare(unfiled()) }} of expenses are uncategorized and not included in the bars above.
+          {{ bare(uncategorized()) }} of expenses are uncategorized and not included in the bars
+          above.
         </p>
       }
     }
@@ -92,7 +93,7 @@
 
   @if (alerts().length > 0) {
     <div class="attention">
-      <h2 class="scope-title">Needs Attention</h2>
+      <h2 class="category-title">Needs Attention</h2>
       <div class="alerts">
         @for (alert of alerts(); track alert.key) {
           <button

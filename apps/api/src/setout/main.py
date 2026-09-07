@@ -26,6 +26,7 @@ from setout.routers import (
     agreement,
     attachment,
     auth,
+    category,
     country,
     counts,
     currency,
@@ -41,7 +42,6 @@ from setout.routers import (
     map,
     person,
     project,
-    scope,
     search,
     vendor,
 )
@@ -149,7 +149,7 @@ def create_app() -> FastAPI:
     api.include_router(counts.router)
     api.include_router(install.router)
     api.include_router(project.router)
-    api.include_router(scope.router)
+    api.include_router(category.router)
     api.include_router(expense.router)
     api.include_router(item.router)
     api.include_router(land.router)

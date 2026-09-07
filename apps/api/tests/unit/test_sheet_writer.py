@@ -19,8 +19,8 @@ def a_book() -> write.Book:
     return write.Book(
         project_name="Jacaranda Close, Ewuru",
         exponent=2,
-        scopes=[
-            write.PlanScope(
+        categories=[
+            write.PlanCategory(
                 code="1000",
                 name="Administrative Expenses",
                 lines=[
@@ -104,7 +104,7 @@ def test_the_reader_recognises_every_sheet_the_writer_names() -> None:
     }
 
 
-def test_a_scope_heading_carries_the_total_of_its_lines() -> None:
+def test_a_category_heading_carries_the_total_of_its_lines() -> None:
     rows = sheets_of(write.build(a_book()))["Budget"]
 
     heading = next(row for row in rows if row[0] == "1000")
@@ -207,10 +207,10 @@ class TestWhatSetoutWroteReadsBack:
         book = a_book()
         sheets = self.read_back(book)
 
-        planned = read_budget.read(sheets[Shape.BUDGET], 2)
+        budgeted = read_budget.read(sheets[Shape.BUDGET], 2)
         spend = read_expenses.read(sheets[Shape.EXPENSES], 2)
 
-        assert planned.planned_amount == book.scopes[0].planned_amount
-        assert [line.cost_type for line in planned.scopes[0].lines] == ["fixed", "material"]
+        assert budgeted.budgeted_amount == book.categories[0].budgeted_amount
+        assert [line.cost_type for line in budgeted.categories[0].lines] == ["fixed", "material"]
         assert [row.amount for row in spend.spend] == [book.spend[0].amount]
         assert spend.spend[0].description == "Roofing sheets"

@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { Api, exportProject } from '@setout/api-client';
-import type { ProjectRead, ProjectStatus, ScopeRead } from '@setout/api-client';
+import type { ProjectRead, ProjectStatus, CategoryRead } from '@setout/api-client';
 import { BudgetService } from '../budget/budget.service';
 import { currencyShape } from '../budget/currency-shape';
 import { formatMoney } from '../budget/money';
@@ -58,7 +58,7 @@ export class ProjectSettingsComponent {
   readonly renaming = signal<string | null>(null);
   readonly newName = signal('');
   readonly removing = signal<string | null>(null);
-  readonly justRemoved = signal<ScopeRead | null>(null);
+  readonly justRemoved = signal<CategoryRead | null>(null);
 
   readonly statuses: StatusChoice[] = [
     { value: 'active', name: 'In progress' },
@@ -131,27 +131,27 @@ export class ProjectSettingsComponent {
     this.toast.show('Project saved.');
   }
 
-  tint(scope: ScopeRead): string {
-    const roots = this.budget.scopes().filter((row) => row.parent_id === null);
-    const at = roots.findIndex((row) => row.id === (scope.parent_id ?? scope.id));
-    return at < 0 ? 'tint-unfiled' : `tint-${(at % TINTS) + 1}`;
+  tint(category: CategoryRead): string {
+    const roots = this.budget.categories().filter((row) => row.parent_id === null);
+    const at = roots.findIndex((row) => row.id === (category.parent_id ?? category.id));
+    return at < 0 ? 'tint-uncategorized' : `tint-${(at % TINTS) + 1}`;
   }
 
-  countLabel(scope: ScopeRead): string {
-    if (!scope.expense_count) {
+  countLabel(category: CategoryRead): string {
+    if (!category.expense_count) {
       return 'no expenses';
     }
-    return `${scope.expense_count} ${scope.expense_count === 1 ? 'expense' : 'expenses'}`;
+    return `${category.expense_count} ${category.expense_count === 1 ? 'expense' : 'expenses'}`;
   }
 
-  canRemove(scope: ScopeRead): boolean {
-    return scope.expense_count === 0;
+  canRemove(category: CategoryRead): boolean {
+    return category.expense_count === 0;
   }
 
-  startRename(scope: ScopeRead): void {
+  startRename(category: CategoryRead): void {
     this.removing.set(null);
-    this.renaming.set(scope.id);
-    this.newName.set(scope.name);
+    this.renaming.set(category.id);
+    this.newName.set(category.name);
   }
 
   cancelRename(): void {
@@ -159,13 +159,13 @@ export class ProjectSettingsComponent {
     this.newName.set('');
   }
 
-  async rename(scope: ScopeRead): Promise<void> {
+  async rename(category: CategoryRead): Promise<void> {
     const name = this.newName().trim();
-    if (!name || name === scope.name) {
+    if (!name || name === category.name) {
       this.cancelRename();
       return;
     }
-    const done = await this.budget.renameScope(this.project().id, scope.id, name);
+    const done = await this.budget.renameCategory(this.project().id, category.id, name);
     this.cancelRename();
     this.toast.show(
       done ? `Renamed to ${name}.` : (this.budget.error() ?? 'Could not rename the category.'),
@@ -189,21 +189,21 @@ export class ProjectSettingsComponent {
     void this.router.navigate(['/import'], { queryParams: { project: this.project().id } });
   }
 
-  ask(scope: ScopeRead): void {
+  ask(category: CategoryRead): void {
     this.renaming.set(null);
-    this.removing.set(scope.id);
+    this.removing.set(category.id);
   }
 
   cancelRemove(): void {
     this.removing.set(null);
   }
 
-  async putScopeBack(): Promise<void> {
+  async putCategoryBack(): Promise<void> {
     const gone = this.justRemoved();
     if (!gone) {
       return;
     }
-    const done = await this.budget.putScopeBack(this.project().id, gone.id);
+    const done = await this.budget.putCategoryBack(this.project().id, gone.id);
     this.justRemoved.set(null);
     this.toast.show(
       done ? `${gone.name} is back.` : (this.budget.error() ?? 'Could not restore the category.'),
@@ -211,12 +211,14 @@ export class ProjectSettingsComponent {
     );
   }
 
-  async remove(scope: ScopeRead): Promise<void> {
-    const done = await this.budget.removeScope(this.project().id, scope.id);
+  async remove(category: CategoryRead): Promise<void> {
+    const done = await this.budget.removeCategory(this.project().id, category.id);
     this.removing.set(null);
-    this.justRemoved.set(done ? scope : null);
+    this.justRemoved.set(done ? category : null);
     this.toast.show(
-      done ? `${scope.name} removed.` : (this.budget.error() ?? 'Could not remove the category.'),
+      done
+        ? `${category.name} removed.`
+        : (this.budget.error() ?? 'Could not remove the category.'),
       done ? 'success' : 'error',
     );
   }

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import type { ProjectRead, ScopeRead } from '@setout/api-client';
+import type { ProjectRead, CategoryRead } from '@setout/api-client';
 import { AgreementService } from '../agreements/agreement.service';
 import { BudgetService } from '../budget/budget.service';
 import { DeliveryService } from '../deliveries/delivery.service';
@@ -27,7 +27,7 @@ interface Alert {
 export class ProjectDashboardComponent {
   readonly project = input.required<ProjectRead>();
   readonly openTab = output<string>();
-  readonly openScope = output<string>();
+  readonly openCategory = output<string>();
 
   readonly budget = inject(BudgetService);
   readonly expenses = inject(ExpenseService);
@@ -36,22 +36,22 @@ export class ProjectDashboardComponent {
 
   readonly symbol = computed(() => currencySymbol(this.project().currency_code));
 
-  readonly planned = computed(() => this.expenses.spend()?.planned_amount ?? 0);
+  readonly budgeted = computed(() => this.expenses.spend()?.budgeted_amount ?? 0);
   readonly spent = computed(() => this.expenses.spend()?.spent_amount ?? 0);
-  readonly unfiled = computed(() => this.expenses.spend()?.unfiled_amount ?? 0);
+  readonly uncategorized = computed(() => this.expenses.spend()?.uncategorized_amount ?? 0);
 
-  readonly isOver = computed(() => this.planned() > 0 && this.spent() > this.planned());
+  readonly isOver = computed(() => this.budgeted() > 0 && this.spent() > this.budgeted());
   readonly varianceLabel = computed(() => (this.isOver() ? 'Over by' : 'Remaining'));
 
   readonly varianceAmount = computed(() => {
-    if (!this.planned()) {
+    if (!this.budgeted()) {
       return null;
     }
-    return Math.abs(this.planned() - this.spent());
+    return Math.abs(this.budgeted() - this.spent());
   });
 
   readonly varianceNote = computed(() => {
-    if (!this.planned()) {
+    if (!this.budgeted()) {
       return 'No budget set.';
     }
     const percent = this.expenses.spend()?.variance_percent;
@@ -63,24 +63,24 @@ export class ProjectDashboardComponent {
   });
 
   readonly budgetNote = computed(() =>
-    this.planned() ? `Across ${this.budget.scopes().length} categories.` : 'No budget set.',
+    this.budgeted() ? `Across ${this.budget.categories().length} categories.` : 'No budget set.',
   );
 
   readonly spentNote = computed(() => {
     const count = this.expenses.total();
-    const unfiled = this.unfiled();
+    const uncategorized = this.uncategorized();
     const filed = `${count} ${count === 1 ? 'expense' : 'expenses'}`;
-    return unfiled ? `${filed}, ${this.bare(unfiled)} unfiled.` : `${filed}.`;
+    return uncategorized ? `${filed}, ${this.bare(uncategorized)} uncategorized.` : `${filed}.`;
   });
 
   readonly usedLabel = computed(() =>
-    this.planned() ? `${Math.round((this.spent() / this.planned()) * 100)}%` : '—',
+    this.budgeted() ? `${Math.round((this.spent() / this.budgeted()) * 100)}%` : '—',
   );
 
   readonly rows = computed(() =>
     this.budget
-      .scopes()
-      .filter((scope) => scope.planned_amount > 0 || scope.spent_amount > 0)
+      .categories()
+      .filter((category) => category.budgeted_amount > 0 || category.spent_amount > 0)
       .sort((a, b) => this.overBy(b) - this.overBy(a)),
   );
 
@@ -97,12 +97,12 @@ export class ProjectDashboardComponent {
   readonly alerts = computed<Alert[]>(() => {
     const alerts: Alert[] = [];
 
-    if (this.unfiled() > 0) {
+    if (this.uncategorized() > 0) {
       alerts.push({
-        key: 'unfiled',
+        key: 'uncategorized',
         title: 'Uncategorized expenses',
         detail: 'Uncategorized, so not included in the bars above',
-        amount: this.bare(this.unfiled()),
+        amount: this.bare(this.uncategorized()),
         urgent: true,
         tab: 'table',
       });
@@ -164,65 +164,68 @@ export class ProjectDashboardComponent {
   }
 
   usedPercent(): number {
-    if (!this.planned()) {
+    if (!this.budgeted()) {
       return 0;
     }
-    return Math.min(100, (this.spent() / this.planned()) * 100);
+    return Math.min(100, (this.spent() / this.budgeted()) * 100);
   }
 
   overPercent(): number {
-    if (!this.planned() || this.spent() <= this.planned()) {
+    if (!this.budgeted() || this.spent() <= this.budgeted()) {
       return 0;
     }
-    const over = this.spent() - this.planned();
-    return Math.min(100 - this.usedPercent(), (over / this.planned()) * 100);
+    const over = this.spent() - this.budgeted();
+    return Math.min(100 - this.usedPercent(), (over / this.budgeted()) * 100);
   }
 
   readonly scale = computed(() =>
-    Math.max(1, ...this.rows().map((scope) => Math.max(scope.planned_amount, scope.spent_amount))),
+    Math.max(
+      1,
+      ...this.rows().map((category) => Math.max(category.budgeted_amount, category.spent_amount)),
+    ),
   );
 
-  overBy(scope: ScopeRead): number {
-    return scope.spent_amount - scope.planned_amount;
+  overBy(category: CategoryRead): number {
+    return category.spent_amount - category.budgeted_amount;
   }
 
-  scopeOver(scope: ScopeRead): boolean {
-    return scope.planned_amount > 0 && scope.spent_amount > scope.planned_amount;
+  categoryOver(category: CategoryRead): boolean {
+    return category.budgeted_amount > 0 && category.spent_amount > category.budgeted_amount;
   }
 
-  tint(scope: ScopeRead): string {
-    return tintFor(scope.id).fill;
+  tint(category: CategoryRead): string {
+    return tintFor(category.id).fill;
   }
 
-  tintEdge(scope: ScopeRead): string {
-    return tintFor(scope.id).ink;
+  tintEdge(category: CategoryRead): string {
+    return tintFor(category.id).ink;
   }
 
-  fillPercent(scope: ScopeRead): number {
-    const within = scope.planned_amount
-      ? Math.min(scope.spent_amount, scope.planned_amount)
-      : scope.spent_amount;
+  fillPercent(category: CategoryRead): number {
+    const within = category.budgeted_amount
+      ? Math.min(category.spent_amount, category.budgeted_amount)
+      : category.spent_amount;
     return (within / this.scale()) * 100;
   }
 
-  scopeOverPercent(scope: ScopeRead): number {
-    if (!this.scopeOver(scope)) {
+  categoryOverPercent(category: CategoryRead): number {
+    if (!this.categoryOver(category)) {
       return 0;
     }
-    return ((scope.spent_amount - scope.planned_amount) / this.scale()) * 100;
+    return ((category.spent_amount - category.budgeted_amount) / this.scale()) * 100;
   }
 
-  budgetMarkPercent(scope: ScopeRead): number | null {
-    if (!scope.planned_amount) {
+  budgetMarkPercent(category: CategoryRead): number | null {
+    if (!category.budgeted_amount) {
       return null;
     }
-    return (scope.planned_amount / this.scale()) * 100;
+    return (category.budgeted_amount / this.scale()) * 100;
   }
 
-  scopeNote(scope: ScopeRead): string {
-    if (!scope.planned_amount) {
-      return scope.spent_amount > 0 ? 'No budget set' : '';
+  categoryNote(category: CategoryRead): string {
+    if (!category.budgeted_amount) {
+      return category.spent_amount > 0 ? 'No budget set' : '';
     }
-    return `${this.bare(scope.spent_amount)} / ${this.bare(scope.planned_amount)}`;
+    return `${this.bare(category.spent_amount)} / ${this.bare(category.budgeted_amount)}`;
   }
 }

@@ -50,7 +50,7 @@ async def test_a_fresh_install_has_nothing_to_show(client: AsyncClient) -> None:
     assert summary["projects"] == 0
     assert summary["currencies"] == []
     assert summary["currency_code"] is None
-    assert summary["planned_amount"] == 0
+    assert summary["budgeted_amount"] == 0
     assert summary["alerts"] == []
     assert (await _read(client, "months"))["months"] == []
     assert (await _read(client, "projects"))["rows"] == []
@@ -61,12 +61,14 @@ async def test_it_totals_every_project_that_shares_a_currency(client: AsyncClien
     await _signed_in(client)
     first = await _project(client, "Jacaranda Close")
     second = await _project(client, "Palm Ridge")
-    scope = (await client.post(f"/api/projects/{first}/scopes", json={"name": "Foundation"})).json()
+    category = (
+        await client.post(f"/api/projects/{first}/categories", json={"name": "Foundation"})
+    ).json()
     await client.post(
-        f"/api/scopes/{scope['id']}/budget-items",
-        json={"description": "Sand", "planned_amount": 100_000_00},
+        f"/api/categories/{category['id']}/budget-items",
+        json={"description": "Sand", "budgeted_amount": 100_000_00},
     )
-    await _spend(client, first, amount=40_000_00, scope_id=scope["id"])
+    await _spend(client, first, amount=40_000_00, category_id=category["id"])
     await _spend(client, second, amount=5_000_00)
 
     summary = await _read(client, "summary")
@@ -75,7 +77,7 @@ async def test_it_totals_every_project_that_shares_a_currency(client: AsyncClien
     assert summary["currency_code"] == "NGN"
     assert summary["currency_exponent"] == 2
     assert summary["currency_projects"] == 2
-    assert summary["planned_amount"] == 100_000_00
+    assert summary["budgeted_amount"] == 100_000_00
     assert summary["spent_amount"] == 45_000_00
 
 
@@ -94,7 +96,7 @@ async def test_it_lists_every_currency_in_use_with_its_project_count(client: Asy
     assert summary["projects"] == 3
 
 
-async def test_asking_for_a_currency_scopes_the_whole_screen(client: AsyncClient) -> None:
+async def test_asking_for_a_currency_categories_the_whole_screen(client: AsyncClient) -> None:
     await _signed_in(client)
     naira = await _project(client, "Jacaranda Close", "NGN")
     dollars = await _project(client, "Somewhere Else", "USD")
@@ -140,7 +142,7 @@ async def test_a_currency_is_read_however_it_is_typed(client: AsyncClient) -> No
     assert (await _read(client, "summary", "usd"))["currency_code"] == "USD"
 
 
-async def test_each_project_says_what_it_planned_spent_and_holds(client: AsyncClient) -> None:
+async def test_each_project_says_what_it_budgeted_spent_and_holds(client: AsyncClient) -> None:
     await _signed_in(client)
     project_id = await _project(client, "Jacaranda Close")
     await _spend(client, project_id, amount=10_000_00)
@@ -151,7 +153,7 @@ async def test_each_project_says_what_it_planned_spent_and_holds(client: AsyncCl
     assert row["name"] == "Jacaranda Close"
     assert row["spent_amount"] == 12_500_00
     assert row["expense_count"] == 2
-    assert row["planned_amount"] == 0
+    assert row["budgeted_amount"] == 0
 
 
 async def test_a_project_with_no_spend_still_reads_as_nothing_spent(client: AsyncClient) -> None:
@@ -209,32 +211,34 @@ async def test_the_latest_spend_is_the_newest_six(client: AsyncClient) -> None:
     )
 
 
-async def test_a_latest_row_names_the_scope_or_says_there_is_none(client: AsyncClient) -> None:
+async def test_a_latest_row_names_the_category_or_says_there_is_none(client: AsyncClient) -> None:
     await _signed_in(client)
     project_id = await _project(client, "Jacaranda Close")
-    scope = (
-        await client.post(f"/api/projects/{project_id}/scopes", json={"name": "Foundation"})
+    category = (
+        await client.post(f"/api/projects/{project_id}/categories", json={"name": "Foundation"})
     ).json()
-    await _spend(client, project_id, description="Filed", scope_id=scope["id"])
-    await _spend(client, project_id, description="Unfiled")
+    await _spend(client, project_id, description="Filed", category_id=category["id"])
+    await _spend(client, project_id, description="Uncategorized")
 
     latest = (await _read(client, "latest"))["rows"]
-    rows = {row["description"]: row["scope_name"] for row in latest}
+    rows = {row["description"]: row["category_name"] for row in latest}
 
     assert rows["Filed"] == "Foundation"
-    assert rows["Unfiled"] is None
+    assert rows["Uncategorized"] is None
 
 
-async def test_it_names_spend_with_no_scope_across_projects(client: AsyncClient) -> None:
+async def test_it_names_spend_with_no_category_across_projects(client: AsyncClient) -> None:
     await _signed_in(client)
     first = await _project(client, "Jacaranda Close")
     second = await _project(client, "Palm Ridge")
     await _spend(client, first, amount=30_000_00)
     await _spend(client, second, amount=23_000_00)
 
-    alert = [a for a in (await _read(client, "summary"))["alerts"] if a["kind"] == "unfiled"][0]
+    alert = [a for a in (await _read(client, "summary"))["alerts"] if a["kind"] == "uncategorized"][
+        0
+    ]
 
-    assert alert["title"] == "Spend with no scope"
+    assert alert["title"] == "Spend with no category"
     assert alert["detail"] == "2 receipts across 2 projects"
     assert alert["amount"] == 53_000_00
     assert alert["urgent"] is True
@@ -259,10 +263,10 @@ async def test_it_names_what_is_paid_for_and_not_delivered(client: AsyncClient) 
 async def test_nothing_wrong_means_nothing_to_say(client: AsyncClient) -> None:
     await _signed_in(client)
     project_id = await _project(client, "Jacaranda Close")
-    scope = (
-        await client.post(f"/api/projects/{project_id}/scopes", json={"name": "Foundation"})
+    category = (
+        await client.post(f"/api/projects/{project_id}/categories", json={"name": "Foundation"})
     ).json()
-    await _spend(client, project_id, scope_id=scope["id"])
+    await _spend(client, project_id, category_id=category["id"])
 
     assert (await _read(client, "summary"))["alerts"] == []
 
@@ -275,7 +279,7 @@ async def test_an_alert_counts_only_the_currency_it_is_read_in(client: AsyncClie
     await _spend(client, dollars, amount=1_000_00)
 
     alerts = (await _read(client, "summary", "USD"))["alerts"]
-    alert = [a for a in alerts if a["kind"] == "unfiled"][0]
+    alert = [a for a in alerts if a["kind"] == "uncategorized"][0]
 
     assert alert["detail"] == "1 receipt across 1 project"
     assert alert["amount"] == 1_000_00

@@ -15,14 +15,14 @@ import { currencySymbol } from '../ui/currency-pill.component';
 import { PaginationComponent } from '../ui/pagination.component';
 import { tintFor } from '../ui/tints';
 
-/** A scope line, or the standing line for spend that reached no scope. */
+/** A category line, or the standing line for spend that reached no category. */
 export interface CompareRow {
   id: string;
   name: string;
-  planned: number;
+  budgeted: number;
   spent: number;
   count: number;
-  isUnfiled: boolean;
+  isUncategorized: boolean;
 }
 
 @Component({
@@ -35,7 +35,7 @@ export interface CompareRow {
 })
 export class BudgetCompareComponent {
   readonly project = input.required<ProjectRead>();
-  readonly openScope = input('');
+  readonly openCategory = input('');
 
   readonly budget = inject(BudgetService);
   readonly expenses = inject(ExpenseService);
@@ -45,39 +45,39 @@ export class BudgetCompareComponent {
   readonly symbol = computed(() => currencySymbol(this.project().currency_code));
 
   readonly rows = computed<CompareRow[]>(() => {
-    const rows: CompareRow[] = this.budget.scopes().map((scope) => ({
-      id: scope.id,
-      name: scope.name,
-      planned: scope.planned_amount,
-      spent: scope.spent_amount,
-      count: scope.expense_count,
-      isUnfiled: false,
+    const rows: CompareRow[] = this.budget.categories().map((category) => ({
+      id: category.id,
+      name: category.name,
+      budgeted: category.budgeted_amount,
+      spent: category.spent_amount,
+      count: category.expense_count,
+      isUncategorized: false,
     }));
 
-    const unfiled = this.expenses.spend()?.unfiled_amount ?? 0;
-    if (unfiled > 0) {
+    const uncategorized = this.expenses.spend()?.uncategorized_amount ?? 0;
+    if (uncategorized > 0) {
       rows.push({
         id: UNFILED,
         name: 'Uncategorized',
-        planned: 0,
-        spent: unfiled,
-        count: this.expenses.spend()?.unfiled_count ?? 0,
-        isUnfiled: true,
+        budgeted: 0,
+        spent: uncategorized,
+        count: this.expenses.spend()?.uncategorized_count ?? 0,
+        isUncategorized: true,
       });
     }
     return rows;
   });
 
-  readonly plannedTotal = computed(() => this.expenses.spend()?.planned_amount ?? 0);
+  readonly budgetedTotal = computed(() => this.expenses.spend()?.budgeted_amount ?? 0);
   readonly spentTotal = computed(() => this.expenses.spend()?.spent_amount ?? 0);
 
   readonly totalOver = computed(
-    () => this.plannedTotal() > 0 && this.spentTotal() > this.plannedTotal(),
+    () => this.budgetedTotal() > 0 && this.spentTotal() > this.budgetedTotal(),
   );
-  readonly totalLeft = computed(() => this.plannedTotal() - this.spentTotal());
+  readonly totalLeft = computed(() => this.budgetedTotal() - this.spentTotal());
 
   readonly totalUsed = computed(() =>
-    this.plannedTotal() ? `${Math.round((this.spentTotal() / this.plannedTotal()) * 100)}%` : '—',
+    this.budgetedTotal() ? `${Math.round((this.spentTotal() / this.budgetedTotal()) * 100)}%` : '—',
   );
 
   readonly countLabel = computed(() => {
@@ -100,7 +100,7 @@ export class BudgetCompareComponent {
       void this.expenses.load(this.project().id);
     });
     effect(() => {
-      const asked = this.openScope();
+      const asked = this.openCategory();
       if (asked) {
         this.expand(asked);
       }
@@ -125,10 +125,10 @@ export class BudgetCompareComponent {
     this.expand(row.id);
   }
 
-  private expand(scopeId: string): void {
-    this.expanded.set(scopeId);
-    if (!this.expenses.byScope()[scopeId]) {
-      void this.expenses.loadForScope(this.project().id, scopeId);
+  private expand(categoryId: string): void {
+    this.expanded.set(categoryId);
+    if (!this.expenses.byCategory()[categoryId]) {
+      void this.expenses.loadForCategory(this.project().id, categoryId);
     }
   }
 
@@ -137,35 +137,35 @@ export class BudgetCompareComponent {
   }
 
   tint(row: CompareRow): string {
-    return row.isUnfiled ? 'var(--warn-surface)' : tintFor(row.id).fill;
+    return row.isUncategorized ? 'var(--warn-surface)' : tintFor(row.id).fill;
   }
 
   tintEdge(row: CompareRow): string {
-    return row.isUnfiled ? 'var(--warn-edge)' : tintFor(row.id).ink;
+    return row.isUncategorized ? 'var(--warn-edge)' : tintFor(row.id).ink;
   }
 
   rowExpenses(row: CompareRow): Nested | undefined {
-    return this.expenses.byScope()[row.id];
+    return this.expenses.byCategory()[row.id];
   }
 
   async goTo(row: CompareRow, page: number): Promise<void> {
-    await this.expenses.loadForScope(this.project().id, row.id, page);
+    await this.expenses.loadForCategory(this.project().id, row.id, page);
   }
 
   over(row: CompareRow): boolean {
-    return row.planned > 0 && row.spent > row.planned;
+    return row.budgeted > 0 && row.spent > row.budgeted;
   }
 
   left(row: CompareRow): string {
-    return row.planned ? this.bare(row.planned - row.spent) : '—';
+    return row.budgeted ? this.bare(row.budgeted - row.spent) : '—';
   }
 
   used(row: CompareRow): string {
-    return row.planned ? `${Math.round((row.spent / row.planned) * 100)}%` : '—';
+    return row.budgeted ? `${Math.round((row.spent / row.budgeted) * 100)}%` : '—';
   }
 
   budgetCell(row: CompareRow): string {
-    return row.planned ? this.bare(row.planned) : '—';
+    return row.budgeted ? this.bare(row.budgeted) : '—';
   }
 
   rowCount(row: CompareRow): string {

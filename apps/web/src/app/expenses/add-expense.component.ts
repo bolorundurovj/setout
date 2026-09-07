@@ -16,7 +16,7 @@ import type {
   ExpenseRead,
   ItemLastPrice,
   ProjectRead,
-  ScopeSuggestion,
+  CategorySuggestion,
 } from '@setout/api-client';
 import { AgreementService } from '../agreements/agreement.service';
 import { AttachmentService } from '../attachments/attachment.service';
@@ -67,7 +67,7 @@ export class AddExpenseComponent {
   private readonly deliveries = inject(DeliveryService);
   readonly attachments = inject(AttachmentService);
 
-  readonly scopeId = signal('');
+  readonly categoryId = signal('');
   readonly description = signal('');
   readonly spentOn = signal(isoDay());
   readonly costType = signal('');
@@ -89,8 +89,8 @@ export class AddExpenseComponent {
   readonly owedWhen = signal('');
   readonly addingVendor = signal(false);
   readonly newVendorName = signal('');
-  readonly suggestedScopeId = signal<string | null>(null);
-  readonly scopeExplicitlyCleared = signal(false);
+  readonly suggestedCategoryId = signal<string | null>(null);
+  readonly categoryExplicitlyCleared = signal(false);
 
   private readonly photo = viewChild.required<ElementRef<HTMLInputElement>>('photo');
   readonly chosen = signal<File | null>(null);
@@ -98,12 +98,12 @@ export class AddExpenseComponent {
 
   readonly symbol = computed(() => currencySymbol(this.project().currency_code));
 
-  readonly scopeChips = computed<Chip[]>(() => [
+  readonly categoryChips = computed<Chip[]>(() => [
     { value: '', label: 'Not sure yet' },
     ...this.budget
-      .scopes()
-      .filter((scope) => !scope.is_group)
-      .map((scope) => ({ value: scope.id, label: scope.name })),
+      .categories()
+      .filter((category) => !category.is_group)
+      .map((category) => ({ value: category.id, label: category.name })),
   ]);
 
   readonly dateChips = computed<Chip[]>(() => [
@@ -179,16 +179,16 @@ export class AddExpenseComponent {
       }
     });
     effect(() => {
-      if (this.isEditing() || this.budget.scopes().length === 0) {
+      if (this.isEditing() || this.budget.categories().length === 0) {
         return;
       }
       const itemId = this.itemId();
       const vendorId = this.vendorId();
       if (!itemId && !vendorId) {
-        this.suggestedScopeId.set(null);
+        this.suggestedCategoryId.set(null);
         return;
       }
-      void this.suggestScope(itemId, vendorId);
+      void this.suggestCategory(itemId, vendorId);
     });
     queueMicrotask(() => {
       void this.budget.load(this.project().id);
@@ -230,15 +230,15 @@ export class AddExpenseComponent {
     return formatMoney(minor, project.currency_code, project.currency_exponent);
   }
 
-  scopeNote(): string {
-    const scope = this.budget.scopes().find((s) => s.id === this.scopeId());
-    if (!scope) {
+  categoryNote(): string {
+    const category = this.budget.categories().find((s) => s.id === this.categoryId());
+    if (!category) {
       return 'Saved as Uncategorized. You can assign a category later.';
     }
-    if (this.scopeId() === this.suggestedScopeId()) {
-      return `Suggested from past purchases. Counts against the budget for ${scope.name}.`;
+    if (this.categoryId() === this.suggestedCategoryId()) {
+      return `Suggested from past purchases. Counts against the budget for ${category.name}.`;
     }
-    return `Counts against the budget for ${scope.name}.`;
+    return `Counts against the budget for ${category.name}.`;
   }
 
   dateNote(): string {
@@ -315,22 +315,22 @@ export class AddExpenseComponent {
     }
   }
 
-  pickScope(scopeId: string): void {
-    this.scopeId.set(scopeId);
-    this.suggestedScopeId.set(null);
-    this.scopeExplicitlyCleared.set(scopeId === '');
+  pickCategory(categoryId: string): void {
+    this.categoryId.set(categoryId);
+    this.suggestedCategoryId.set(null);
+    this.categoryExplicitlyCleared.set(categoryId === '');
   }
 
-  private async suggestScope(itemId: string, vendorId: string): Promise<void> {
-    const suggestion: ScopeSuggestion | null = await this.expenses.suggestScope(
+  private async suggestCategory(itemId: string, vendorId: string): Promise<void> {
+    const suggestion: CategorySuggestion | null = await this.expenses.suggestCategory(
       this.project().id,
       itemId || undefined,
       vendorId || undefined,
     );
-    if (suggestion?.scope_id && !this.scopeId()) {
-      this.scopeId.set(suggestion.scope_id);
-      this.suggestedScopeId.set(suggestion.scope_id);
-      this.scopeExplicitlyCleared.set(false);
+    if (suggestion?.category_id && !this.categoryId()) {
+      this.categoryId.set(suggestion.category_id);
+      this.suggestedCategoryId.set(suggestion.category_id);
+      this.categoryExplicitlyCleared.set(false);
     }
   }
 
@@ -381,8 +381,8 @@ export class AddExpenseComponent {
     this.description.set(expense.description);
     this.amount.set(major(expense.amount));
     this.spentOn.set(expense.spent_on);
-    this.scopeId.set(expense.scope_id ?? '');
-    this.scopeExplicitlyCleared.set(expense.scope_id === null);
+    this.categoryId.set(expense.category_id ?? '');
+    this.categoryExplicitlyCleared.set(expense.category_id === null);
     this.itemId.set(expense.item_id ?? '');
     this.agreementId.set(expense.agreement_id ?? '');
     this.vendorId.set(expense.vendor_id ?? '');
@@ -468,7 +468,7 @@ export class AddExpenseComponent {
       description: this.description().trim(),
       amount: derived === null ? amount : null,
       spent_on: this.spentOn() || null,
-      scope_id: this.scopeId() || null,
+      category_id: this.categoryId() || null,
       item_id: this.itemId() || null,
       vendor_id: this.vendorId() || null,
       agreement_id: this.agreementId() || null,
@@ -484,7 +484,7 @@ export class AddExpenseComponent {
       ? await this.expenses.update(this.project().id, existing.id, body)
       : await this.expenses.add(this.project().id, {
           ...body,
-          auto_scope: !this.scopeExplicitlyCleared(),
+          auto_categorize: !this.categoryExplicitlyCleared(),
         });
 
     if (!saved) {
@@ -529,8 +529,8 @@ export class AddExpenseComponent {
     this.notes.set('');
     this.itemId.set('');
     this.lastPrice.set(null);
-    this.suggestedScopeId.set(null);
-    this.scopeExplicitlyCleared.set(false);
+    this.suggestedCategoryId.set(null);
+    this.categoryExplicitlyCleared.set(false);
     this.owed.set(false);
     this.owedWhat.set('');
     this.owedWhen.set('');
