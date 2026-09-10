@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Setout Spend Data Flow",
+    "quality_profile": "showcase",
+    "viewBox": [1080, 500]
+  },
+  "stages": [
+    { "label": "Capture" },
+    { "label": "Persist" },
+    { "label": "Compute" },
+    { "label": "Report" }
+  ],
+  "nodes": [
+    { "id": "budget_form", "type": "frontend", "label": "Budget entry", "sublabel": "category · amount", "stage": 0, "row": 0, "tag": "set deliberately", "width": 140 },
+    { "id": "form", "type": "frontend", "label": "Expense form", "sublabel": "description · amount · date", "stage": 0, "row": 1, "tag": "one-handed", "width": 150 },
+    { "id": "budget", "type": "database", "label": "Budget item", "sublabel": "budgeted_amount", "stage": 1, "row": 0, "tag": "set_at", "width": 140 },
+    { "id": "expense", "type": "database", "label": "Expense", "sublabel": "amount · soft delete", "stage": 1, "row": 1, "tag": "minor units", "width": 140 },
+    { "id": "attachment", "type": "cloud", "label": "Attachment", "sublabel": "receipt photo", "stage": 1, "row": 2, "tag": "sha256 name", "width": 130 },
+    { "id": "compute", "type": "backend", "label": "Calculations", "sublabel": "balances · budgets · prices", "stage": 2, "row": 0, "tag": "utils", "width": 170 },
+    { "id": "totals", "type": "backend", "label": "Project totals", "sublabel": "budgeted vs spent", "stage": 3, "row": 0, "tag": "one currency", "width": 140 },
+    { "id": "workbook", "type": "backend", "label": "Spreadsheet", "sublabel": "import · export", "stage": 3, "row": 2, "tag": "xlsx", "width": 130 }
+  ],
+  "flows": [
+    { "id": "set-budget", "from": "budget_form", "to": "budget", "label": "set amount", "variant": "default" },
+    { "id": "record-spend", "from": "form", "to": "expense", "label": "record spend", "variant": "emphasis", "route": "straight" },
+    { "id": "upload-receipt", "from": "form", "to": "attachment", "label": "upload receipt", "variant": "dashed" },
+    { "id": "budget-in", "from": "budget", "to": "compute", "label": "budgeted", "variant": "default", "route": "straight" },
+    { "id": "spend-in", "from": "expense", "to": "compute", "label": "spend", "variant": "emphasis" },
+    { "id": "balances-out", "from": "compute", "to": "totals", "label": "balances", "variant": "emphasis", "route": "straight" },
+    { "id": "export-rows", "from": "compute", "to": "workbook", "label": "rows", "variant": "default" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "Spend and budget apart", "items": ["An expense records spending and never writes a budget value", "A budget belongs to a category and is set deliberately", "Amounts are whole minor units, never floats"] },
+    { "dot": "rose", "title": "Reports", "items": ["Totals compare budgeted against spent per project", "Spreadsheet import and export", "Soft deletes cascade and restore"] }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Project Lifecycle",
+    "quality_profile": "showcase",
+    "viewBox": [1376, 640]
+  },
+  "lanes": [
+    { "id": "main", "label": "Project status" },
+    { "id": "terminal", "label": "End states" }
+  ],
+  "states": [
+    { "id": "active", "type": "start", "label": "Active", "lane": "main", "col": 0, "step": "01" },
+    { "id": "on_hold", "type": "waiting", "label": "On hold", "lane": "main", "col": 1, "step": "02" },
+    { "id": "completed", "type": "success", "label": "Completed", "lane": "main", "col": 2, "step": "03" },
+    { "id": "archived", "type": "neutral", "label": "Archived", "lane": "main", "col": 3, "step": "04" },
+    { "id": "deleted", "type": "failure", "label": "Deleted", "lane": "terminal", "col": 1, "step": "05" }
+  ],
+  "transitions": [
+    { "from": "active", "to": "on_hold", "label": "pause", "variant": "default" },
+    { "from": "on_hold", "to": "active", "label": "resume", "variant": "emphasis", "route": "bottom-channel", "labelDx": 30 },
+    { "from": "active", "to": "completed", "label": "complete", "variant": "emphasis", "route": "bottom-channel" },
+    { "from": "completed", "to": "archived", "label": "archive", "variant": "default", "labelDy": -25 },
+    { "from": "archived", "to": "deleted", "label": "delete", "variant": "security", "labelDy": 30 },
+    { "from": "deleted", "to": "archived", "label": "restore", "variant": "dashed", "route": "right-channel" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Status flow", "items": ["A project is created Active and tracks spending", "On hold pauses it; Completed finishes the build", "Only an Archived project can be deleted"] },
+    { "dot": "rose", "title": "Soft delete", "items": ["Delete keeps the row and can be restored", "On hold is recoverable back to Active"] }
+  ]
+}
