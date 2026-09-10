@@ -52,3 +52,6 @@ prototype/
 # Exported transcripts, wherever /export drops them.
 *-local-command-caveat*.txt
 2???-??-??-??????-*.txt
+
+.agents/
+skills-lock.json
