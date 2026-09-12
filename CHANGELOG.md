@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.1.0](https://github.com/bolorundurovj/setout/compare/v2.0.1...v2.1.0) (2026-09-12)
+
+
+### Features
+
+* **land:** link geojson.io in the boundary hint ([2882d35](https://github.com/bolorundurovj/setout/commit/2882d3592c96bf2b292eb43f027f0e5160171f5a))
+* **land:** link geojson.io in the boundary hint ([4eb9d4d](https://github.com/bolorundurovj/setout/commit/4eb9d4de8139530c8abb550db56c69ad714d6319))
+
+
+### Documentation
+
+* add Setout system diagrams ([196d026](https://github.com/bolorundurovj/setout/commit/196d02679ff18edd799a7ab4dc9ad4342052f8de))
+* note diagram regeneration and ignore agent skills ([3667213](https://github.com/bolorundurovj/setout/commit/3667213e90ddd417c5e23667df9114054ba44245))
+
+
+### Build and dependencies
+
+* **deps-dev:** bump ruff from 0.16.3 to 0.16.6 in /apps/api ([#46](https://github.com/bolorundurovj/setout/issues/46)) ([18ac9d1](https://github.com/bolorundurovj/setout/commit/18ac9d19d22c9ab057b4df75364a3283b7ad1ef5))
+* **deps:** bump actions/attest-build-provenance from 2 to 4 ([#28](https://github.com/bolorundurovj/setout/issues/28)) ([e08e541](https://github.com/bolorundurovj/setout/commit/e08e541d026ad87f9ada5d1879af6eb655ea5eba))
+* **deps:** bump actions/upload-artifact from 4 to 7 ([#30](https://github.com/bolorundurovj/setout/issues/30)) ([2def16a](https://github.com/bolorundurovj/setout/commit/2def16a4deca5fed6ae4a9ec92feb6758cf79cf4))
+* **deps:** bump boto3 from 1.43.81 to 1.43.90 in /apps/api ([#47](https://github.com/bolorundurovj/setout/issues/47)) ([fa4024c](https://github.com/bolorundurovj/setout/commit/fa4024c2d2b7b8f6a5999c63de170a39db067e3f))
+* **deps:** bump docker/build-push-action from 6 to 7 ([#24](https://github.com/bolorundurovj/setout/issues/24)) ([412e9ce](https://github.com/bolorundurovj/setout/commit/412e9cebf801df8a17821a006f93ee431f1c0916))
+* **deps:** bump docker/login-action from 3 to 4 ([#26](https://github.com/bolorundurovj/setout/issues/26)) ([508fa5c](https://github.com/bolorundurovj/setout/commit/508fa5cc1db9ebb2e30de0e1e0be5e3b8dc1a465))
+* **deps:** bump docker/metadata-action from 5 to 6 ([#23](https://github.com/bolorundurovj/setout/issues/23)) ([dd497e0](https://github.com/bolorundurovj/setout/commit/dd497e0e39d542ceb2534e7df8b2560067f9e736))
+
 ## [2.0.1](https://github.com/bolorundurovj/setout/compare/v2.0.0...v2.0.1) (2026-09-07)
 
 
