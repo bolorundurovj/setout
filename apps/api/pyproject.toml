@@ -26,14 +26,14 @@ dependencies = [
     "bcrypt==5.0.0",
     "email-validator==2.3.0",
     "python-multipart==0.0.32",
-    "boto3==1.43.81",
+    "boto3==1.43.90",
     "httpx==0.28.1",
     "openpyxl==3.1.5",
 ]
 
 [dependency-groups]
 dev = [
-    "ruff==0.16.3",
+    "ruff==0.16.6",
     "mypy==2.3.1",
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
