@@ -36,6 +36,7 @@ else
 fi
 
 echo "Generating TypeScript client"
+rm -rf "$SDK_DIR/src"
 ( cd "$SDK_DIR" && yarn ng-openapi-gen --config ng-openapi-gen.json )
 
 # The generator writes CRLF on Windows, which leaves the committed client
