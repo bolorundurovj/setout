@@ -17,6 +17,8 @@ class User(Model):
         default=None,
         description="Which currency the home screen opens on",
     )
+    failed_logins = fields.IntField(default=0, db_default=0)
+    last_failed_at = fields.DatetimeField(null=True, default=None)
     created_at = fields.DatetimeField(auto_now_add=True)
 
     class Meta:

@@ -1,8 +1,33 @@
+import asyncio
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from httpx import AsyncClient
 
+from setout.config import get_settings
 from setout.models.currency import Currency
+from setout.models.user import Session, User
 from setout.services.auth import read_session_id, sign_session_id
+
+
+@pytest.fixture(autouse=True)
+def _no_waiting(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No waiting, so the suite stays quick. The ceiling is a count, not a duration."""
+    monkeypatch.setenv("SETOUT_LOGIN_DELAY_SECONDS", "0")
+    get_settings.cache_clear()
+
+
+async def _setup(client: AsyncClient, password: str = "password123") -> None:
+    resp = await client.post("/api/auth/setup", json={"name": "Admin", "password": password})
+    assert resp.status_code == 200, resp.text
+
+
+async def _wrong(client: AsyncClient, times: int = 1) -> int:
+    status = 0
+    for _ in range(times):
+        resp = await client.post("/api/auth/login", json={"password": "nope"})
+        status = resp.status_code
+    return status
 
 
 @pytest.mark.asyncio
@@ -226,3 +251,125 @@ async def test_it_refuses_a_base_currency_it_does_not_know(client: AsyncClient) 
 
     assert resp.status_code == 422
     assert "Unknown currency" in resp.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_a_burst_of_wrong_passphrases_is_refused_rather_than_answered(
+    client: AsyncClient,
+) -> None:
+    await _setup(client)
+    settings = get_settings()
+
+    assert await _wrong(client, settings.login_max_attempts) == 401
+
+    refused = await client.post("/api/auth/login", json={"password": "nope"})
+    assert refused.status_code == 429
+    assert refused.headers["Retry-After"] == str(settings.login_retry_after_seconds)
+
+    # The ceiling applies to the right passphrase too.
+    assert (
+        await client.post("/api/auth/login", json={"password": "password123"})
+    ).status_code == 429
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_the_wait_doubles_before_the_refusal_arrives(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _setup(client)
+    monkeypatch.setenv("SETOUT_LOGIN_DELAY_SECONDS", "1")
+    get_settings.cache_clear()
+
+    waited: list[float] = []
+
+    async def _record(seconds: float) -> None:
+        waited.append(seconds)
+
+    monkeypatch.setattr(asyncio, "sleep", _record)
+
+    await _wrong(client, 6)
+    assert waited == [1.0, 2.0, 4.0]
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_the_right_passphrase_clears_what_the_wrong_ones_counted(
+    client: AsyncClient,
+) -> None:
+    await _setup(client)
+    await _wrong(client, 4)
+    assert (await User.first()).failed_logins == 4
+
+    assert (
+        await client.post("/api/auth/login", json={"password": "password123"})
+    ).status_code == 200
+
+    user = await User.first()
+    assert user is not None
+    assert user.failed_logins == 0
+    assert user.last_failed_at is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_failures_are_forgotten_once_the_window_has_passed(client: AsyncClient) -> None:
+    await _setup(client)
+    await _wrong(client, get_settings().login_max_attempts)
+    assert await _wrong(client) == 429
+
+    user = await User.first()
+    assert user is not None
+    user.last_failed_at = datetime.now(UTC) - timedelta(
+        seconds=get_settings().login_retry_after_seconds + 60
+    )
+    await user.save()
+
+    assert await _wrong(client) == 401
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_an_expired_session_is_swept_when_somebody_signs_in(client: AsyncClient) -> None:
+    await _setup(client)
+    user = await User.first()
+    assert user is not None
+    await Session.create(id="stale", user=user, expires_at=datetime.now(UTC) - timedelta(days=1))
+
+    await client.post("/api/auth/login", json={"password": "password123"})
+
+    assert await Session.get_or_none(id="stale") is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_a_session_past_half_its_window_is_pushed_out(client: AsyncClient) -> None:
+    await _setup(client)
+    session = await Session.all().first()
+    assert session is not None
+    nearly_gone = datetime.now(UTC) + timedelta(days=2)
+    session.expires_at = nearly_gone
+    await session.save()
+
+    resp = await client.get("/api/auth/me")
+    assert resp.status_code == 200
+    assert "setout_session" in resp.headers.get("set-cookie", "")
+
+    again = await Session.get(id=session.id)
+    assert again.expires_at > nearly_gone
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_a_fresh_session_is_left_where_it_is(client: AsyncClient) -> None:
+    await _setup(client)
+    session = await Session.all().first()
+    assert session is not None
+    before = session.expires_at
+
+    resp = await client.get("/api/auth/me")
+    assert resp.status_code == 200
+    assert "set-cookie" not in resp.headers
+
+    assert (await Session.get(id=session.id)).expires_at == before
