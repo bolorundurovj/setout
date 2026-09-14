@@ -209,6 +209,139 @@ async def test_an_archived_expense_is_listed_only_when_asked_for(client: AsyncCl
     assert spend["spent_amount"] == 11_000_00
 
 
+async def _vendor(client: AsyncClient, name: str = "Corner Depot Cement") -> str:
+    resp = await client.post("/api/vendors", json={"name": name})
+    return str(resp.json()["id"])
+
+
+async def _person(client: AsyncClient, name: str = "Mummy") -> str:
+    resp = await client.post("/api/people", json={"name": name})
+    return str(resp.json()["id"])
+
+
+async def _item(client: AsyncClient, name: str = "Cement") -> str:
+    resp = await client.post("/api/items", json={"name": name})
+    return str(resp.json()["id"])
+
+
+async def _listed(client: AsyncClient, project_id: str, **params: object) -> dict:
+    resp = await client.get(f"/api/projects/{project_id}/expenses", params=params)
+    assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
+async def test_the_list_matches_part_of_a_description_or_a_note(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    await _spend(client, project_id, description="17 bags of cement")
+    await _spend(client, project_id, description="Blocks", notes="paid in cement money")
+    await _spend(client, project_id, description="Diesel")
+
+    page = await _listed(client, project_id, search="cement")
+    assert {row["description"] for row in page["items"]} == {"17 bags of cement", "Blocks"}
+    assert page["total"] == 2
+
+
+async def test_the_list_narrows_to_a_vendor_a_person_or_an_item(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    vendor_id = await _vendor(client)
+    person_id = await _person(client)
+    item_id = await _item(client)
+    await _spend(client, project_id, description="From the depot", vendor_id=vendor_id)
+    await _spend(client, project_id, description="Mummy paid", paid_by_id=person_id)
+    await _spend(client, project_id, description="Cement", item_id=item_id)
+    await _spend(client, project_id, description="Nothing attributed")
+
+    assert (await _listed(client, project_id, vendor_id=vendor_id))["total"] == 1
+    assert (await _listed(client, project_id, paid_by_id=person_id))["total"] == 1
+    assert (await _listed(client, project_id, item_id=item_id))["total"] == 1
+
+
+async def test_a_date_range_takes_both_ends_with_it(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    for day in ("2026-02-28", "2026-03-01", "2026-03-17", "2026-03-31", "2026-04-01"):
+        await _spend(client, project_id, description=day, spent_on=day)
+
+    page = await _listed(client, project_id, spent_from="2026-03-01", spent_to="2026-03-31")
+    assert [row["description"] for row in page["items"]] == [
+        "2026-03-31",
+        "2026-03-17",
+        "2026-03-01",
+    ]
+
+    assert (await _listed(client, project_id, spent_from="2026-04-01"))["total"] == 1
+    assert (await _listed(client, project_id, spent_to="2026-02-28"))["total"] == 1
+
+
+async def test_filters_narrow_each_other_rather_than_replacing(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    vendor_id = await _vendor(client)
+    other_id = await _vendor(client, "Riverside Sawmill")
+    await _spend(
+        client, project_id, description="Cement", vendor_id=vendor_id, spent_on="2026-03-02"
+    )
+    await _spend(
+        client, project_id, description="Cement", vendor_id=other_id, spent_on="2026-03-02"
+    )
+    await _spend(
+        client, project_id, description="Cement", vendor_id=vendor_id, spent_on="2026-05-02"
+    )
+
+    page = await _listed(client, project_id, search="cement", vendor_id=vendor_id, month="2026-03")
+    assert page["total"] == 1
+
+    narrower = await _listed(client, project_id, month="2026-03", spent_from="2026-03-15")
+    assert narrower["total"] == 0
+
+
+@pytest.mark.parametrize(
+    ("sort", "expected"),
+    [
+        ("recent", ["Newest", "Middle", "Oldest"]),
+        ("oldest", ["Oldest", "Middle", "Newest"]),
+        ("largest", ["Middle", "Newest", "Oldest"]),
+        ("smallest", ["Oldest", "Newest", "Middle"]),
+    ],
+)
+async def test_the_list_comes_back_in_the_order_asked_for(
+    client: AsyncClient, sort: str, expected: list[str]
+) -> None:
+    project_id = await _project(client)
+    await _spend(client, project_id, description="Oldest", amount=1_000, spent_on="2026-01-01")
+    await _spend(client, project_id, description="Middle", amount=9_000, spent_on="2026-02-01")
+    await _spend(client, project_id, description="Newest", amount=5_000, spent_on="2026-03-01")
+
+    page = await _listed(client, project_id, sort=sort)
+    assert [row["description"] for row in page["items"]] == expected
+
+
+async def test_the_page_says_what_everything_matching_adds_up_to(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    vendor_id = await _vendor(client)
+    for index in range(3):
+        await _spend(
+            client, project_id, description=f"Load {index}", amount=10_000, vendor_id=vendor_id
+        )
+    await _spend(client, project_id, description="Somewhere else", amount=7_000)
+
+    page = await _listed(client, project_id, limit=1)
+    assert len(page["items"]) == 1
+    assert page["total_amount"] == 37_000
+
+    filtered = await _listed(client, project_id, vendor_id=vendor_id)
+    assert filtered["total_amount"] == 30_000
+
+
+async def test_an_archived_expense_is_left_out_of_the_total(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    kept = await _spend(client, project_id, description="Cement", amount=10_000)
+    gone = await _spend(client, project_id, description="Sand", amount=5_000)
+    await client.delete(f"/api/expenses/{gone['id']}")
+
+    assert (await _listed(client, project_id))["total_amount"] == 10_000
+    assert (await _listed(client, project_id, include_deleted=True))["total_amount"] == 15_000
+    assert kept["amount"] == 10_000
+
+
 async def test_expenses_are_paginated(client: AsyncClient) -> None:
     project_id = await _project(client)
     for index in range(3):
