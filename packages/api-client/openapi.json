@@ -329,6 +329,9 @@
           "401": {
             "description": "Invalid credentials"
           },
+          "429": {
+            "description": "Too many wrong passphrases. Wait and try again"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
