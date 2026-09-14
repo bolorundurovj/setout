@@ -2,11 +2,19 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from setout.models.expense import CostType
 from setout.schemas.decimals import PlainDecimal
+
+
+class ExpenseSort(StrEnum):
+    RECENT = "recent"
+    OLDEST = "oldest"
+    LARGEST = "largest"
+    SMALLEST = "smallest"
 
 
 class ExpenseCreate(BaseModel):
@@ -90,6 +98,9 @@ class ExpenseRead(BaseModel):
 class ExpensePage(BaseModel):
     items: list[ExpenseRead]
     total: int
+    total_amount: int = Field(
+        ..., description="What everything matching adds up to, not just this page"
+    )
     limit: int
     offset: int
 

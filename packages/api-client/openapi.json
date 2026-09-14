@@ -2181,6 +2181,127 @@
             "description": "Only this calendar month, as YYYY-MM"
           },
           {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Match part of the description or the notes",
+              "title": "Search"
+            },
+            "description": "Match part of the description or the notes"
+          },
+          {
+            "name": "vendor_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this vendor",
+              "title": "Vendor Id"
+            },
+            "description": "Only this vendor"
+          },
+          {
+            "name": "paid_by_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only what this person paid for",
+              "title": "Paid By Id"
+            },
+            "description": "Only what this person paid for"
+          },
+          {
+            "name": "item_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this item",
+              "title": "Item Id"
+            },
+            "description": "Only this item"
+          },
+          {
+            "name": "spent_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Spent on this day or after",
+              "title": "Spent From"
+            },
+            "description": "Spent on this day or after"
+          },
+          {
+            "name": "spent_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Spent on this day or before",
+              "title": "Spent To"
+            },
+            "description": "Spent on this day or before"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ExpenseSort",
+              "description": "The order rows come back in",
+              "default": "recent"
+            },
+            "description": "The order rows come back in"
+          },
+          {
             "name": "uncategorized_only",
             "in": "query",
             "required": false,
@@ -10560,6 +10681,11 @@
             "type": "integer",
             "title": "Total"
           },
+          "total_amount": {
+            "type": "integer",
+            "title": "Total Amount",
+            "description": "What everything matching adds up to, not just this page"
+          },
           "limit": {
             "type": "integer",
             "title": "Limit"
@@ -10573,6 +10699,7 @@
         "required": [
           "items",
           "total",
+          "total_amount",
           "limit",
           "offset"
         ],
@@ -10749,6 +10876,16 @@
           "deleted_at"
         ],
         "title": "ExpenseRead"
+      },
+      "ExpenseSort": {
+        "type": "string",
+        "enum": [
+          "recent",
+          "oldest",
+          "largest",
+          "smallest"
+        ],
+        "title": "ExpenseSort"
       },
       "ExpenseUpdate": {
         "properties": {

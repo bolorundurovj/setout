@@ -103,6 +103,30 @@ describe('ProjectDetailComponent', () => {
     return fixture.componentInstance;
   }
 
+  it('gathers the filters out of the address for the expense tab', () => {
+    const component = render('expense');
+    fixture.componentRef.setInput('q', 'cement');
+    fixture.componentRef.setInput('vendor', 'v1');
+    fixture.componentRef.setInput('from', '2026-03-01');
+    fixture.componentRef.setInput('sort', 'largest');
+    fixture.detectChanges();
+
+    expect(component.expenseFilters()).toEqual({
+      search: 'cement',
+      vendorId: 'v1',
+      paidById: '',
+      itemId: '',
+      from: '2026-03-01',
+      to: '',
+      sort: 'largest',
+    });
+  });
+
+  it('asks for the newest first when the address says nothing about order', () => {
+    const component = render('expense');
+    expect(component.expenseFilters().sort).toBe('recent');
+  });
+
   it('opens on the dashboard by default', () => {
     expect(render().activeTab()).toBe('dashboard');
   });

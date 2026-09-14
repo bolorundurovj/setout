@@ -1,8 +1,12 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import type { ExpenseRead, ProjectRead, CategoryRead } from '@setout/api-client';
 import { BudgetService } from '../budget/budget.service';
 import { ToastService } from '../toast.service';
-import { ExpenseService, UNFILED } from './expense.service';
+import { ItemService } from '../items/item.service';
+import { PersonService } from '../people/person.service';
+import { VendorService } from '../vendors/vendor.service';
+import { ExpenseService, UNFILED, type ExpenseFilters } from './expense.service';
 import { ExpensesComponent } from './expenses.component';
 
 function expense(id: string, over: Partial<ExpenseRead> = {}): ExpenseRead {
@@ -77,7 +81,7 @@ describe('ExpensesComponent', () => {
   let fileResult: number | null;
   let asked: boolean[];
 
-  function render() {
+  function renderFixture(filters: ExpenseFilters = {}) {
     expenses = [expense('e1'), expense('e2', { description: 'Sand' })];
     uncategorized = [...expenses];
     categories = [category('s1', 'Concrete foundation')];
@@ -112,9 +116,9 @@ describe('ExpensesComponent', () => {
       }),
       saving: () => false,
       error: () => null,
-      load: async (projectId: string, includeArchived = false) => {
+      load: async (projectId: string, filters: { includeArchived?: boolean } = {}) => {
         loaded.push(projectId);
-        asked.push(includeArchived);
+        asked.push(filters.includeArchived ?? false);
       },
       goTo: async (projectId: string) => void loaded.push(projectId),
       loadForCategory: async (projectId: string, categoryId: string, page = 1) => {
@@ -134,12 +138,18 @@ describe('ExpensesComponent', () => {
       load: async () => undefined,
     };
 
+    const choices = { choices: () => [], loadChoices: async () => undefined };
+
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [ExpensesComponent],
       providers: [
+        provideRouter([]),
         { provide: ExpenseService, useValue: expenseService },
         { provide: BudgetService, useValue: budgetService },
+        { provide: VendorService, useValue: choices },
+        { provide: PersonService, useValue: choices },
+        { provide: ItemService, useValue: choices },
         {
           provide: ToastService,
           useValue: { show: (message: string, type = 'success') => toasts.push({ message, type }) },
@@ -148,8 +158,13 @@ describe('ExpensesComponent', () => {
     });
     const fixture = TestBed.createComponent(ExpensesComponent);
     fixture.componentRef.setInput('project', project);
+    fixture.componentRef.setInput('filters', filters);
     fixture.detectChanges();
-    return fixture.componentInstance;
+    return fixture;
+  }
+
+  function render(filters: ExpenseFilters = {}) {
+    return renderFixture(filters).componentInstance;
   }
 
   it('loads expenses and budget for the project', async () => {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, status
@@ -14,6 +15,7 @@ from setout.schemas.expense import (
     ExpenseCreate,
     ExpensePage,
     ExpenseRead,
+    ExpenseSort,
     ExpenseUpdate,
     ProjectMonths,
     ProjectSpend,
@@ -48,6 +50,17 @@ async def list_expenses(
             description="Only this calendar month, as YYYY-MM",
         ),
     ] = None,
+    search: Annotated[
+        str | None, Query(description="Match part of the description or the notes")
+    ] = None,
+    vendor_id: Annotated[str | None, Query(description="Only this vendor")] = None,
+    paid_by_id: Annotated[str | None, Query(description="Only what this person paid for")] = None,
+    item_id: Annotated[str | None, Query(description="Only this item")] = None,
+    spent_from: Annotated[date | None, Query(description="Spent on this day or after")] = None,
+    spent_to: Annotated[date | None, Query(description="Spent on this day or before")] = None,
+    sort: Annotated[ExpenseSort, Query(description="The order rows come back in")] = (
+        ExpenseSort.RECENT
+    ),
     uncategorized_only: Annotated[
         bool, Query(description="Only expenses with no category")
     ] = False,
@@ -63,6 +76,13 @@ async def list_expenses(
         category_id=category_id,
         agreement_id=agreement_id,
         month=month,
+        search=search,
+        vendor_id=vendor_id,
+        paid_by_id=paid_by_id,
+        item_id=item_id,
+        spent_from=spent_from,
+        spent_to=spent_to,
+        sort=sort,
         uncategorized_only=uncategorized_only,
         agreement_only=agreement_only,
         include_deleted=include_deleted,

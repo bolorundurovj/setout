@@ -4,6 +4,7 @@ from datetime import UTC, date, datetime
 from typing import Any
 
 from fastapi import HTTPException, status
+from tortoise.expressions import Q
 from tortoise.functions import Sum
 from tortoise.queryset import QuerySet
 
@@ -22,6 +23,7 @@ from setout.schemas.expense import (
     ExpenseCreate,
     ExpensePage,
     ExpenseRead,
+    ExpenseSort,
     ExpenseUpdate,
     ProjectMonths,
     ProjectSpend,
@@ -30,6 +32,13 @@ from setout.utils.attachments import counts_for
 from setout.utils.cascade import delete_under_expense, restore_under_expense
 from setout.utils.expenses import derived_amount
 from setout.utils.months import month_range, to_months
+
+SORT_ORDERS: dict[ExpenseSort, tuple[str, ...]] = {
+    ExpenseSort.RECENT: ("-spent_on", "-created_at"),
+    ExpenseSort.OLDEST: ("spent_on", "created_at"),
+    ExpenseSort.LARGEST: ("-amount", "-spent_on"),
+    ExpenseSort.SMALLEST: ("amount", "-spent_on"),
+}
 
 
 class ExpenseController:
@@ -40,6 +49,13 @@ class ExpenseController:
         category_id: str | None,
         agreement_id: str | None,
         month: str | None,
+        search: str | None,
+        vendor_id: str | None,
+        paid_by_id: str | None,
+        item_id: str | None,
+        spent_from: date | None,
+        spent_to: date | None,
+        sort: ExpenseSort,
         uncategorized_only: bool,
         agreement_only: bool,
         include_deleted: bool,
@@ -61,15 +77,33 @@ class ExpenseController:
         if month is not None:
             first, following = month_range(month)
             query = query.filter(spent_on__gte=first, spent_on__lt=following)
+        if search:
+            query = query.filter(Q(description__icontains=search) | Q(notes__icontains=search))
+        if vendor_id is not None:
+            query = query.filter(vendor_id=vendor_id)
+        if paid_by_id is not None:
+            query = query.filter(paid_by_id=paid_by_id)
+        if item_id is not None:
+            query = query.filter(item_id=item_id)
+        if spent_from is not None:
+            query = query.filter(spent_on__gte=spent_from)
+        if spent_to is not None:
+            query = query.filter(spent_on__lte=spent_to)
         total = await query.count()
-        rows = await query.offset(offset).limit(limit)
+        total_amount = await self._sum_of(query)
+        rows = await query.order_by(*SORT_ORDERS[sort]).offset(offset).limit(limit)
         counts = await counts_for([row.id for row in rows])
         return ExpensePage(
             items=[self._read(row, counts.get(row.id, 0)) for row in rows],
             total=total,
+            total_amount=total_amount,
             limit=limit,
             offset=offset,
         )
+
+    async def _sum_of(self, query: QuerySet[Expense]) -> int:
+        added = await query.annotate(total=Sum("amount")).values("total")
+        return int(added[0]["total"] or 0) if added else 0
 
     async def create(self, project_id: str, req: ExpenseCreate) -> ExpenseRead:
         await self._project_or_404(project_id)

@@ -4,6 +4,7 @@ import {
   Api,
   BulkFileExpenses,
   ExpenseCreate,
+  ExpenseSort,
   ExpenseUpdate,
   ExpenseRead,
   ProjectMonths,
@@ -30,6 +31,17 @@ export interface Nested {
   page: number;
 }
 
+export interface ExpenseFilters {
+  search?: string;
+  vendorId?: string;
+  paidById?: string;
+  itemId?: string;
+  from?: string;
+  to?: string;
+  sort?: ExpenseSort;
+  includeArchived?: boolean;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -43,7 +55,8 @@ export class ExpenseService {
   private readonly byCategoryState = signal<Record<string, Nested>>({});
   private readonly monthsState = signal<ProjectMonths | null>(null);
   private readonly byMonthState = signal<Record<string, Nested>>({});
-  private readonly deletedState = signal(false);
+  private readonly filterState = signal<ExpenseFilters>({});
+  private readonly totalAmountState = signal(0);
 
   readonly expenses = this.state.asReadonly();
   readonly spend = this.spendState.asReadonly();
@@ -55,23 +68,33 @@ export class ExpenseService {
   readonly error = signal<string | null>(null);
 
   readonly page = this.pageState.asReadonly();
+  readonly totalAmount = this.totalAmountState.asReadonly();
 
-  async load(projectId: string, includeDeleted = false): Promise<void> {
-    this.deletedState.set(includeDeleted);
+  async load(projectId: string, filters: ExpenseFilters = {}): Promise<void> {
+    this.filterState.set(filters);
     await this.goTo(projectId, 1);
   }
 
   async goTo(projectId: string, page: number): Promise<void> {
     this.error.set(null);
     try {
+      const filters = this.filterState();
       const rows = await this.api.invoke(listExpenses, {
         project_id: projectId,
-        include_deleted: this.deletedState(),
+        search: filters.search || undefined,
+        vendor_id: filters.vendorId || undefined,
+        paid_by_id: filters.paidById || undefined,
+        item_id: filters.itemId || undefined,
+        spent_from: filters.from || undefined,
+        spent_to: filters.to || undefined,
+        sort: filters.sort ?? 'recent',
+        include_deleted: filters.includeArchived ?? false,
         limit: PAGE_SIZE,
         offset: offsetOf(page),
       });
       this.state.set(rows.items);
       this.totalState.set(rows.total);
+      this.totalAmountState.set(rows.total_amount);
       this.pageState.set(page);
     } catch {
       this.error.set('Could not load expenses.');
