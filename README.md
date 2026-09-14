@@ -64,7 +64,8 @@ Open a project and select **Add Expense**. Three fields are required: descriptio
 - A category with subcategories has no expenses of its own. Assign to the subcategory.
 - Amounts are stored as whole numbers in the currency's minor units, so nothing
   is lost to rounding. NGN 11,000.00 is stored as 1100000.
-- Removing an expense is a soft delete. The row is retained and can be restored.
+- Deleting an expense is a soft delete. The row is retained, and **Show deleted**
+  on the expenses list brings it back into view with a Restore beside it.
 
 Behind **More details** an expense can also record the item, the vendor and who paid. All three are optional.
 
