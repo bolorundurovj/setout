@@ -81,7 +81,7 @@ export class DeliveryService {
       });
       return created;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not record what is owed.');
+      this.error.set(detailOf(e) ?? 'Could not record what is outstanding.');
       return null;
     } finally {
       this.saving.set(false);
@@ -96,7 +96,7 @@ export class DeliveryService {
       this.swap(changed);
       return changed;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not change what is owed.');
+      this.error.set(detailOf(e) ?? 'Could not change what is outstanding.');
       return null;
     } finally {
       this.saving.set(false);
@@ -163,7 +163,7 @@ export class DeliveryService {
           : await this.api.invoke(listDeliveries, { ...query, project_id: projectId });
       this.put(key, { rows: answer.items, total: answer.total, owed: answer.owed_amount });
     } catch {
-      this.error.set('Could not load what is still owed.');
+      this.error.set('Could not load what is outstanding.');
       this.put(key, EMPTY);
     }
   }

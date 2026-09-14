@@ -196,7 +196,7 @@ class ImportController:
                     kind=DecisionKind.OWED_NOT_IMPORTABLE,
                     count=len(owed),
                     detail=(
-                        "what is owed hangs off the expense that paid for it, and these rows "
+                        "deliveries hang off the expense that paid for them, and these rows "
                         "carry no amount, so they are listed here rather than brought in"
                     ),
                 )

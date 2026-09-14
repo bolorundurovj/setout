@@ -11,7 +11,7 @@ class DeliveryCreate(BaseModel):
         None,
         min_length=1,
         max_length=255,
-        description="What is owed. Defaults to the expense description",
+        description="What is outstanding. Defaults to the expense description",
     )
     promised: str | None = Field(None, max_length=255, description="When it was promised, in words")
 
@@ -45,7 +45,7 @@ class DeliveryPage(BaseModel):
     items: list[DeliveryRead]
     total: int
     owed_amount: int = Field(
-        ..., description="Still owed across every matching row, in one project's currency"
+        ..., description="Outstanding amount across every matching row, in one project's currency"
     )
     limit: int
     offset: int

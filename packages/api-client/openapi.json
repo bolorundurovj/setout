@@ -10300,7 +10300,7 @@
               }
             ],
             "title": "Description",
-            "description": "What is owed. Defaults to the expense description"
+            "description": "What is outstanding. Defaults to the expense description"
           },
           "promised": {
             "anyOf": [
@@ -10338,7 +10338,7 @@
           "owed_amount": {
             "type": "integer",
             "title": "Owed Amount",
-            "description": "Still owed across every matching row, in one project's currency"
+            "description": "Outstanding amount across every matching row, in one project's currency"
           },
           "limit": {
             "type": "integer",

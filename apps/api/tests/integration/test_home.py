@@ -255,7 +255,7 @@ async def test_it_names_what_is_paid_for_and_not_delivered(client: AsyncClient) 
 
     alert = [a for a in (await _read(client, "summary"))["alerts"] if a["kind"] == "deliveries"][0]
 
-    assert alert["detail"] == "1 thing owed by a vendor"
+    assert alert["detail"] == "1 thing outstanding from a vendor"
     assert alert["amount"] == 76_500_00
     assert alert["urgent"] is False
 

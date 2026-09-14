@@ -39,13 +39,13 @@ export class DeliveriesComponent {
   readonly owedNote = computed(() => {
     const set = this.waitingSet();
     if (this.includeArchived()) {
-      return `${this.money(set.owed)} still owed, archived rows aside.`;
+      return `${this.money(set.owed)} outstanding, archived rows aside.`;
     }
     if (set.total === 0) {
       return 'Everything paid for has arrived.';
     }
     const things = set.total === 1 ? 'thing' : 'things';
-    return `${set.total} ${things} owed, ${this.money(set.owed)} paid for.`;
+    return `${set.total} ${things} outstanding, ${this.money(set.owed)} paid for.`;
   });
 
   constructor() {
@@ -138,7 +138,7 @@ export class DeliveriesComponent {
       promised: promised.length > 0 ? promised : null,
     });
     if (!changed) {
-      this.toast.show(this.deliveries.error() ?? 'Could not change what is owed.', 'error');
+      this.toast.show(this.deliveries.error() ?? 'Could not change what is outstanding.', 'error');
       return;
     }
     this.cancelEdit();
@@ -161,7 +161,7 @@ export class DeliveriesComponent {
     await this.deliveries.remove(owed.id);
     this.justRemoved.set(owed);
     await this.refresh();
-    this.toast.show(`${owed.description} is no longer owed. The expense stands.`);
+    this.toast.show(`${owed.description} archived. The expense stands.`);
   }
 
   async putBackRemoved(): Promise<void> {

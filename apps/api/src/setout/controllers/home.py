@@ -223,7 +223,8 @@ class HomeController:
                     kind="deliveries",
                     title="Paid for, not delivered",
                     detail=(
-                        f"{len(owed)} {'thing' if len(owed) == 1 else 'things'} owed by a vendor"
+                        f"{len(owed)} {'thing' if len(owed) == 1 else 'things'}"
+                        f" outstanding from a vendor"
                     ),
                     amount=sum(row.expense.amount for row in owed),
                     urgent=False,

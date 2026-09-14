@@ -18,7 +18,7 @@
 
   @if (justRemoved(); as gone) {
     <p class="banner t-small">
-      {{ gone.description }} is no longer owed.
+      {{ gone.description }} is archived.
       <button type="button" class="link-action" (click)="putBackRemoved()">Undo</button>
     </p>
   }
@@ -42,7 +42,9 @@
           <div class="owed editing">
             <div class="edit-fields">
               <div class="field">
-                <label class="t-micro" [attr.for]="'owed-what-' + owed.id">What Is Owed</label>
+                <label class="t-micro" [attr.for]="'owed-what-' + owed.id"
+                  >What Is Outstanding</label
+                >
                 <input
                   [id]="'owed-what-' + owed.id"
                   class="input-field"
@@ -75,7 +77,7 @@
             <span class="owed-text">
               <span class="owed-what">{{ owed.description }}</span>
               @if (owed.deleted_at) {
-                <span class="owed-when">{{ vendorName(owed) }} &middot; no longer owed</span>
+                <span class="owed-when">{{ vendorName(owed) }} &middot; archived</span>
               } @else {
                 <span class="owed-when">{{ vendorName(owed) }} &middot; {{ waiting(owed) }}</span>
               }
@@ -86,7 +88,7 @@
                 <app-button variant="secondary" (pressed)="restore(owed)">Restore</app-button>
               } @else {
                 <app-button variant="secondary" (pressed)="startEdit(owed)">Change</app-button>
-                <app-button variant="danger" (pressed)="remove(owed)">Not Owed</app-button>
+                <app-button variant="danger" (pressed)="remove(owed)">Archive</app-button>
                 <app-button (pressed)="markDelivered(owed)">Mark Delivered</app-button>
               }
             </span>

@@ -509,7 +509,10 @@ export class AddExpenseComponent {
         promised: this.owedWhen().trim() || null,
       });
       if (!waiting) {
-        this.toast.show(this.deliveries.error() ?? 'Could not record what is owed.', 'error');
+        this.toast.show(
+          this.deliveries.error() ?? 'Could not record what is outstanding.',
+          'error',
+        );
       }
     }
 

@@ -110,9 +110,9 @@ describe('DeliveriesComponent', () => {
     return fixture.componentInstance;
   }
 
-  it('counts and adds up everything owed, not the page in hand', () => {
+  it('counts and adds up everything outstanding, not the page in hand', () => {
     const component = render(bucket([owed({ id: 'a' })], { total: 14, owed: 20_000_000 }));
-    expect(component.owedNote()).toContain('14 things owed');
+    expect(component.owedNote()).toContain('14 things outstanding');
     expect(component.owedNote()).toContain('200,000');
   });
 
@@ -128,7 +128,7 @@ describe('DeliveriesComponent', () => {
     expect(pagesAsked).toContain(3);
   });
 
-  it('corrects what is owed, and reads an emptied promise as nobody having said', async () => {
+  it('corrects what is outstanding, and reads an emptied promise as nobody having said', async () => {
     const component = render(bucket([owed({ id: 'd1' })]));
     component.startEdit(owed({ id: 'd1', description: '17 bags of cement' }));
     expect(component.editWhat()).toBe('17 bags of cement');

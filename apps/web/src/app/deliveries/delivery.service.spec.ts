@@ -83,7 +83,7 @@ describe('DeliveryService', () => {
     expect(asked[0]['offset']).toBe(20);
   });
 
-  it('counts what is owed across every page, not the rows in hand', async () => {
+  it('counts what is outstanding across every page, not the rows in hand', async () => {
     const service = configure(() => page([owed('a')], { total: 14, owed_amount: 20_000_000 }));
 
     await service.loadWaiting('p1');
@@ -164,7 +164,7 @@ describe('DeliveryService', () => {
       throw new Error('offline');
     });
     await service.loadWaiting('p1');
-    expect(service.error()).toBe('Could not load what is still owed.');
+    expect(service.error()).toBe('Could not load what is outstanding.');
     expect(service.waiting('p1').rows).toEqual([]);
   });
 });
