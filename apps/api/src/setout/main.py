@@ -20,6 +20,7 @@ from starlette.responses import Response
 from starlette.types import Scope
 
 from setout import __version__
+from setout.cli import consume_recovery_file
 from setout.config import Settings, get_settings
 from setout.db import apply_migrations, close_db, init_db
 from setout.routers import (
@@ -110,6 +111,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("Database status on start: %s", status)
     # Open the connection the app serves requests with.
     await init_db(enable_global_fallback=True)
+    await consume_recovery_file()
 
     try:
         yield

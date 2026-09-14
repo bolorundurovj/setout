@@ -11,7 +11,7 @@ Setout ships as one image: the API serves the built frontend, applies migrations
 | Change `MINIO_ROOT_PASSWORD` and the Postgres password | The compose defaults exist so the stack starts with one command. They are not production defaults |
 | Put it behind HTTPS | See below |
 | Set `SETOUT_CORS_ORIGINS` to the origin you serve from | It defaults to the local dev server |
-| Nothing, for guessing | Repeated wrong passphrases are already slowed and then refused with `429`. There is no lockout to be locked out of, and the settings that shape it are in [configuration](configuration.md) |
+| Nothing, for guessing | Repeated wrong passphrases are already slowed and then refused with `429`. There is no lockout to be locked out of, and the settings that shape it are in [configuration](configuration.md). If you lose the passphrase, reset it with the recovery command in [troubleshooting](troubleshooting.md#i-forgot-the-admin-passphrase) |
 
 ## Behind a reverse proxy
 

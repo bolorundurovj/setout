@@ -49,6 +49,9 @@ Repository = "https://github.com/bolorundurovj/setout"
 Issues = "https://github.com/bolorundurovj/setout/issues"
 Documentation = "https://github.com/bolorundurovj/setout/tree/master/docs"
 
+[project.scripts]
+setout = "setout.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

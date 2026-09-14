@@ -40,10 +40,10 @@ PYTEST_PARALLEL := -n $(PYTEST_WORKERS) --dist loadfile
 endif
 
 .PHONY: help setup dev api web watch-sdk lint format test test-unit test-int test-contract \
-	sdk migration migrate downgrade seed backup restore check check-parallel run-check \
+	sdk migration migrate downgrade seed backup restore reset-passphrase check check-parallel run-check \
 	build docker-build kill clean line-endings require-uv require-yarn require-docker
 
-# file is the archive argument to `make restore`.
+# file is the archive argument to `make restore` or `make reset-passphrase`.
 file ?=
 
 help: ## Show this help.
@@ -154,6 +154,9 @@ backup: ## Write the database and uploaded files into one dated archive.
 
 restore: ## Read a backup archive back, after asking. Pass file=<archive>.
 	$(BASH) scripts/restore.sh $(file)
+
+reset-passphrase: require-uv ## Reset the admin passphrase (prompts or reads reset-passphrase.txt). Pass file=<txt>.
+	cd $(API_DIR) && uv run python -m setout.cli reset-passphrase $(if $(file),--file "$(file)",)
 
 check: ## Lint, typecheck, all tests, coverage floor.
 	@$(MAKE) run-check PYTEST_WORKERS=1

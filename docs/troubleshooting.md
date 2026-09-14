@@ -48,3 +48,46 @@ ZoneInfoNotFoundError: 'No time zone found with key UTC'
 ```
 
 The system has no time zone database. The `tzdata` package is pinned for this reason. If you see this error, dependencies were not installed from the lockfile. Run `make setup`.
+
+## I forgot the admin passphrase
+
+Reset the admin passphrase without editing the database directly.
+
+### Method 1: Recovery text file (recommended for Docker and headless servers)
+
+Create a file named `reset-passphrase.txt` in the repository root or data directory (`/var/lib/setout/` in Docker):
+
+```bash
+echo "your-new-secure-passphrase" > reset-passphrase.txt
+```
+
+You can optionally specify a username: `Admin:your-new-secure-passphrase`.
+
+Then either restart the server (which detects and consumes it on startup) or run:
+
+```bash
+make reset-passphrase
+```
+
+In Docker:
+
+```bash
+docker compose -f docker/docker-compose.yml exec setout uv run python -m setout.cli reset-passphrase
+```
+
+The recovery file is consumed, the passphrase is reset, any failed login lockout is cleared, and **the file is automatically deleted** so plaintext credentials do not linger on disk.
+
+### Method 2: Interactive prompt (local development)
+
+If no `reset-passphrase.txt` file exists, running `make reset-passphrase` prompts securely in your terminal:
+
+```bash
+make reset-passphrase
+```
+
+You can also pass a custom file path with `file=`:
+
+```bash
+make reset-passphrase file=/path/to/my-secret.txt
+```
+
