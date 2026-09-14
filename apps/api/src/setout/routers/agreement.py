@@ -37,10 +37,13 @@ NOT_FOUND: dict[int | str, dict[str, Any]] = {
 async def list_agreements(
     project_id: str,
     user: CurrentUser,
+    include_deleted: Annotated[bool, Query(description="Include removed agreements")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> AgreementPage:
-    return await controller.list_agreements(project_id, limit=limit, offset=offset)
+    return await controller.list_agreements(
+        project_id, include_deleted=include_deleted, limit=limit, offset=offset
+    )
 
 
 @router.post(
@@ -75,14 +78,24 @@ async def delete_agreement(agreement_id: str, user: CurrentUser) -> None:
     await controller.delete(agreement_id)
 
 
+@router.post(
+    "/agreements/{agreement_id}/restore", operation_id="restoreAgreement", responses=NOT_FOUND
+)
+async def restore_agreement(agreement_id: str, user: CurrentUser) -> AgreementRead:
+    return await controller.restore(agreement_id)
+
+
 @router.get("/projects/{project_id}/advances", operation_id="listAdvances", responses=NOT_FOUND)
 async def list_advances(
     project_id: str,
     user: CurrentUser,
+    include_deleted: Annotated[bool, Query(description="Include removed advances")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> AdvancePage:
-    return await controller.list_advances(project_id, limit=limit, offset=offset)
+    return await controller.list_advances(
+        project_id, include_deleted=include_deleted, limit=limit, offset=offset
+    )
 
 
 @router.post(
@@ -108,6 +121,11 @@ async def update_advance(advance_id: str, req: AdvanceUpdate, user: CurrentUser)
 )
 async def delete_advance(advance_id: str, user: CurrentUser) -> None:
     await controller.delete_advance(advance_id)
+
+
+@router.post("/advances/{advance_id}/restore", operation_id="restoreAdvance", responses=NOT_FOUND)
+async def restore_advance(advance_id: str, user: CurrentUser) -> AdvanceRead:
+    return await controller.restore_advance(advance_id)
 
 
 @router.get("/projects/{project_id}/balances", operation_id="listBalances", responses=NOT_FOUND)

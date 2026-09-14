@@ -37,10 +37,13 @@ DUPLICATE: dict[int | str, dict[str, Any]] = {
 async def list_items(
     user: CurrentUser,
     search: Annotated[str | None, Query(description="Match part of the name")] = None,
+    include_archived: Annotated[bool, Query(description="Include archived items")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> ItemPage:
-    return await controller.list_items(search=search, limit=limit, offset=offset)
+    return await controller.list_items(
+        search=search, include_archived=include_archived, limit=limit, offset=offset
+    )
 
 
 @router.post(

@@ -42,8 +42,12 @@ async def list_category_presets(user: CurrentUser) -> list[CategoryPresetRead]:
 
 
 @router.get("/projects/{project_id}/categories", operation_id="listCategories", responses=NOT_FOUND)
-async def list_categories(project_id: str, user: CurrentUser) -> list[CategoryRead]:
-    return await controller.list_categories(project_id)
+async def list_categories(
+    project_id: str,
+    user: CurrentUser,
+    include_deleted: Annotated[bool, Query(description="Include removed categories")] = False,
+) -> list[CategoryRead]:
+    return await controller.list_categories(project_id, include_deleted=include_deleted)
 
 
 @router.post(
@@ -57,8 +61,12 @@ async def create_category(project_id: str, req: CategoryCreate, user: CurrentUse
 
 
 @router.get("/projects/{project_id}/budget", operation_id="getProjectBudget", responses=NOT_FOUND)
-async def get_project_budget(project_id: str, user: CurrentUser) -> ProjectBudget:
-    return await controller.budget(project_id)
+async def get_project_budget(
+    project_id: str,
+    user: CurrentUser,
+    include_deleted: Annotated[bool, Query(description="Include removed categories")] = False,
+) -> ProjectBudget:
+    return await controller.budget(project_id, include_deleted=include_deleted)
 
 
 @router.patch("/categories/{category_id}", operation_id="updateCategory", responses=NOT_FOUND)
@@ -94,10 +102,13 @@ async def restore_category(category_id: str, user: CurrentUser) -> CategoryRead:
 async def list_budget_items(
     category_id: str,
     user: CurrentUser,
+    include_deleted: Annotated[bool, Query(description="Include removed budget items")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> BudgetItemPage:
-    return await controller.list_items(category_id, limit=limit, offset=offset)
+    return await controller.list_items(
+        category_id, include_deleted=include_deleted, limit=limit, offset=offset
+    )
 
 
 @router.post(
@@ -127,3 +138,10 @@ async def update_budget_item(
 )
 async def delete_budget_item(item_id: str, user: CurrentUser) -> None:
     await controller.delete_item(item_id)
+
+
+@router.post(
+    "/budget-items/{item_id}/restore", operation_id="restoreBudgetItem", responses=NOT_FOUND
+)
+async def restore_budget_item(item_id: str, user: CurrentUser) -> BudgetItemRead:
+    return await controller.restore_item(item_id)

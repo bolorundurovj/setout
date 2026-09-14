@@ -54,6 +54,7 @@ async def list_expenses(
     agreement_only: Annotated[
         bool, Query(description="Only payments assigned to an agreement")
     ] = False,
+    include_deleted: Annotated[bool, Query(description="Include removed expenses")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> ExpensePage:
@@ -64,6 +65,7 @@ async def list_expenses(
         month=month,
         uncategorized_only=uncategorized_only,
         agreement_only=agreement_only,
+        include_deleted=include_deleted,
         limit=limit,
         offset=offset,
     )

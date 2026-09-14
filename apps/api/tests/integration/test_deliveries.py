@@ -204,6 +204,25 @@ async def test_a_deleted_delivery_leaves_the_list_and_can_come_back(client: Asyn
     assert (await client.get(f"/api/projects/{project_id}/deliveries")).json()["total"] == 1
 
 
+async def test_a_removed_delivery_is_listed_when_asked_for_and_owes_nothing(
+    client: AsyncClient,
+) -> None:
+    project_id = await _project(client)
+    spend = await _spend(client, project_id)
+    delivery = await _delivery(client, project_id, expense_id=spend["id"])
+    await client.delete(f"/api/deliveries/{delivery['id']}")
+
+    page = (
+        await client.get(f"/api/projects/{project_id}/deliveries", params={"include_deleted": True})
+    ).json()
+    assert [row["id"] for row in page["items"]] == [delivery["id"]]
+    assert page["items"][0]["deleted_at"]
+    assert page["owed_amount"] == 0
+
+    across = await client.get("/api/deliveries", params={"include_deleted": True})
+    assert across.json()["total"] == 1
+
+
 async def test_the_record_export_carries_deliveries(client: AsyncClient) -> None:
     project_id = await _project(client)
     spend = await _spend(client, project_id)

@@ -42,11 +42,14 @@ class ExpenseController:
         month: str | None,
         uncategorized_only: bool,
         agreement_only: bool,
+        include_deleted: bool,
         limit: int,
         offset: int,
     ) -> ExpensePage:
         await self._project_or_404(project_id)
-        query = Expense.filter(project_id=project_id, deleted_at__isnull=True)
+        query = Expense.filter(project_id=project_id)
+        if not include_deleted:
+            query = query.filter(deleted_at__isnull=True)
         if uncategorized_only:
             query = query.filter(category_id__isnull=True)
         elif category_id is not None:

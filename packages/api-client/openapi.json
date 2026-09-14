@@ -1319,6 +1319,18 @@
             }
           },
           {
+            "name": "include_deleted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include removed categories",
+              "default": false,
+              "title": "Include Deleted"
+            },
+            "description": "Include removed categories"
+          },
+          {
             "name": "setout_session",
             "in": "cookie",
             "required": false,
@@ -1460,6 +1472,18 @@
               "type": "string",
               "title": "Project Id"
             }
+          },
+          {
+            "name": "include_deleted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include removed categories",
+              "default": false,
+              "title": "Include Deleted"
+            },
+            "description": "Include removed categories"
           },
           {
             "name": "setout_session",
@@ -1723,6 +1747,18 @@
               "type": "string",
               "title": "Category Id"
             }
+          },
+          {
+            "name": "include_deleted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include removed budget items",
+              "default": false,
+              "title": "Include Deleted"
+            },
+            "description": "Include removed budget items"
           },
           {
             "name": "limit",
@@ -2008,6 +2044,70 @@
         }
       }
     },
+    "/api/budget-items/{item_id}/restore": {
+      "post": {
+        "tags": [
+          "categories"
+        ],
+        "summary": "Restore Budget Item",
+        "operationId": "restoreBudgetItem",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetItemRead"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects/{project_id}/expenses": {
       "get": {
         "tags": [
@@ -2103,6 +2203,18 @@
               "title": "Agreement Only"
             },
             "description": "Only payments assigned to an agreement"
+          },
+          {
+            "name": "include_deleted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include removed expenses",
+              "default": false,
+              "title": "Include Deleted"
+            },
+            "description": "Include removed expenses"
           },
           {
             "name": "limit",
@@ -2845,6 +2957,18 @@
               "title": "Search"
             },
             "description": "Match part of the name"
+          },
+          {
+            "name": "include_archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include archived items",
+              "default": false,
+              "title": "Include Archived"
+            },
+            "description": "Include archived items"
           },
           {
             "name": "limit",
@@ -5926,6 +6050,18 @@
             }
           },
           {
+            "name": "include_deleted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include removed agreements",
+              "default": false,
+              "title": "Include Deleted"
+            },
+            "description": "Include removed agreements"
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -6268,6 +6404,70 @@
         }
       }
     },
+    "/api/agreements/{agreement_id}/restore": {
+      "post": {
+        "tags": [
+          "agreements"
+        ],
+        "summary": "Restore Agreement",
+        "operationId": "restoreAgreement",
+        "parameters": [
+          {
+            "name": "agreement_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agreement Id"
+            }
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgreementRead"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects/{project_id}/advances": {
       "get": {
         "tags": [
@@ -6284,6 +6484,18 @@
               "type": "string",
               "title": "Project Id"
             }
+          },
+          {
+            "name": "include_deleted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include removed advances",
+              "default": false,
+              "title": "Include Deleted"
+            },
+            "description": "Include removed advances"
           },
           {
             "name": "limit",
@@ -6566,6 +6778,70 @@
         }
       }
     },
+    "/api/advances/{advance_id}/restore": {
+      "post": {
+        "tags": [
+          "agreements"
+        ],
+        "summary": "Restore Advance",
+        "operationId": "restoreAdvance",
+        "parameters": [
+          {
+            "name": "advance_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Advance Id"
+            }
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdvanceRead"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects/{project_id}/balances": {
       "get": {
         "tags": [
@@ -6692,6 +6968,18 @@
               "title": "Received Only"
             },
             "description": "Only what has arrived"
+          },
+          {
+            "name": "include_deleted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include removed deliveries",
+              "default": false,
+              "title": "Include Deleted"
+            },
+            "description": "Include removed deliveries"
           },
           {
             "name": "limit",
@@ -6894,6 +7182,18 @@
               "title": "Received Only"
             },
             "description": "Only what has arrived"
+          },
+          {
+            "name": "include_deleted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include removed deliveries",
+              "default": false,
+              "title": "Include Deleted"
+            },
+            "description": "Include removed deliveries"
           },
           {
             "name": "limit",

@@ -200,13 +200,65 @@ async def test_agreements_and_advances_are_paginated(client: AsyncClient) -> Non
     assert len(page["items"]) == 2
 
 
+async def test_a_removed_agreement_is_listed_when_asked_for_and_restorable(
+    client: AsyncClient,
+) -> None:
+    project_id = await _project(client)
+    vendor_id = await _vendor(client)
+    agreement = await _agreement(client, project_id, vendor_id, 100_000)
+
+    assert (await client.delete(f"/api/agreements/{agreement['id']}")).status_code == 204
+    assert (await client.get(f"/api/projects/{project_id}/agreements")).json()["total"] == 0
+
+    page = (
+        await client.get(f"/api/projects/{project_id}/agreements", params={"include_deleted": True})
+    ).json()
+    assert [row["id"] for row in page["items"]] == [agreement["id"]]
+    assert page["items"][0]["deleted_at"]
+
+    restored = await client.post(f"/api/agreements/{agreement['id']}/restore")
+    assert restored.status_code == 200
+    assert restored.json()["deleted_at"] is None
+    assert (await client.get(f"/api/projects/{project_id}/agreements")).json()["total"] == 1
+
+
+async def test_a_removed_advance_is_listed_when_asked_for_and_restorable(
+    client: AsyncClient,
+) -> None:
+    project_id = await _project(client)
+    person_id = await _person(client)
+    advance = (
+        await client.post(
+            f"/api/projects/{project_id}/advances",
+            json={"person_id": person_id, "amount": 100_000_00},
+        )
+    ).json()
+
+    assert (await client.delete(f"/api/advances/{advance['id']}")).status_code == 204
+    assert (await client.get(f"/api/projects/{project_id}/balances")).json() == []
+
+    page = (
+        await client.get(f"/api/projects/{project_id}/advances", params={"include_deleted": True})
+    ).json()
+    assert [row["id"] for row in page["items"]] == [advance["id"]]
+    assert page["items"][0]["deleted_at"]
+
+    restored = await client.post(f"/api/advances/{advance['id']}/restore")
+    assert restored.status_code == 200
+    assert restored.json()["deleted_at"] is None
+    balances = (await client.get(f"/api/projects/{project_id}/balances")).json()
+    assert balances[0]["advanced_amount"] == 100_000_00
+
+
 async def test_missing_things_answer_404(client: AsyncClient) -> None:
     await _project(client)
     assert (await client.get("/api/agreements/nope")).status_code == 404
     assert (await client.delete("/api/agreements/nope")).status_code == 404
+    assert (await client.post("/api/agreements/nope/restore")).status_code == 404
     stale = await client.patch("/api/agreements/nope", json={"agreed_amount": 1})
     assert stale.status_code == 404
     assert (await client.delete("/api/advances/nope")).status_code == 404
+    assert (await client.post("/api/advances/nope/restore")).status_code == 404
     assert (await client.patch("/api/advances/nope", json={"amount": 1})).status_code == 404
     assert (await client.get("/api/projects/nope/balances")).status_code == 404
 

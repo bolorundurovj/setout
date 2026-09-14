@@ -95,6 +95,19 @@ async def test_archiving_hides_an_item_and_restoring_brings_it_back(client: Asyn
     assert (await client.get("/api/items")).json()["total"] == 1
 
 
+async def test_an_archived_item_is_listed_only_when_asked_for(client: AsyncClient) -> None:
+    await _setup(client)
+    item = await _item(client, "Cement")
+    await client.delete(f"/api/items/{item['id']}")
+
+    page = (await client.get("/api/items", params={"include_archived": True})).json()
+    assert [row["id"] for row in page["items"]] == [item["id"]]
+    assert page["items"][0]["deleted_at"]
+
+    searched = await client.get("/api/items", params={"include_archived": True, "search": "ceme"})
+    assert searched.json()["total"] == 1
+
+
 async def test_every_purchase_builds_the_price_history(client: AsyncClient) -> None:
     projects = await _setup(client)
     item = await _item(client, "Six inch blocks")

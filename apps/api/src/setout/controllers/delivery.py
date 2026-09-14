@@ -25,12 +25,15 @@ class DeliveryController:
         vendor_id: str | None,
         outstanding_only: bool,
         received_only: bool,
+        include_deleted: bool,
         limit: int,
         offset: int,
     ) -> DeliveryPage:
         if project_id is not None:
             await self._project_or_404(project_id)
-        query = Delivery.filter(deleted_at__isnull=True, expense__deleted_at__isnull=True)
+        query = Delivery.all()
+        if not include_deleted:
+            query = query.filter(deleted_at__isnull=True, expense__deleted_at__isnull=True)
         if project_id is not None:
             query = query.filter(project_id=project_id)
         if vendor_id is not None:
@@ -40,7 +43,10 @@ class DeliveryController:
         if received_only:
             query = query.filter(received_at__isnull=False)
         total = await query.count()
-        owed = await query.filter(received_at__isnull=True).prefetch_related("expense")
+        owed_rows = query.filter(received_at__isnull=True)
+        if include_deleted:
+            owed_rows = owed_rows.filter(deleted_at__isnull=True, expense__deleted_at__isnull=True)
+        owed = await owed_rows.prefetch_related("expense")
         rows = (
             await query.offset(offset)
             .limit(limit)

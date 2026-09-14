@@ -190,6 +190,25 @@ async def test_an_expense_is_soft_deleted_and_restorable(client: AsyncClient) ->
     assert (await client.get(f"/api/projects/{project_id}/expenses")).json()["total"] == 1
 
 
+async def test_a_removed_expense_is_listed_only_when_asked_for(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    kept = await _spend(client, project_id, description="Cement")
+    gone = await _spend(client, project_id, description="Sand")
+    await client.delete(f"/api/expenses/{gone['id']}")
+
+    listed = await client.get(
+        f"/api/projects/{project_id}/expenses", params={"include_deleted": True}
+    )
+    page = listed.json()
+    assert page["total"] == 2
+    assert {row["id"] for row in page["items"]} == {kept["id"], gone["id"]}
+    removed = next(row for row in page["items"] if row["id"] == gone["id"])
+    assert removed["deleted_at"]
+
+    spend = (await client.get(f"/api/projects/{project_id}/spend")).json()
+    assert spend["spent_amount"] == 11_000_00
+
+
 async def test_expenses_are_paginated(client: AsyncClient) -> None:
     project_id = await _project(client)
     for index in range(3):
