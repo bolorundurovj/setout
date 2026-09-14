@@ -36,7 +36,7 @@ export class ExpensesComponent {
   readonly adding = signal(false);
   readonly editingExpense = signal<ExpenseRead | null>(null);
   readonly filing = signal(false);
-  readonly includeDeleted = signal(false);
+  readonly includeArchived = signal(false);
   readonly selected = signal<Set<string>>(new Set());
   readonly bulkCategoryId = signal<string>('');
 
@@ -180,7 +180,7 @@ export class ExpensesComponent {
 
   async remove(expenseId: string): Promise<void> {
     await this.expenses.remove(this.project().id, expenseId);
-    this.toast.show('Expense deleted. Show deleted to restore it.');
+    this.toast.show('Expense archived. Show archived to restore it.');
   }
 
   async restore(expenseId: string): Promise<void> {
@@ -188,13 +188,13 @@ export class ExpensesComponent {
     this.toast.show('Expense restored.');
   }
 
-  async setIncludeDeleted(on: boolean): Promise<void> {
+  async setIncludeArchived(on: boolean): Promise<void> {
     this.filing.set(false);
-    this.includeDeleted.set(on);
+    this.includeArchived.set(on);
     await this.expenses.load(this.project().id, on);
   }
 
-  deletedLabel(): string {
-    return this.includeDeleted() ? 'Hide deleted' : 'Show deleted';
+  archivedLabel(): string {
+    return this.includeArchived() ? 'Hide archived' : 'Show archived';
   }
 }

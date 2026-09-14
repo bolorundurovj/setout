@@ -440,7 +440,7 @@ export class AddExpenseComponent {
     }
     await this.attachments.remove(existing.id, file.id);
     this.justRemoved.set(file);
-    this.toast.show('Photo deleted. The expense stands.');
+    this.toast.show('Photo archived. The expense is unchanged.');
   }
 
   async putPhotoBack(): Promise<void> {

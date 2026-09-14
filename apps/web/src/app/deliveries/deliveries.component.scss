@@ -53,15 +53,15 @@
   background: var(--surface);
 }
 
-.owed.deleted,
-.done.deleted {
+.owed.archived,
+.done.archived {
   border: 1px solid var(--hairline);
   background: var(--sidebar);
 }
 
-.owed.deleted .owed-what,
-.owed.deleted .owed-when,
-.owed.deleted .owed-amount {
+.owed.archived .owed-what,
+.owed.archived .owed-when,
+.owed.archived .owed-amount {
   color: var(--ink-3);
 }
 

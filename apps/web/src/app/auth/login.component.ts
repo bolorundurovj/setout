@@ -18,7 +18,7 @@ import { ToastService } from '../toast.service';
           <app-logo [size]="44" />
           <div class="header-text">
             <div class="t-display">SetOut</div>
-            <div class="t-small">Unlock this device</div>
+            <div class="t-small">Sign in on this device</div>
           </div>
         </div>
 
@@ -40,7 +40,7 @@ import { ToastService } from '../toast.service';
           [loading]="authService.loading()"
           (pressed)="onSubmit()"
         >
-          {{ authService.loading() ? 'Unlocking...' : 'Unlock' }}
+          {{ authService.loading() ? 'Signing in...' : 'Sign In' }}
         </app-button>
 
         @if (authService.error()) {
@@ -128,7 +128,7 @@ export class LoginComponent {
     if (!this.password()) return;
     const success = await this.authService.login(this.password());
     if (success) {
-      this.toast.show('Device unlocked successfully.');
+      this.toast.show('Signed in.');
       await this.router.navigate(['/']);
     }
   }

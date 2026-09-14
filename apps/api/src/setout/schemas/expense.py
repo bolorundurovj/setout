@@ -128,7 +128,9 @@ class ProjectSpend(BaseModel):
     spent_amount: int
     uncategorized_amount: int
     uncategorized_count: int
-    removed_count: int = Field(..., description="Expenses taken off the record, in no total")
+    removed_count: int = Field(
+        ..., description="Expenses archived, no longer accounted for in total"
+    )
     variance_percent: float | None = Field(
         ..., description="Null when there is no budget to compare against, never infinity"
     )

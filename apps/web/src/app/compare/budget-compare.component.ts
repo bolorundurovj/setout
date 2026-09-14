@@ -91,7 +91,7 @@ export class BudgetCompareComponent {
       return '';
     }
     const rows = removed === 1 ? 'expense' : 'expenses';
-    return `${removed} ${rows} deleted from this project and not counted.`;
+    return `${removed} ${rows} archived and not counted.`;
   });
 
   constructor() {

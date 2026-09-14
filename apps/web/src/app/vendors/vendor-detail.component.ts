@@ -146,6 +146,6 @@ export class VendorDetailComponent {
   async restore(): Promise<void> {
     await this.vendors.restore(this.id());
     await this.load();
-    this.toast.show('Vendor taken out of the archive.');
+    this.toast.show('Vendor restored.');
   }
 }

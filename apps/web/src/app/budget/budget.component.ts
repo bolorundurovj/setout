@@ -26,7 +26,7 @@ export class BudgetComponent {
 
   readonly openCategory = signal<string | null>(null);
   readonly newCategoryName = signal('');
-  readonly includeDeleted = signal(false);
+  readonly includeArchived = signal(false);
   private readonly drafts = signal<Record<string, string>>({});
   readonly itemDescription = signal('');
   readonly itemAmount = signal('');
@@ -50,18 +50,18 @@ export class BudgetComponent {
   private async load(): Promise<void> {
     await this.budget.load(this.project().id);
     for (const category of this.budget.categories()) {
-      await this.budget.loadItems(category.id, this.includeDeleted());
+      await this.budget.loadItems(category.id, this.includeArchived());
     }
     this.syncDrafts();
   }
 
-  async setIncludeDeleted(on: boolean): Promise<void> {
-    this.includeDeleted.set(on);
+  async setIncludeArchived(on: boolean): Promise<void> {
+    this.includeArchived.set(on);
     await this.load();
   }
 
-  deletedLabel(): string {
-    return this.includeDeleted() ? 'Hide deleted' : 'Show deleted';
+  archivedLabel(): string {
+    return this.includeArchived() ? 'Hide archived' : 'Show archived';
   }
 
   private syncDrafts(): void {
@@ -169,7 +169,7 @@ export class BudgetComponent {
     this.itemDescription.set('');
     this.itemAmount.set('');
     this.itemCostType.set('');
-    await this.budget.loadItems(category.id, this.includeDeleted());
+    await this.budget.loadItems(category.id, this.includeArchived());
   }
 
   /** One row, one number. Extra detail lives in the items under the row. */
@@ -215,9 +215,9 @@ export class BudgetComponent {
   }
 
   async removeItem(category: CategoryRead, itemId: string): Promise<void> {
-    await this.budget.removeItem(this.project().id, category.id, itemId, this.includeDeleted());
+    await this.budget.removeItem(this.project().id, category.id, itemId, this.includeArchived());
     await this.load();
-    this.toast.show('Budget item deleted. Show deleted to restore it.');
+    this.toast.show('Budget item archived. Show archived to restore it.');
   }
 
   async restoreItem(category: CategoryRead, itemId: string): Promise<void> {

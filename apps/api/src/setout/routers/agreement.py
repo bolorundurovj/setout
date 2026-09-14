@@ -37,7 +37,7 @@ NOT_FOUND: dict[int | str, dict[str, Any]] = {
 async def list_agreements(
     project_id: str,
     user: CurrentUser,
-    include_deleted: Annotated[bool, Query(description="Include removed agreements")] = False,
+    include_deleted: Annotated[bool, Query(description="Include archived agreements")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> AgreementPage:
@@ -89,7 +89,7 @@ async def restore_agreement(agreement_id: str, user: CurrentUser) -> AgreementRe
 async def list_advances(
     project_id: str,
     user: CurrentUser,
-    include_deleted: Annotated[bool, Query(description="Include removed advances")] = False,
+    include_deleted: Annotated[bool, Query(description="Include archived advances")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> AdvancePage:

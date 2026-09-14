@@ -32,7 +32,9 @@ NOT_FOUND: dict[int | str, dict[str, Any]] = {
     status.HTTP_404_NOT_FOUND: {"description": "Not found"}
 }
 IS_GROUP: dict[int | str, dict[str, Any]] = {
-    status.HTTP_409_CONFLICT: {"description": "Category holds no budget of its own"}
+    status.HTTP_409_CONFLICT: {
+        "description": "A category with subcategories has no budget of its own"
+    }
 }
 
 
@@ -45,7 +47,7 @@ async def list_category_presets(user: CurrentUser) -> list[CategoryPresetRead]:
 async def list_categories(
     project_id: str,
     user: CurrentUser,
-    include_deleted: Annotated[bool, Query(description="Include removed categories")] = False,
+    include_deleted: Annotated[bool, Query(description="Include archived categories")] = False,
 ) -> list[CategoryRead]:
     return await controller.list_categories(project_id, include_deleted=include_deleted)
 
@@ -64,7 +66,7 @@ async def create_category(project_id: str, req: CategoryCreate, user: CurrentUse
 async def get_project_budget(
     project_id: str,
     user: CurrentUser,
-    include_deleted: Annotated[bool, Query(description="Include removed categories")] = False,
+    include_deleted: Annotated[bool, Query(description="Include archived categories")] = False,
 ) -> ProjectBudget:
     return await controller.budget(project_id, include_deleted=include_deleted)
 
@@ -80,7 +82,9 @@ async def update_category(category_id: str, req: CategoryUpdate, user: CurrentUs
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         **NOT_FOUND,
-        status.HTTP_409_CONFLICT: {"description": "The category holds expenses"},
+        status.HTTP_409_CONFLICT: {
+            "description": "A category with expenses cannot be archived, only renamed"
+        },
     },
 )
 async def delete_category(category_id: str, user: CurrentUser) -> None:
@@ -102,7 +106,7 @@ async def restore_category(category_id: str, user: CurrentUser) -> CategoryRead:
 async def list_budget_items(
     category_id: str,
     user: CurrentUser,
-    include_deleted: Annotated[bool, Query(description="Include removed budget items")] = False,
+    include_deleted: Annotated[bool, Query(description="Include archived budget items")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> BudgetItemPage:

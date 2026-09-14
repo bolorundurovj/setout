@@ -54,7 +54,7 @@ describe('LoginComponent', () => {
     expect(navigations).toEqual([]);
   });
 
-  it('unlocks and goes to the dashboard', async () => {
+  it('signs in and goes to the dashboard', async () => {
     const component = render();
     component.password.set('a passphrase');
 
@@ -62,7 +62,7 @@ describe('LoginComponent', () => {
 
     expect(attempts).toEqual(['a passphrase']);
     expect(navigations[0][0]).toEqual(['/']);
-    expect(toasts[0]).toContain('unlocked');
+    expect(toasts[0]).toContain('Signed in');
   });
 
   it('stays where it is when the passphrase is wrong', async () => {

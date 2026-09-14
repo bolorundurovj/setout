@@ -101,12 +101,12 @@
   border-top: 1px solid var(--hairline);
 }
 
-.row.deleted {
+.row.archived {
   background: var(--sidebar);
 }
 
-.row.deleted .desc,
-.row.deleted .figure {
+.row.archived .desc,
+.row.archived .figure {
   color: var(--ink-3);
   text-decoration: line-through;
 }

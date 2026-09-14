@@ -63,40 +63,40 @@ describe('ProjectsComponent', () => {
     return fixture.componentInstance;
   }
 
-  it('asks before archiving', () => {
+  it('asks before closing', () => {
     const component = render([project()]);
-    component.ask('p1', 'archive');
-    expect(component.isPending('p1', 'archive')).toBe(true);
-    expect(component.isPending('p1', 'delete')).toBe(false);
+    component.ask('p1', 'close');
+    expect(component.isPending('p1', 'close')).toBe(true);
+    expect(component.isPending('p1', 'archive')).toBe(false);
   });
 
   it('drops the prompt when cancelled', () => {
     const component = render([project()]);
-    component.ask('p1', 'delete');
+    component.ask('p1', 'archive');
     component.cancelPending();
-    expect(component.isPending('p1', 'delete')).toBe(false);
+    expect(component.isPending('p1', 'close')).toBe(false);
   });
 
-  it('archives only after the prompt is confirmed', async () => {
+  it('closes only after the prompt is confirmed', async () => {
     const component = render([project()]);
-    component.ask('p1', 'archive');
-    await component.archive('p1');
+    component.ask('p1', 'close');
+    await component.close('p1');
     expect(updates[0]).toEqual(['p1', { status: 'archived' }]);
-    expect(component.isPending('p1', 'archive')).toBe(false);
+    expect(component.isPending('p1', 'close')).toBe(false);
   });
 
   it('puts an archived project back to active', async () => {
     const component = render([project({ status: 'archived' })]);
-    await component.unarchive('p1');
+    await component.reopen('p1');
     expect(updates[0]).toEqual(['p1', { status: 'active' }]);
   });
 
   it('clears a pending prompt when the deleted filter changes', async () => {
     const component = render([project()]);
-    component.ask('p1', 'delete');
-    await component.setIncludeDeleted(true);
-    expect(component.isPending('p1', 'delete')).toBe(false);
-    expect(component.includeDeleted()).toBe(true);
+    component.ask('p1', 'archive');
+    await component.setIncludeArchived(true);
+    expect(component.isPending('p1', 'archive')).toBe(false);
+    expect(component.includeArchived()).toBe(true);
   });
 
   it('reads initials from the first two words', () => {

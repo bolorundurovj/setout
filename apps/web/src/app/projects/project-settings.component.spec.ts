@@ -273,7 +273,7 @@ describe('ProjectSettingsComponent', () => {
     expect(component.renaming()).toBeNull();
   });
 
-  it('removes a category once asked', async () => {
+  it('archives a category once asked', async () => {
     const component = await ready();
     component.ask(category({ id: 'a' }));
 
@@ -281,7 +281,7 @@ describe('ProjectSettingsComponent', () => {
 
     expect(removed).toEqual(['a']);
     expect(component.removing()).toBeNull();
-    expect(toasts[0].message).toBe('Landscaping deleted.');
+    expect(toasts[0].message).toBe('Landscaping archived.');
   });
 
   it('passes on the reason a category with expenses cannot go', async () => {

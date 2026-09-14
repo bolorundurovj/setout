@@ -8,8 +8,8 @@
       </p>
     </div>
     <div class="intro-actions">
-      <app-toggle [checked]="includeDeleted()" (toggled)="setIncludeDeleted($event)">
-        {{ deletedLabel() }}
+      <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
+        {{ archivedLabel() }}
       </app-toggle>
       @if (!filing() && expenses.spend()?.uncategorized_count) {
         <app-button variant="secondary" (pressed)="startFiling()">Assign Uncategorized</app-button>
@@ -130,7 +130,7 @@
       </div>
 
       @for (expense of expenses.expenses(); track expense.id) {
-        <div class="row" [class.deleted]="expense.deleted_at">
+        <div class="row" [class.archived]="expense.deleted_at">
           <span class="main">
             <span class="desc">
               {{ expense.description }}
@@ -139,7 +139,7 @@
               }
             </span>
             @if (expense.deleted_at) {
-              <span class="t-micro">Deleted. It counts towards nothing until it is restored.</span>
+              <span class="t-micro">Archived. It counts towards nothing until it is restored.</span>
             } @else if (meta(expense)) {
               <span class="t-micro">{{ meta(expense) }}</span>
             }
@@ -171,10 +171,10 @@
               <button
                 type="button"
                 class="link-action destructive"
-                [attr.aria-label]="'Take ' + expense.description + ' off the record'"
+                [attr.aria-label]="'Archive ' + expense.description"
                 (click)="remove(expense.id)"
               >
-                Remove
+                Archive
               </button>
             }
           </span>

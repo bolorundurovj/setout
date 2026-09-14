@@ -111,8 +111,8 @@
   <section class="card block">
     <div class="block-head">
       <span class="t-micro">Categories</span>
-      <app-toggle [checked]="includeDeleted()" (toggled)="setIncludeDeleted($event)">
-        {{ deletedLabel() }}
+      <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
+        {{ archivedLabel() }}
       </app-toggle>
     </div>
 
@@ -124,12 +124,12 @@
           <div
             class="category"
             [class.child]="category.parent_id"
-            [class.deleted]="category.deleted_at"
+            [class.archived]="category.deleted_at"
           >
             @if (category.deleted_at) {
               <span class="swatch" [class]="tint(category)"></span>
               <span class="category-name">{{ category.name }}</span>
-              <span class="category-count t-mono">deleted</span>
+              <span class="category-count t-mono">archived</span>
               <button
                 type="button"
                 class="link-action"
@@ -154,9 +154,9 @@
             } @else if (removing() === category.id) {
               <span class="swatch" [class]="tint(category)"></span>
               <span class="category-name">{{ category.name }}</span>
-              <span class="t-small confirm">Remove this category?</span>
+              <span class="t-small confirm">Archive this category?</span>
               <button type="button" class="link-action destructive" (click)="remove(category)">
-                Yes, Remove
+                Yes, Archive
               </button>
               <button type="button" class="link-action" (click)="cancelRemove()">Cancel</button>
             } @else {
@@ -193,7 +193,7 @@
         </p>
       }
 
-      <p class="t-small note">A category with expenses cannot be deleted, only renamed.</p>
+      <p class="t-small note">A category with expenses cannot be archived, only renamed.</p>
     }
   </section>
 

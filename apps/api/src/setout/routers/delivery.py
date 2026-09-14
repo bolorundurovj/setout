@@ -35,7 +35,7 @@ async def list_deliveries(
     vendor_id: Annotated[str | None, Query(description="Only this vendor")] = None,
     outstanding_only: Annotated[bool, Query(description="Only what has not arrived")] = False,
     received_only: Annotated[bool, Query(description="Only what has arrived")] = False,
-    include_deleted: Annotated[bool, Query(description="Include removed deliveries")] = False,
+    include_deleted: Annotated[bool, Query(description="Include archived deliveries")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> DeliveryPage:
@@ -56,7 +56,7 @@ async def list_all_deliveries(
     vendor_id: Annotated[str | None, Query(description="Only this vendor")] = None,
     outstanding_only: Annotated[bool, Query(description="Only what has not arrived")] = False,
     received_only: Annotated[bool, Query(description="Only what has arrived")] = False,
-    include_deleted: Annotated[bool, Query(description="Include removed deliveries")] = False,
+    include_deleted: Annotated[bool, Query(description="Include archived deliveries")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> DeliveryPage:

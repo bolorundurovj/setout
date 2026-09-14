@@ -60,13 +60,13 @@ export class ProjectSettingsComponent {
   readonly newName = signal('');
   readonly removing = signal<string | null>(null);
   readonly justRemoved = signal<CategoryRead | null>(null);
-  readonly includeDeleted = signal(false);
+  readonly includeArchived = signal(false);
 
   readonly statuses: StatusChoice[] = [
     { value: 'active', name: 'In progress' },
     { value: 'on_hold', name: 'On hold' },
     { value: 'completed', name: 'Finished' },
-    { value: 'archived', name: 'Archived' },
+    { value: 'archived', name: 'Closed' },
   ];
 
   readonly shape = computed(() =>
@@ -211,7 +211,7 @@ export class ProjectSettingsComponent {
   async restore(category: CategoryRead): Promise<void> {
     const done = await this.budget.putCategoryBack(this.project().id, category.id);
     this.justRemoved.set(null);
-    await this.budget.load(this.project().id, this.includeDeleted());
+    await this.budget.load(this.project().id, this.includeArchived());
     this.toast.show(
       done
         ? `${category.name} restored.`
@@ -220,29 +220,29 @@ export class ProjectSettingsComponent {
     );
   }
 
-  async setIncludeDeleted(on: boolean): Promise<void> {
-    this.includeDeleted.set(on);
+  async setIncludeArchived(on: boolean): Promise<void> {
+    this.includeArchived.set(on);
     this.renaming.set(null);
     this.removing.set(null);
     await this.budget.load(this.project().id, on);
   }
 
-  deletedLabel(): string {
-    return this.includeDeleted() ? 'Hide deleted' : 'Show deleted';
+  archivedLabel(): string {
+    return this.includeArchived() ? 'Hide archived' : 'Show archived';
   }
 
   async remove(category: CategoryRead): Promise<void> {
     const done = await this.budget.removeCategory(
       this.project().id,
       category.id,
-      this.includeDeleted(),
+      this.includeArchived(),
     );
     this.removing.set(null);
     this.justRemoved.set(done ? category : null);
     this.toast.show(
       done
-        ? `${category.name} deleted.`
-        : (this.budget.error() ?? 'Could not remove the category.'),
+        ? `${category.name} archived.`
+        : (this.budget.error() ?? 'Could not archive the category.'),
       done ? 'success' : 'error',
     );
   }

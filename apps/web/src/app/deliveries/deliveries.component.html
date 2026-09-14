@@ -7,8 +7,8 @@
         an item delivered does not change any total.
       </p>
     </div>
-    <app-toggle [checked]="includeDeleted()" (toggled)="setIncludeDeleted($event)">
-      {{ deletedLabel() }}
+    <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
+      {{ archivedLabel() }}
     </app-toggle>
   </div>
 
@@ -71,7 +71,7 @@
             </div>
           </div>
         } @else {
-          <div class="owed" [class.deleted]="owed.deleted_at">
+          <div class="owed" [class.archived]="owed.deleted_at">
             <span class="owed-text">
               <span class="owed-what">{{ owed.description }}</span>
               @if (owed.deleted_at) {
@@ -108,13 +108,13 @@
     <section class="block">
       <h3 class="t-heading">Delivered</h3>
       @for (owed of arrivedRows(); track owed.id) {
-        <div class="done" [class.deleted]="owed.deleted_at">
+        <div class="done" [class.archived]="owed.deleted_at">
           <span class="owed-text">
             <span class="done-what">{{ owed.description }}</span>
             <span class="t-small muted">
               {{ vendorName(owed) }} &middot; arrived {{ arrivedOn(owed) }}
               @if (owed.deleted_at) {
-                &middot; deleted
+                &middot; archived
               }
             </span>
           </span>

@@ -54,7 +54,7 @@ async def list_expenses(
     agreement_only: Annotated[
         bool, Query(description="Only payments assigned to an agreement")
     ] = False,
-    include_deleted: Annotated[bool, Query(description="Include removed expenses")] = False,
+    include_deleted: Annotated[bool, Query(description="Include archived expenses")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> ExpensePage:
@@ -76,7 +76,9 @@ async def list_expenses(
     operation_id="fileExpenses",
     responses={
         **NOT_FOUND,
-        status.HTTP_409_CONFLICT: {"description": "Category holds no spend of its own"},
+        status.HTTP_409_CONFLICT: {
+            "description": "A category with subcategories has no expenses of its own"
+        },
     },
 )
 async def file_expenses(
@@ -91,7 +93,9 @@ async def file_expenses(
     status_code=status.HTTP_201_CREATED,
     responses={
         **NOT_FOUND,
-        status.HTTP_409_CONFLICT: {"description": "Category holds no spend of its own"},
+        status.HTTP_409_CONFLICT: {
+            "description": "A category with subcategories has no expenses of its own"
+        },
     },
 )
 async def add_expense(project_id: str, req: ExpenseCreate, user: CurrentUser) -> ExpenseRead:
