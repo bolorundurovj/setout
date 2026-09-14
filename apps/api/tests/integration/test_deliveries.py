@@ -204,7 +204,7 @@ async def test_a_deleted_delivery_leaves_the_list_and_can_come_back(client: Asyn
     assert (await client.get(f"/api/projects/{project_id}/deliveries")).json()["total"] == 1
 
 
-async def test_a_removed_delivery_is_listed_when_asked_for_and_owes_nothing(
+async def test_an_archived_delivery_is_listed_when_asked_for_and_owes_nothing(
     client: AsyncClient,
 ) -> None:
     project_id = await _project(client)

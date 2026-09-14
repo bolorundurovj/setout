@@ -200,7 +200,7 @@ async def test_agreements_and_advances_are_paginated(client: AsyncClient) -> Non
     assert len(page["items"]) == 2
 
 
-async def test_a_removed_agreement_is_listed_when_asked_for_and_restorable(
+async def test_an_archived_agreement_is_listed_when_asked_for_and_restorable(
     client: AsyncClient,
 ) -> None:
     project_id = await _project(client)
@@ -222,7 +222,7 @@ async def test_a_removed_agreement_is_listed_when_asked_for_and_restorable(
     assert (await client.get(f"/api/projects/{project_id}/agreements")).json()["total"] == 1
 
 
-async def test_a_removed_advance_is_listed_when_asked_for_and_restorable(
+async def test_an_archived_advance_is_listed_when_asked_for_and_restorable(
     client: AsyncClient,
 ) -> None:
     project_id = await _project(client)

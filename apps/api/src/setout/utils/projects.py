@@ -10,7 +10,7 @@ def require_archived(project: Project) -> None:
     if project.status != ProjectStatus.ARCHIVED:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Archive the project before deleting it",
+            detail="Close the project before archiving it",
         )
 
 

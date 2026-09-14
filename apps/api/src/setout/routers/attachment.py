@@ -34,7 +34,7 @@ NOT_FOUND: dict[int | str, dict[str, Any]] = {
 async def list_attachments(
     expense_id: str,
     user: CurrentUser,
-    include_deleted: Annotated[bool, Query(description="Include removed files")] = False,
+    include_deleted: Annotated[bool, Query(description="Include archived files")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> AttachmentPage:

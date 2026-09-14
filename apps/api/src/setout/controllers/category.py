@@ -169,7 +169,7 @@ class CategoryController:
         if await Expense.filter(category_id__in=branch, deleted_at__isnull=True).exists():
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="A category with expenses cannot be deleted, only renamed",
+                detail="A category with expenses cannot be archived, only renamed",
             )
 
     async def _below(self, category: Category) -> list[str]:

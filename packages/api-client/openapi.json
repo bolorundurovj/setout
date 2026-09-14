@@ -799,11 +799,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include soft deleted projects",
+              "description": "Include archived projects",
               "default": false,
               "title": "Include Deleted"
             },
-            "description": "Include soft deleted projects"
+            "description": "Include archived projects"
           },
           {
             "name": "limit",
@@ -1166,7 +1166,7 @@
             "description": "Project not found"
           },
           "409": {
-            "description": "Project is not archived"
+            "description": "The project is not closed"
           },
           "422": {
             "description": "Validation Error",
@@ -1324,11 +1324,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include removed categories",
+              "description": "Include archived categories",
               "default": false,
               "title": "Include Deleted"
             },
-            "description": "Include removed categories"
+            "description": "Include archived categories"
           },
           {
             "name": "setout_session",
@@ -1479,11 +1479,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include removed categories",
+              "description": "Include archived categories",
               "default": false,
               "title": "Include Deleted"
             },
-            "description": "Include removed categories"
+            "description": "Include archived categories"
           },
           {
             "name": "setout_session",
@@ -1652,7 +1652,7 @@
             "description": "Not found"
           },
           "409": {
-            "description": "The category holds expenses"
+            "description": "A category with expenses cannot be archived, only renamed"
           },
           "422": {
             "description": "Validation Error",
@@ -1754,11 +1754,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include removed budget items",
+              "description": "Include archived budget items",
               "default": false,
               "title": "Include Deleted"
             },
-            "description": "Include removed budget items"
+            "description": "Include archived budget items"
           },
           {
             "name": "limit",
@@ -1894,7 +1894,7 @@
             "description": "Not found"
           },
           "409": {
-            "description": "Category holds no budget of its own"
+            "description": "A category with subcategories has no budget of its own"
           },
           "422": {
             "description": "Validation Error",
@@ -2210,11 +2210,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include removed expenses",
+              "description": "Include archived expenses",
               "default": false,
               "title": "Include Deleted"
             },
-            "description": "Include removed expenses"
+            "description": "Include archived expenses"
           },
           {
             "name": "limit",
@@ -2350,7 +2350,7 @@
             "description": "Not found"
           },
           "409": {
-            "description": "Category holds no spend of its own"
+            "description": "A category with subcategories has no expenses of its own"
           },
           "422": {
             "description": "Validation Error",
@@ -2428,7 +2428,7 @@
             "description": "Not found"
           },
           "409": {
-            "description": "Category holds no spend of its own"
+            "description": "A category with subcategories has no expenses of its own"
           },
           "422": {
             "description": "Validation Error",
@@ -3964,11 +3964,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include removed files",
+              "description": "Include archived files",
               "default": false,
               "title": "Include Deleted"
             },
-            "description": "Include removed files"
+            "description": "Include archived files"
           },
           {
             "name": "limit",
@@ -4474,11 +4474,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include removed entries",
+              "description": "Include archived entries",
               "default": false,
               "title": "Include Deleted"
             },
-            "description": "Include removed entries"
+            "description": "Include archived entries"
           },
           {
             "name": "limit",
@@ -6055,11 +6055,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include removed agreements",
+              "description": "Include archived agreements",
               "default": false,
               "title": "Include Deleted"
             },
-            "description": "Include removed agreements"
+            "description": "Include archived agreements"
           },
           {
             "name": "limit",
@@ -6491,11 +6491,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include removed advances",
+              "description": "Include archived advances",
               "default": false,
               "title": "Include Deleted"
             },
-            "description": "Include removed advances"
+            "description": "Include archived advances"
           },
           {
             "name": "limit",
@@ -6975,11 +6975,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include removed deliveries",
+              "description": "Include archived deliveries",
               "default": false,
               "title": "Include Deleted"
             },
-            "description": "Include removed deliveries"
+            "description": "Include archived deliveries"
           },
           {
             "name": "limit",
@@ -7189,11 +7189,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include removed deliveries",
+              "description": "Include archived deliveries",
               "default": false,
               "title": "Include Deleted"
             },
-            "description": "Include removed deliveries"
+            "description": "Include archived deliveries"
           },
           {
             "name": "limit",
@@ -7922,11 +7922,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include removed files",
+              "description": "Include archived files",
               "default": false,
               "title": "Include Deleted"
             },
-            "description": "Include removed files"
+            "description": "Include archived files"
           },
           {
             "name": "limit",
@@ -14076,7 +14076,7 @@
           "removed_count": {
             "type": "integer",
             "title": "Removed Count",
-            "description": "Expenses taken off the record, in no total"
+            "description": "Expenses archived, no longer accounted for in total"
           },
           "variance_percent": {
             "anyOf": [
