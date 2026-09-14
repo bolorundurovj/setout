@@ -21,7 +21,7 @@ import { SettingsComponent } from './settings/settings.component';
 import { authGuard, guestGuard } from './auth/auth.guard';
 
 export const routes: Routes = [
-  { path: 'login', component: LoginComponent, canActivate: [guestGuard], title: 'Unlock' },
+  { path: 'login', component: LoginComponent, canActivate: [guestGuard], title: 'Sign In' },
   { path: 'setup', component: SetupComponent, canActivate: [guestGuard], title: 'Setup' },
   { path: '', component: DashboardComponent, canActivate: [authGuard], title: 'Dashboard' },
   {

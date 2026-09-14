@@ -52,7 +52,7 @@ describe('App', () => {
       return fixture.componentInstance;
     }
 
-    it('asks for the counts once the server is unlocked', () => {
+    it('asks for the counts once signed in', () => {
       render({ projects: 1, vendors: 0, items: 0, people: 0, lands: 0 });
       expect(loads).toBe(1);
     });

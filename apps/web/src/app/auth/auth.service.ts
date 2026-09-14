@@ -101,7 +101,7 @@ export class AuthService {
       ) {
         this.error.set('Incorrect passphrase.');
       } else {
-        this.error.set('An error occurred during sign in.');
+        this.error.set('Could not sign in.');
       }
       return false;
     }
