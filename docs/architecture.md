@@ -61,7 +61,7 @@ it can be categorized later.
 
 **Items, vendors and people belong to the install, not a project**, because the same vendor and the same item are used across projects. Their amounts are always reported per project. An item holds no prices of its own; every expense assigned to it with a rate builds its price history.
 
-**Deletes are soft, and cascade to what a row owns.** A deleted row is retained and can be restored. Deleting a row also deletes its dependants. Every list that holds soft deleted rows takes `include_deleted` (`include_archived` for the install-wide lists), and the screen that owns the list offers the toggle that sets it, so a deleted row stays reachable rather than depending on an undo that a page refresh loses.
+**Removing is archiving, and it cascades to what a row owns.** An archived row is retained and can be restored; nothing in Setout is deleted for good. Archiving a row archives its dependants. Every list that holds archived rows takes a flag to include them, and the screen that owns the list offers the toggle that sets it, so an archived row stays reachable rather than depending on an undo that a page refresh loses. The column behind it is `deleted_at`, kept from before the wording settled.
 
 **IDs are short and readable.** Twelve characters from an alphabet that excludes `0`/`O` and `1`/`l`/`I`, so an ID is unambiguous when read aloud or copied (`utils/ids.py`).
 
