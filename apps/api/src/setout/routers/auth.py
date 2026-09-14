@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
@@ -18,6 +19,7 @@ from setout.schemas.auth import (
     UserResponse,
 )
 from setout.services.auth import (
+    delay_for,
     hash_password,
     read_session_id,
     sign_session_id,
@@ -27,10 +29,10 @@ from setout.services.auth import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 SESSION_COOKIE_NAME = "setout_session"
-SESSION_DAYS = 30
 
 
 async def get_current_user(
+    response: Response,
     setout_session: Annotated[str | None, Cookie()] = None,
 ) -> User:
     if not setout_session:
@@ -42,16 +44,26 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired session"
         )
 
-    session = await Session.get_or_none(
-        id=session_id, expires_at__gt=datetime.now(UTC)
-    ).prefetch_related("user")
+    now = datetime.now(UTC)
+    session = await Session.get_or_none(id=session_id, expires_at__gt=now).prefetch_related("user")
 
     if not session:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired session"
         )
 
+    await _extend_expiry(session, now, response)
     return session.user
+
+
+async def _extend_expiry(session: Session, now: datetime, response: Response) -> None:
+    """Reset expiry to a full window once half of it has passed."""
+    window = session_window()
+    if session.expires_at - now > window / 2:
+        return
+    session.expires_at = now + window
+    await session.save()
+    set_session_cookie(response, session.id)
 
 
 @router.get(
@@ -114,6 +126,10 @@ async def change_passphrase(
     await Session.filter(user_id=user.id).exclude(id=keep or "").delete()
 
 
+def session_window() -> timedelta:
+    return timedelta(days=get_settings().session_days)
+
+
 def set_session_cookie(response: Response, session_id: str) -> None:
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
@@ -121,7 +137,7 @@ def set_session_cookie(response: Response, session_id: str) -> None:
         httponly=True,
         secure=get_settings().cookie_secure,
         samesite="lax",
-        max_age=SESSION_DAYS * 24 * 3600,
+        max_age=get_settings().session_days * 24 * 3600,
     )
 
 
@@ -169,7 +185,7 @@ async def setup_admin(req: SetupRequest, response: Response) -> UserResponse:
     user = await User.create(name=req.name, email=req.email, password_hash=hashed)
 
     session_id = secrets.token_urlsafe(32)
-    expires = datetime.now(UTC) + timedelta(days=SESSION_DAYS)
+    expires = datetime.now(UTC) + session_window()
     await Session.create(id=session_id, user=user, expires_at=expires)
 
     set_session_cookie(response, session_id)
@@ -179,22 +195,64 @@ async def setup_admin(req: SetupRequest, response: Response) -> UserResponse:
 @router.post(
     "/login",
     operation_id="login",
-    responses={status.HTTP_401_UNAUTHORIZED: {"description": "Invalid credentials"}},
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Invalid credentials"},
+        status.HTTP_429_TOO_MANY_REQUESTS: {
+            "description": "Too many wrong passphrases. Wait and try again"
+        },
+    },
 )
 async def login(req: LoginRequest, response: Response) -> UserResponse:
+    settings = get_settings()
     user = await User.first()
-    if not user or not verify_password(req.password, user.password_hash):
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
         )
 
+    now = datetime.now(UTC)
+    failures = _failures_remembered(user, now, settings.login_retry_after_seconds)
+    wait = delay_for(failures, settings)
+    if wait is None:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many wrong passphrases. Wait and try again",
+            headers={"Retry-After": str(settings.login_retry_after_seconds)},
+        )
+    if wait:
+        await asyncio.sleep(wait)
+
+    if not verify_password(req.password, user.password_hash):
+        user.failed_logins = failures + 1
+        user.last_failed_at = now
+        await user.save()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+        )
+
+    if user.failed_logins:
+        user.failed_logins = 0
+        user.last_failed_at = None
+        await user.save()
+
+    await Session.filter(expires_at__lte=now).delete()
+
     session_id = secrets.token_urlsafe(32)
-    expires = datetime.now(UTC) + timedelta(days=SESSION_DAYS)
-    await Session.create(id=session_id, user=user, expires_at=expires)
+    await Session.create(id=session_id, user=user, expires_at=now + session_window())
 
     set_session_cookie(response, session_id)
     return UserResponse.model_validate(user)
+
+
+def _failures_remembered(user: User, now: datetime, window_seconds: int) -> int:
+    """Failures older than the window are not counted."""
+    if user.last_failed_at is None:
+        return 0
+    if (now - user.last_failed_at).total_seconds() > window_seconds:
+        return 0
+    return user.failed_logins
 
 
 @router.post("/logout", operation_id="logout", status_code=204)

@@ -55,6 +55,10 @@ def app_schema(
 ) -> Iterator[schemathesis.BaseSchema]:
     db_file = tmp_path / "contract.sqlite3"
     monkeypatch.setenv("SETOUT_DATABASE_URL", f"sqlite://{db_file.as_posix()}")
+    # Generated passphrases are a burst of failures, which the throttle answers
+    # with 429 and a growing wait. The throttle has its own tests.
+    monkeypatch.setenv("SETOUT_LOGIN_DELAY_SECONDS", "0")
+    monkeypatch.setenv("SETOUT_LOGIN_MAX_ATTEMPTS", "1000000")
     get_settings.cache_clear()
     monkeypatch.setattr(db_module, "TORTOISE_ORM", db_module.build_tortoise_config())
 

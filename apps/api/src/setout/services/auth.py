@@ -5,7 +5,7 @@ import hmac
 
 import bcrypt
 
-from setout.config import get_settings
+from setout.config import Settings, get_settings
 
 
 def hash_password(password: str) -> str:
@@ -18,6 +18,20 @@ def verify_password(password: str, hashed: str) -> bool:
         return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
     except ValueError:
         return False
+
+
+def delay_for(failures: int, settings: Settings) -> float | None:
+    """Seconds to wait before answering, or None when the attempt should be refused.
+
+    Setout has one account, so a lockout could be used to keep the owner out.
+    """
+    if failures >= settings.login_max_attempts:
+        return None
+    over = failures - settings.login_free_attempts
+    if over < 0:
+        return 0.0
+    wait: float = settings.login_delay_seconds * (2**over)
+    return min(wait, settings.login_delay_cap_seconds)
 
 
 def _signature(session_id: str) -> str:

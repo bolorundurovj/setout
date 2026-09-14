@@ -39,6 +39,19 @@ class Settings(BaseSettings):
     # reachable over anything other than localhost.
     cookie_secure: bool = False
 
+    # How long a session lasts. The expiry is reset while the session is in use.
+    session_days: int = 30
+    # Wrong passphrases answered at once before any waiting starts.
+    login_free_attempts: int = 3
+    # The first wait, doubling per failure after that. Zero turns the waiting off.
+    login_delay_seconds: float = 1.0
+    # The waiting never grows past this.
+    login_delay_cap_seconds: float = 8.0
+    # Past this many failures the attempt is refused rather than held open.
+    login_max_attempts: int = 7
+    # What Retry-After says, and how long a failure is remembered for.
+    login_retry_after_seconds: int = 30
+
     # Tiles for the map on a plot of land. The default is OpenStreetMap's own
     # server; point this at your own if you run Setout for more than a household.
     map_tile_url: str = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"

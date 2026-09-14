@@ -93,13 +93,12 @@ export class AuthService {
       return true;
     } catch (e: unknown) {
       this.loading.set(false);
-      if (
-        typeof e === 'object' &&
-        e !== null &&
-        'status' in e &&
-        (e as { status: number }).status === 401
-      ) {
+      const status =
+        typeof e === 'object' && e !== null && 'status' in e ? (e as { status: number }).status : 0;
+      if (status === 401) {
         this.error.set('Incorrect passphrase.');
+      } else if (status === 429) {
+        this.error.set('Too many wrong passphrases. Wait a moment and try again.');
       } else {
         this.error.set('Could not sign in.');
       }

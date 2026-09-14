@@ -14,6 +14,12 @@ and adjust. Local development defaults to `./data`.
 | `SETOUT_LOG_LEVEL` | `info` | `debug`, `info`, `warning`, `error` |
 | `SETOUT_CORS_ORIGINS` | `http://localhost:4200` | Comma separated origins allowed to call the API |
 | `SETOUT_COOKIE_SECURE` | `false` | Send the session cookie over HTTPS only; turn on when not on localhost |
+| `SETOUT_SESSION_DAYS` | `30` | How long a session lasts. The window slides while it is in use |
+| `SETOUT_LOGIN_FREE_ATTEMPTS` | `3` | Wrong passphrases answered at once before any waiting |
+| `SETOUT_LOGIN_DELAY_SECONDS` | `1.0` | The first wait, doubling per failure after that |
+| `SETOUT_LOGIN_DELAY_CAP_SECONDS` | `8.0` | However long the waiting grows, it stops here |
+| `SETOUT_LOGIN_MAX_ATTEMPTS` | `7` | Past this many failures the attempt is refused outright |
+| `SETOUT_LOGIN_RETRY_AFTER_SECONDS` | `30` | What `Retry-After` says, and how long a failure is remembered |
 | `SETOUT_STORAGE_BACKEND` | `local` | Where attached files live: `local` or `s3` |
 | `SETOUT_S3_BUCKET` | empty | Bucket name when the backend is `s3` |
 | `SETOUT_S3_ENDPOINT_URL` | empty | Leave unset for Amazon; set it for MinIO, R2, B2, Spaces |
@@ -29,6 +35,13 @@ and adjust. Local development defaults to `./data`.
 | `SETOUT_MAP_ATTRIBUTION` | `© OpenStreetMap contributors` | Credit shown on the map |
 | `SETOUT_GEOCODER_URL` | Nominatim | Turns a pin into an address. Empty turns the check off |
 | `SETOUT_GEOCODER_EMAIL` | empty | Contact address, requested by Nominatim beyond light use |
+
+Repeated wrong passphrases are slowed and then refused. The wait doubles from
+`SETOUT_LOGIN_DELAY_SECONDS`, and past `SETOUT_LOGIN_MAX_ATTEMPTS` the attempt comes back as
+`429` with a `Retry-After` header rather than being held open. There is no lockout: Setout has
+one account, so a lockout would let anybody keep you out by failing on purpose. A correct
+passphrase clears the count, and failures older than `SETOUT_LOGIN_RETRY_AFTER_SECONDS` are
+forgotten.
 
 Two of these decide whether the installation is safe to expose. `SETOUT_SECRET_KEY` signs session cookies, so anyone who knows it can forge a session. The app warns on startup while it is still the default. `SETOUT_COOKIE_SECURE` should be enabled anywhere other than localhost.
 
