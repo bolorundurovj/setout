@@ -75,6 +75,7 @@ describe('ExpensesComponent', () => {
   let uncategorizedPages: number[];
   let toasts: { message: string; type: string }[];
   let fileResult: number | null;
+  let asked: boolean[];
 
   function render() {
     expenses = [expense('e1'), expense('e2', { description: 'Sand' })];
@@ -85,6 +86,7 @@ describe('ExpensesComponent', () => {
     uncategorizedPages = [];
     toasts = [];
     fileResult = 2;
+    asked = [];
 
     const expenseService = {
       expenses: () => expenses,
@@ -110,7 +112,10 @@ describe('ExpensesComponent', () => {
       }),
       saving: () => false,
       error: () => null,
-      load: async (projectId: string) => void loaded.push(projectId),
+      load: async (projectId: string, includeDeleted = false) => {
+        loaded.push(projectId);
+        asked.push(includeDeleted);
+      },
       goTo: async (projectId: string) => void loaded.push(projectId),
       loadForCategory: async (projectId: string, categoryId: string, page = 1) => {
         loaded.push(projectId);
@@ -121,6 +126,7 @@ describe('ExpensesComponent', () => {
         return fileResult;
       },
       remove: async () => undefined,
+      restore: async () => undefined,
     };
 
     const budgetService = {
@@ -150,6 +156,19 @@ describe('ExpensesComponent', () => {
     render();
     await Promise.resolve();
     expect(loaded).toContain('p1');
+  });
+
+  it('reads the list again with the deleted included when the toggle goes on', async () => {
+    const component = render();
+    component.startFiling();
+
+    await component.setIncludeDeleted(true);
+
+    expect(component.includeDeleted()).toBe(true);
+    expect(component.deletedLabel()).toBe('Hide deleted');
+    expect(asked).toContain(true);
+    // Filing works on live rows, so it closes rather than showing deleted ones.
+    expect(component.filing()).toBe(false);
   });
 
   it('starts bulk filing and loads the uncategorized list', async () => {

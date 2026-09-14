@@ -172,7 +172,7 @@ describe('AgreementService', () => {
     expect(service.saving()).toBe(false);
   });
 
-  it('takes a removed agreement out of the list and off the count', async () => {
+  it('takes a deleted agreement out of the list and off the count', async () => {
     const service = configure((name) =>
       name === 'listAgreements' ? page([agreement('a1'), agreement('a2')], 2) : undefined,
     );
@@ -182,6 +182,52 @@ describe('AgreementService', () => {
 
     expect(service.agreements().map((row) => row.id)).toEqual(['a2']);
     expect(service.agreementTotal()).toBe(1);
+  });
+
+  it('leaves deleted rows out of both lists unless the page includes them', async () => {
+    const service = configure((name) =>
+      name === 'listAgreements' ? page([agreement('a1')], 1) : page([{ id: 'ad1' }], 1),
+    );
+    await service.loadAll('p1');
+    await service.loadAdvances('p1');
+    expect(calls('listAgreements')[0]['include_deleted']).toBe(false);
+    expect(calls('listAdvances')[0]['include_deleted']).toBe(false);
+
+    await service.loadAll('p1', true);
+    await service.loadAdvances('p1');
+    expect(calls('listAgreements')[1]['include_deleted']).toBe(true);
+    expect(calls('listAdvances')[1]['include_deleted']).toBe(true);
+  });
+
+  it('puts a restored agreement back in place, no longer deleted', async () => {
+    const service = configure((name) => {
+      if (name === 'listAgreements') {
+        return page([agreement('a1', { deleted_at: '2026-09-01T00:00:00Z' })], 1);
+      }
+      return name === 'restoreAgreement' ? agreement('a1') : undefined;
+    });
+    await service.loadAll('p1', true);
+
+    const back = await service.restore('a1');
+
+    expect(back?.deleted_at).toBeNull();
+    expect(service.agreements()[0].deleted_at).toBeNull();
+  });
+
+  it('reads the advances and balances again once one is restored', async () => {
+    const service = configure((name) =>
+      name === 'listBalances'
+        ? []
+        : name === 'restoreAdvance'
+          ? { id: 'ad1' }
+          : page([{ id: 'ad1' }]),
+    );
+
+    await service.restoreAdvance('p1', 'ad1');
+
+    expect(calls('restoreAdvance').length).toBe(1);
+    expect(calls('listAdvances').length).toBe(1);
+    expect(calls('listBalances').length).toBe(1);
   });
 
   it('reads advances a page at a time and remembers which page it is on', async () => {

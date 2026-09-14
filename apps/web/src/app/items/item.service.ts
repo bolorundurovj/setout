@@ -30,6 +30,7 @@ export class ItemService {
   private readonly pageState = signal(1);
   private readonly choiceState = signal<ItemRead[]>([]);
   private readonly searchState = signal('');
+  private readonly archivedState = signal(false);
 
   readonly items = this.state.asReadonly();
   readonly total = this.totalState.asReadonly();
@@ -42,8 +43,9 @@ export class ItemService {
 
   private asked = 0;
 
-  async load(search?: string): Promise<void> {
+  async load(search?: string, includeArchived = false): Promise<void> {
     this.searchState.set(search ?? '');
+    this.archivedState.set(includeArchived);
     await this.goTo(1);
   }
 
@@ -63,6 +65,7 @@ export class ItemService {
     try {
       const rows = await this.api.invoke(listItems, {
         search: this.searchState() || undefined,
+        include_archived: this.archivedState(),
         limit: PAGE_SIZE,
         offset: offsetOf(page),
       });

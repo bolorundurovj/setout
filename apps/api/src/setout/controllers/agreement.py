@@ -26,9 +26,13 @@ from setout.utils.balances import balance_of, paid_by_agreement, person_balances
 
 
 class AgreementController:
-    async def list_agreements(self, project_id: str, *, limit: int, offset: int) -> AgreementPage:
+    async def list_agreements(
+        self, project_id: str, *, include_deleted: bool, limit: int, offset: int
+    ) -> AgreementPage:
         await self._project_or_404(project_id)
-        query = Agreement.filter(project_id=project_id, deleted_at__isnull=True)
+        query = Agreement.filter(project_id=project_id)
+        if not include_deleted:
+            query = query.filter(deleted_at__isnull=True)
         total = await query.count()
         rows = await query.offset(offset).limit(limit).prefetch_related("vendor")
         paid = await paid_by_agreement([row.id for row in rows])
@@ -67,9 +71,21 @@ class AgreementController:
         agreement.deleted_at = datetime.now(UTC)
         await agreement.save()
 
-    async def list_advances(self, project_id: str, *, limit: int, offset: int) -> AdvancePage:
+    async def restore(self, agreement_id: str) -> AgreementRead:
+        agreement = await self._agreement_or_404(agreement_id, include_deleted=True)
+        if agreement.deleted_at is not None:
+            agreement.deleted_at = None
+            await agreement.save()
+        paid = await paid_by_agreement([agreement.id])
+        return self._read(agreement, paid.get(agreement.id, 0))
+
+    async def list_advances(
+        self, project_id: str, *, include_deleted: bool, limit: int, offset: int
+    ) -> AdvancePage:
         await self._project_or_404(project_id)
-        query = Advance.filter(project_id=project_id, deleted_at__isnull=True)
+        query = Advance.filter(project_id=project_id)
+        if not include_deleted:
+            query = query.filter(deleted_at__isnull=True)
         total = await query.count()
         rows = await query.offset(offset).limit(limit).prefetch_related("person")
         return AdvancePage(
@@ -106,6 +122,13 @@ class AgreementController:
         advance = await self._advance_or_404(advance_id)
         advance.deleted_at = datetime.now(UTC)
         await advance.save()
+
+    async def restore_advance(self, advance_id: str) -> AdvanceRead:
+        advance = await self._advance_or_404(advance_id, include_deleted=True)
+        if advance.deleted_at is not None:
+            advance.deleted_at = None
+            await advance.save()
+        return self._advance(advance)
 
     async def balances(self, project_id: str) -> list[PersonBalance]:
         project = await self._project_or_404(project_id)
@@ -180,18 +203,16 @@ class AgreementController:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
         return project
 
-    async def _agreement_or_404(self, agreement_id: str) -> Agreement:
-        agreement = await Agreement.get_or_none(
-            id=agreement_id, deleted_at__isnull=True
-        ).prefetch_related("vendor")
-        if agreement is None:
+    async def _agreement_or_404(
+        self, agreement_id: str, *, include_deleted: bool = False
+    ) -> Agreement:
+        agreement = await Agreement.get_or_none(id=agreement_id).prefetch_related("vendor")
+        if agreement is None or (agreement.deleted_at is not None and not include_deleted):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agreement not found")
         return agreement
 
-    async def _advance_or_404(self, advance_id: str) -> Advance:
-        advance = await Advance.get_or_none(
-            id=advance_id, deleted_at__isnull=True
-        ).prefetch_related("person")
-        if advance is None:
+    async def _advance_or_404(self, advance_id: str, *, include_deleted: bool = False) -> Advance:
+        advance = await Advance.get_or_none(id=advance_id).prefetch_related("person")
+        if advance is None or (advance.deleted_at is not None and not include_deleted):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Advance not found")
         return advance

@@ -71,7 +71,7 @@ describe('AttachmentService', () => {
     expect(service.error()).toBe('That file is larger than the 25 MB limit');
   });
 
-  it('takes a removed file out of the list it was in', async () => {
+  it('takes a deleted file out of the list it was in', async () => {
     const service = configure((name) =>
       name === 'listAttachments' ? { items: [file('a'), file('b')], total: 2 } : undefined,
     );

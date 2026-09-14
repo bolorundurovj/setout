@@ -226,10 +226,10 @@ describe('BudgetCompareComponent', () => {
 
   it('says how many expenses were taken off the record, and nothing when none were', () => {
     expect(render([], { ...spend(1000, 500), removed_count: 2 }).removedNote()).toBe(
-      '2 expenses removed from this project and not counted.',
+      '2 expenses deleted from this project and not counted.',
     );
     expect(render([], { ...spend(1000, 500), removed_count: 1 }).removedNote()).toContain(
-      '1 expense removed',
+      '1 expense deleted',
     );
     expect(render([], spend(1000, 500)).removedNote()).toBe('');
   });

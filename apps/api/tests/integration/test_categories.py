@@ -155,6 +155,34 @@ async def test_a_deleted_category_is_hidden_and_restorable(client: AsyncClient) 
     assert restored.json()["deleted_at"] is None
 
 
+async def test_a_removed_category_is_listed_when_asked_for_without_its_budget(
+    client: AsyncClient,
+) -> None:
+    project_id = await _project(client)
+    kept = await _category(client, project_id, "Interior work")
+    gone = await _category(client, project_id, "Equipment rentals")
+    for category_id in (kept["id"], gone["id"]):
+        await client.post(
+            f"/api/categories/{category_id}/budget-items",
+            json={"description": "Hire", "budgeted_amount": 50_000_00},
+        )
+    await client.delete(f"/api/categories/{gone['id']}")
+
+    listed = await client.get(
+        f"/api/projects/{project_id}/categories", params={"include_deleted": True}
+    )
+    rows = listed.json()
+    assert {row["id"] for row in rows} == {kept["id"], gone["id"]}
+    removed = next(row for row in rows if row["id"] == gone["id"])
+    assert removed["deleted_at"]
+    assert removed["own_budgeted_amount"] == 50_000_00
+
+    budget = (
+        await client.get(f"/api/projects/{project_id}/budget", params={"include_deleted": True})
+    ).json()
+    assert budget["budgeted_amount"] == 50_000_00
+
+
 async def test_a_category_cannot_be_its_own_parent(client: AsyncClient) -> None:
     project_id = await _project(client)
     category = await _category(client, project_id, "Interior work")
@@ -207,6 +235,7 @@ async def test_missing_things_answer_404(client: AsyncClient) -> None:
     assert (await client.post("/api/categories/nope/restore")).status_code == 404
     assert (await client.get("/api/categories/nope/budget-items")).status_code == 404
     assert (await client.delete("/api/budget-items/nope")).status_code == 404
+    assert (await client.post("/api/budget-items/nope/restore")).status_code == 404
     assert (
         await client.patch("/api/budget-items/nope", json={"budgeted_amount": 1})
     ).status_code == 404
@@ -249,6 +278,35 @@ async def test_a_budget_item_is_soft_deleted(client: AsyncClient) -> None:
 
     categories = (await client.get(f"/api/projects/{project_id}/categories")).json()
     assert categories[0]["budgeted_amount"] == 0
+
+
+async def test_a_removed_budget_item_is_listed_when_asked_for_and_restorable(
+    client: AsyncClient,
+) -> None:
+    project_id = await _project(client)
+    category = await _category(client, project_id, "Roofing")
+    item = (
+        await client.post(
+            f"/api/categories/{category['id']}/budget-items",
+            json={"description": "Roofing sheets", "budgeted_amount": 750_000_00},
+        )
+    ).json()
+    await client.delete(f"/api/budget-items/{item['id']}")
+
+    page = (
+        await client.get(
+            f"/api/categories/{category['id']}/budget-items", params={"include_deleted": True}
+        )
+    ).json()
+    assert [row["id"] for row in page["items"]] == [item["id"]]
+    assert page["items"][0]["deleted_at"]
+
+    restored = await client.post(f"/api/budget-items/{item['id']}/restore")
+    assert restored.status_code == 200
+    assert restored.json()["deleted_at"] is None
+
+    categories = (await client.get(f"/api/projects/{project_id}/categories")).json()
+    assert categories[0]["budgeted_amount"] == 750_000_00
 
 
 async def test_a_category_can_be_moved_under_another(client: AsyncClient) -> None:

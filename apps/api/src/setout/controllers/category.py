@@ -31,7 +31,9 @@ class CategoryController:
     async def list_presets(self) -> list[CategoryPresetRead]:
         return [CategoryPresetRead.model_validate(p) for p in await CategoryPreset.all()]
 
-    async def list_categories(self, project_id: str) -> list[CategoryRead]:
+    async def list_categories(
+        self, project_id: str, *, include_deleted: bool = False
+    ) -> list[CategoryRead]:
         await self._project_or_404(project_id)
         categories = await Category.filter(project_id=project_id, deleted_at__isnull=True)
         items = await BudgetItem.filter(
@@ -39,18 +41,34 @@ class CategoryController:
             deleted_at__isnull=True,
         )
         expenses = await Expense.filter(project_id=project_id, deleted_at__isnull=True)
-        return to_reads(categories, items, expenses)
+        reads = to_reads(categories, items, expenses)
+        if include_deleted:
+            reads.extend(await self._removed_reads(project_id))
+        return reads
 
-    async def budget(self, project_id: str) -> ProjectBudget:
+    async def budget(self, project_id: str, *, include_deleted: bool = False) -> ProjectBudget:
         project = await self._project_or_404(project_id)
-        categories = await self.list_categories(project_id)
+        categories = await self.list_categories(project_id, include_deleted=include_deleted)
         return ProjectBudget(
             project_id=project.id,
             currency_code=project.currency_id,
             currency_exponent=project.currency.exponent,
-            budgeted_amount=sum(category.own_budgeted_amount for category in categories),
+            budgeted_amount=sum(
+                category.own_budgeted_amount
+                for category in categories
+                if category.deleted_at is None
+            ),
             categories=categories,
         )
+
+    async def _removed_reads(self, project_id: str) -> list[CategoryRead]:
+        # A removed category reads its figures from the rows removed with it, and is
+        # left out of the live rollup so the budget total is unchanged by showing it.
+        categories = await Category.filter(project_id=project_id, deleted_at__not_isnull=True)
+        if not categories:
+            return []
+        items = await BudgetItem.filter(category_id__in=[row.id for row in categories])
+        return to_reads(categories, items)
 
     async def create(self, project_id: str, req: CategoryCreate) -> CategoryRead:
         await self._project_or_404(project_id)
@@ -92,9 +110,13 @@ class CategoryController:
             await restore_under_category(category.id, deleted_at)
         return self._one(await self.list_categories(category.project_id), category.id)
 
-    async def list_items(self, category_id: str, *, limit: int, offset: int) -> BudgetItemPage:
+    async def list_items(
+        self, category_id: str, *, include_deleted: bool, limit: int, offset: int
+    ) -> BudgetItemPage:
         await self._category_or_404(category_id)
-        query = BudgetItem.filter(category_id=category_id, deleted_at__isnull=True)
+        query = BudgetItem.filter(category_id=category_id)
+        if not include_deleted:
+            query = query.filter(deleted_at__isnull=True)
         total = await query.count()
         items = await query.offset(offset).limit(limit)
         return BudgetItemPage(
@@ -132,6 +154,13 @@ class CategoryController:
         item = await self._item_or_404(item_id)
         item.deleted_at = datetime.now(UTC)
         await item.save()
+
+    async def restore_item(self, item_id: str) -> BudgetItemRead:
+        item = await self._item_or_404(item_id, include_deleted=True)
+        if item.deleted_at is not None:
+            item.deleted_at = None
+            await item.save()
+        return BudgetItemRead.model_validate(item)
 
     async def _holds_no_spend(self, category: Category) -> None:
         # A deleted category would take its expenses out of every category total while
@@ -181,8 +210,8 @@ class CategoryController:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND_CATEGORY)
         return category
 
-    async def _item_or_404(self, item_id: str) -> BudgetItem:
-        item = await BudgetItem.get_or_none(id=item_id, deleted_at__isnull=True)
-        if item is None:
+    async def _item_or_404(self, item_id: str, *, include_deleted: bool = False) -> BudgetItem:
+        item = await BudgetItem.get_or_none(id=item_id)
+        if item is None or (item.deleted_at is not None and not include_deleted):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND_ITEM)
         return item

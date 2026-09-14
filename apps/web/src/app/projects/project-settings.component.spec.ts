@@ -281,7 +281,7 @@ describe('ProjectSettingsComponent', () => {
 
     expect(removed).toEqual(['a']);
     expect(component.removing()).toBeNull();
-    expect(toasts[0].message).toBe('Landscaping removed.');
+    expect(toasts[0].message).toBe('Landscaping deleted.');
   });
 
   it('passes on the reason a category with expenses cannot go', async () => {

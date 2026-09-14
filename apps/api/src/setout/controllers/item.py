@@ -25,8 +25,10 @@ DUPLICATE_NAME = "An item with that name already exists"
 
 
 class ItemController:
-    async def list_items(self, *, search: str | None, limit: int, offset: int) -> ItemPage:
-        query = Item.filter(deleted_at__isnull=True)
+    async def list_items(
+        self, *, search: str | None, include_archived: bool, limit: int, offset: int
+    ) -> ItemPage:
+        query = Item.all() if include_archived else Item.filter(deleted_at__isnull=True)
         if search:
             query = query.filter(name__icontains=search)
         total = await query.count()

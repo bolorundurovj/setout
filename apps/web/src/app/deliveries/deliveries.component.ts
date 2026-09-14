@@ -4,13 +4,14 @@ import { formatMoney } from '../budget/money';
 import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
 import { PaginationComponent } from '../ui/pagination.component';
+import { ToggleComponent } from '../ui/toggle.component';
 import { DeliveryService } from './delivery.service';
 
 @Component({
   selector: 'app-deliveries',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, PaginationComponent],
+  imports: [ButtonComponent, PaginationComponent, ToggleComponent],
   templateUrl: './deliveries.component.html',
   styleUrl: './deliveries.component.scss',
 })
@@ -22,6 +23,7 @@ export class DeliveriesComponent {
 
   readonly waitingPage = signal(1);
   readonly arrivedPage = signal(1);
+  readonly includeDeleted = signal(false);
 
   readonly editing = signal<string | null>(null);
   readonly editWhat = signal('');
@@ -36,6 +38,9 @@ export class DeliveriesComponent {
 
   readonly owedNote = computed(() => {
     const set = this.waitingSet();
+    if (this.includeDeleted()) {
+      return `${this.money(set.owed)} still owed, deleted rows aside.`;
+    }
     if (set.total === 0) {
       return 'Everything paid for has arrived.';
     }
@@ -49,12 +54,24 @@ export class DeliveriesComponent {
 
   async goToWaiting(page: number): Promise<void> {
     this.waitingPage.set(page);
-    await this.deliveries.loadWaiting(this.project().id, page);
+    await this.deliveries.loadWaiting(this.project().id, page, this.includeDeleted());
   }
 
   async goToArrived(page: number): Promise<void> {
     this.arrivedPage.set(page);
-    await this.deliveries.loadArrived(this.project().id, page);
+    await this.deliveries.loadArrived(this.project().id, page, this.includeDeleted());
+  }
+
+  async setIncludeDeleted(on: boolean): Promise<void> {
+    this.includeDeleted.set(on);
+    this.cancelEdit();
+    this.waitingPage.set(1);
+    this.arrivedPage.set(1);
+    await this.refresh();
+  }
+
+  deletedLabel(): string {
+    return this.includeDeleted() ? 'Hide deleted' : 'Show deleted';
   }
 
   money(minor: number): string {
@@ -152,21 +169,26 @@ export class DeliveriesComponent {
     if (!gone) {
       return;
     }
-    const back = await this.deliveries.restore(gone.id);
+    await this.restore(gone);
+  }
+
+  async restore(owed: DeliveryRead): Promise<void> {
+    const back = await this.deliveries.restore(owed.id);
     this.justRemoved.set(null);
     if (!back) {
-      this.toast.show(this.deliveries.error() ?? 'Could not put that back.', 'error');
+      this.toast.show(this.deliveries.error() ?? 'Could not restore that delivery.', 'error');
       return;
     }
     await this.refresh();
-    this.toast.show(`${back.description} is owed again.`);
+    this.toast.show(`${back.description} restored.`);
   }
 
   private async refresh(): Promise<void> {
     const projectId = this.project().id;
+    const removed = this.includeDeleted();
     await Promise.all([
-      this.deliveries.loadWaiting(projectId, this.waitingPage()),
-      this.deliveries.loadArrived(projectId, this.arrivedPage()),
+      this.deliveries.loadWaiting(projectId, this.waitingPage(), removed),
+      this.deliveries.loadArrived(projectId, this.arrivedPage(), removed),
     ]);
   }
 }

@@ -1,10 +1,15 @@
 <div class="budget">
   <div class="intro">
-    <h2 class="t-heading">Set Budget</h2>
-    <p class="prose">
-      The budget for {{ project().name }}. Set it before work starts. Every change records the date
-      it was made.
-    </p>
+    <div class="intro-text">
+      <h2 class="t-heading">Set Budget</h2>
+      <p class="prose">
+        The budget for {{ project().name }}. Set it before work starts. Every change records the
+        date it was made.
+      </p>
+    </div>
+    <app-toggle [checked]="includeDeleted()" (toggled)="setIncludeDeleted($event)">
+      {{ deletedLabel() }}
+    </app-toggle>
   </div>
 
   @if (budget.error()) {
@@ -73,21 +78,34 @@
           @if (openCategory() === category.id && !category.is_group) {
             <div class="items">
               @for (item of itemsFor(category.id); track item.id) {
-                <div class="item">
+                <div class="item" [class.deleted]="item.deleted_at">
                   <span class="t-small">
                     {{ item.description }}
                     @if (item.cost_type) {
                       <span class="split t-mono">{{ item.cost_type }}</span>
                     }
+                    @if (item.deleted_at) {
+                      <span class="split t-mono">deleted</span>
+                    }
                   </span>
                   <span class="right t-mono muted">{{ money(item.budgeted_amount) }}</span>
-                  <button
-                    type="button"
-                    class="link-action t-mono"
-                    (click)="removeItem(category, item.id)"
-                  >
-                    Remove
-                  </button>
+                  @if (item.deleted_at) {
+                    <button
+                      type="button"
+                      class="link-action t-mono"
+                      (click)="restoreItem(category, item.id)"
+                    >
+                      Restore
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="link-action t-mono"
+                      (click)="removeItem(category, item.id)"
+                    >
+                      Remove
+                    </button>
+                  }
                 </div>
               }
               @if (itemsFor(category.id).length === 0) {

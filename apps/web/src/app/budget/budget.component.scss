@@ -9,6 +9,14 @@
 
 .intro {
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.intro-text {
+  display: flex;
   flex-direction: column;
   gap: 6px;
 }
@@ -144,6 +152,10 @@
   grid-template-columns: 1fr 170px 130px;
   align-items: center;
   gap: 10px;
+
+  &.deleted {
+    opacity: 0.6;
+  }
 }
 
 .add-item {

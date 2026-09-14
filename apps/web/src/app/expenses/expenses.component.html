@@ -8,6 +8,9 @@
       </p>
     </div>
     <div class="intro-actions">
+      <app-toggle [checked]="includeDeleted()" (toggled)="setIncludeDeleted($event)">
+        {{ deletedLabel() }}
+      </app-toggle>
       @if (!filing() && expenses.spend()?.uncategorized_count) {
         <app-button variant="secondary" (pressed)="startFiling()">Assign Uncategorized</app-button>
       }
@@ -127,7 +130,7 @@
       </div>
 
       @for (expense of expenses.expenses(); track expense.id) {
-        <div class="row">
+        <div class="row" [class.deleted]="expense.deleted_at">
           <span class="main">
             <span class="desc">
               {{ expense.description }}
@@ -135,7 +138,9 @@
                 <span class="chip photo t-mono" [title]="photoTitle(expense)">photo</span>
               }
             </span>
-            @if (meta(expense)) {
+            @if (expense.deleted_at) {
+              <span class="t-micro">Deleted. It counts towards nothing until it is restored.</span>
+            } @else if (meta(expense)) {
               <span class="t-micro">{{ meta(expense) }}</span>
             }
           </span>
@@ -145,22 +150,33 @@
           <span class="right t-mono figure">{{ money(expense.amount) }}</span>
           <span class="right t-mono muted">{{ expense.spent_on }}</span>
           <span class="row-actions">
-            <button
-              type="button"
-              class="link-action"
-              [attr.aria-label]="'Change ' + expense.description"
-              (click)="edit(expense)"
-            >
-              Edit
-            </button>
-            <button
-              type="button"
-              class="link-action destructive"
-              [attr.aria-label]="'Take ' + expense.description + ' off the record'"
-              (click)="remove(expense.id)"
-            >
-              Remove
-            </button>
+            @if (expense.deleted_at) {
+              <button
+                type="button"
+                class="link-action"
+                [attr.aria-label]="'Restore ' + expense.description"
+                (click)="restore(expense.id)"
+              >
+                Restore
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="link-action"
+                [attr.aria-label]="'Change ' + expense.description"
+                (click)="edit(expense)"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                class="link-action destructive"
+                [attr.aria-label]="'Take ' + expense.description + ' off the record'"
+                (click)="remove(expense.id)"
+              >
+                Remove
+              </button>
+            }
           </span>
         </div>
       }

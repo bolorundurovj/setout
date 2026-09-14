@@ -59,6 +59,18 @@ describe('ItemService', () => {
     expect(service.loading()).toBe(false);
   });
 
+  it('leaves archived rows out unless the page includes them, and keeps that choice when paging', async () => {
+    const service = configure(() => page([item('i1')], 24));
+    await service.load();
+    expect((calls[0] as { include_archived?: boolean }).include_archived).toBe(false);
+
+    await service.load(undefined, true);
+    expect((calls[1] as { include_archived?: boolean }).include_archived).toBe(true);
+
+    await service.goTo(2);
+    expect((calls[2] as { include_archived?: boolean }).include_archived).toBe(true);
+  });
+
   it('passes a search term through and drops an empty one', async () => {
     const service = configure(() => page([]));
     await service.load('inch');

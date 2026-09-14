@@ -8,6 +8,14 @@
 
 .intro {
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.intro-text {
+  display: flex;
   flex-direction: column;
   gap: 6px;
 }
@@ -43,6 +51,18 @@
 .done {
   border: 1px solid var(--hairline);
   background: var(--surface);
+}
+
+.owed.deleted,
+.done.deleted {
+  border: 1px solid var(--hairline);
+  background: var(--sidebar);
+}
+
+.owed.deleted .owed-what,
+.owed.deleted .owed-when,
+.owed.deleted .owed-amount {
+  color: var(--ink-3);
 }
 
 .owed-text {

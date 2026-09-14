@@ -70,6 +70,18 @@ describe('ExpenseService', () => {
     expect(names).toContain('getProjectSpend');
   });
 
+  it('leaves deleted rows out unless the page includes them, and keeps that choice when paging', async () => {
+    const service = configure(standard);
+    await service.load('p1');
+    expect((calls[0] as { include_deleted?: boolean }).include_deleted).toBe(false);
+
+    await service.load('p1', true);
+    expect((calls[2] as { include_deleted?: boolean }).include_deleted).toBe(true);
+
+    await service.goTo('p1', 2);
+    expect((calls[4] as { include_deleted?: boolean }).include_deleted).toBe(true);
+  });
+
   it('reports a failure instead of throwing', async () => {
     const service = configure((name) => {
       if (name === 'listExpenses') {

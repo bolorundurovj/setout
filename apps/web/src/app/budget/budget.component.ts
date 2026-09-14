@@ -5,6 +5,7 @@ import { ButtonComponent } from '../ui/button.component';
 import { Chip, ChipGroupComponent } from '../ui/chip-group.component';
 import { ComboboxComponent } from '../ui/combobox.component';
 import { ToastService } from '../toast.service';
+import { ToggleComponent } from '../ui/toggle.component';
 import { currencySymbol } from '../ui/currency-pill.component';
 import { BudgetService } from './budget.service';
 import { formatMoney, parseMoney } from './money';
@@ -13,7 +14,7 @@ import { formatMoney, parseMoney } from './money';
   selector: 'app-budget',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, ButtonComponent, ChipGroupComponent, ComboboxComponent],
+  imports: [FormsModule, ButtonComponent, ChipGroupComponent, ComboboxComponent, ToggleComponent],
   templateUrl: './budget.component.html',
   styleUrl: './budget.component.scss',
 })
@@ -25,6 +26,7 @@ export class BudgetComponent {
 
   readonly openCategory = signal<string | null>(null);
   readonly newCategoryName = signal('');
+  readonly includeDeleted = signal(false);
   private readonly drafts = signal<Record<string, string>>({});
   readonly itemDescription = signal('');
   readonly itemAmount = signal('');
@@ -48,9 +50,18 @@ export class BudgetComponent {
   private async load(): Promise<void> {
     await this.budget.load(this.project().id);
     for (const category of this.budget.categories()) {
-      await this.budget.loadItems(category.id);
+      await this.budget.loadItems(category.id, this.includeDeleted());
     }
     this.syncDrafts();
+  }
+
+  async setIncludeDeleted(on: boolean): Promise<void> {
+    this.includeDeleted.set(on);
+    await this.load();
+  }
+
+  deletedLabel(): string {
+    return this.includeDeleted() ? 'Hide deleted' : 'Show deleted';
   }
 
   private syncDrafts(): void {
@@ -112,18 +123,23 @@ export class BudgetComponent {
     return this.budget.items()[categoryId] ?? [];
   }
 
+  /** Removed items are shown but count towards nothing. */
+  private liveItemsFor(categoryId: string): BudgetItemRead[] {
+    return this.itemsFor(categoryId).filter((item) => !item.deleted_at);
+  }
+
   draftFor(categoryId: string): string {
     return this.drafts()[categoryId] ?? '';
   }
 
   /** The day the number was last set on purpose. */
   setOn(categoryId: string): string {
-    const items = this.itemsFor(categoryId);
+    const items = this.liveItemsFor(categoryId);
     return items.length ? this.day(items[0].set_at) : '—';
   }
 
   changed(categoryId: string): string {
-    const items = this.itemsFor(categoryId);
+    const items = this.liveItemsFor(categoryId);
     if (!items.length) {
       return '—';
     }
@@ -153,13 +169,13 @@ export class BudgetComponent {
     this.itemDescription.set('');
     this.itemAmount.set('');
     this.itemCostType.set('');
-    await this.budget.loadItems(category.id);
+    await this.budget.loadItems(category.id, this.includeDeleted());
   }
 
   /** One row, one number. Extra detail lives in the items under the row. */
   async commit(category: CategoryRead): Promise<void> {
     const typed = this.draftFor(category.id).trim();
-    const items = this.itemsFor(category.id);
+    const items = this.liveItemsFor(category.id);
     if (typed === '') {
       return;
     }
@@ -199,8 +215,19 @@ export class BudgetComponent {
   }
 
   async removeItem(category: CategoryRead, itemId: string): Promise<void> {
-    await this.budget.removeItem(this.project().id, category.id, itemId);
+    await this.budget.removeItem(this.project().id, category.id, itemId, this.includeDeleted());
     await this.load();
-    this.toast.show('Budget item removed.');
+    this.toast.show('Budget item deleted. Show deleted to restore it.');
+  }
+
+  async restoreItem(category: CategoryRead, itemId: string): Promise<void> {
+    const done = await this.budget.putItemBack(this.project().id, category.id, itemId);
+    await this.load();
+    this.toast.show(
+      done
+        ? 'Budget item restored.'
+        : (this.budget.error() ?? 'Could not restore that budget item.'),
+      done ? 'success' : 'error',
+    );
   }
 }

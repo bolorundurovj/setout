@@ -7,6 +7,7 @@ import { ButtonComponent } from '../ui/button.component';
 import { InfiniteScrollDirective } from '../ui/infinite-scroll.directive';
 import { PaginationComponent } from '../ui/pagination.component';
 import { pageOf } from '../ui/paging';
+import { ToggleComponent } from '../ui/toggle.component';
 import { currencySymbol } from '../ui/currency-pill.component';
 import { PersonService } from '../people/person.service';
 import { VendorService } from '../vendors/vendor.service';
@@ -16,7 +17,7 @@ import { AgreementService } from './agreement.service';
   selector: 'app-agreements',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, InfiniteScrollDirective, PaginationComponent],
+  imports: [ButtonComponent, InfiniteScrollDirective, PaginationComponent, ToggleComponent],
   templateUrl: './agreements.component.html',
   styleUrl: './agreements.component.scss',
 })
@@ -31,6 +32,7 @@ export class AgreementsComponent {
 
   readonly adding = signal(false);
   readonly addingAdvance = signal(false);
+  readonly includeDeleted = signal(false);
   readonly personId = signal('');
   readonly advanceAmount = signal('');
   readonly paying = signal<string | null>(null);
@@ -264,7 +266,29 @@ export class AgreementsComponent {
 
   async removeAdvance(advanceId: string): Promise<void> {
     await this.agreements.removeAdvance(this.project().id, advanceId);
-    this.toast.show('Advance removed.');
+    this.toast.show('Advance deleted. Show deleted to restore it.');
+  }
+
+  async restoreAdvance(advanceId: string): Promise<void> {
+    const back = await this.agreements.restoreAdvance(this.project().id, advanceId);
+    if (!back) {
+      this.toast.show(this.agreements.error() ?? 'Could not restore that advance.', 'error');
+      return;
+    }
+    this.toast.show(`Advance to ${back.person_name} restored.`);
+  }
+
+  async setIncludeDeleted(on: boolean): Promise<void> {
+    this.includeDeleted.set(on);
+    this.cancelEdit();
+    this.cancelEditAdvance();
+    this.cancelPayment();
+    await this.agreements.loadAll(this.project().id, on);
+    await this.agreements.loadAdvances(this.project().id);
+  }
+
+  deletedLabel(): string {
+    return this.includeDeleted() ? 'Hide deleted' : 'Show deleted';
   }
 
   /** Positive means they still hold money, negative means they are owed it. */
@@ -274,6 +298,15 @@ export class AgreementsComponent {
 
   async remove(agreementId: string): Promise<void> {
     await this.agreements.remove(agreementId);
-    this.toast.show('Agreement removed.');
+    this.toast.show('Agreement deleted. Show deleted to restore it.');
+  }
+
+  async restore(agreementId: string): Promise<void> {
+    const back = await this.agreements.restore(agreementId);
+    if (!back) {
+      this.toast.show(this.agreements.error() ?? 'Could not restore that agreement.', 'error');
+      return;
+    }
+    this.toast.show(`Agreement with ${back.vendor_name} restored.`);
   }
 }

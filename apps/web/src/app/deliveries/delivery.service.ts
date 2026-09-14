@@ -47,17 +47,19 @@ export class DeliveryService {
     return this.state()[`vendor:${vendorId}`] ?? EMPTY;
   }
 
-  async loadWaiting(projectId: string, page = 1): Promise<void> {
+  async loadWaiting(projectId: string, page = 1, includeDeleted = false): Promise<void> {
     await this.load(`project:${projectId}:waiting`, page, {
       project_id: projectId,
       outstanding_only: true,
+      include_deleted: includeDeleted,
     });
   }
 
-  async loadArrived(projectId: string, page = 1): Promise<void> {
+  async loadArrived(projectId: string, page = 1, includeDeleted = false): Promise<void> {
     await this.load(`project:${projectId}:arrived`, page, {
       project_id: projectId,
       received_only: true,
+      include_deleted: includeDeleted,
     });
   }
 
@@ -135,7 +137,7 @@ export class DeliveryService {
     try {
       return await this.api.invoke(restoreDelivery, { delivery_id: deliveryId });
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not put that back.');
+      this.error.set(detailOf(e) ?? 'Could not restore that delivery.');
       return null;
     }
   }
@@ -148,6 +150,7 @@ export class DeliveryService {
       vendor_id?: string;
       outstanding_only?: boolean;
       received_only?: boolean;
+      include_deleted?: boolean;
     },
   ): Promise<void> {
     this.error.set(null);

@@ -8,14 +8,19 @@
     history. Items are shared across every project.
   </p>
 
-  <input
-    class="input-field search"
-    type="search"
-    placeholder="Search items"
-    aria-label="Search items"
-    [value]="search()"
-    (input)="onSearch($event)"
-  />
+  <div class="controls">
+    <input
+      class="input-field search"
+      type="search"
+      placeholder="Search items"
+      aria-label="Search items"
+      [value]="search()"
+      (input)="onSearch($event)"
+    />
+    <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
+      {{ archivedLabel() }}
+    </app-toggle>
+  </div>
 
   @if (items.error()) {
     <p class="t-small error">{{ items.error() }}</p>
@@ -81,10 +86,15 @@
       </div>
 
       @for (item of items.items(); track item.id) {
-        <div class="row">
+        <div class="row" [class.archived]="item.deleted_at">
           <button type="button" class="name-cell" (click)="open(item.id)">
             <span class="item-name">{{ item.name }}</span>
-            <span class="t-micro">{{ countLabel(item) }}</span>
+            <span class="t-micro">
+              {{ countLabel(item) }}
+              @if (item.deleted_at) {
+                &middot; archived
+              }
+            </span>
           </button>
 
           <span class="t-small muted">{{ unitLabel(item) }}</span>
@@ -109,14 +119,25 @@
             <span class="right t-small muted">{{ notSet }}</span>
           }
 
-          <button
-            type="button"
-            class="link-action t-mono"
-            [attr.aria-label]="'Archive ' + item.name"
-            (click)="archive(item.id)"
-          >
-            Archive
-          </button>
+          @if (item.deleted_at) {
+            <button
+              type="button"
+              class="link-action t-mono"
+              [attr.aria-label]="'Restore ' + item.name"
+              (click)="restore(item.id)"
+            >
+              Restore
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="link-action t-mono"
+              [attr.aria-label]="'Archive ' + item.name"
+              (click)="archive(item.id)"
+            >
+              Archive
+            </button>
+          }
         </div>
       }
     </div>

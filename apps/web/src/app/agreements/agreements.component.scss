@@ -20,6 +20,13 @@
   gap: 6px;
 }
 
+.intro-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .panel {
   display: flex;
   flex-direction: column;
@@ -83,6 +90,10 @@
   border-radius: 14px;
   overflow: hidden;
   background: var(--surface);
+
+  &.deleted {
+    opacity: 0.6;
+  }
 }
 
 .agreement-head {
@@ -270,6 +281,15 @@
   padding: 11px 18px;
   background: var(--field);
   border-bottom: 1.5px solid var(--rule);
+}
+
+.row.deleted {
+  background: var(--sidebar);
+
+  .vendor,
+  .cell-figure {
+    color: var(--ink-3);
+  }
 }
 
 .main {

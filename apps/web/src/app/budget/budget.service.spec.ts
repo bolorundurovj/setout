@@ -26,13 +26,16 @@ function category(id: string, over: Record<string, unknown> = {}) {
 
 describe('BudgetService', () => {
   let names: string[];
+  let calls: Record<string, unknown>[];
 
   function configure(reply: (name: string) => unknown) {
     names = [];
+    calls = [];
     TestBed.resetTestingModule();
     const api = {
-      invoke: async (fn: { name?: string }) => {
+      invoke: async (fn: { name?: string }, args?: Record<string, unknown>) => {
         names.push(fn?.name ?? '');
+        calls.push({ call: fn?.name ?? '', ...(args ?? {}) });
         return reply(fn?.name ?? '');
       },
     };
@@ -60,6 +63,50 @@ describe('BudgetService', () => {
     await service.load('p1');
     expect(service.error()).toBe('Could not load the budget.');
     expect(service.loading()).toBe(false);
+  });
+
+  it('leaves deleted categories and items out unless the caller includes them', async () => {
+    const service = configure((name) =>
+      name === 'getProjectBudget'
+        ? {
+            project_id: 'p1',
+            currency_code: 'NGN',
+            currency_exponent: 2,
+            budgeted_amount: 0,
+            categories: [],
+          }
+        : { items: [], total: 0, limit: 100, offset: 0 },
+    );
+
+    await service.load('p1');
+    await service.loadItems('s1');
+    expect(calls[0]['include_deleted']).toBe(false);
+    expect(calls[1]['include_deleted']).toBe(false);
+
+    await service.load('p1', true);
+    await service.loadItems('s1', true);
+    expect(calls[2]['include_deleted']).toBe(true);
+    expect(calls[3]['include_deleted']).toBe(true);
+  });
+
+  it('reads the items and the budget again once one is restored', async () => {
+    const service = configure((name) =>
+      name === 'getProjectBudget'
+        ? {
+            project_id: 'p1',
+            currency_code: 'NGN',
+            currency_exponent: 2,
+            budgeted_amount: 0,
+            categories: [],
+          }
+        : { items: [], total: 0, limit: 100, offset: 0 },
+    );
+
+    expect(await service.putItemBack('p1', 's1', 'i1')).toBe(true);
+
+    expect(names).toContain('restoreBudgetItem');
+    expect(names).toContain('listBudgetItems');
+    expect(names).toContain('getProjectBudget');
   });
 
   it('keeps items per category', async () => {
