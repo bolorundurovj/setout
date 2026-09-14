@@ -261,4 +261,48 @@
   }
 }
 
+.filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+  padding: 16px 18px;
+  border: 1.5px solid var(--rule);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.dates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.filter-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--hairline);
+  padding-top: 12px;
+}
+
+.match-line {
+  margin: 0;
+}
+
+@media (max-width: bp.$phone) {
+  .filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @include rows.stacked-rows;

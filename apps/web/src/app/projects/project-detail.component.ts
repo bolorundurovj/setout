@@ -9,13 +9,14 @@ import {
 } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
-import type { ProjectRead } from '@setout/api-client';
+import type { ExpenseSort, ProjectRead } from '@setout/api-client';
 import { AgreementsComponent } from '../agreements/agreements.component';
 import { BudgetCompareComponent } from '../compare/budget-compare.component';
 import { ProjectDashboardComponent } from '../dashboard/project-dashboard.component';
 import { DeliveriesComponent } from '../deliveries/deliveries.component';
 import { BudgetComponent } from '../budget/budget.component';
 import { ExpensesComponent } from '../expenses/expenses.component';
+import type { ExpenseFilters } from '../expenses/expense.service';
 import { MonthsComponent } from '../months/months.component';
 import { ButtonComponent } from '../ui/button.component';
 import { CurrencyPillComponent } from '../ui/currency-pill.component';
@@ -56,6 +57,23 @@ export class ProjectDetailComponent {
   readonly id = input.required<string>();
   readonly tab = input('');
   readonly category = input('');
+  readonly q = input('');
+  readonly vendor = input('');
+  readonly person = input('');
+  readonly item = input('');
+  readonly from = input('');
+  readonly to = input('');
+  readonly sort = input('');
+
+  readonly expenseFilters = computed<ExpenseFilters>(() => ({
+    search: this.q(),
+    vendorId: this.vendor(),
+    paidById: this.person(),
+    itemId: this.item(),
+    from: this.from(),
+    to: this.to(),
+    sort: (this.sort() as ExpenseSort) || 'recent',
+  }));
 
   readonly project = signal<ProjectRead | null>(null);
   readonly activeTab = signal('dashboard');

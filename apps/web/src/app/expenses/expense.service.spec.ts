@@ -70,16 +70,60 @@ describe('ExpenseService', () => {
     expect(names).toContain('getProjectSpend');
   });
 
-  it('leaves deleted rows out unless the page includes them, and keeps that choice when paging', async () => {
+  it('leaves archived rows out unless the page includes them, and keeps that choice when paging', async () => {
     const service = configure(standard);
     await service.load('p1');
     expect((calls[0] as { include_deleted?: boolean }).include_deleted).toBe(false);
 
-    await service.load('p1', true);
+    await service.load('p1', { includeArchived: true });
     expect((calls[2] as { include_deleted?: boolean }).include_deleted).toBe(true);
 
     await service.goTo('p1', 2);
     expect((calls[4] as { include_deleted?: boolean }).include_deleted).toBe(true);
+  });
+
+  it('sends every filter it was given, and keeps them when turning a page', async () => {
+    const service = configure(standard);
+    await service.load('p1', {
+      search: 'cement',
+      vendorId: 'v1',
+      paidById: 'pe1',
+      itemId: 'i1',
+      from: '2026-03-01',
+      to: '2026-03-31',
+      sort: 'largest',
+    });
+
+    const asked = calls[0] as Record<string, unknown>;
+    expect(asked['search']).toBe('cement');
+    expect(asked['vendor_id']).toBe('v1');
+    expect(asked['paid_by_id']).toBe('pe1');
+    expect(asked['item_id']).toBe('i1');
+    expect(asked['spent_from']).toBe('2026-03-01');
+    expect(asked['spent_to']).toBe('2026-03-31');
+    expect(asked['sort']).toBe('largest');
+
+    await service.goTo('p1', 2);
+    expect((calls[2] as Record<string, unknown>)['search']).toBe('cement');
+  });
+
+  it('sends no filters when asked for the project plainly', async () => {
+    const service = configure(standard);
+    await service.load('p1', { search: 'cement' });
+    await service.load('p1');
+
+    const asked = calls[2] as Record<string, unknown>;
+    expect(asked['search']).toBeUndefined();
+    expect(asked['sort']).toBe('recent');
+  });
+
+  it('reports what everything matching adds up to', async () => {
+    const service = configure((name) =>
+      name === 'getProjectSpend' ? spend : { ...page([expense('e1')], 8), total_amount: 44_000 },
+    );
+    await service.load('p1');
+
+    expect(service.totalAmount()).toBe(44_000);
   });
 
   it('reports a failure instead of throwing', async () => {

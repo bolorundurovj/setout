@@ -8,6 +8,7 @@
       </p>
     </div>
     <div class="intro-actions">
+      <app-button variant="secondary" (pressed)="toggleFilters()">{{ filtersLabel() }}</app-button>
       <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
         {{ archivedLabel() }}
       </app-toggle>
@@ -17,6 +18,91 @@
       <app-button (pressed)="openDrawer()">Add Expense</app-button>
     </div>
   </div>
+
+  @if (showFilters()) {
+    <div class="filters panel">
+      <label class="field">
+        <span class="t-micro">Description or notes</span>
+        <input
+          class="input-field"
+          type="search"
+          placeholder="What was bought"
+          [value]="search()"
+          (input)="onSearch($event)"
+        />
+      </label>
+
+      <div class="field">
+        <span class="t-micro">Vendor</span>
+        <app-chip-group
+          label="Vendor"
+          [chips]="vendorChips()"
+          [value]="vendorId()"
+          (valueChange)="pick('vendorId', $event)"
+        />
+      </div>
+
+      <div class="field">
+        <span class="t-micro">Paid by</span>
+        <app-chip-group
+          label="Paid by"
+          [chips]="personChips()"
+          [value]="paidById()"
+          (valueChange)="pick('paidById', $event)"
+        />
+      </div>
+
+      <div class="field">
+        <span class="t-micro">Item</span>
+        <app-chip-group
+          label="Item"
+          [chips]="itemChips()"
+          [value]="itemId()"
+          (valueChange)="pick('itemId', $event)"
+        />
+      </div>
+
+      <div class="dates">
+        <label class="field">
+          <span class="t-micro">From</span>
+          <input
+            class="input-field t-mono"
+            type="date"
+            [value]="from()"
+            (change)="setDate('from', $event)"
+          />
+        </label>
+        <label class="field">
+          <span class="t-micro">To</span>
+          <input
+            class="input-field t-mono"
+            type="date"
+            [value]="to()"
+            (change)="setDate('to', $event)"
+          />
+        </label>
+      </div>
+
+      <div class="field">
+        <span class="t-micro">Order</span>
+        <app-chip-group
+          label="Order"
+          [chips]="sortChips"
+          [value]="sort()"
+          (valueChange)="pickSort($event)"
+        />
+      </div>
+
+      @if (filtered()) {
+        <div class="filter-actions">
+          <span class="t-small muted">{{ matchLine() }}</span>
+          <app-button variant="secondary" (pressed)="clear()">Clear Filters</app-button>
+        </div>
+      }
+    </div>
+  } @else if (filtered()) {
+    <p class="t-small muted match-line">{{ matchLine() }}</p>
+  }
 
   @if (expenses.spend(); as spend) {
     <div class="summary">
@@ -116,8 +202,13 @@
     }
   } @else if (expenses.expenses().length === 0) {
     <div class="card">
-      <p class="t-body">Nothing recorded yet.</p>
-      <p class="t-small">The first expense you add appears here.</p>
+      @if (filtered()) {
+        <p class="t-body">Nothing matches those filters.</p>
+        <p class="t-small">Widen them, or clear them to see the whole project.</p>
+      } @else {
+        <p class="t-body">Nothing recorded yet.</p>
+        <p class="t-small">The first expense you add appears here.</p>
+      }
     </div>
   } @else {
     <div class="table">

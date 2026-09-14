@@ -34,7 +34,7 @@
     } @else if (activeTab() === 'budget') {
       <app-budget [project]="p" />
     } @else if (activeTab() === 'expense') {
-      <app-expenses [project]="p" />
+      <app-expenses [project]="p" [filters]="expenseFilters()" />
     } @else if (activeTab() === 'agreements') {
       <app-agreements [project]="p" />
     } @else if (activeTab() === 'deliveries') {
