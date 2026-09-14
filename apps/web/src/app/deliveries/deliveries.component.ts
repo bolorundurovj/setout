@@ -23,7 +23,7 @@ export class DeliveriesComponent {
 
   readonly waitingPage = signal(1);
   readonly arrivedPage = signal(1);
-  readonly includeDeleted = signal(false);
+  readonly includeArchived = signal(false);
 
   readonly editing = signal<string | null>(null);
   readonly editWhat = signal('');
@@ -38,8 +38,8 @@ export class DeliveriesComponent {
 
   readonly owedNote = computed(() => {
     const set = this.waitingSet();
-    if (this.includeDeleted()) {
-      return `${this.money(set.owed)} still owed, deleted rows aside.`;
+    if (this.includeArchived()) {
+      return `${this.money(set.owed)} still owed, archived rows aside.`;
     }
     if (set.total === 0) {
       return 'Everything paid for has arrived.';
@@ -54,24 +54,24 @@ export class DeliveriesComponent {
 
   async goToWaiting(page: number): Promise<void> {
     this.waitingPage.set(page);
-    await this.deliveries.loadWaiting(this.project().id, page, this.includeDeleted());
+    await this.deliveries.loadWaiting(this.project().id, page, this.includeArchived());
   }
 
   async goToArrived(page: number): Promise<void> {
     this.arrivedPage.set(page);
-    await this.deliveries.loadArrived(this.project().id, page, this.includeDeleted());
+    await this.deliveries.loadArrived(this.project().id, page, this.includeArchived());
   }
 
-  async setIncludeDeleted(on: boolean): Promise<void> {
-    this.includeDeleted.set(on);
+  async setIncludeArchived(on: boolean): Promise<void> {
+    this.includeArchived.set(on);
     this.cancelEdit();
     this.waitingPage.set(1);
     this.arrivedPage.set(1);
     await this.refresh();
   }
 
-  deletedLabel(): string {
-    return this.includeDeleted() ? 'Hide deleted' : 'Show deleted';
+  archivedLabel(): string {
+    return this.includeArchived() ? 'Hide archived' : 'Show archived';
   }
 
   money(minor: number): string {
@@ -185,7 +185,7 @@ export class DeliveriesComponent {
 
   private async refresh(): Promise<void> {
     const projectId = this.project().id;
-    const removed = this.includeDeleted();
+    const removed = this.includeArchived();
     await Promise.all([
       this.deliveries.loadWaiting(projectId, this.waitingPage(), removed),
       this.deliveries.loadArrived(projectId, this.arrivedPage(), removed),

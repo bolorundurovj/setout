@@ -32,7 +32,7 @@ export class AgreementsComponent {
 
   readonly adding = signal(false);
   readonly addingAdvance = signal(false);
-  readonly includeDeleted = signal(false);
+  readonly includeArchived = signal(false);
   readonly personId = signal('');
   readonly advanceAmount = signal('');
   readonly paying = signal<string | null>(null);
@@ -266,7 +266,7 @@ export class AgreementsComponent {
 
   async removeAdvance(advanceId: string): Promise<void> {
     await this.agreements.removeAdvance(this.project().id, advanceId);
-    this.toast.show('Advance deleted. Show deleted to restore it.');
+    this.toast.show('Advance archived. Show archived to restore it.');
   }
 
   async restoreAdvance(advanceId: string): Promise<void> {
@@ -278,8 +278,8 @@ export class AgreementsComponent {
     this.toast.show(`Advance to ${back.person_name} restored.`);
   }
 
-  async setIncludeDeleted(on: boolean): Promise<void> {
-    this.includeDeleted.set(on);
+  async setIncludeArchived(on: boolean): Promise<void> {
+    this.includeArchived.set(on);
     this.cancelEdit();
     this.cancelEditAdvance();
     this.cancelPayment();
@@ -287,8 +287,8 @@ export class AgreementsComponent {
     await this.agreements.loadAdvances(this.project().id);
   }
 
-  deletedLabel(): string {
-    return this.includeDeleted() ? 'Hide deleted' : 'Show deleted';
+  archivedLabel(): string {
+    return this.includeArchived() ? 'Hide archived' : 'Show archived';
   }
 
   /** Positive means they still hold money, negative means they are owed it. */
@@ -298,7 +298,7 @@ export class AgreementsComponent {
 
   async remove(agreementId: string): Promise<void> {
     await this.agreements.remove(agreementId);
-    this.toast.show('Agreement deleted. Show deleted to restore it.');
+    this.toast.show('Agreement archived. Show archived to restore it.');
   }
 
   async restore(agreementId: string): Promise<void> {

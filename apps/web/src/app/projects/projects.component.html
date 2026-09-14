@@ -1,6 +1,6 @@
 <app-topbar title="All Projects" [subtitle]="subtitle()">
-  <app-toggle [checked]="includeDeleted()" (toggled)="setIncludeDeleted($event)">
-    Show Deleted
+  <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
+    Show Archived
   </app-toggle>
   <app-button variant="secondary" (pressed)="importSheet()">Import a Sheet</app-button>
   @if (!showForm()) {
@@ -80,7 +80,7 @@
     </div>
   } @else {
     @for (project of projects.projects(); track project.id) {
-      <article class="project-card" [class.deleted]="project.deleted_at">
+      <article class="project-card" [class.archived]="project.deleted_at">
         <div class="project-body">
           <div class="initials t-mono">{{ initials(project.name) }}</div>
           <div class="project-main">
@@ -116,27 +116,27 @@
         </div>
 
         <div class="project-actions">
-          @if (isPending(project.id, 'archive')) {
-            <span class="confirm t-small">Archive this project?</span>
-            <app-button (pressed)="archive(project.id)">Yes, Archive</app-button>
+          @if (isPending(project.id, 'close')) {
+            <span class="confirm t-small">Close this project?</span>
+            <app-button (pressed)="close(project.id)">Yes, Close</app-button>
             <app-button variant="secondary" (pressed)="cancelPending()">Cancel</app-button>
-          } @else if (isPending(project.id, 'delete')) {
-            <span class="confirm t-small">Delete this project? It can be restored.</span>
-            <app-button variant="danger" (pressed)="remove(project.id)">Yes, Delete</app-button>
+          } @else if (isPending(project.id, 'archive')) {
+            <span class="confirm t-small">Archive this project? It can be restored.</span>
+            <app-button variant="danger" (pressed)="remove(project.id)">Yes, Archive</app-button>
             <app-button variant="secondary" (pressed)="cancelPending()">Cancel</app-button>
           } @else if (project.deleted_at) {
             <app-button variant="secondary" (pressed)="restore(project.id)">Restore</app-button>
           } @else if (project.status === 'archived') {
             <app-button (pressed)="open(project.id)">Open</app-button>
-            <app-button variant="secondary" (pressed)="unarchive(project.id)">Unarchive</app-button>
-            <app-button variant="danger" (pressed)="ask(project.id, 'delete')">Delete</app-button>
+            <app-button variant="secondary" (pressed)="reopen(project.id)">Reopen</app-button>
+            <app-button variant="danger" (pressed)="ask(project.id, 'archive')">Archive</app-button>
           } @else {
             <app-button (pressed)="open(project.id)">Open</app-button>
             <app-button variant="secondary" (pressed)="addExpense(project.id)">
               Add Expense
             </app-button>
-            <app-button variant="secondary" (pressed)="ask(project.id, 'archive')">
-              Archive
+            <app-button variant="secondary" (pressed)="ask(project.id, 'close')">
+              Close
             </app-button>
           }
         </div>

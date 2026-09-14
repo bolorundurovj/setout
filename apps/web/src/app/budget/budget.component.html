@@ -7,8 +7,8 @@
         date it was made.
       </p>
     </div>
-    <app-toggle [checked]="includeDeleted()" (toggled)="setIncludeDeleted($event)">
-      {{ deletedLabel() }}
+    <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
+      {{ archivedLabel() }}
     </app-toggle>
   </div>
 
@@ -78,14 +78,14 @@
           @if (openCategory() === category.id && !category.is_group) {
             <div class="items">
               @for (item of itemsFor(category.id); track item.id) {
-                <div class="item" [class.deleted]="item.deleted_at">
+                <div class="item" [class.archived]="item.deleted_at">
                   <span class="t-small">
                     {{ item.description }}
                     @if (item.cost_type) {
                       <span class="split t-mono">{{ item.cost_type }}</span>
                     }
                     @if (item.deleted_at) {
-                      <span class="split t-mono">deleted</span>
+                      <span class="split t-mono">archived</span>
                     }
                   </span>
                   <span class="right t-mono muted">{{ money(item.budgeted_amount) }}</span>
@@ -103,7 +103,7 @@
                       class="link-action t-mono"
                       (click)="removeItem(category, item.id)"
                     >
-                      Remove
+                      Archive
                     </button>
                   }
                 </div>

@@ -112,9 +112,9 @@ describe('ExpensesComponent', () => {
       }),
       saving: () => false,
       error: () => null,
-      load: async (projectId: string, includeDeleted = false) => {
+      load: async (projectId: string, includeArchived = false) => {
         loaded.push(projectId);
-        asked.push(includeDeleted);
+        asked.push(includeArchived);
       },
       goTo: async (projectId: string) => void loaded.push(projectId),
       loadForCategory: async (projectId: string, categoryId: string, page = 1) => {
@@ -162,10 +162,10 @@ describe('ExpensesComponent', () => {
     const component = render();
     component.startFiling();
 
-    await component.setIncludeDeleted(true);
+    await component.setIncludeArchived(true);
 
-    expect(component.includeDeleted()).toBe(true);
-    expect(component.deletedLabel()).toBe('Hide deleted');
+    expect(component.includeArchived()).toBe(true);
+    expect(component.archivedLabel()).toBe('Hide archived');
     expect(asked).toContain(true);
     // Filing works on live rows, so it closes rather than showing deleted ones.
     expect(component.filing()).toBe(false);

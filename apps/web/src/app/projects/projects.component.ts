@@ -26,7 +26,7 @@ const STATUS_LINES: Record<ProjectStatus, string> = {
   active: 'Active.',
   on_hold: 'On hold.',
   completed: 'Completed.',
-  archived: 'Archived. It can be deleted.',
+  archived: 'Closed. It can be archived.',
 };
 
 @Component({
@@ -62,10 +62,10 @@ export class ProjectsComponent {
     }
     const parts = [`${summary.total} ${summary.total === 1 ? 'project' : 'projects'}`];
     if (summary.archived) {
-      parts.push(`${summary.archived} archived`);
+      parts.push(`${summary.archived} closed`);
     }
     if (summary.deleted) {
-      parts.push(`${summary.deleted} deleted`);
+      parts.push(`${summary.deleted} archived`);
     }
     return parts.join(' · ');
   });
@@ -78,11 +78,11 @@ export class ProjectsComponent {
     return codes.length === 1 ? `All in ${codes[0]}` : `${codes.length} currencies`;
   });
 
-  readonly pending = signal<{ id: string; action: 'archive' | 'delete' } | null>(null);
+  readonly pending = signal<{ id: string; action: 'close' | 'archive' } | null>(null);
 
   readonly add = input('');
   readonly showForm = signal(false);
-  readonly includeDeleted = signal(false);
+  readonly includeArchived = signal(false);
   readonly name = signal('');
   readonly currencyCode = signal('NGN');
   readonly notes = signal('');
@@ -140,7 +140,7 @@ export class ProjectsComponent {
 
   statusLine(project: ProjectRead): string {
     if (project.deleted_at) {
-      return 'Deleted. It can be restored.';
+      return 'Archived. It can be restored.';
     }
     if (project.status === 'active' && !project.budgeted_amount) {
       return 'Active. No budget set yet.';
@@ -179,9 +179,9 @@ export class ProjectsComponent {
     }
   }
 
-  async setIncludeDeleted(value: boolean): Promise<void> {
+  async setIncludeArchived(value: boolean): Promise<void> {
     this.pending.set(null);
-    this.includeDeleted.set(value);
+    this.includeArchived.set(value);
     await this.projects.load(value);
   }
 
@@ -223,7 +223,7 @@ export class ProjectsComponent {
     return Math.min(100 - this.usedPercent(project), (over / project.budgeted_amount) * 100);
   }
 
-  ask(id: string, action: 'archive' | 'delete'): void {
+  ask(id: string, action: 'close' | 'archive'): void {
     this.pending.set({ id, action });
   }
 
@@ -231,26 +231,26 @@ export class ProjectsComponent {
     this.pending.set(null);
   }
 
-  isPending(id: string, action: 'archive' | 'delete'): boolean {
+  isPending(id: string, action: 'close' | 'archive'): boolean {
     const pending = this.pending();
     return pending?.id === id && pending.action === action;
   }
 
-  async archive(id: string): Promise<void> {
+  async close(id: string): Promise<void> {
     await this.projects.update(id, { status: 'archived' });
     this.pending.set(null);
-    this.toast.show('Project archived. It can be unarchived or deleted.');
+    this.toast.show('Project closed. It can be reopened or archived.');
   }
 
-  async unarchive(id: string): Promise<void> {
+  async reopen(id: string): Promise<void> {
     await this.projects.update(id, { status: 'active' });
-    this.toast.show('Project unarchived.');
+    this.toast.show('Project reopened.');
   }
 
   async remove(id: string): Promise<void> {
     await this.projects.remove(id);
     this.pending.set(null);
-    this.toast.show('Project deleted. Show deleted to restore it.');
+    this.toast.show('Project archived. Show archived to restore it.');
   }
 
   async restore(id: string): Promise<void> {
