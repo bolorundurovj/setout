@@ -40,6 +40,14 @@ describe('AuthService', () => {
     expect(service.loading()).toBe(false);
   });
 
+  it('says to wait when the server refuses a burst of attempts', async () => {
+    const service = configure(async () => {
+      throw { status: 429 };
+    });
+    expect(await service.login('wrong')).toBe(false);
+    expect(service.error()).toBe('Too many wrong passphrases. Wait a moment and try again.');
+  });
+
   it('explains a server that is already set up', async () => {
     const service = configure(async () => {
       throw { status: 409 };
