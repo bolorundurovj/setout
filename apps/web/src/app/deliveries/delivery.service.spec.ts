@@ -110,7 +110,16 @@ describe('DeliveryService', () => {
     expect(service.waiting('p1').owed).toBe(7_650_000);
   });
 
-  it('takes a removed row out of every list holding it', async () => {
+  it('leaves deleted rows out unless the page includes them', async () => {
+    const service = configure(() => page([owed('a')]));
+    await service.loadWaiting('p1');
+    await service.loadArrived('p1', 1, true);
+
+    expect(asked[0]['include_deleted']).toBe(false);
+    expect(asked[1]['include_deleted']).toBe(true);
+  });
+
+  it('takes a deleted row out of every list holding it', async () => {
     const service = configure((name) =>
       name === 'listAllDeliveries' ? page([owed('b')]) : page([owed('a'), owed('b')]),
     );

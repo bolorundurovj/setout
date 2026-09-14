@@ -109,15 +109,36 @@
   </section>
 
   <section class="card block">
-    <span class="t-micro">Categories</span>
+    <div class="block-head">
+      <span class="t-micro">Categories</span>
+      <app-toggle [checked]="includeDeleted()" (toggled)="setIncludeDeleted($event)">
+        {{ deletedLabel() }}
+      </app-toggle>
+    </div>
 
     @if (budget.categories().length === 0) {
       <p class="t-small note">No categories yet. Add them on the Budget tab.</p>
     } @else {
       <div class="categories">
         @for (category of budget.categories(); track category.id) {
-          <div class="category" [class.child]="category.parent_id">
-            @if (renaming() === category.id) {
+          <div
+            class="category"
+            [class.child]="category.parent_id"
+            [class.deleted]="category.deleted_at"
+          >
+            @if (category.deleted_at) {
+              <span class="swatch" [class]="tint(category)"></span>
+              <span class="category-name">{{ category.name }}</span>
+              <span class="category-count t-mono">deleted</span>
+              <button
+                type="button"
+                class="link-action"
+                [attr.aria-label]="'Restore ' + category.name"
+                (click)="restore(category)"
+              >
+                Restore
+              </button>
+            } @else if (renaming() === category.id) {
               <input
                 class="input-field rename"
                 type="text"
@@ -167,7 +188,7 @@
 
       @if (justRemoved(); as gone) {
         <p class="t-small note">
-          {{ gone.name }} was removed.
+          {{ gone.name }} was deleted.
           <button type="button" class="link-action" (click)="putCategoryBack()">Undo</button>
         </p>
       }

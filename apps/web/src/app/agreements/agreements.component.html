@@ -7,9 +7,14 @@
         expenses assigned to each agreement, so a part payment is recorded once.
       </p>
     </div>
-    @if (!adding()) {
-      <app-button (pressed)="openForm()">New Agreement</app-button>
-    }
+    <div class="intro-actions">
+      <app-toggle [checked]="includeDeleted()" (toggled)="setIncludeDeleted($event)">
+        {{ deletedLabel() }}
+      </app-toggle>
+      @if (!adding()) {
+        <app-button (pressed)="openForm()">New Agreement</app-button>
+      }
+    </div>
   </div>
 
   @if (agreements.error()) {
@@ -75,7 +80,7 @@
     </div>
   } @else {
     @for (agreement of agreements.agreements(); track agreement.id) {
-      <article class="agreement">
+      <article class="agreement" [class.deleted]="agreement.deleted_at">
         <div class="agreement-head">
           <div class="titles">
             @if (editing() === agreement.id) {
@@ -154,7 +159,17 @@
           </div>
 
           <div class="agreement-actions">
-            @if (paying() === agreement.id) {
+            @if (agreement.deleted_at) {
+              <span class="t-small hint">Deleted. Its payments stand as expenses.</span>
+              <button
+                type="button"
+                class="link-action"
+                [attr.aria-label]="'Restore the agreement with ' + agreement.vendor_name"
+                (click)="restore(agreement.id)"
+              >
+                Restore
+              </button>
+            } @else if (paying() === agreement.id) {
               <span class="amount">
                 <span class="amount-prefix t-mono">{{ symbol() }}</span>
                 <input
@@ -328,11 +343,23 @@
           <span></span>
         </div>
         @for (advance of agreements.advances(); track advance.id) {
-          <div class="row">
+          <div class="row" [class.deleted]="advance.deleted_at">
             <span class="main"
               ><span class="vendor">{{ advance.person_name }}</span></span
             >
-            @if (editingAdvance() === advance.id) {
+            @if (advance.deleted_at) {
+              <span class="right t-mono cell-figure">{{ money(advance.amount) }}</span>
+              <span class="right t-mono muted">{{ advance.given_on }}</span>
+              <span class="t-small muted">deleted</span>
+              <button
+                type="button"
+                class="link-action"
+                [attr.aria-label]="'Restore the advance to ' + advance.person_name"
+                (click)="restoreAdvance(advance.id)"
+              >
+                Restore
+              </button>
+            } @else if (editingAdvance() === advance.id) {
               <span class="amount right">
                 <span class="amount-prefix t-mono">{{ symbol() }}</span>
                 <input

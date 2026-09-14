@@ -16,6 +16,7 @@ import { formatMoney } from '../budget/money';
 import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
 import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
+import { ToggleComponent } from '../ui/toggle.component';
 import { LandService } from '../lands/land.service';
 import { whereLabel } from '../lands/land-labels';
 import { ProjectService } from './project.service';
@@ -33,7 +34,7 @@ interface StatusChoice {
   selector: 'app-project-settings',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChipGroupComponent],
+  imports: [ButtonComponent, ChipGroupComponent, ToggleComponent],
   templateUrl: './project-settings.component.html',
   styleUrl: './project-settings.component.scss',
 })
@@ -59,6 +60,7 @@ export class ProjectSettingsComponent {
   readonly newName = signal('');
   readonly removing = signal<string | null>(null);
   readonly justRemoved = signal<CategoryRead | null>(null);
+  readonly includeDeleted = signal(false);
 
   readonly statuses: StatusChoice[] = [
     { value: 'active', name: 'In progress' },
@@ -203,21 +205,43 @@ export class ProjectSettingsComponent {
     if (!gone) {
       return;
     }
-    const done = await this.budget.putCategoryBack(this.project().id, gone.id);
+    await this.restore(gone);
+  }
+
+  async restore(category: CategoryRead): Promise<void> {
+    const done = await this.budget.putCategoryBack(this.project().id, category.id);
     this.justRemoved.set(null);
+    await this.budget.load(this.project().id, this.includeDeleted());
     this.toast.show(
-      done ? `${gone.name} is back.` : (this.budget.error() ?? 'Could not restore the category.'),
+      done
+        ? `${category.name} restored.`
+        : (this.budget.error() ?? 'Could not restore the category.'),
       done ? 'success' : 'error',
     );
   }
 
+  async setIncludeDeleted(on: boolean): Promise<void> {
+    this.includeDeleted.set(on);
+    this.renaming.set(null);
+    this.removing.set(null);
+    await this.budget.load(this.project().id, on);
+  }
+
+  deletedLabel(): string {
+    return this.includeDeleted() ? 'Hide deleted' : 'Show deleted';
+  }
+
   async remove(category: CategoryRead): Promise<void> {
-    const done = await this.budget.removeCategory(this.project().id, category.id);
+    const done = await this.budget.removeCategory(
+      this.project().id,
+      category.id,
+      this.includeDeleted(),
+    );
     this.removing.set(null);
     this.justRemoved.set(done ? category : null);
     this.toast.show(
       done
-        ? `${category.name} removed.`
+        ? `${category.name} deleted.`
         : (this.budget.error() ?? 'Could not remove the category.'),
       done ? 'success' : 'error',
     );

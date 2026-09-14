@@ -43,6 +43,7 @@ export class ExpenseService {
   private readonly byCategoryState = signal<Record<string, Nested>>({});
   private readonly monthsState = signal<ProjectMonths | null>(null);
   private readonly byMonthState = signal<Record<string, Nested>>({});
+  private readonly deletedState = signal(false);
 
   readonly expenses = this.state.asReadonly();
   readonly spend = this.spendState.asReadonly();
@@ -55,7 +56,8 @@ export class ExpenseService {
 
   readonly page = this.pageState.asReadonly();
 
-  async load(projectId: string): Promise<void> {
+  async load(projectId: string, includeDeleted = false): Promise<void> {
+    this.deletedState.set(includeDeleted);
     await this.goTo(projectId, 1);
   }
 
@@ -64,6 +66,7 @@ export class ExpenseService {
     try {
       const rows = await this.api.invoke(listExpenses, {
         project_id: projectId,
+        include_deleted: this.deletedState(),
         limit: PAGE_SIZE,
         offset: offsetOf(page),
       });

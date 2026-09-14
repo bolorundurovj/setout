@@ -115,6 +115,10 @@
   background: var(--field);
   border: 1px solid var(--rule);
   border-radius: 10px;
+
+  &.deleted {
+    opacity: 0.6;
+  }
 }
 
 .category.child {

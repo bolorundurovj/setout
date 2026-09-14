@@ -5,6 +5,13 @@
   max-width: 720px;
 }
 
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .search {
   max-width: 340px;
 }
@@ -50,6 +57,14 @@
 
 .row:not(.head) + .row {
   border-top: 1px solid var(--hairline);
+}
+
+.row.archived {
+  background: var(--sidebar);
+}
+
+.row.archived .item-name {
+  color: var(--ink-3);
 }
 
 .right {

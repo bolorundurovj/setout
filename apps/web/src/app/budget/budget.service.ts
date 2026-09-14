@@ -8,6 +8,7 @@ import {
   CategoryPresetRead,
   CategoryRead,
   addBudgetItem,
+  restoreBudgetItem,
   restoreCategory,
   updateBudgetItem,
   createCategory,
@@ -39,11 +40,16 @@ export class BudgetService {
   readonly categories = computed<CategoryRead[]>(() => this.budgetState()?.categories ?? []);
   readonly budgetedTotal = computed(() => this.budgetState()?.budgeted_amount ?? 0);
 
-  async load(projectId: string): Promise<void> {
+  async load(projectId: string, includeDeleted = false): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
     try {
-      this.budgetState.set(await this.api.invoke(getProjectBudget, { project_id: projectId }));
+      this.budgetState.set(
+        await this.api.invoke(getProjectBudget, {
+          project_id: projectId,
+          include_deleted: includeDeleted,
+        }),
+      );
     } catch {
       this.error.set('Could not load the budget.');
     } finally {
@@ -62,9 +68,13 @@ export class BudgetService {
     }
   }
 
-  async loadItems(categoryId: string): Promise<void> {
+  async loadItems(categoryId: string, includeDeleted = false): Promise<void> {
     try {
-      const page = await this.api.invoke(listBudgetItems, { category_id: categoryId, limit: 100 });
+      const page = await this.api.invoke(listBudgetItems, {
+        category_id: categoryId,
+        include_deleted: includeDeleted,
+        limit: 100,
+      });
       this.itemState.update((all) => ({ ...all, [categoryId]: page.items }));
     } catch {
       this.error.set('Could not load the budget items.');
@@ -88,11 +98,15 @@ export class BudgetService {
     }
   }
 
-  async removeCategory(projectId: string, categoryId: string): Promise<boolean> {
+  async removeCategory(
+    projectId: string,
+    categoryId: string,
+    includeDeleted = false,
+  ): Promise<boolean> {
     this.error.set(null);
     try {
       await this.api.invoke(deleteCategory, { category_id: categoryId });
-      await this.load(projectId);
+      await this.load(projectId, includeDeleted);
       return true;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not remove the category.');
@@ -140,9 +154,27 @@ export class BudgetService {
     await this.load(projectId);
   }
 
-  async removeItem(projectId: string, categoryId: string, itemId: string): Promise<void> {
+  async removeItem(
+    projectId: string,
+    categoryId: string,
+    itemId: string,
+    includeDeleted = false,
+  ): Promise<void> {
     await this.api.invoke(deleteBudgetItem, { item_id: itemId });
-    await this.loadItems(categoryId);
+    await this.loadItems(categoryId, includeDeleted);
     await this.load(projectId);
+  }
+
+  async putItemBack(projectId: string, categoryId: string, itemId: string): Promise<boolean> {
+    this.error.set(null);
+    try {
+      await this.api.invoke(restoreBudgetItem, { item_id: itemId });
+      await this.loadItems(categoryId, true);
+      await this.load(projectId);
+      return true;
+    } catch (e: unknown) {
+      this.error.set(detailOf(e) ?? 'Could not restore that budget item.');
+      return false;
+    }
   }
 }

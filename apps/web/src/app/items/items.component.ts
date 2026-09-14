@@ -6,6 +6,7 @@ import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
 import { debounce } from '../ui/debounce';
 import { PaginationComponent } from '../ui/pagination.component';
+import { ToggleComponent } from '../ui/toggle.component';
 import { TopbarComponent } from '../ui/topbar.component';
 import { ItemService } from './item.service';
 
@@ -13,7 +14,7 @@ import { ItemService } from './item.service';
   selector: 'app-items',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, PaginationComponent, TopbarComponent],
+  imports: [ButtonComponent, PaginationComponent, ToggleComponent, TopbarComponent],
   templateUrl: './items.component.html',
   styleUrl: './items.component.scss',
 })
@@ -26,10 +27,13 @@ export class ItemsComponent {
 
   readonly search = signal('');
   readonly showForm = signal(false);
+  readonly includeArchived = signal(false);
   readonly name = signal('');
   readonly unit = signal('');
 
-  private readonly typing = debounce<string>((text) => void this.items.load(text));
+  private readonly typing = debounce<string>(
+    (text) => void this.items.load(text, this.includeArchived()),
+  );
 
   constructor() {
     void this.items.load();
@@ -85,7 +89,22 @@ export class ItemsComponent {
 
   async archive(itemId: string): Promise<void> {
     await this.items.remove(itemId);
-    this.toast.show('Item archived.');
+    this.toast.show('Item archived. Show archived to restore it.');
+  }
+
+  async restore(itemId: string): Promise<void> {
+    await this.items.restore(itemId);
+    this.toast.show('Item restored.');
+  }
+
+  async setIncludeArchived(on: boolean): Promise<void> {
+    this.typing.cancel();
+    this.includeArchived.set(on);
+    await this.items.load(this.search(), on);
+  }
+
+  archivedLabel(): string {
+    return this.includeArchived() ? 'Hide archived' : 'Show archived';
   }
 
   unitLabel(item: ItemRead): string {

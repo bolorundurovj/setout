@@ -7,6 +7,7 @@ import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
 import { DrawerComponent } from '../ui/drawer.component';
 import { PaginationComponent } from '../ui/pagination.component';
+import { ToggleComponent } from '../ui/toggle.component';
 import { AddExpenseComponent } from './add-expense.component';
 import { ExpenseService, UNFILED } from './expense.service';
 
@@ -20,6 +21,7 @@ import { ExpenseService, UNFILED } from './expense.service';
     DrawerComponent,
     FormsModule,
     PaginationComponent,
+    ToggleComponent,
   ],
   templateUrl: './expenses.component.html',
   styleUrl: './expenses.component.scss',
@@ -34,6 +36,7 @@ export class ExpensesComponent {
   readonly adding = signal(false);
   readonly editingExpense = signal<ExpenseRead | null>(null);
   readonly filing = signal(false);
+  readonly includeDeleted = signal(false);
   readonly selected = signal<Set<string>>(new Set());
   readonly bulkCategoryId = signal<string>('');
 
@@ -177,6 +180,21 @@ export class ExpensesComponent {
 
   async remove(expenseId: string): Promise<void> {
     await this.expenses.remove(this.project().id, expenseId);
-    this.toast.show('Expense removed. It can be restored.');
+    this.toast.show('Expense deleted. Show deleted to restore it.');
+  }
+
+  async restore(expenseId: string): Promise<void> {
+    await this.expenses.restore(this.project().id, expenseId);
+    this.toast.show('Expense restored.');
+  }
+
+  async setIncludeDeleted(on: boolean): Promise<void> {
+    this.filing.set(false);
+    this.includeDeleted.set(on);
+    await this.expenses.load(this.project().id, on);
+  }
+
+  deletedLabel(): string {
+    return this.includeDeleted() ? 'Hide deleted' : 'Show deleted';
   }
 }
