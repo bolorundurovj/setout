@@ -440,7 +440,7 @@ export class AddExpenseComponent {
     }
     await this.attachments.remove(existing.id, file.id);
     this.justRemoved.set(file);
-    this.toast.show('Photo removed. The expense stands.');
+    this.toast.show('Photo deleted. The expense stands.');
   }
 
   async putPhotoBack(): Promise<void> {
@@ -452,7 +452,9 @@ export class AddExpenseComponent {
     const back = await this.attachments.restore(existing.id, gone.id);
     this.justRemoved.set(null);
     this.toast.show(
-      back ? `${back.filename} is back.` : (this.attachments.error() ?? 'Could not put it back.'),
+      back
+        ? `${back.filename} restored.`
+        : (this.attachments.error() ?? 'Could not restore that file.'),
       back ? 'success' : 'error',
     );
   }

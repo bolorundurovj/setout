@@ -50,7 +50,7 @@ describe('VendorService', () => {
     expect(service.total()).toBe(1);
   });
 
-  it('leaves the archived out unless asked', async () => {
+  it('leaves archived rows out unless the page includes them', async () => {
     const service = configure(() => page([]));
     await service.load();
     expect((calls[0] as { include_archived?: boolean }).include_archived).toBe(false);

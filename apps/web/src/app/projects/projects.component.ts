@@ -140,7 +140,7 @@ export class ProjectsComponent {
 
   statusLine(project: ProjectRead): string {
     if (project.deleted_at) {
-      return 'Deleted. Restore it to bring it back.';
+      return 'Deleted. It can be restored.';
     }
     if (project.status === 'active' && !project.budgeted_amount) {
       return 'Active. No budget set yet.';
