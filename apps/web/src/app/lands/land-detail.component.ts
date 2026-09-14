@@ -169,7 +169,7 @@ export class LandDetailComponent {
       this.toast.show(this.lands.error() ?? 'Could not save the area.', 'error');
       return;
     }
-    this.toast.show('Stated area updated from the mapped survey.');
+    this.toast.show('Stated area taken from the survey.');
     await this.load();
   }
 

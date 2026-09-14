@@ -109,6 +109,6 @@ export class PersonDetailComponent {
   async restore(): Promise<void> {
     await this.people.restore(this.id());
     await this.load();
-    this.toast.show('Person taken out of the archive.');
+    this.toast.show('Person restored.');
   }
 }

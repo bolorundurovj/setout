@@ -302,7 +302,7 @@ export class ImportComponent {
     this.result.set(done);
     this.step.set('done');
     await this.projects.load();
-    this.toast.show(`${done.project_name} has the sheet in it.`);
+    this.toast.show(`Imported into ${done.project_name}.`);
   }
 
   openProject(): void {
