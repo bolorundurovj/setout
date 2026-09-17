@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.2.0](https://github.com/bolorundurovj/setout/compare/v2.1.0...v2.2.0) (2026-09-17)
+
+
+### Features
+
+* add command-line interface for passphrase recovery and reset ([9e83a4c](https://github.com/bolorundurovj/setout/commit/9e83a4c62eeb61cac20eb1f2436b86a87e57ffe0))
+* filter the project expense list ([#59](https://github.com/bolorundurovj/setout/issues/59)) ([f02dbd3](https://github.com/bolorundurovj/setout/commit/f02dbd3dd01184ee1c525a323a1d97959fc3a1db))
+* tighten authentication ([#61](https://github.com/bolorundurovj/setout/issues/61)) ([a6e28d2](https://github.com/bolorundurovj/setout/commit/a6e28d20fe1d2889ae663c002b72525046395e23))
+
+
+### Refactoring
+
+* update terminology from "owed" to "outstanding" across components ([c85d39e](https://github.com/bolorundurovj/setout/commit/c85d39e4363672cdc7f0cdbbfc52d9f55f1886be))
+
+
+### Build and dependencies
+
+* **deps:** bump fast-uri from 3.1.5 to 3.1.8 ([#63](https://github.com/bolorundurovj/setout/issues/63)) ([cc30bff](https://github.com/bolorundurovj/setout/commit/cc30bff33924ffd97e312497300192fc26be5f92))
+
 ## [2.1.0](https://github.com/bolorundurovj/setout/compare/v2.0.1...v2.1.0) (2026-09-14)
 
 
