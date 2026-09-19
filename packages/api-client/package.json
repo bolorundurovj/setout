@@ -23,6 +23,6 @@
   },
   "devDependencies": {
     "ng-openapi-gen": "1.0.5",
-    "prettier": "3.9.6"
+    "prettier": "3.9.7"
   }
 }
