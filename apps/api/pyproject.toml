@@ -15,7 +15,7 @@ classifiers = [
     "Topic :: Office/Business :: Financial :: Accounting",
 ]
 dependencies = [
-    "fastapi==0.141.1",
+    "fastapi==0.142.1",
     "tortoise-orm==1.1.8",
     "aiosqlite==0.22.1",
     "asyncpg==0.31.0",
