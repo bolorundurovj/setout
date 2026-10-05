@@ -2467,10 +2467,10 @@ fresh@^2.0.0:
   resolved "https://registry.npmjs.org/fresh/-/fresh-2.0.0.tgz"
   integrity sha512-Rx/WycZ60HOaqLKAi6cHRKKI7zxWbJ31MhntmtwMoaTeF7XFH9hhBp8vITaMidfljRQ6eYWCKkaTK+ykVJHP2A==
 
-fs-extra@^11.3.2:
-  version "11.4.0"
-  resolved "https://registry.npmjs.org/fs-extra/-/fs-extra-11.4.0.tgz"
-  integrity sha512-EQsFzMUJkCKGr1ePqlYADkIUmHW1s3ZXr5Yqy6wbGrfUCphpl2maM/kyOIRA2HpP3AaFQTZXD4ldjek+nccddA==
+fs-extra@^11.4.1:
+  version "11.4.1"
+  resolved "https://registry.yarnpkg.com/fs-extra/-/fs-extra-11.4.1.tgz#6a01ca80008eacf3ca1ffde5ef79088f68203a5a"
+  integrity sha512-KYAb4c9BJQI6QqGKthV68OHe0badztdXJWKo0WtBA9IuCFPTKvE5ZdUBglP833aMjhaSPNO4A5j/EkzZtGlKjA==
   dependencies:
     graceful-fs "^4.2.0"
     jsonfile "^6.0.1"
@@ -2542,9 +2542,9 @@ graceful-fs@^4.1.2, graceful-fs@^4.1.6, graceful-fs@^4.2.0:
   resolved "https://registry.npmjs.org/graceful-fs/-/graceful-fs-4.2.11.tgz"
   integrity sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==
 
-handlebars@^4.7.8:
+handlebars@^4.7.9:
   version "4.7.9"
-  resolved "https://registry.npmjs.org/handlebars/-/handlebars-4.7.9.tgz"
+  resolved "https://registry.yarnpkg.com/handlebars/-/handlebars-4.7.9.tgz#6f139082ab58dc4e5a0e51efe7db5ae890d56a0f"
   integrity sha512-4E71E0rpOaQuJR2A3xDZ+GM1HyWYv1clR58tC8emQNeQe3RH7MAzSbat+V0wG78LQBo6m6bzSG/L4pBuCsgnUQ==
   dependencies:
     minimist "^1.2.5"
@@ -2934,9 +2934,9 @@ locate-path@^6.0.0:
   dependencies:
     p-locate "^5.0.0"
 
-lodash@^4.17.21:
+lodash@^4.18.1:
   version "4.18.1"
-  resolved "https://registry.npmjs.org/lodash/-/lodash-4.18.1.tgz"
+  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.18.1.tgz#ff2b66c1f6326d59513de2407bf881439812771c"
   integrity sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==
 
 log-symbols@^7.0.1:
@@ -3088,18 +3088,18 @@ neo-async@^2.6.2:
   resolved "https://registry.npmjs.org/neo-async/-/neo-async-2.6.2.tgz"
   integrity sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==
 
-ng-openapi-gen@1.0.5:
-  version "1.0.5"
-  resolved "https://registry.npmjs.org/ng-openapi-gen/-/ng-openapi-gen-1.0.5.tgz"
-  integrity sha512-wosZ/3maujBVhezNC+bw9PgT3I//hVZzF27CIi4FJc3uq3ibDciEB+GyRZflcLm3AE84kAKrD6cRBIAQVyrnnA==
+ng-openapi-gen@1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/ng-openapi-gen/-/ng-openapi-gen-1.1.0.tgz#6a21518b6d65472e28a7e29dad7f8e78ee2191ec"
+  integrity sha512-18Nujl6hPuacDfDJlw+II++w9IRrG6aHP90GLzuZOv9yB03yyoC2Dgd8Z5sXqVDRvgQxeWPwdXpsGvxyqhJDfA==
   dependencies:
     "@apidevtools/json-schema-ref-parser" "^14.2.1"
     argparse "^2.0.1"
     eol "^0.10.0"
-    fs-extra "^11.3.2"
-    handlebars "^4.7.8"
+    fs-extra "^11.4.1"
+    handlebars "^4.7.9"
     jsesc "^3.1.0"
-    lodash "^4.17.21"
+    lodash "^4.18.1"
     openapi-types "^12.1.3"
 
 node-addon-api@^6.1.0:
