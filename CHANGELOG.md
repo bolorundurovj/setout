@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.1](https://github.com/bolorundurovj/setout/compare/v2.2.0...v2.2.1) (2026-10-05)
+
+
+### Build and dependencies
+
+* **deps:** bump hono from 4.13.2 to 4.13.13 ([#90](https://github.com/bolorundurovj/setout/issues/90)) ([900da89](https://github.com/bolorundurovj/setout/commit/900da893313bcfe7e1cb10d22b4c59715031a0d2))
+* **deps:** bump ip-address from 10.5.0 to 10.7.3 ([#89](https://github.com/bolorundurovj/setout/issues/89)) ([43ebf52](https://github.com/bolorundurovj/setout/commit/43ebf522cfa67c39c3b640a334fdc207f3ce2ae4))
+
 ## [2.2.0](https://github.com/bolorundurovj/setout/compare/v2.1.0...v2.2.0) (2026-09-17)
 
 
