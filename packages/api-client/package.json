@@ -22,7 +22,7 @@
     "format": "prettier --write \"src/**/*.ts\""
   },
   "devDependencies": {
-    "ng-openapi-gen": "1.0.5",
+    "ng-openapi-gen": "1.1.0",
     "prettier": "3.9.6"
   }
 }
