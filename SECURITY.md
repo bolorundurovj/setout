@@ -34,8 +34,8 @@ not safe to expose, and the documentation states this in several places:
 - `SETOUT_SECRET_KEY` defaults to `change-me`. It signs session cookies, so
   anyone who knows it can forge a session. The app warns on startup while it is
   still the default, and [docs/deployment.md](docs/deployment.md) lists it first.
-- The compose stack's Postgres and MinIO credentials are defaults
-  (Postgres `setout` / `setout`, MinIO `setout` / `setout-secret`).
+- The compose stack's Postgres and S3 credentials are defaults
+  (Postgres `setout` / `setout`, S3/RustFS `setout` / `setout-secret`).
 - `SETOUT_COOKIE_SECURE` defaults to `false`, which is correct for localhost and
   incorrect for any other host.
 

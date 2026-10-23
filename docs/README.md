@@ -6,7 +6,7 @@ The guides below cover running and developing Setout.
 
 - [Installation](installation.md): Docker, bare metal, first run.
 - [Configuration](configuration.md): every environment variable, for the app and for the compose stack.
-- [Deployment](deployment.md): Postgres, S3 or MinIO, HTTPS, upgrades.
+- [Deployment](deployment.md): Postgres, S3 or RustFS, HTTPS, upgrades.
 - [Backup and restore](backup-and-restore.md): the two kinds of backup, and when each applies.
 - [Troubleshooting](troubleshooting.md): common failures and their fixes.
 

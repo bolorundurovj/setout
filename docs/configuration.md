@@ -23,13 +23,14 @@ and adjust. Local development defaults to `./data`.
 | `SETOUT_SIGN_IN_RETRY_AFTER_SECONDS` | `30` | Value of `Retry-After`, and how long a failure is counted |
 | `SETOUT_STORAGE_BACKEND` | `local` | Where attached files live: `local` or `s3` |
 | `SETOUT_S3_BUCKET` | empty | Bucket name when the backend is `s3` |
-| `SETOUT_S3_ENDPOINT_URL` | empty | Leave unset for Amazon; set it for MinIO, R2, B2, Spaces |
+| `SETOUT_S3_ENDPOINT_URL` | empty | Leave unset for Amazon; set it for RustFS, R2, B2, Spaces |
 | `SETOUT_S3_PUBLIC_URL` | empty | Address browsers use to reach the bucket; defaults to the endpoint URL |
 | `SETOUT_S3_REGION` | empty | Region, where the provider wants one |
 | `SETOUT_S3_ACCESS_KEY_ID` | empty | Access key |
 | `SETOUT_S3_SECRET_ACCESS_KEY` | empty | Secret key |
 | `SETOUT_S3_PREFIX` | `attachments` | Folder inside the bucket |
-| `SETOUT_S3_USE_PATH_STYLE` | `false` | Turn on for MinIO and other providers that require path-style addressing |
+| `SETOUT_S3_USE_PATH_STYLE` | `false` | Turn on for RustFS and other providers that require path-style addressing |
+| `SETOUT_S3_AUTO_CREATE_BUCKET` | `true` | Automatically create the target S3 bucket on boot if it does not exist |
 | `SETOUT_S3_LINK_SECONDS` | `300` | Expiry of presigned bucket URLs, in seconds |
 | `SETOUT_MAX_ATTACHMENT_BYTES` | `26214400` | Largest file that can be attached |
 | `SETOUT_MAX_IMPORT_BYTES` | `26214400` | Largest workbook that can be imported; the file is read into memory |
@@ -90,10 +91,10 @@ in a `.env` file beside the compose file.
 | --- | --- | --- |
 | `SETOUT_PORT` | `8474` | Port the app is published on |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `setout` | Database credentials |
-| `MINIO_ROOT_USER` | `setout` | Bucket access key |
-| `MINIO_ROOT_PASSWORD` | `setout-secret` | Bucket secret key |
-| `MINIO_BUCKET` | `setout` | Bucket the attachments go in |
-| `MINIO_PORT` / `MINIO_CONSOLE_PORT` | `9000` / `9001` | Published MinIO ports |
+| `STORAGE_ACCESS_KEY` / `MINIO_ROOT_USER` | `setout` | S3 / RustFS access key |
+| `STORAGE_SECRET_KEY` / `MINIO_ROOT_PASSWORD` | `setout-secret` | S3 / RustFS secret key |
+| `STORAGE_BUCKET` / `MINIO_BUCKET` | `setout` | Bucket the attachments go in |
+| `STORAGE_PORT` / `STORAGE_CONSOLE_PORT` | `9000` / `9001` | Published S3 API and RustFS console ports |
 | `POSTGRES_PORT` | `5433` | Host port for Postgres, not 5432, to avoid a conflict with an existing Postgres installation |
 | `SETOUT_SECRET_KEY` | `change-me` | Session signing key |
 
@@ -104,7 +105,7 @@ attached twice is stored once. By default they go on the disk under
 `SETOUT_DATA_DIR`, which the server backup already includes.
 
 Point `SETOUT_STORAGE_BACKEND` at `s3` and they go to any S3-compatible bucket:
-Amazon, MinIO, R2, B2, Spaces and others. A bucket is
+Amazon, RustFS, R2, B2, Spaces and others. A bucket is
 not included in the server backup, so back up the bucket separately.
 
 ## The frontend
