@@ -11,6 +11,10 @@ from botocore.exceptions import ClientError
 from setout.config import Settings
 from setout.services.storage import build_storage, checksum_of, key_for
 from setout.services.storage.local import LocalStorage
+from setout.services.storage.migrate import (
+    _read_legacy_file_from_dir,
+    _read_legacy_file_from_s3,
+)
 from setout.services.storage.s3 import S3Storage
 
 pytestmark = pytest.mark.unit
@@ -102,13 +106,30 @@ class TestLocalStorage:
 
 
 class FakeS3:
-    """Only the five calls the S3 backend makes."""
+    """Only the calls the S3 backend makes."""
 
-    def __init__(self, missing: bool = False, endpoint: str = "http://minio:9000") -> None:
+    def __init__(
+        self,
+        missing: bool = False,
+        endpoint: str = "http://minio:9000",
+        bucket_exists: bool = True,
+    ) -> None:
         self.missing = missing
         self.endpoint = endpoint.rstrip("/")
+        self.bucket_exists = bucket_exists
         self.written: dict[str, bytes] = {}
         self.calls: list[tuple[str, dict]] = []
+
+    def head_bucket(self, **kw: object) -> dict:
+        self.calls.append(("head_bucket", dict(kw)))
+        if not self.bucket_exists:
+            raise ClientError({"Error": {"Code": "404", "Message": "Not Found"}}, "HeadBucket")
+        return {}
+
+    def create_bucket(self, **kw: object) -> dict:
+        self.calls.append(("create_bucket", dict(kw)))
+        self.bucket_exists = True
+        return {}
 
     def put_object(self, **kw: object) -> None:
         self.calls.append(("put_object", dict(kw)))
@@ -217,6 +238,25 @@ class TestS3Storage:
         # The operations client never saw the presign call.
         assert not internal.calls
 
+    async def test_ensure_bucket_creates_bucket_when_missing(self) -> None:
+        client = FakeS3(bucket_exists=False)
+        store = self.store(client)
+
+        await store.ensure_bucket()
+
+        assert client.bucket_exists is True
+        assert ("head_bucket", {"Bucket": "a-bucket"}) in client.calls
+        assert ("create_bucket", {"Bucket": "a-bucket"}) in client.calls
+
+    async def test_ensure_bucket_noop_when_bucket_exists(self) -> None:
+        client = FakeS3(bucket_exists=True)
+        store = self.store(client)
+
+        await store.ensure_bucket()
+
+        assert ("head_bucket", {"Bucket": "a-bucket"}) in client.calls
+        assert not any(call[0] == "create_bucket" for call in client.calls)
+
 
 class TestPickingABackend:
     def test_it_keeps_files_on_the_disk_beside_the_database_by_default(
@@ -243,3 +283,54 @@ class TestPickingABackend:
         assert isinstance(store, S3Storage)
         assert store.bucket == "a-bucket"
         assert store.public_url == "https://files.example"
+
+
+class TestLegacyStorageMigrationHelpers:
+    def test_reads_direct_file_from_directory(self, tmp_path: Path) -> None:
+        target = tmp_path / "ab" / "cd" / "test.jpg"
+        target.parent.mkdir(parents=True)
+        target.write_bytes(b"legacy content")
+
+        data = _read_legacy_file_from_dir(tmp_path, "ab/cd/test.jpg")
+        assert data == b"legacy content"
+
+    def test_reads_bucket_and_prefix_subdirectories(self, tmp_path: Path) -> None:
+        target = tmp_path / "setout" / "attachments" / "ab" / "cd" / "test.jpg"
+        target.parent.mkdir(parents=True)
+        target.write_bytes(b"nested content")
+
+        data = _read_legacy_file_from_dir(
+            tmp_path, "ab/cd/test.jpg", bucket="setout", prefix="attachments"
+        )
+        assert data == b"nested content"
+
+    def test_reads_minio_part1_format(self, tmp_path: Path) -> None:
+        part = tmp_path / "setout" / "attachments" / "ab" / "cd" / "test.jpg" / "part.1"
+        part.parent.mkdir(parents=True)
+        part.write_bytes(b"minio part 1 content")
+
+        data = _read_legacy_file_from_dir(
+            tmp_path, "ab/cd/test.jpg", bucket="setout", prefix="attachments"
+        )
+        assert data == b"minio part 1 content"
+
+    def test_returns_none_when_legacy_file_is_missing(self, tmp_path: Path) -> None:
+        data = _read_legacy_file_from_dir(tmp_path, "ab/cd/missing.jpg")
+        assert data is None
+
+    def test_reads_legacy_file_from_s3_client(self) -> None:
+        client = FakeS3()
+        client.written["attachments/ab/cd/test.jpg"] = b"s3 content"
+
+        data = _read_legacy_file_from_s3(
+            client, bucket="setout", prefix="attachments", storage_key="ab/cd/test.jpg"
+        )
+        assert data == b"s3 content"
+
+    def test_reads_legacy_file_from_s3_client_returns_none_on_404(self) -> None:
+        client = FakeS3(missing=True)
+
+        data = _read_legacy_file_from_s3(
+            client, bucket="setout", prefix="attachments", storage_key="ab/cd/missing.jpg"
+        )
+        assert data is None

@@ -42,6 +42,7 @@ from setout.routers import (
     search,
     vendor,
 )
+from setout.services.storage import S3Storage, auto_migrate_legacy_storage, get_storage
 
 logger = logging.getLogger("setout")
 
@@ -100,6 +101,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("Database status on start: %s", status)
     await init_db(enable_global_fallback=True)
     await consume_recovery_file()
+
+    storage = get_storage()
+    if isinstance(storage, S3Storage) and settings.s3_auto_create_bucket:
+        try:
+            await storage.ensure_bucket()
+        except Exception as e:
+            logger.warning("Could not auto-create S3 bucket %s: %s", storage.bucket, e)
+
+    try:
+        await auto_migrate_legacy_storage(storage, settings)
+    except Exception as e:
+        logger.warning("Storage migration encountered an error: %s", e)
 
     try:
         yield

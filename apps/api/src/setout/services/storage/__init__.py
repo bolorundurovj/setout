@@ -5,12 +5,14 @@ from functools import lru_cache
 from setout.config import Settings, get_settings
 from setout.services.storage.base import Storage, checksum_of, key_for
 from setout.services.storage.local import LocalStorage
+from setout.services.storage.migrate import auto_migrate_legacy_storage
 from setout.services.storage.s3 import S3Storage
 
 __all__ = [
     "LocalStorage",
     "S3Storage",
     "Storage",
+    "auto_migrate_legacy_storage",
     "build_storage",
     "checksum_of",
     "get_storage",
