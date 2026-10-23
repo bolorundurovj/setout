@@ -12,7 +12,7 @@ import calendar
 import struct
 import sys
 import zlib
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 
 # Adds the API source to sys.path so the script runs from the repository root; hence E402.
@@ -174,7 +174,7 @@ AGREEMENT_PAYMENTS = [
 
 # Paid, outstanding delivery.
 OUTSTANDING_DESCRIPTION = "17 bags of cement"
-OUTSTANDING_EXPECTED = "this week"
+OUTSTANDING_EXPECTED_DAYS = 5
 OUTSTANDING_EXPENSE = "12 bags of cement plus delivery"
 
 # The expense with a receipt attached.
@@ -344,7 +344,7 @@ async def _load() -> None:
                 project=project,
                 expense=expense,
                 description=OUTSTANDING_DESCRIPTION,
-                expected=OUTSTANDING_EXPECTED,
+                expected=date.today() + timedelta(days=OUTSTANDING_EXPECTED_DAYS),
             )
         if description == RECEIPT_FOR:
             await attach_receipt(project, expense)
