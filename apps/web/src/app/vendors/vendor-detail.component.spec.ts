@@ -48,7 +48,7 @@ function outstandingDelivery(overrides: Partial<DeliveryRead> = {}): DeliveryRea
     vendor_id: 'v1',
     vendor_name: 'A Vendor',
     description: '17 bags of cement',
-    expected: 'this week',
+    expected: '2026-10-25',
     amount: 76_500_00,
     currency_code: 'NGN',
     currency_exponent: 2,
@@ -145,7 +145,9 @@ describe('VendorDetailComponent', () => {
     expect(component.outstandingDeliveries().map((row) => row.description)).toEqual([
       '17 bags of cement',
     ]);
-    expect(component.deliveryDates(outstandingDelivery())).toContain('expected this week');
+    expect(component.deliveryDates(outstandingDelivery())).toContain('expected');
+    expect(component.deliveryDates(outstandingDelivery())).toContain('2026');
+    expect(component.deliveryDates(outstandingDelivery())).toContain('25');
   });
 
   it('reloads the outstanding deliveries after marking one received', async () => {

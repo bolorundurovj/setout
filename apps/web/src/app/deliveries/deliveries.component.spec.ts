@@ -28,7 +28,7 @@ function delivery(overrides: Partial<DeliveryRead> = {}): DeliveryRead {
     vendor_id: 'v1',
     vendor_name: 'Corner Depot Cement',
     description: '17 bags of cement',
-    expected: 'this week',
+    expected: '2026-10-25',
     amount: 7_650_000,
     currency_code: 'NGN',
     currency_exponent: 2,
@@ -179,7 +179,9 @@ describe('DeliveriesComponent', () => {
 
   it('shows the expected date after the paid date', () => {
     const component = render();
-    expect(component.outstandingDetail(delivery())).toContain('expected this week');
+    expect(component.outstandingDetail(delivery())).toContain(
+      `expected ${component.formatExpected('2026-10-25')}`,
+    );
     expect(component.outstandingDetail(delivery({ expected: null }))).not.toContain('expected');
   });
 

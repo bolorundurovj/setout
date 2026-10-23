@@ -10,7 +10,7 @@ function delivery(id: string, overrides: Record<string, unknown> = {}) {
     vendor_id: 'v1',
     vendor_name: 'Corner Depot Cement',
     description: '17 bags of cement',
-    expected: 'this week',
+    expected: '2026-10-25',
     amount: 7_650_000,
     currency_code: 'NGN',
     currency_exponent: 2,

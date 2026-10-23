@@ -76,7 +76,12 @@
           <div class="outstanding">
             <span class="outstanding-text">
               <span class="outstanding-description">{{ delivery.description }}</span>
-              <span class="outstanding-dates">{{ deliveryDates(delivery) }}</span>
+              <span class="outstanding-dates">
+                {{ deliveryDates(delivery) }}
+                @if (delivery.is_overdue) {
+                  <span class="overdue-tag t-micro">Overdue</span>
+                }
+              </span>
             </span>
             <span class="outstanding-actions">
               <span class="outstanding-amount t-mono">{{ deliveryAmount(delivery) }}</span>

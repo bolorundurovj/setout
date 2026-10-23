@@ -69,10 +69,10 @@ async def test_description_defaults_to_the_expense_description(
         project_id,
         expense_id=other["id"],
         description="17 bags of cement",
-        expected="this week",
+        expected="2026-10-25",
     )
     assert explicit["description"] == "17 bags of cement"
-    assert explicit["expected"] == "this week"
+    assert explicit["expected"] == "2026-10-25"
 
 
 async def test_delivery_amount_follows_the_expense_amount(client: AsyncClient) -> None:

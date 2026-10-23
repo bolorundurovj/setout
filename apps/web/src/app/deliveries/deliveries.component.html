@@ -59,7 +59,7 @@
                 <input
                   [id]="'delivery-expected-' + delivery.id"
                   class="input-field"
-                  type="text"
+                  type="date"
                   [value]="editExpected()"
                   (input)="editExpected.set(value($event))"
                   (keyup.enter)="saveEdit(delivery)"
@@ -74,7 +74,11 @@
             </div>
           </div>
         } @else {
-          <div class="outstanding" [class.archived]="delivery.archived_at">
+          <div
+            class="outstanding"
+            [class.archived]="delivery.archived_at"
+            [class.overdue]="delivery.is_overdue && !delivery.archived_at"
+          >
             <span class="delivery-text">
               <span class="delivery-description">{{ delivery.description }}</span>
               @if (delivery.archived_at) {
@@ -83,6 +87,9 @@
                 <span class="delivery-detail"
                   >{{ vendorName(delivery) }} &middot; {{ outstandingDetail(delivery) }}</span
                 >
+              }
+              @if (delivery.is_overdue && !delivery.archived_at) {
+                <span class="overdue-tag t-micro">Overdue</span>
               }
             </span>
             <span class="delivery-actions">

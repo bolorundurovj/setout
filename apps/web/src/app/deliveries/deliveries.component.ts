@@ -104,9 +104,19 @@ export class DeliveriesComponent {
     });
   }
 
+  formatExpected(dateStr: string): string {
+    return new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
+
   outstandingDetail(delivery: DeliveryRead): string {
     const paid = `Paid ${this.paidOn(delivery)}`;
-    return delivery.expected ? `${paid} · expected ${delivery.expected}` : paid;
+    return delivery.expected
+      ? `${paid} · expected ${this.formatExpected(delivery.expected)}`
+      : paid;
   }
 
   requestDelete(id: string): void {

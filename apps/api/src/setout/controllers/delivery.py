@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from fastapi import HTTPException, status
 
@@ -11,6 +11,7 @@ from setout.schemas.delivery import (
     DeliveryCreate,
     DeliveryPage,
     DeliveryRead,
+    DeliverySort,
     DeliveryUpdate,
 )
 
@@ -26,6 +27,7 @@ class DeliveryController:
         outstanding_only: bool,
         received_only: bool,
         include_archived: bool,
+        sort: DeliverySort = DeliverySort.RECENT,
         limit: int,
         offset: int,
     ) -> DeliveryPage:
@@ -49,8 +51,13 @@ class DeliveryController:
                 archived_at__isnull=True, expense__archived_at__isnull=True
             )
         outstanding = await outstanding_rows.prefetch_related("expense")
+        order = (
+            ("expected", "-created_at", "id")
+            if sort == DeliverySort.EXPECTED
+            else ("-created_at", "id")
+        )
         rows = (
-            await query.order_by("-created_at", "id")
+            await query.order_by(*order)
             .offset(offset)
             .limit(limit)
             .prefetch_related("expense__vendor", "project__currency")
@@ -131,6 +138,12 @@ class DeliveryController:
     def _read(self, delivery: Delivery) -> DeliveryRead:
         expense = delivery.expense
         vendor = expense.vendor
+        today = date.today()
+        is_overdue = (
+            delivery.received_at is None
+            and delivery.expected is not None
+            and delivery.expected < today
+        )
         return DeliveryRead(
             id=delivery.id,
             project_id=delivery.project_id,
@@ -139,6 +152,7 @@ class DeliveryController:
             vendor_name=vendor.name if vendor else None,
             description=delivery.description,
             expected=delivery.expected,
+            is_overdue=is_overdue,
             amount=expense.amount,
             currency_code=delivery.project.currency_id,
             currency_exponent=delivery.project.currency.exponent,

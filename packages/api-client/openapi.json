@@ -7826,6 +7826,17 @@
             "description": "Include archived deliveries"
           },
           {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DeliverySort",
+              "description": "Sort order",
+              "default": "recent"
+            },
+            "description": "Sort order"
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -8038,6 +8049,17 @@
               "title": "Include Archived"
             },
             "description": "Include archived deliveries"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DeliverySort",
+              "description": "Sort order",
+              "default": "recent"
+            },
+            "description": "Sort order"
           },
           {
             "name": "limit",
@@ -11146,7 +11168,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 255
+                "format": "date"
               },
               {
                 "type": "null"
@@ -11242,13 +11264,20 @@
           "expected": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "date"
               },
               {
                 "type": "null"
               }
             ],
             "title": "Expected"
+          },
+          "is_overdue": {
+            "type": "boolean",
+            "title": "Is Overdue",
+            "description": "True if delivery is outstanding and expected date is in the past",
+            "default": false
           },
           "amount": {
             "type": "integer",
@@ -11323,6 +11352,14 @@
         ],
         "title": "DeliveryRead"
       },
+      "DeliverySort": {
+        "type": "string",
+        "enum": [
+          "recent",
+          "expected"
+        ],
+        "title": "DeliverySort"
+      },
       "DeliveryUpdate": {
         "properties": {
           "description": {
@@ -11341,7 +11378,8 @@
           "expected": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "date"
               },
               {
                 "type": "null"

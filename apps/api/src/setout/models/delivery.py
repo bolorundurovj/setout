@@ -29,7 +29,7 @@ class Delivery(Model):
     )
     expense_id: str
     description = fields.CharField(max_length=255)
-    expected = fields.CharField(max_length=255, null=True, default=None)
+    expected = fields.DateField(null=True, default=None)
     received_at = fields.DatetimeField(null=True, default=None)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)

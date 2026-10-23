@@ -244,14 +244,14 @@ describe('AddExpenseComponent', () => {
     component.amount.set('76500');
     component.toggleOutstandingDelivery();
     component.deliveryDescription.set('17 bags of cement');
-    component.deliveryExpected.set('this week');
+    component.deliveryExpected.set('2026-10-25');
 
     await component.save(false);
 
     expect(deliveryCalls[0][1]).toEqual({
       expense_id: 'e1',
       description: '17 bags of cement',
-      expected: 'this week',
+      expected: '2026-10-25',
     });
   });
 

@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class DeliverySort(StrEnum):
+    RECENT = "recent"
+    EXPECTED = "expected"
 
 
 class DeliveryCreate(BaseModel):
@@ -13,14 +19,14 @@ class DeliveryCreate(BaseModel):
         max_length=255,
         description="What is outstanding. Defaults to the expense description",
     )
-    expected: str | None = Field(None, max_length=255, description="When delivery is expected")
+    expected: date | None = Field(None, description="When delivery is expected")
 
 
 class DeliveryUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     description: str | None = Field(None, min_length=1, max_length=255)
-    expected: str | None = None
+    expected: date | None = None
 
 
 class DeliveryRead(BaseModel):
@@ -30,7 +36,10 @@ class DeliveryRead(BaseModel):
     vendor_id: str | None
     vendor_name: str | None
     description: str
-    expected: str | None
+    expected: date | None
+    is_overdue: bool = Field(
+        False, description="True if delivery is outstanding and expected date is in the past"
+    )
     amount: int = Field(..., description="Taken from the expense that paid for the delivery")
     currency_code: str
     currency_exponent: int

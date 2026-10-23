@@ -91,7 +91,15 @@ export class VendorDetailComponent {
       month: 'short',
       year: 'numeric',
     });
-    return delivery.expected ? `Paid ${paid} · expected ${delivery.expected}` : `Paid ${paid}`;
+    if (!delivery.expected) {
+      return `Paid ${paid}`;
+    }
+    const expected = new Date(`${delivery.expected}T00:00:00`).toLocaleDateString(undefined, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+    return `Paid ${paid} · expected ${expected}`;
   }
 
   async markReceived(delivery: DeliveryRead): Promise<void> {

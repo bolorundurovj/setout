@@ -11,6 +11,7 @@ from setout.schemas.delivery import (
     DeliveryCreate,
     DeliveryPage,
     DeliveryRead,
+    DeliverySort,
     DeliveryUpdate,
 )
 
@@ -38,6 +39,7 @@ async def list_deliveries(
     ] = False,
     received_only: Annotated[bool, Query(description="Only received deliveries")] = False,
     include_archived: Annotated[bool, Query(description="Include archived deliveries")] = False,
+    sort: Annotated[DeliverySort, Query(description="Sort order")] = DeliverySort.RECENT,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> DeliveryPage:
@@ -47,6 +49,7 @@ async def list_deliveries(
         outstanding_only=outstanding_only,
         received_only=received_only,
         include_archived=include_archived,
+        sort=sort,
         limit=limit,
         offset=offset,
     )
@@ -61,6 +64,7 @@ async def list_all_deliveries(
     ] = False,
     received_only: Annotated[bool, Query(description="Only received deliveries")] = False,
     include_archived: Annotated[bool, Query(description="Include archived deliveries")] = False,
+    sort: Annotated[DeliverySort, Query(description="Sort order")] = DeliverySort.RECENT,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> DeliveryPage:
@@ -70,6 +74,7 @@ async def list_all_deliveries(
         outstanding_only=outstanding_only,
         received_only=received_only,
         include_archived=include_archived,
+        sort=sort,
         limit=limit,
         offset=offset,
     )
