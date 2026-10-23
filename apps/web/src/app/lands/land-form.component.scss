@@ -51,14 +51,14 @@
 }
 
 // Holds the map's height while its chunk loads, so the form does not jump.
-.map-waiting {
+.map-placeholder {
   height: 340px;
   border: 1.5px solid var(--rule);
   border-radius: 14px;
   background: var(--field);
 }
 
-.geojson {
+.points-input {
   min-height: 96px;
   resize: vertical;
   font-size: 13px;
@@ -66,7 +66,7 @@
 }
 
 @media (max-width: bp.$narrow) {
-  .map-waiting {
+  .map-placeholder {
     height: 260px;
   }
 }

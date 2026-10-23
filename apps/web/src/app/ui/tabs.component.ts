@@ -17,7 +17,7 @@ export interface Tab {
           class="tab"
           role="tab"
           [id]="tab.value + '-tab'"
-          [class.on]="tab.value === value()"
+          [class.selected]="tab.value === value()"
           [attr.aria-selected]="tab.value === value()"
           [attr.aria-controls]="tab.value + '-panel'"
           [attr.tabindex]="tab.value === value() ? 0 : -1"
@@ -67,7 +67,7 @@ export interface Tab {
         }
       }
 
-      .tab.on {
+      .tab.selected {
         color: var(--ink);
         border-bottom-color: var(--accent);
         font-weight: 500;
@@ -98,7 +98,7 @@ export class TabsComponent {
     }
     event.preventDefault();
     this.valueChange.emit(tabs[to].value);
-    // The tab that takes selection takes focus with it, as the pattern expects.
+    // Selection moves focus with it, per the WAI-ARIA tabs pattern.
     const strip = (event.target as HTMLElement).parentElement;
     (strip?.children[to] as HTMLElement | undefined)?.focus();
   }

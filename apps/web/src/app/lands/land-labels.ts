@@ -38,7 +38,7 @@ export function unitName(unit: LandSizeUnit, value: string): string {
   return Number(value) === 1 ? names[0] : names[1];
 }
 
-export function sizeLabel(land: Pick<LandRead, 'size_value' | 'size_unit'>): string {
+export function statedAreaLabel(land: Pick<LandRead, 'size_value' | 'size_unit'>): string {
   const value = land.size_value;
   const unit = land.size_unit;
   if (!value || !unit) {
@@ -47,7 +47,7 @@ export function sizeLabel(land: Pick<LandRead, 'size_value' | 'size_unit'>): str
   return `${formatNumber(value)} ${unitName(unit, value)}`;
 }
 
-export function worthLabel(
+export function valuationLabel(
   land: Pick<LandRead, 'current_value' | 'currency_code' | 'currency_exponent'>,
 ): string {
   const amount = land.current_value;
@@ -57,7 +57,7 @@ export function worthLabel(
   return formatMoney(amount, land.currency_code, land.currency_exponent ?? 2);
 }
 
-export function whereLabel(
+export function locationLabel(
   land: Pick<LandRead, 'city' | 'state' | 'address'> & Partial<Pick<LandRead, 'country_name'>>,
 ): string {
   const parts = [land.city, land.state, land.country_name].filter((part): part is string => !!part);
@@ -66,3 +66,5 @@ export function whereLabel(
   }
   return land.address ?? '';
 }
+
+export const whereLabel = locationLabel;

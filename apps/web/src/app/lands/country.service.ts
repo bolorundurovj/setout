@@ -8,8 +8,7 @@ export class CountryService {
   private readonly api = inject(Api);
 
   private readonly countryState = signal<CountryRead[]>([]);
-  // Fetched a country at a time. All of them at once is thousands of rows to
-  // fill one picker.
+  // Loaded per country; loading all states at once is thousands of rows.
   private readonly statesByCountry = signal<Record<string, StateRead[]>>({});
 
   readonly all = this.countryState.asReadonly();

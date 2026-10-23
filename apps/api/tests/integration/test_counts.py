@@ -7,11 +7,11 @@ from setout.models.currency import Currency
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
 
-async def _signed_in(client: AsyncClient) -> None:
+async def _set_up_admin(client: AsyncClient) -> None:
     await Currency.bulk_create(
         [Currency(code=c[0], name=c[1], exponent=c[2]) for c in CURRENCIES if c[0] == "NGN"]
     )
-    await client.post("/api/auth/setup", json={"name": "Admin", "password": "password123"})
+    await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": "password123"})
 
 
 async def _counts(client: AsyncClient) -> dict:
@@ -24,8 +24,8 @@ async def test_counts_require_authentication(client: AsyncClient) -> None:
     assert (await client.get("/api/counts")).status_code == 401
 
 
-async def test_a_fresh_install_counts_nothing(client: AsyncClient) -> None:
-    await _signed_in(client)
+async def test_new_install_counts_are_zero(client: AsyncClient) -> None:
+    await _set_up_admin(client)
     assert await _counts(client) == {
         "projects": 0,
         "vendors": 0,
@@ -35,8 +35,8 @@ async def test_a_fresh_install_counts_nothing(client: AsyncClient) -> None:
     }
 
 
-async def test_counts_follow_what_has_been_added(client: AsyncClient) -> None:
-    await _signed_in(client)
+async def test_counts_include_created_records(client: AsyncClient) -> None:
+    await _set_up_admin(client)
     await client.post(
         "/api/projects", json={"name": "Jacaranda Close, Ewuru", "currency_code": "NGN"}
     )
@@ -54,39 +54,39 @@ async def test_counts_follow_what_has_been_added(client: AsyncClient) -> None:
     }
 
 
-async def test_what_has_been_archived_is_not_counted(client: AsyncClient) -> None:
-    await _signed_in(client)
+async def test_archived_records_are_not_counted(client: AsyncClient) -> None:
+    await _set_up_admin(client)
     project = (
         await client.post("/api/projects", json={"name": "Jacaranda Close", "currency_code": "NGN"})
     ).json()
     vendor = (await client.post("/api/vendors", json={"name": "Ewuru Block Works"})).json()
 
-    await client.patch(f"/api/projects/{project['id']}", json={"status": "archived"})
-    await client.delete(f"/api/projects/{project['id']}")
-    await client.delete(f"/api/vendors/{vendor['id']}")
+    await client.patch(f"/api/projects/{project['id']}", json={"status": "closed"})
+    await client.post(f"/api/projects/{project['id']}/archive")
+    await client.post(f"/api/vendors/{vendor['id']}/archive")
 
     counts = await _counts(client)
     assert counts["projects"] == 0
     assert counts["vendors"] == 0
 
 
-async def test_a_restored_row_is_counted_again(client: AsyncClient) -> None:
-    await _signed_in(client)
+async def test_restored_record_is_counted_again(client: AsyncClient) -> None:
+    await _set_up_admin(client)
     vendor = (await client.post("/api/vendors", json={"name": "Ewuru Block Works"})).json()
-    await client.delete(f"/api/vendors/{vendor['id']}")
+    await client.post(f"/api/vendors/{vendor['id']}/archive")
 
     await client.post(f"/api/vendors/{vendor['id']}/restore")
 
     assert (await _counts(client))["vendors"] == 1
 
 
-async def test_a_project_only_archived_still_counts(client: AsyncClient) -> None:
-    await _signed_in(client)
+async def test_closed_project_is_still_counted(client: AsyncClient) -> None:
+    await _set_up_admin(client)
     project = (
         await client.post("/api/projects", json={"name": "Ijapo Extension", "currency_code": "NGN"})
     ).json()
 
-    await client.patch(f"/api/projects/{project['id']}", json={"status": "archived"})
+    await client.patch(f"/api/projects/{project['id']}", json={"status": "closed"})
 
-    # It is still in the list until it is deleted, so the badge has to match.
+    # A closed project stays listed until it is archived, so the badge counts it.
     assert (await _counts(client))["projects"] == 1

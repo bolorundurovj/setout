@@ -61,11 +61,14 @@ export class ItemDetailComponent {
 
   unitLabel(): string {
     const unit = this.prices()?.unit;
-    return unit ? `per ${unit}` : 'no unit recorded';
+    if (!unit) {
+      return 'no unit recorded';
+    }
+    return unit.toLowerCase() === 'each' ? 'each' : `per ${unit}`;
   }
 
   countLabel(series: ItemPriceSeries): string {
-    return series.count === 1 ? 'bought once' : `bought ${series.count} times`;
+    return series.count === 1 ? '1 expense' : `${series.count} expenses`;
   }
 
   changeLabel(series: ItemPriceSeries): string {
@@ -74,12 +77,12 @@ export class ItemDetailComponent {
     }
     const rounded = Math.abs(series.change_percent).toFixed(1);
     if (series.change_percent > 0) {
-      return `risen ${rounded}%`;
+      return `up ${rounded}%`;
     }
-    return series.change_percent < 0 ? `fallen ${rounded}%` : 'no change';
+    return series.change_percent < 0 ? `down ${rounded}%` : 'no change';
   }
 
-  hasRisen(series: ItemPriceSeries): boolean {
+  hasIncreased(series: ItemPriceSeries): boolean {
     return (series.change_percent ?? 0) > 0;
   }
 
@@ -89,7 +92,7 @@ export class ItemDetailComponent {
 
   private readonly pages = signal<Record<string, number>>({});
 
-  newestFirst(series: ItemPriceSeries): ItemPricePoint[] {
+  pageNewestFirst(series: ItemPriceSeries): ItemPricePoint[] {
     return pageOf([...series.points].reverse(), this.pageOn(series));
   }
 

@@ -4,7 +4,7 @@ from httpx import AsyncClient
 from setout import __version__
 from setout.currencies import CURRENCIES
 from setout.models.currency import Currency
-from setout.utils.dump import FORMAT
+from setout.utils.backup import FORMAT, forward
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
@@ -13,7 +13,7 @@ async def _signed_in(client: AsyncClient) -> None:
     await Currency.bulk_create(
         [Currency(code=c[0], name=c[1], exponent=c[2]) for c in CURRENCIES if c[0] == "NGN"]
     )
-    await client.post("/api/auth/setup", json={"name": "Admin", "password": "password123"})
+    await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": "password123"})
 
 
 async def _project(client: AsyncClient, name: str = "Jacaranda Close, Ewuru") -> dict:
@@ -52,9 +52,9 @@ async def test_the_install_says_its_version_and_its_schema(client: AsyncClient) 
     facts = (await client.get("/api/install")).json()
 
     assert facts["version"] == __version__
-    assert facts["record_bytes"] >= 0
+    assert facts["data_bytes"] >= 0
     assert "migration" in facts
-    assert "record_changed_at" in facts
+    assert "data_changed_at" in facts
 
 
 async def test_an_export_is_stamped_with_what_wrote_it(client: AsyncClient) -> None:
@@ -87,7 +87,7 @@ async def test_sessions_are_left_out_of_an_export(client: AsyncClient) -> None:
     assert "session" not in backup["tables"]
 
 
-async def test_a_restore_puts_the_record_back_as_it_was(client: AsyncClient) -> None:
+async def test_a_restore_puts_the_data_back_as_it_was(client: AsyncClient) -> None:
     await _signed_in(client)
     await _project(client)
     backup = await _export(client)
@@ -102,20 +102,20 @@ async def test_a_restore_puts_the_record_back_as_it_was(client: AsyncClient) -> 
     assert resp.json()["signed_out"] is True
 
 
-async def test_the_passphrase_from_the_copy_is_the_one_that_works_after(
+async def test_the_passphrase_from_the_backup_is_the_one_that_works_after(
     client: AsyncClient,
 ) -> None:
     await _signed_in(client)
     backup = await _export(client)
     await client.post(
-        "/api/auth/password",
-        json={"current_password": "password123", "new_password": "a longer secret"},
+        "/api/auth/passphrase",
+        json={"current_passphrase": "password123", "new_passphrase": "a longer secret"},
     )
 
     await _restore(client, backup)
 
-    await client.post("/api/auth/logout")
-    back = await client.post("/api/auth/login", json={"password": "password123"})
+    await client.post("/api/auth/sign-out")
+    back = await client.post("/api/auth/sign-in", json={"passphrase": "password123"})
     assert back.status_code == 200
 
 
@@ -128,7 +128,7 @@ async def test_a_restore_signs_every_device_out(client: AsyncClient) -> None:
     assert (await client.get("/api/auth/me")).status_code == 401
 
 
-async def test_a_copy_from_another_version_is_refused_until_it_is_accepted(
+async def test_a_backup_from_another_version_is_refused_until_it_is_accepted(
     client: AsyncClient,
 ) -> None:
     await _signed_in(client)
@@ -144,7 +144,7 @@ async def test_a_copy_from_another_version_is_refused_until_it_is_accepted(
     assert accepted.status_code == 200
 
 
-async def test_a_copy_from_another_schema_is_refused_the_same_way(client: AsyncClient) -> None:
+async def test_a_backup_from_another_schema_is_refused_the_same_way(client: AsyncClient) -> None:
     await _signed_in(client)
     backup = await _export(client)
     backup["migration"] = "0099_from_the_future"
@@ -166,7 +166,7 @@ async def test_a_file_of_another_layout_is_refused(client: AsyncClient) -> None:
     assert "format 99" in resp.json()["detail"]
 
 
-async def test_a_format_one_copy_is_read_under_the_old_names(client: AsyncClient) -> None:
+async def test_a_format_one_backup_is_read_under_the_old_names(client: AsyncClient) -> None:
     await _signed_in(client)
     project = (await _project(client))["id"]
     created = await client.post(f"/api/projects/{project}/categories", json={"name": "Foundation"})
@@ -193,11 +193,57 @@ async def test_a_format_one_copy_is_read_under_the_old_names(client: AsyncClient
     assert resp.status_code == 200, resp.text
     assert resp.json()["row_counts"]["category"] == 1
 
-    back = await client.post("/api/auth/login", json={"password": "password123"})
+    back = await client.post("/api/auth/sign-in", json={"passphrase": "password123"})
     assert back.status_code == 200, back.text
     page = await client.get(f"/api/categories/{category_id}/budget-items")
     assert page.status_code == 200, page.text
     assert [item["budgeted_amount"] for item in page.json()["items"]] == [500000]
+
+
+async def test_a_format_two_backup_is_read_under_the_old_names(client: AsyncClient) -> None:
+    await _signed_in(client)
+    closed = (await _project(client))["id"]
+    archived = (await _project(client, name="Owode Bungalow"))["id"]
+    await client.patch(f"/api/projects/{closed}", json={"status": "closed"})
+    await client.patch(f"/api/projects/{archived}", json={"status": "closed"})
+    await client.post(f"/api/projects/{archived}/archive")
+    backup = await _export(client)
+
+    backup["format"] = 2
+    for rows in backup["tables"].values():
+        for row in rows:
+            if "archived_at" in row:
+                row["deleted_at"] = row.pop("archived_at")
+    for row in backup["tables"]["project"]:
+        row["status"] = "archived" if row["status"] == "closed" else row["status"]
+    for row in backup["tables"]["user"]:
+        row["password_hash"] = row.pop("passphrase_hash")
+        row["failed_logins"] = row.pop("failed_sign_ins")
+
+    resp = await _restore(client, backup, accept=True)
+
+    assert resp.status_code == 200, resp.text
+    back = await client.post("/api/auth/sign-in", json={"passphrase": "password123"})
+    assert back.status_code == 200, back.text
+    summary = (await client.get("/api/project-summary")).json()
+    assert (summary["closed"], summary["archived"]) == (1, 1)
+
+
+async def test_a_format_two_backup_maps_every_renamed_column() -> None:
+    tables = forward(
+        {
+            "delivery": [{"id": "d1", "promised": "next week", "deleted_at": None}],
+            "land_document": [{"id": "l1", "note": "Receipt"}],
+            "land_valuation": [{"id": "v1", "note": "Bank"}],
+            "project": [{"id": "p1", "status": "archived"}, {"id": "p2", "status": "active"}],
+        },
+        2,
+    )
+
+    assert tables["delivery"] == [{"id": "d1", "expected": "next week", "archived_at": None}]
+    assert tables["land_document"] == [{"id": "l1", "notes": "Receipt"}]
+    assert tables["land_valuation"] == [{"id": "v1", "notes": "Bank"}]
+    assert [row["status"] for row in tables["project"]] == ["closed", "active"]
 
 
 async def test_a_file_naming_a_table_this_setout_does_not_know_is_refused(
@@ -213,7 +259,7 @@ async def test_a_file_naming_a_table_this_setout_does_not_know_is_refused(
     assert "deliveries" in resp.json()["detail"]
 
 
-async def test_rows_that_do_not_fit_leave_the_record_alone(client: AsyncClient) -> None:
+async def test_rows_that_do_not_fit_leave_the_data_alone(client: AsyncClient) -> None:
     await _signed_in(client)
     await _project(client)
     backup = await _export(client)
@@ -222,11 +268,11 @@ async def test_rows_that_do_not_fit_leave_the_record_alone(client: AsyncClient) 
     resp = await _restore(client, backup, accept=True)
 
     assert resp.status_code == 422
-    assert "left as it was" in resp.json()["detail"]
+    assert "was not changed" in resp.json()["detail"]
     assert (await client.get("/api/projects")).json()["total"] == 1
 
 
-async def test_a_copy_naming_a_column_the_table_lacks_is_refused(client: AsyncClient) -> None:
+async def test_a_backup_naming_a_column_the_table_lacks_is_refused(client: AsyncClient) -> None:
     await _signed_in(client)
     copy = (await client.get("/api/install/export")).json()
     copy["tables"]["vendor"] = [

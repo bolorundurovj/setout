@@ -1,4 +1,4 @@
-/** A refusal carries a sentence; something unparseable carries a list. */
+/** HTTP errors carry a string detail; validation errors carry a list. */
 export function detailOf(e: unknown): string | null {
   const detail = (e as { error?: { detail?: unknown } })?.error?.detail;
   if (typeof detail === 'string') {

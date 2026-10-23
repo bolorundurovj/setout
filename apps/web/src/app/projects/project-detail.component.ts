@@ -26,7 +26,6 @@ import { ProjectSettingsComponent } from './project-settings.component';
 interface Tab {
   key: string;
   name: string;
-  ready: boolean;
 }
 
 @Component({
@@ -79,14 +78,14 @@ export class ProjectDetailComponent {
   readonly activeTab = signal('dashboard');
 
   readonly tabs: Tab[] = [
-    { key: 'dashboard', name: 'Dashboard', ready: true },
-    { key: 'expense', name: 'Expenses', ready: true },
-    { key: 'table', name: 'Budget vs Spent', ready: true },
-    { key: 'months', name: 'Month by Month', ready: true },
-    { key: 'budget', name: 'Budget', ready: true },
-    { key: 'agreements', name: 'Agreements', ready: true },
-    { key: 'deliveries', name: 'Deliveries', ready: true },
-    { key: 'psettings', name: 'Project Settings', ready: true },
+    { key: 'dashboard', name: 'Dashboard' },
+    { key: 'expense', name: 'Expenses' },
+    { key: 'table', name: 'Budget vs Spent' },
+    { key: 'months', name: 'Month by Month' },
+    { key: 'budget', name: 'Budget' },
+    { key: 'agreements', name: 'Agreements' },
+    { key: 'deliveries', name: 'Deliveries' },
+    { key: 'psettings', name: 'Project Settings' },
   ];
 
   readonly activeTabName = computed(
@@ -96,7 +95,7 @@ export class ProjectDetailComponent {
   constructor() {
     effect(() => {
       const requested = this.tab();
-      const known = this.tabs.some((tab) => tab.key === requested && tab.ready);
+      const known = this.tabs.some((tab) => tab.key === requested);
       this.activeTab.set(known ? requested : 'dashboard');
     });
     effect(() => {

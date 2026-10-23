@@ -17,10 +17,10 @@ const project: ProjectRead = {
   spent_amount: 0,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
-  deleted_at: null,
+  archived_at: null,
 };
 
-function category(over: Partial<CategoryRead> = {}): CategoryRead {
+function category(overrides: Partial<CategoryRead> = {}): CategoryRead {
   return {
     id: 's1',
     project_id: 'p1',
@@ -37,12 +37,12 @@ function category(over: Partial<CategoryRead> = {}): CategoryRead {
     own_expense_count: 0,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
-function expense(over: Partial<ExpenseRead> = {}): ExpenseRead {
+function expense(overrides: Partial<ExpenseRead> = {}): ExpenseRead {
   return {
     id: 'e1',
     project_id: 'p1',
@@ -61,31 +61,31 @@ function expense(over: Partial<ExpenseRead> = {}): ExpenseRead {
     notes: null,
     created_at: '2026-06-11T00:00:00Z',
     updated_at: '2026-06-11T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
-function months(over: Partial<ProjectMonths> = {}): ProjectMonths {
+function months(overrides: Partial<ProjectMonths> = {}): ProjectMonths {
   return {
     project_id: 'p1',
     currency_code: 'NGN',
     currency_exponent: 2,
     total_amount: 0,
     months: [],
-    busiest_month: null,
-    ...over,
+    highest_month: null,
+    ...overrides,
   };
 }
 
-const row = (over: Partial<MonthRow> = {}): MonthRow => ({
+const row = (overrides: Partial<MonthRow> = {}): MonthRow => ({
   month: '2026-06',
   label: 'Jun 2026',
   amount: 0,
   count: 0,
   barWidth: '0%',
   parts: [],
-  ...over,
+  ...overrides,
 });
 
 describe('MonthsComponent', () => {
@@ -126,18 +126,18 @@ describe('MonthsComponent', () => {
     return fixture.componentInstance;
   }
 
-  it('has no rows before anything is loaded', () => {
+  it('has no rows before the months load', () => {
     const c = render(null);
     expect(c.rows()).toEqual([]);
     expect(c.total()).toBe(0);
   });
 
-  it('names a month by its short month and year', () => {
+  it('labels a month with its short month name and year', () => {
     expect(render().label('2026-06')).toBe('Jun 2026');
     expect(render().label('2027-01')).toBe('Jan 2027');
   });
 
-  it('draws the heaviest month full width and the rest against it', () => {
+  it('draws the highest month at full width and scales the others to it', () => {
     const c = render(
       months({
         months: [
@@ -151,7 +151,7 @@ describe('MonthsComponent', () => {
     expect(c.total()).toBe(5_000_000);
   });
 
-  it('sizes each segment against its own month, not the whole project', () => {
+  it('sizes each segment against its own month total', () => {
     const c = render(
       months({
         months: [
@@ -161,7 +161,7 @@ describe('MonthsComponent', () => {
             expense_count: 2,
             categories: [
               { category_id: 'a', name: 'Groundwork', amount: 750_000 },
-              { category_id: null, name: 'Uncategorized', amount: 250_000 },
+              { category_id: null, name: 'Uncategorised', amount: 250_000 },
             ],
           },
           { month: '2026-07', amount: 4_000_000, expense_count: 1, categories: [] },
@@ -172,7 +172,7 @@ describe('MonthsComponent', () => {
     expect(c.rows()[0].parts.map((p) => p.width)).toEqual(['75%', '25%']);
   });
 
-  it('hands out a tint per top level category, in budget order', () => {
+  it('assigns one tint per top-level category in budget order', () => {
     const c = render(
       months({
         months: [
@@ -183,7 +183,7 @@ describe('MonthsComponent', () => {
             categories: [
               { category_id: 'a', name: 'Groundwork', amount: 100 },
               { category_id: 'b', name: 'Roof', amount: 100 },
-              { category_id: null, name: 'Uncategorized', amount: 100 },
+              { category_id: null, name: 'Uncategorised', amount: 100 },
             ],
           },
         ],
@@ -193,11 +193,11 @@ describe('MonthsComponent', () => {
     expect(c.rows()[0].parts.map((p) => p.tint)).toEqual([
       'tint-1',
       'tint-2',
-      'tint-uncategorized',
+      'tint-uncategorised',
     ]);
   });
 
-  it('gives a category it has never heard of the uncategorized tint rather than nothing', () => {
+  it('uses the uncategorised tint for an unknown category', () => {
     const c = render(
       months({
         months: [
@@ -205,40 +205,40 @@ describe('MonthsComponent', () => {
             month: '2026-06',
             amount: 100,
             expense_count: 1,
-            categories: [{ category_id: 'gone', name: 'Vanished', amount: 100 }],
+            categories: [{ category_id: 'unknown', name: 'Unknown category', amount: 100 }],
           },
         ],
       }),
     );
-    expect(c.rows()[0].parts[0].tint).toBe('tint-uncategorized');
+    expect(c.rows()[0].parts[0].tint).toBe('tint-uncategorised');
   });
 
-  it('counts the expenses in a month, singular when there is one', () => {
+  it('pluralises the month expense count', () => {
     const c = render();
     expect(c.countLabel(row({ count: 4 }))).toBe('4 expenses');
     expect(c.countLabel(row({ count: 1 }))).toBe('1 expense');
     expect(c.countLabel(row({ count: 0 }))).toBe('0 expenses');
   });
 
-  it('names the heaviest month in the note', () => {
+  it('names the highest month in the note', () => {
     const c = render(
       months({
         months: [
           { month: '2026-06', amount: 1_000_000, expense_count: 1, categories: [] },
           { month: '2026-07', amount: 4_000_000, expense_count: 1, categories: [] },
         ],
-        busiest_month: '2026-07',
+        highest_month: '2026-07',
       }),
     );
     expect(c.note()).toContain('Highest month: Jul 2026');
     expect(c.note()).toContain('40,000');
   });
 
-  it('says nothing is recorded rather than naming a month that is not there', () => {
-    expect(render().note()).toContain('Nothing recorded yet');
+  it('reports no expenses when there is no highest month', () => {
+    expect(render().note()).toContain('No expenses yet');
   });
 
-  it('fetches a month on first open, and not again on reopen', () => {
+  it('loads a month on first open only', () => {
     const c = render(
       months({ months: [{ month: '2026-06', amount: 100, expense_count: 1, categories: [] }] }),
     );
@@ -251,7 +251,7 @@ describe('MonthsComponent', () => {
     expect(loaded).toEqual(['2026-06']);
   });
 
-  it('does not refetch a month it already holds', () => {
+  it('does not reload a month already loaded', () => {
     const c = render(months(), [], { '2026-06': [] });
     c.toggle(row());
     expect(loaded).toEqual([]);
@@ -265,22 +265,22 @@ describe('MonthsComponent', () => {
     expect(c.isOpen(row({ month: '2026-07' }))).toBe(true);
   });
 
-  it('tells a month that is still loading apart from an empty one', () => {
+  it('distinguishes a loading month from an empty one', () => {
     const c = render(months(), [], { '2026-06': [] });
     expect(c.monthExpenses(row({ month: '2026-06' }))).toEqual([]);
     expect(c.monthExpenses(row({ month: '2026-07' }))).toBeUndefined();
   });
 
-  it('names the category an expense was filed to, and says so when it was not', () => {
+  it('names the category an expense is assigned to, or Uncategorised', () => {
     const c = render(months(), [category({ id: 'a', name: 'Groundwork' })]);
     expect(c.categoryName(expense({ category_id: 'a' }))).toBe('Groundwork');
-    expect(c.categoryName(expense({ category_id: null }))).toBe('Uncategorized');
-    expect(c.categoryName(expense({ category_id: 'gone' }))).toBe('Uncategorized');
+    expect(c.categoryName(expense({ category_id: null }))).toBe('Uncategorised');
+    expect(c.categoryName(expense({ category_id: 'unknown' }))).toBe('Uncategorised');
   });
 
-  it('drops the symbol from figures in the table and keeps it in the note', () => {
+  it('omits the currency symbol in table amounts and keeps it in the note', () => {
     const c = render();
-    expect(c.bare(2_326_300)).toBe('23,263');
+    expect(c.plainAmount(2_326_300)).toBe('23,263');
     expect(c.money(2_326_300)).toContain('23,263');
   });
 });

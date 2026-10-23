@@ -1,8 +1,8 @@
-"""Integration tests for turning a pin into an address.
+"""Integration tests for reverse geocoding coordinates to a map address.
 
-Nothing here reaches the network. The outbound call is replaced rather than the
-HTTP client itself, because the test client is an httpx client too and patching
-that would hijack the very request under test.
+No request reaches the network. The outbound lookup is stubbed rather than the
+HTTP client, because the test client is also an httpx client and patching httpx
+would intercept its requests.
 """
 
 import pytest
@@ -23,23 +23,23 @@ EWURU = GeocodedPlace(
 
 
 @pytest.fixture(autouse=True)
-def _fresh(monkeypatch: pytest.MonkeyPatch) -> None:
-    geocoder.forget()
+def _reset_geocoder(monkeypatch: pytest.MonkeyPatch) -> None:
+    geocoder.clear_cache()
     monkeypatch.setattr(geocoder, "MIN_SECONDS_BETWEEN", 0.0)
 
 
 async def _setup(client: AsyncClient) -> None:
-    await client.post("/api/auth/setup", json={"name": "Admin", "password": "password123"})
+    await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": "password123"})
 
 
-def _asks(monkeypatch: pytest.MonkeyPatch, found: GeocodedPlace | None) -> list[object]:
+def _stub_lookup(monkeypatch: pytest.MonkeyPatch, place: GeocodedPlace | None) -> list[object]:
     calls: list[object] = []
 
-    async def fake(url: str, email: str, at: tuple[float, float]) -> GeocodedPlace | None:
-        calls.append(at)
-        return found
+    async def fake(url: str, email: str, coordinates: tuple[float, float]) -> GeocodedPlace | None:
+        calls.append(coordinates)
+        return place
 
-    monkeypatch.setattr(geocoder, "_ask", fake)
+    monkeypatch.setattr(geocoder, "_request_reverse", fake)
     return calls
 
 
@@ -48,12 +48,12 @@ async def test_geocoding_requires_authentication(client: AsyncClient) -> None:
     assert resp.status_code == 401
 
 
-async def test_a_pin_comes_back_as_a_place(
+async def test_reverse_geocode_returns_place(
     client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     await _setup(client)
     monkeypatch.setattr(get_settings(), "geocoder_url", "http://geocoder.test")
-    _asks(monkeypatch, EWURU)
+    _stub_lookup(monkeypatch, EWURU)
 
     body = (
         await client.get("/api/geocode", params={"latitude": 6.5244, "longitude": 3.3792})
@@ -64,12 +64,12 @@ async def test_a_pin_comes_back_as_a_place(
     assert body["country_code"] == "NG"
 
 
-async def test_nothing_is_asked_when_the_geocoder_is_off(
+async def test_no_lookup_when_geocoder_is_disabled(
     client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     await _setup(client)
     monkeypatch.setattr(get_settings(), "geocoder_url", "")
-    calls = _asks(monkeypatch, EWURU)
+    calls = _stub_lookup(monkeypatch, EWURU)
 
     resp = await client.get("/api/geocode", params={"latitude": 6.5244, "longitude": 3.3792})
 
@@ -78,21 +78,21 @@ async def test_nothing_is_asked_when_the_geocoder_is_off(
     assert calls == []
 
 
-async def test_the_same_spot_is_only_asked_once(
+async def test_repeat_coordinates_are_looked_up_once(
     client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     await _setup(client)
     monkeypatch.setattr(get_settings(), "geocoder_url", "http://geocoder.test")
-    calls = _asks(monkeypatch, EWURU)
+    calls = _stub_lookup(monkeypatch, EWURU)
 
-    at = {"latitude": 6.5244, "longitude": 3.3792}
-    await client.get("/api/geocode", params=at)
-    await client.get("/api/geocode", params=at)
+    coordinates = {"latitude": 6.5244, "longitude": 3.3792}
+    await client.get("/api/geocode", params=coordinates)
+    await client.get("/api/geocode", params=coordinates)
 
     assert len(calls) == 1
 
 
-async def test_a_pin_off_the_earth_is_refused(client: AsyncClient) -> None:
+async def test_out_of_range_latitude_is_rejected(client: AsyncClient) -> None:
     await _setup(client)
 
     resp = await client.get("/api/geocode", params={"latitude": 91, "longitude": 3.3})
@@ -100,12 +100,12 @@ async def test_a_pin_off_the_earth_is_refused(client: AsyncClient) -> None:
     assert resp.status_code == 422
 
 
-async def test_no_signal_answers_with_nothing(
+async def test_failed_lookup_returns_null(
     client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     await _setup(client)
     monkeypatch.setattr(get_settings(), "geocoder_url", "http://geocoder.test")
-    _asks(monkeypatch, None)
+    _stub_lookup(monkeypatch, None)
 
     resp = await client.get("/api/geocode", params={"latitude": 6.5244, "longitude": 3.3792})
 

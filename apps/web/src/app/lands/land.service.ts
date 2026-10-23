@@ -11,12 +11,12 @@ import {
   LandValuationCreate,
   LandValuationRead,
   LandValuationUpdate,
-  addLandDocument,
-  addLandValuation,
+  archiveLand,
+  archiveLandDocument,
+  archiveLandValuation,
   createLand,
-  deleteLand,
-  deleteLandDocument,
-  deleteLandValuation,
+  createLandDocument,
+  createLandValuation,
   downloadLandDocument,
   getLand,
   listLandDocuments,
@@ -24,6 +24,7 @@ import {
   listLands,
   restoreLand,
   restoreLandDocument,
+  restoreLandValuation,
   reverseGeocode,
   updateLand,
   updateLandDocument,
@@ -54,10 +55,10 @@ export class LandService {
   readonly error = signal<string | null>(null);
 
   readonly page = this.pageState.asReadonly();
-  // Every choice for the pickers, which cannot work off one page of the table.
+  // Up to CHOICE_LIMIT rows for the pickers, which cannot use a single page of results.
   readonly choices = this.choiceState.asReadonly();
 
-  private asked = 0;
+  private latestRequest = 0;
 
   async load(search?: string, includeArchived = false): Promise<void> {
     this.searchState.set(search ?? '');
@@ -75,7 +76,7 @@ export class LandService {
   }
 
   async goTo(page: number): Promise<void> {
-    const ticket = ++this.asked;
+    const requestId = ++this.latestRequest;
     this.loading.set(true);
     this.error.set(null);
     try {
@@ -85,33 +86,33 @@ export class LandService {
         limit: PAGE_SIZE,
         offset: offsetOf(page),
       });
-      if (ticket !== this.asked) {
+      if (requestId !== this.latestRequest) {
         return;
       }
       this.state.set(rows.items);
       this.totalState.set(rows.total);
       this.pageState.set(page);
     } catch {
-      if (ticket !== this.asked) {
+      if (requestId !== this.latestRequest) {
         return;
       }
-      this.error.set('Could not load the land.');
+      this.error.set('Could not load the land records.');
     } finally {
-      if (ticket === this.asked) {
+      if (requestId === this.latestRequest) {
         this.loading.set(false);
       }
     }
   }
 
   private async refresh(): Promise<void> {
-    const here = this.pageState();
-    await this.goTo(here);
-    if (this.state().length === 0 && here > 1) {
-      await this.goTo(here - 1);
+    const currentPage = this.pageState();
+    await this.goTo(currentPage);
+    if (this.state().length === 0 && currentPage > 1) {
+      await this.goTo(currentPage - 1);
     }
   }
 
-  async add(body: LandCreate): Promise<LandRead | null> {
+  async create(body: LandCreate): Promise<LandRead | null> {
     this.saving.set(true);
     this.error.set(null);
     try {
@@ -121,7 +122,7 @@ export class LandService {
       void this.counts.load();
       return created;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not add the land.');
+      this.error.set(detailOf(e) ?? 'Could not create the land record.');
       return null;
     } finally {
       this.saving.set(false);
@@ -135,13 +136,13 @@ export class LandService {
       this.state.update((rows) => rows.map((row) => (row.id === landId ? updated : row)));
       return updated;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not save the land.');
+      this.error.set(detailOf(e) ?? 'Could not save the land record.');
       return null;
     }
   }
 
   async archive(landId: string): Promise<void> {
-    await this.api.invoke(deleteLand, { land_id: landId });
+    await this.api.invoke(archiveLand, { land_id: landId });
     await this.refresh();
     void this.counts.load();
   }
@@ -156,7 +157,7 @@ export class LandService {
     try {
       return await this.api.invoke(getLand, { land_id: landId });
     } catch {
-      this.error.set('Could not load the land.');
+      this.error.set('Could not load the land record.');
       return null;
     }
   }
@@ -170,22 +171,22 @@ export class LandService {
     }
   }
 
-  async addDocument(
+  async createDocument(
     landId: string,
     kind: LandDocumentKind,
     file: File,
-    note?: string | null,
+    notes?: string | null,
   ): Promise<LandDocumentRead | null> {
     this.saving.set(true);
     this.error.set(null);
     try {
-      return await this.api.invoke(addLandDocument, {
+      return await this.api.invoke(createLandDocument, {
         land_id: landId,
         // The generated body types the file as a string; the SDK wants the File.
-        body: { file: file as unknown as string, kind, note: note ?? undefined },
+        body: { file: file as unknown as string, kind, notes: notes ?? undefined },
       });
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not upload the file.');
+      this.error.set(detailOf(e) ?? 'Could not upload the document.');
       return null;
     } finally {
       this.saving.set(false);
@@ -197,8 +198,8 @@ export class LandService {
     return `${this.api.rootUrl}${path}`;
   }
 
-  async removeDocument(documentId: string): Promise<void> {
-    await this.api.invoke(deleteLandDocument, { document_id: documentId });
+  async archiveDocument(documentId: string): Promise<void> {
+    await this.api.invoke(archiveLandDocument, { document_id: documentId });
   }
 
   async restoreDocument(documentId: string): Promise<void> {
@@ -227,11 +228,14 @@ export class LandService {
     }
   }
 
-  async addValuation(landId: string, body: LandValuationCreate): Promise<LandValuationRead | null> {
+  async createValuation(
+    landId: string,
+    body: LandValuationCreate,
+  ): Promise<LandValuationRead | null> {
     this.saving.set(true);
     this.error.set(null);
     try {
-      return await this.api.invoke(addLandValuation, { land_id: landId, body });
+      return await this.api.invoke(createLandValuation, { land_id: landId, body });
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not save the valuation.');
       return null;
@@ -248,21 +252,25 @@ export class LandService {
     try {
       return await this.api.invoke(updateLandValuation, { valuation_id: valuationId, body });
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not save that.');
+      this.error.set(detailOf(e) ?? 'Could not save the valuation.');
       return null;
     }
   }
 
-  async removeValuation(valuationId: string): Promise<void> {
-    await this.api.invoke(deleteLandValuation, { valuation_id: valuationId });
+  async archiveValuation(valuationId: string): Promise<void> {
+    await this.api.invoke(archiveLandValuation, { valuation_id: valuationId });
   }
 
-  /** What the map calls a spot, or nothing when the geocoder is off or unreachable. */
-  async placeAt(latitude: number, longitude: number): Promise<GeocodedPlace | null> {
+  async restoreValuation(valuationId: string): Promise<void> {
+    await this.api.invoke(restoreLandValuation, { valuation_id: valuationId });
+  }
+
+  /** Reverse geocodes a point; null when the geocoder is disabled or unreachable. */
+  async reverseGeocode(latitude: number, longitude: number): Promise<GeocodedPlace | null> {
     try {
       return await this.api.invoke(reverseGeocode, { latitude, longitude });
     } catch {
-      // A check that cannot run is not an error worth putting in front of anyone.
+      // Geocoding is advisory, so failures are not shown.
       return null;
     }
   }

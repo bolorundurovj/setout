@@ -4,14 +4,14 @@
   @if (loading()) {
     <div class="card"><p class="t-body">Loading vendor…</p></div>
   } @else if (vendor(); as v) {
-    @if (v.deleted_at) {
+    @if (v.archived_at) {
       <p class="banner warn t-small">
-        Archived. Their expenses still count. They no longer appear when selecting a vendor on the
-        expense form.
+        This vendor is archived. Their expenses are still included in totals. They are no longer
+        listed when selecting a vendor on the expense form.
       </p>
-    } @else if (needsFillingIn(v)) {
+    } @else if (isIncomplete(v)) {
       <p class="banner warn t-small">
-        Added with a name only. Add the trade and a phone number when you can.
+        This vendor has only a name. Add the trade and a phone number.
       </p>
     }
 
@@ -21,7 +21,7 @@
         <p class="t-small">{{ v.trade ?? notSet }}</p>
       </div>
       <div class="head-actions">
-        @if (!v.deleted_at) {
+        @if (!v.archived_at) {
           <app-button variant="secondary" (pressed)="edit()">Edit Vendor</app-button>
           <app-button variant="danger" (pressed)="archive()">Archive</app-button>
         } @else {
@@ -37,11 +37,11 @@
       </div>
       <div class="fact">
         <span class="t-micro">Phone</span>
-        <span class="t-body t-mono">{{ v.phone ?? 'no phone' }}</span>
+        <span class="t-body t-mono">{{ v.phone ?? notSet }}</span>
       </div>
       <div class="fact">
         <span class="t-micro">Email</span>
-        <span class="t-body t-mono">{{ v.email ?? 'no email' }}</span>
+        <span class="t-body t-mono">{{ v.email ?? notSet }}</span>
       </div>
       <div class="fact">
         <span class="t-micro">Expenses</span>
@@ -49,18 +49,18 @@
       </div>
     </div>
 
-    @if (owedHere().length > 0) {
+    @if (outstandingDeliveries().length > 0) {
       <section class="block">
-        <h2 class="t-heading">Paid For, Not Delivered</h2>
-        @for (owed of owedHere(); track owed.id) {
-          <div class="owed">
-            <span class="owed-text">
-              <span class="owed-what">{{ owed.description }}</span>
-              <span class="owed-when">{{ owedWhen(owed) }}</span>
+        <h2 class="t-heading">Outstanding Deliveries</h2>
+        @for (delivery of outstandingDeliveries(); track delivery.id) {
+          <div class="outstanding">
+            <span class="outstanding-text">
+              <span class="outstanding-description">{{ delivery.description }}</span>
+              <span class="outstanding-dates">{{ deliveryDates(delivery) }}</span>
             </span>
-            <span class="owed-right">
-              <span class="owed-amount t-mono">{{ owedMoney(owed) }}</span>
-              <app-button (pressed)="markDelivered(owed)">Mark Delivered</app-button>
+            <span class="outstanding-actions">
+              <span class="outstanding-amount t-mono">{{ deliveryAmount(delivery) }}</span>
+              <app-button (pressed)="markReceived(delivery)">Mark Received</app-button>
             </span>
           </div>
         }
@@ -70,7 +70,7 @@
     <section class="block">
       <h2 class="t-heading">Spent With This Vendor</h2>
 
-      @if (spend(); as s) {
+      @if (expenseSummary(); as s) {
         @if (s.projects.length === 0) {
           <div class="card"><p class="t-body">No expenses yet.</p></div>
         } @else {
@@ -84,23 +84,23 @@
               <div class="row">
                 <span class="t-small">{{ row.project_name }}</span>
                 <span class="right t-mono muted">{{ row.expense_count }}</span>
-                <span class="right t-mono figure">{{ money(row) }}</span>
+                <span class="right t-mono figure">{{ formatSpent(row) }}</span>
               </div>
             }
             @for (t of totalsByCurrency(s); track t.currency_code) {
               <div class="row total">
                 <span class="total-label">Total {{ t.currency_code }}</span>
                 <span class="right t-mono muted">{{ t.expense_count }}</span>
-                <span class="right t-mono total-figure">{{ total(t) }}</span>
+                <span class="right t-mono total-figure">{{ formatTotal(t) }}</span>
               </div>
             }
           </div>
           <p class="t-small muted">
-            Projects are listed separately. Two currencies would never be added together.
+            Projects are listed separately so that currencies are never combined.
           </p>
         }
       } @else {
-        <p class="t-small muted">Could not load their expenses.</p>
+        <p class="t-small muted">Could not load the expenses.</p>
       }
     </section>
 
@@ -110,17 +110,17 @@
         <div class="card">
           <p class="t-body">No agreements with this vendor.</p>
           <p class="t-small">
-            An agreed price is set on a project under Agreements. All agreements with this vendor
-            appear here.
+            Agreements are created on a project's Agreements tab. All agreements with this vendor
+            are listed here.
           </p>
         </div>
       } @else {
         <div class="table">
           <div class="row agreement head-row">
             <span class="t-micro">Agreement</span>
-            <span class="t-micro right">Agreed</span>
+            <span class="t-micro right">Agreed Amount</span>
             <span class="t-micro right">Paid</span>
-            <span class="t-micro right">Remaining</span>
+            <span class="t-micro right">Balance</span>
           </div>
           @for (a of agreements(); track a.id) {
             <div class="row agreement">
@@ -130,14 +130,14 @@
               </span>
               <span class="right t-mono figure">{{ agreementMoney(a, a.agreed_amount) }}</span>
               <span class="right t-mono muted">{{ agreementMoney(a, a.paid_amount) }}</span>
-              <span class="right t-mono figure" [class.owed]="a.balance_amount > 0">
+              <span class="right t-mono figure" [class.balance-due]="a.balance_amount > 0">
                 {{ agreementMoney(a, a.balance_amount) }}
               </span>
             </div>
           }
         </div>
         <p class="t-small muted">
-          Projects are listed separately. Two currencies would never be added together.
+          Projects are listed separately so that currencies are never combined.
         </p>
       }
     </section>

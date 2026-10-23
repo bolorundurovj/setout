@@ -9,7 +9,7 @@ def price_change_percent(first: int, last: int, count: int) -> float | None:
     return round((last - first) / first * 100, 2)
 
 
-def in_order(points: list[ItemPricePoint]) -> list[ItemPricePoint]:
+def sort_by_date(points: list[ItemPricePoint]) -> list[ItemPricePoint]:
     return sorted(points, key=lambda point: (point.spent_on, point.expense_id))
 
 
@@ -18,7 +18,7 @@ def summarise(
     currency_exponent: int,
     points: list[ItemPricePoint],
 ) -> ItemPriceSummary:
-    ordered = in_order(points)
+    ordered = sort_by_date(points)
     rates = [point.unit_rate for point in ordered]
     first, last = rates[0], rates[-1]
     return ItemPriceSummary(
@@ -40,7 +40,7 @@ def summarise_series(
     currency_exponent: int,
     points: list[ItemPricePoint],
 ) -> ItemPriceSeries:
-    ordered = in_order(points)
+    ordered = sort_by_date(points)
     summary = summarise(currency_code, currency_exponent, ordered)
     return ItemPriceSeries(
         currency_code=summary.currency_code,

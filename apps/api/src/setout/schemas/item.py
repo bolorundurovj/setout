@@ -9,7 +9,7 @@ from setout.schemas.decimals import PlainDecimal
 
 class ItemCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
-    unit: str | None = Field(None, max_length=32, description="What the price is quoted in")
+    unit: str | None = Field(None, max_length=32, description="The unit the price is quoted in")
     notes: str | None = None
 
 
@@ -31,9 +31,7 @@ class ItemPriceSummary(BaseModel):
     last_paid_on: date
     lowest_price: int
     highest_price: int
-    change_percent: float | None = Field(
-        ..., description="Null when there is only one price, so nothing to compare"
-    )
+    change_percent: float | None = Field(..., description="Null when there is only one price")
 
 
 class ItemRead(BaseModel):
@@ -47,7 +45,7 @@ class ItemRead(BaseModel):
     )
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
+    archived_at: datetime | None
 
 
 class ItemPage(BaseModel):

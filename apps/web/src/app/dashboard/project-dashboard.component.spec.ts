@@ -19,7 +19,7 @@ const project: ProjectRead = {
   spent_amount: 0,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
-  deleted_at: null,
+  archived_at: null,
 };
 
 function category(over: Partial<CategoryRead> = {}): CategoryRead {
@@ -39,19 +39,19 @@ function category(over: Partial<CategoryRead> = {}): CategoryRead {
     own_expense_count: 0,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
     ...over,
   };
 }
 
 describe('ProjectDashboardComponent', () => {
   function render(
-    spend: Record<string, unknown> | null,
+    summary: Record<string, unknown> | null,
     categories: CategoryRead[] = [],
     expenseCount = 0,
     agreements: unknown[] = [],
     balances: unknown[] = [],
-    owed: { description: string; vendor_name: string | null; amount: number }[] = [],
+    outstanding: { description: string; vendor_name: string | null; amount: number }[] = [],
   ) {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -69,12 +69,12 @@ describe('ProjectDashboardComponent', () => {
         {
           provide: DeliveryService,
           useValue: {
-            waiting: () => ({
-              rows: owed,
-              total: owed.length,
-              owed: owed.reduce((sum, row) => sum + row.amount, 0),
+            outstanding: () => ({
+              rows: outstanding,
+              total: outstanding.length,
+              outstandingAmount: outstanding.reduce((sum, row) => sum + row.amount, 0),
             }),
-            loadWaiting: async () => undefined,
+            loadOutstanding: async () => undefined,
           },
         },
         {
@@ -84,7 +84,7 @@ describe('ProjectDashboardComponent', () => {
         {
           provide: ExpenseService,
           useValue: {
-            spend: () => spend,
+            summary: () => summary,
             total: () => expenseCount,
             load: async () => undefined,
           },
@@ -97,79 +97,82 @@ describe('ProjectDashboardComponent', () => {
     return fixture.componentInstance;
   }
 
-  const spend = (
+  const summary = (
     budgeted: number,
     spent: number,
-    uncategorized = 0,
+    uncategorised = 0,
     variance: number | null = null,
   ) => ({
     budgeted_amount: budgeted,
     spent_amount: spent,
-    uncategorized_amount: uncategorized,
+    uncategorised_amount: uncategorised,
     variance_percent: variance,
   });
 
-  it('says what is left while under the plan', () => {
-    const c = render(spend(215_000_000, 100_000_000, 0, -53.49));
-    expect(c.isOver()).toBe(false);
+  it('shows Remaining when under budget', () => {
+    const c = render(summary(215_000_000, 100_000_000, 0, -53.49));
+    expect(c.isOverBudget()).toBe(false);
     expect(c.varianceLabel()).toBe('Remaining');
     expect(c.varianceAmount()).toBe(115_000_000);
   });
 
-  it('says how far over once the plan is passed', () => {
-    // The seeded project: budgeted 2,150,000, spent 2,326,300.
-    const c = render(spend(215_000_000, 232_630_000, 6_100_000, 8.2));
-    expect(c.isOver()).toBe(true);
-    expect(c.varianceLabel()).toBe('Over by');
+  it('shows Over budget by and the variance when over budget', () => {
+    const c = render(summary(215_000_000, 232_630_000, 6_100_000, 8.2));
+    expect(c.isOverBudget()).toBe(true);
+    expect(c.varianceLabel()).toBe('Over budget by');
     expect(c.varianceAmount()).toBe(17_630_000);
     expect(c.varianceNote()).toContain('8.2% over budget');
   });
 
-  it('will not claim a variance without a budget', () => {
-    const c = render(spend(0, 50_000_000));
+  it('shows no variance without a budget', () => {
+    const c = render(summary(0, 50_000_000));
     expect(c.varianceAmount()).toBeNull();
-    expect(c.isOver()).toBe(false);
+    expect(c.isOverBudget()).toBe(false);
     expect(c.usedLabel()).toBe('—');
     expect(c.varianceNote()).toContain('No budget set');
   });
 
-  it('fills the meter in proportion and never past full', () => {
-    expect(render(spend(1000, 250)).usedPercent()).toBe(25);
-    expect(render(spend(1000, 5000)).usedPercent()).toBe(100);
-    expect(render(spend(0, 500)).usedPercent()).toBe(0);
+  it('fills the meter proportionally, capped at 100', () => {
+    expect(render(summary(1000, 250)).usedPercent()).toBe(25);
+    expect(render(summary(1000, 5000)).usedPercent()).toBe(100);
+    expect(render(summary(0, 500)).usedPercent()).toBe(0);
   });
 
-  it('counts the expenses and names the uncategorized spend', () => {
-    const c = render(spend(1000, 500, 200), [], 3);
+  it('counts expenses and notes the uncategorised amount', () => {
+    const c = render(summary(1000, 500, 200), [], 3);
     expect(c.spentNote()).toContain('3 expenses');
-    expect(c.spentNote()).toContain('uncategorized');
+    expect(c.spentNote()).toContain('uncategorised');
   });
 
-  it('leaves out categories with nothing budgeted and nothing spent', () => {
-    const c = render(spend(1000, 500), [
+  it('omits categories with nothing budgeted or spent', () => {
+    const c = render(summary(1000, 500), [
       category({ id: 's1', budgeted_amount: 1000 }),
       category({ id: 's2', name: 'Untouched' }),
     ]);
     expect(c.rows().map((s) => s.id)).toEqual(['s1']);
   });
 
-  it('puts the worst overspend first', () => {
-    const c = render(spend(1000, 900), [
+  it('sorts the largest overspend first', () => {
+    const c = render(summary(1000, 900), [
       category({ id: 'under', budgeted_amount: 500, spent_amount: 100 }),
       category({ id: 'over', budgeted_amount: 100, spent_amount: 800 }),
     ]);
     expect(c.rows()[0].id).toBe('over');
   });
 
-  it('marks a category that has gone past its budget', () => {
-    const c = render(spend(1000, 500));
-    expect(c.categoryOver(category({ budgeted_amount: 100, spent_amount: 800 }))).toBe(true);
-    expect(c.categoryOver(category({ budgeted_amount: 800, spent_amount: 100 }))).toBe(false);
-    expect(c.categoryOver(category({ budgeted_amount: 0, spent_amount: 800 }))).toBe(false);
+  it('flags a category that is over budget', () => {
+    const c = render(summary(1000, 500));
+    expect(c.categoryIsOverBudget(category({ budgeted_amount: 100, spent_amount: 800 }))).toBe(
+      true,
+    );
+    expect(c.categoryIsOverBudget(category({ budgeted_amount: 800, spent_amount: 100 }))).toBe(
+      false,
+    );
+    expect(c.categoryIsOverBudget(category({ budgeted_amount: 0, spent_amount: 800 }))).toBe(false);
   });
 
-  it('shows spend against budget on a category, and says when there is none', () => {
-    const c = render(spend(1000, 500));
+  it('shows spent against budgeted per category, or No budget set', () => {
+    const c = render(summary(1000, 500));
     expect(c.categoryNote(category({ budgeted_amount: 100_000, spent_amount: 50_000 }))).toBe(
       '500 / 1,000',
     );
@@ -178,20 +181,20 @@ describe('ProjectDashboardComponent', () => {
     );
   });
 
-  it('says nothing needs attention when nothing does', () => {
-    expect(render(spend(1000, 500)).alerts()).toEqual([]);
+  it('shows no alerts when nothing needs attention', () => {
+    expect(render(summary(1000, 500)).alerts()).toEqual([]);
   });
 
-  it('flags spend that is filed to no category', () => {
-    const alerts = render(spend(1000, 500, 5_300_000)).alerts();
+  it('flags uncategorised expenses', () => {
+    const alerts = render(summary(1000, 500, 5_300_000)).alerts();
     expect(alerts.length).toBe(1);
-    expect(alerts[0].title).toBe('Uncategorized expenses');
+    expect(alerts[0].title).toBe('Uncategorised expenses');
     expect(alerts[0].amount).toBe('53,000');
     expect(alerts[0].urgent).toBe(true);
   });
 
-  it('flags what is left on an agreement, and ignores settled ones', () => {
-    const alerts = render(spend(1000, 500), [], 0, [
+  it('flags agreement balances and ignores settled agreements', () => {
+    const alerts = render(summary(1000, 500), [], 0, [
       {
         id: 'a1',
         vendor_name: 'Kunle Bricklaying',
@@ -201,14 +204,14 @@ describe('ProjectDashboardComponent', () => {
       { id: 'a2', vendor_name: 'Paid Up Co', description: 'Roofing', balance_amount: 0 },
     ]).alerts();
     expect(alerts.length).toBe(1);
-    expect(alerts[0].title).toBe('Remaining on an agreement');
+    expect(alerts[0].title).toBe('Agreement balance');
     expect(alerts[0].detail).toBe('Kunle Bricklaying · block work');
     expect(alerts[0].amount).toBe('35,000');
   });
 
-  it('flags someone who is out of pocket, not someone holding money', () => {
+  it('flags a negative person balance and ignores a positive one', () => {
     const alerts = render(
-      spend(1000, 500),
+      summary(1000, 500),
       [],
       0,
       [],
@@ -222,9 +225,9 @@ describe('ProjectDashboardComponent', () => {
     expect(alerts[0].amount).toBe('32,500');
   });
 
-  it('names the one thing a vendor still owes', () => {
+  it('names the single outstanding delivery', () => {
     const alerts = render(
-      spend(1000, 500),
+      summary(1000, 500),
       [],
       0,
       [],
@@ -232,15 +235,15 @@ describe('ProjectDashboardComponent', () => {
       [{ description: '17 bags of cement', vendor_name: 'Corner Depot Cement', amount: 7_650_000 }],
     ).alerts();
 
-    const owed = alerts.find((a) => a.title === 'Paid for, not delivered');
-    expect(owed?.detail).toBe('17 bags of cement · Corner Depot Cement');
-    expect(owed?.amount).toBe('76,500');
-    expect(owed?.urgent).toBe(false);
+    const outstanding = alerts.find((a) => a.title === 'Outstanding deliveries');
+    expect(outstanding?.detail).toBe('17 bags of cement · Corner Depot Cement');
+    expect(outstanding?.amount).toBe('76,500');
+    expect(outstanding?.urgent).toBe(false);
   });
 
-  it('counts them once there is more than one', () => {
+  it('counts outstanding deliveries when there are several', () => {
     const alerts = render(
-      spend(1000, 500),
+      summary(1000, 500),
       [],
       0,
       [],
@@ -251,14 +254,14 @@ describe('ProjectDashboardComponent', () => {
       ],
     ).alerts();
 
-    const owed = alerts.find((a) => a.title === 'Paid for, not delivered');
-    expect(owed?.detail).toBe('2 items owed by vendors');
-    expect(owed?.amount).toBe('100,000');
+    const outstanding = alerts.find((a) => a.title === 'Outstanding deliveries');
+    expect(outstanding?.detail).toBe('2 paid items outstanding');
+    expect(outstanding?.amount).toBe('100,000');
   });
 
-  it('says so when nobody recorded who owes it', () => {
+  it('notes a missing vendor on an outstanding delivery', () => {
     const alerts = render(
-      spend(1000, 500),
+      summary(1000, 500),
       [],
       0,
       [],
@@ -269,14 +272,14 @@ describe('ProjectDashboardComponent', () => {
     expect(alerts[0].detail).toBe('17 bags of cement · vendor not recorded');
   });
 
-  it('says nothing about deliveries when none are waiting', () => {
-    const alerts = render(spend(1000, 500)).alerts();
-    expect(alerts.some((a) => a.title === 'Paid for, not delivered')).toBe(false);
+  it('shows no delivery alert when none are outstanding', () => {
+    const alerts = render(summary(1000, 500)).alerts();
+    expect(alerts.some((a) => a.title === 'Outstanding deliveries')).toBe(false);
   });
 
-  it('points each alert at the tab that answers it', () => {
+  it('routes each alert to its tab', () => {
     const alerts = render(
-      spend(1000, 500, 5_300_000),
+      summary(1000, 500, 5_300_000),
       [],
       0,
       [
@@ -292,14 +295,14 @@ describe('ProjectDashboardComponent', () => {
     ).alerts();
 
     const tabFor = (title: string) => alerts.find((a) => a.title.startsWith(title))?.tab;
-    expect(tabFor('Uncategorized expenses')).toBe('table');
-    expect(tabFor('Remaining on an agreement')).toBe('agreements');
-    expect(tabFor('Paid for, not delivered')).toBe('deliveries');
+    expect(tabFor('Uncategorised expenses')).toBe('table');
+    expect(tabFor('Agreement balance')).toBe('agreements');
+    expect(tabFor('Outstanding deliveries')).toBe('deliveries');
     expect(tabFor('Owed to')).toBe('agreements');
   });
 
-  it('draws every bar to one scale, so two categories can be compared', () => {
-    const c = render(spend(3000, 1500), [
+  it('draws every bar to a shared scale', () => {
+    const c = render(summary(3000, 1500), [
       category({ id: 'big', budgeted_amount: 2000, spent_amount: 1000 }),
       category({ id: 'small', budgeted_amount: 500, spent_amount: 500 }),
     ]);
@@ -312,8 +315,8 @@ describe('ProjectDashboardComponent', () => {
     expect(c.fillPercent(small)).toBe(25);
   });
 
-  it('marks where the budget sits and draws the overspend past it', () => {
-    const c = render(spend(1000, 1500), [
+  it('positions the budget mark and the over-budget segment', () => {
+    const c = render(summary(1000, 1500), [
       category({ id: 's1', budgeted_amount: 1000, spent_amount: 1500 }),
     ]);
     const row = c.rows()[0];
@@ -323,8 +326,8 @@ describe('ProjectDashboardComponent', () => {
     expect(c.categoryOverPercent(row)).toBe(33.33333333333333);
   });
 
-  it('has no budget mark where no budget was set', () => {
-    const c = render(spend(0, 500), [category({ id: 's1', spent_amount: 500 })]);
+  it('omits the budget mark without a budget', () => {
+    const c = render(summary(0, 500), [category({ id: 's1', spent_amount: 500 })]);
     const row = c.rows()[0];
 
     expect(c.budgetMarkPercent(row)).toBeNull();
@@ -332,8 +335,8 @@ describe('ProjectDashboardComponent', () => {
     expect(c.categoryOverPercent(row)).toBe(0);
   });
 
-  it('gives a category the same colour wherever it is drawn', () => {
-    const c = render(spend(1000, 500), [category({ id: 's1', budgeted_amount: 1000 })]);
+  it('tints a category consistently', () => {
+    const c = render(summary(1000, 500), [category({ id: 's1', budgeted_amount: 1000 })]);
     const row = c.rows()[0];
 
     expect(c.tint(row)).toBe(c.tint(row));
@@ -341,13 +344,13 @@ describe('ProjectDashboardComponent', () => {
     expect(c.tintEdge(row)).not.toBe(c.tint(row));
   });
 
-  it('sends a pressed category to the table rather than just the tab', () => {
-    const c = render(spend(1000, 500), [category({ id: 's1', budgeted_amount: 1000 })]);
-    const asked: string[] = [];
-    c.openCategory.subscribe((id: string) => asked.push(id));
+  it('emits openCategory with the category id', () => {
+    const c = render(summary(1000, 500), [category({ id: 's1', budgeted_amount: 1000 })]);
+    const emitted: string[] = [];
+    c.openCategory.subscribe((id: string) => emitted.push(id));
 
     c.openCategory.emit('s1');
 
-    expect(asked).toEqual(['s1']);
+    expect(emitted).toEqual(['s1']);
   });
 });

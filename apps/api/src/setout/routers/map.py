@@ -21,5 +21,5 @@ controller = MapController()
 
 @router.get("/map", operation_id="getMapSettings")
 async def get_map_settings(user: CurrentUser) -> MapSettings:
-    """Where the map gets its tiles. Set SETOUT_MAP_TILE_URL to use your own."""
+    """The map tile source. Set SETOUT_MAP_TILE_URL to use a different tile server."""
     return controller.settings()

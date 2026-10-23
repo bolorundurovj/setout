@@ -18,7 +18,7 @@
   gap: 6px;
   color: var(--ink-3);
 
-  &.on {
+  &.reached {
     color: var(--ink);
   }
 }
@@ -28,7 +28,7 @@
   border-radius: 2px;
   background: var(--rule);
 
-  .step.on & {
+  .step.reached & {
     background: var(--accent);
   }
 }
@@ -67,7 +67,7 @@
   border: 0;
 }
 
-.drop {
+.file-picker {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -91,7 +91,7 @@
   }
 }
 
-.chosen {
+.selected-file {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -101,7 +101,7 @@
   border-radius: 12px;
 }
 
-.chosen-text {
+.selected-file-text {
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -283,13 +283,13 @@
   color: var(--accent);
 }
 
-.samples {
+.templates {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 10px;
 }
 
-.sample {
+.template {
   display: flex;
   flex-direction: column;
   gap: 3px;

@@ -25,7 +25,7 @@
   min-width: 0;
 }
 
-.pair {
+.two-column {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
@@ -41,7 +41,7 @@
 }
 
 @media (max-width: bp.$narrow) {
-  .pair {
+  .two-column {
     grid-template-columns: 1fr;
   }
 }

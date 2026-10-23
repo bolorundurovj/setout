@@ -8,10 +8,10 @@ pytestmark = pytest.mark.unit
 
 def _settings(**over: object) -> Settings:
     base: dict[str, object] = {
-        "login_free_attempts": 3,
-        "login_delay_seconds": 1.0,
-        "login_delay_cap_seconds": 8.0,
-        "login_max_attempts": 7,
+        "sign_in_free_attempts": 3,
+        "sign_in_delay_seconds": 1.0,
+        "sign_in_delay_cap_seconds": 8.0,
+        "sign_in_max_attempts": 7,
     }
     return Settings(**(base | over))  # type: ignore[arg-type]
 
@@ -32,13 +32,13 @@ def test_the_attempt_is_refused_once_there_have_been_too_many() -> None:
 
 
 def test_the_wait_never_grows_past_the_cap() -> None:
-    settings = _settings(login_delay_cap_seconds=2.0, login_max_attempts=99)
+    settings = _settings(sign_in_delay_cap_seconds=2.0, sign_in_max_attempts=99)
     assert delay_for(4, settings) == 2.0
     assert delay_for(20, settings) == 2.0
 
 
 def test_a_zero_delay_leaves_the_ceiling_where_it_is() -> None:
     # The suite runs with no waiting, which must not also turn off the refusal.
-    settings = _settings(login_delay_seconds=0.0)
+    settings = _settings(sign_in_delay_seconds=0.0)
     assert delay_for(5, settings) == 0.0
     assert delay_for(7, settings) is None

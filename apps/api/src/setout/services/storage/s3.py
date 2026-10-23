@@ -1,5 +1,3 @@
-"""Files in an S3 compatible bucket."""
-
 from __future__ import annotations
 
 import asyncio
@@ -11,7 +9,7 @@ from botocore.exceptions import ClientError
 
 from setout.services.storage.base import Storage
 
-MISSING = ("404", "NoSuchKey", "NotFound")
+MISSING_CODES = ("404", "NoSuchKey", "NotFound")
 
 
 def _s3_client(
@@ -76,29 +74,33 @@ class S3Storage(Storage):
         await asyncio.to_thread(
             self.client.put_object,
             Bucket=self.bucket,
-            Key=self._at(key),
+            Key=self._object_key(key),
             Body=data,
             ContentType=content_type,
         )
 
     async def get(self, key: str) -> bytes:
         try:
-            answer = await asyncio.to_thread(
-                self.client.get_object, Bucket=self.bucket, Key=self._at(key)
+            response = await asyncio.to_thread(
+                self.client.get_object, Bucket=self.bucket, Key=self._object_key(key)
             )
         except ClientError as e:
             if self._is_missing(e):
                 raise FileNotFoundError(key) from e
             raise
-        body: bytes = await asyncio.to_thread(answer["Body"].read)
+        body: bytes = await asyncio.to_thread(response["Body"].read)
         return body
 
     async def delete(self, key: str) -> None:
-        await asyncio.to_thread(self.client.delete_object, Bucket=self.bucket, Key=self._at(key))
+        await asyncio.to_thread(
+            self.client.delete_object, Bucket=self.bucket, Key=self._object_key(key)
+        )
 
     async def exists(self, key: str) -> bool:
         try:
-            await asyncio.to_thread(self.client.head_object, Bucket=self.bucket, Key=self._at(key))
+            await asyncio.to_thread(
+                self.client.head_object, Bucket=self.bucket, Key=self._object_key(key)
+            )
         except ClientError as e:
             if self._is_missing(e):
                 return False
@@ -106,13 +108,13 @@ class S3Storage(Storage):
         return True
 
     async def url(self, key: str, *, filename: str, content_type: str) -> str:
-        """A link that expires, carrying the real name rather than the hash."""
+        """Returns a presigned URL that serves the file inline under its original filename."""
         link: str = await asyncio.to_thread(
             self.presign_client.generate_presigned_url,
             "get_object",
             Params={
                 "Bucket": self.bucket,
-                "Key": self._at(key),
+                "Key": self._object_key(key),
                 "ResponseContentType": content_type,
                 "ResponseContentDisposition": f'inline; filename="{filename}"',
             },
@@ -120,9 +122,9 @@ class S3Storage(Storage):
         )
         return link
 
-    def _at(self, key: str) -> str:
+    def _object_key(self, key: str) -> str:
         return f"{self.prefix}/{key}" if self.prefix else key
 
     def _is_missing(self, error: ClientError) -> bool:
-        answer: dict[str, Any] = error.response.get("Error", {})
-        return str(answer.get("Code")) in MISSING
+        details: dict[str, Any] = error.response.get("Error", {})
+        return str(details.get("Code")) in MISSING_CODES

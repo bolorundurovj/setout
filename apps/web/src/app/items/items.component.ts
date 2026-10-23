@@ -31,13 +31,13 @@ export class ItemsComponent {
   readonly name = signal('');
   readonly unit = signal('');
 
-  private readonly typing = debounce<string>(
+  private readonly debouncedSearch = debounce<string>(
     (text) => void this.items.load(text, this.includeArchived()),
   );
 
   constructor() {
     void this.items.load();
-    inject(DestroyRef).onDestroy(() => this.typing.cancel());
+    inject(DestroyRef).onDestroy(() => this.debouncedSearch.cancel());
   }
 
   value(event: Event): string {
@@ -46,14 +46,14 @@ export class ItemsComponent {
 
   onSearch(event: Event): void {
     this.search.set(this.value(event));
-    this.typing.call(this.search());
+    this.debouncedSearch.call(this.search());
   }
 
   async goTo(page: number): Promise<void> {
     await this.items.goTo(page);
   }
 
-  open(itemId: string): void {
+  openItem(itemId: string): void {
     void this.router.navigate(['/items', itemId]);
   }
 
@@ -81,14 +81,14 @@ export class ItemsComponent {
     });
     if (created) {
       this.cancel();
-      this.toast.show(`${created.name} added to the catalogue.`);
+      this.toast.show(`${created.name} saved.`);
     } else {
-      this.toast.show(this.items.error() ?? 'Could not add that item.', 'error');
+      this.toast.show(this.items.error() ?? 'Could not add the item.', 'error');
     }
   }
 
   async archive(itemId: string): Promise<void> {
-    await this.items.remove(itemId);
+    await this.items.archive(itemId);
     this.toast.show('Item archived. Show archived to restore it.');
   }
 
@@ -98,7 +98,7 @@ export class ItemsComponent {
   }
 
   async setIncludeArchived(on: boolean): Promise<void> {
-    this.typing.cancel();
+    this.debouncedSearch.cancel();
     this.includeArchived.set(on);
     await this.items.load(this.search(), on);
   }
@@ -108,14 +108,17 @@ export class ItemsComponent {
   }
 
   unitLabel(item: ItemRead): string {
-    return item.unit ? `per ${item.unit}` : this.notSet;
+    if (!item.unit) {
+      return this.notSet;
+    }
+    return item.unit.toLowerCase() === 'each' ? 'each' : `per ${item.unit}`;
   }
 
   countLabel(item: ItemRead): string {
     if (item.purchase_count === 0) {
-      return 'never bought';
+      return 'No expenses';
     }
-    return item.purchase_count === 1 ? 'bought once' : `bought ${item.purchase_count} times`;
+    return item.purchase_count === 1 ? '1 expense' : `${item.purchase_count} expenses`;
   }
 
   money(minor: number, price: ItemPriceSummary): string {
@@ -133,7 +136,7 @@ export class ItemsComponent {
     return price.change_percent < 0 ? `down ${rounded}%` : 'no change';
   }
 
-  hasRisen(price: ItemPriceSummary): boolean {
+  hasIncreased(price: ItemPriceSummary): boolean {
     return (price.change_percent ?? 0) > 0;
   }
 }

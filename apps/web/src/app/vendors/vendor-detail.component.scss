@@ -135,11 +135,34 @@
   color: var(--ink);
 }
 
-.total-figure {
-  font-size: 16px;
+.overdue-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--danger-surface);
+  color: var(--danger-ink);
+  border: 1px solid var(--danger-edge);
   font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
+  margin-left: 6px;
+}
+
+.confirm-delete {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  .delete-input {
+    width: 90px;
+    padding: 4px 8px;
+    font-size: 13px;
+    text-transform: uppercase;
+  }
+}
+
+.danger-text {
+  color: var(--danger);
+  font-weight: 500;
 }
 
 @media (max-width: bp.$lap) {
@@ -165,12 +188,11 @@
   grid-template-columns: 1fr 130px 130px 130px;
 }
 
-.cell-owed,
-.figure.owed {
+.figure.balance-due {
   color: var(--over-ink);
 }
 
-.owed {
+.outstanding {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -181,31 +203,31 @@
   border-radius: 12px;
 }
 
-.owed-text {
+.outstanding-text {
   display: flex;
   flex-direction: column;
   gap: 3px;
   min-width: 0;
 }
 
-.owed-what {
+.outstanding-description {
   font-weight: 500;
   font-size: 13px;
   color: var(--over-ink);
 }
 
-.owed-when {
+.outstanding-dates {
   font-size: 13px;
   color: var(--over-ink);
 }
 
-.owed-right {
+.outstanding-actions {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.owed-amount {
+.outstanding-amount {
   font-weight: 500;
   font-size: 16px;
   font-variant-numeric: tabular-nums;
@@ -214,7 +236,7 @@
 }
 
 @media (max-width: bp.$phone) {
-  .owed {
+  .outstanding {
     flex-direction: column;
     align-items: flex-start;
   }

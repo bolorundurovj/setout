@@ -14,7 +14,7 @@ import { PersonService } from './person.service';
   styleUrl: './person-form.component.scss',
 })
 export class PersonFormComponent {
-  readonly people = inject(PersonService);
+  readonly personService = inject(PersonService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly pageTitle = inject(Title);
@@ -45,7 +45,7 @@ export class PersonFormComponent {
       return;
     }
     this.loading.set(true);
-    const person = await this.people.get(this.id());
+    const person = await this.personService.get(this.id());
     if (person) {
       this.name.set(person.name);
       this.role.set(person.role ?? '');
@@ -60,16 +60,16 @@ export class PersonFormComponent {
   }
 
   title(): string {
-    return this.isEdit() ? 'Edit' : 'Add Someone';
+    return this.isEdit() ? 'Edit Person' : 'New Person';
   }
 
   subtitle(): string {
     return this.isEdit()
-      ? 'Changing somebody here changes them on every project.'
-      : 'A name is enough. Everything else can be filled in later.';
+      ? 'Changes apply to every project this person appears in.'
+      : 'Only the name is required. Other details can be added later.';
   }
 
-  value(event: Event): string {
+  inputValue(event: Event): string {
     return (event.target as HTMLInputElement).value;
   }
 
@@ -92,14 +92,14 @@ export class PersonFormComponent {
       notes: this.notes().trim() || null,
     };
     const saved = this.isEdit()
-      ? await this.people.edit(this.id(), body)
-      : await this.people.add(body);
+      ? await this.personService.edit(this.id(), body)
+      : await this.personService.add(body);
 
     if (saved) {
-      this.toast.show(this.isEdit() ? 'Saved.' : `${saved.name} added.`);
+      this.toast.show(this.isEdit() ? 'Person saved.' : `${saved.name} added.`);
       void this.router.navigate(['/people', saved.id]);
     } else {
-      this.toast.show(this.people.error() ?? 'Could not save that person.', 'error');
+      this.toast.show(this.personService.error() ?? 'Could not save the person.', 'error');
     }
   }
 }

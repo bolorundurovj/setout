@@ -35,39 +35,39 @@ describe('LandMapComponent', () => {
     return { fixture, component: fixture.componentInstance };
   }
 
-  it('starts with no corners when the plot has no edge', () => {
+  it('has no boundary points without a boundary', () => {
     const { component } = render();
-    expect(component.corners()).toEqual([]);
+    expect(component.points()).toEqual([]);
   });
 
-  it('takes its corners from the boundary it was given', () => {
+  it('reads boundary points from the boundary input', () => {
     const { component } = render(SQUARE);
-    expect(component.corners().length).toBe(4);
+    expect(component.points().length).toBe(4);
   });
 
-  it('drops the last corner and says so', () => {
+  it('undo emits the boundary without the last point', () => {
     const { component } = render(SQUARE);
     let sent: LandBoundary | null | undefined;
     component.boundaryChange.subscribe((value) => (sent = value));
 
     component.undo();
 
-    expect(component.corners().length).toBe(3);
+    expect(component.points().length).toBe(3);
     expect(sent?.coordinates[0].length).toBe(4);
   });
 
-  it('clearing the edge sends nothing rather than an empty shape', () => {
+  it('clear emits null rather than an empty polygon', () => {
     const { component } = render(SQUARE);
     let sent: LandBoundary | null | undefined;
     component.boundaryChange.subscribe((value) => (sent = value));
 
     component.clear();
 
-    expect(component.corners()).toEqual([]);
+    expect(component.points()).toEqual([]);
     expect(sent).toBeNull();
   });
 
-  it('two corners are not yet a shape', () => {
+  it('emits null with fewer than three boundary points', () => {
     const { component } = render(SQUARE);
     let sent: LandBoundary | null | undefined;
     component.boundaryChange.subscribe((value) => (sent = value));
@@ -78,7 +78,7 @@ describe('LandMapComponent', () => {
     expect(sent).toBeNull();
   });
 
-  it('taking the pin off sends nothing', () => {
+  it('clearPin emits null', () => {
     const { component } = render();
     let sent: unknown;
     component.pointChange.subscribe((value) => (sent = value));

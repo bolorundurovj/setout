@@ -2,19 +2,19 @@ import { Injectable, inject, signal } from '@angular/core';
 import { detailOf } from '../api-error';
 import {
   Api,
-  BulkFileExpenses,
+  BulkCategoriseExpenses,
   ExpenseCreate,
   ExpenseSort,
   ExpenseUpdate,
   ExpenseRead,
   ProjectMonths,
-  ProjectSpend,
+  ProjectExpenseSummary,
   CategorySuggestion,
-  addExpense,
-  deleteExpense,
-  fileExpenses,
+  archiveExpense,
+  categoriseExpenses,
+  createExpense,
+  getProjectExpenseSummary,
   getProjectMonths,
-  getProjectSpend,
   listExpenses,
   restoreExpense,
   suggestCategory,
@@ -22,10 +22,10 @@ import {
 } from '@setout/api-client';
 import { PAGE_SIZE, offsetOf } from '../ui/paging';
 
-/** Stands in for a category on rows that hold spend which reached no category. */
-export const UNFILED = 'uncategorized';
+/** Placeholder category id for expenses without a category. */
+export const UNCATEGORISED = 'uncategorised';
 
-export interface Nested {
+export interface ExpensePage {
   rows: ExpenseRead[];
   total: number;
   page: number;
@@ -49,17 +49,17 @@ export class ExpenseService {
   private readonly api = inject(Api);
 
   private readonly state = signal<ExpenseRead[]>([]);
-  private readonly spendState = signal<ProjectSpend | null>(null);
+  private readonly summaryState = signal<ProjectExpenseSummary | null>(null);
   private readonly totalState = signal(0);
   private readonly pageState = signal(1);
-  private readonly byCategoryState = signal<Record<string, Nested>>({});
+  private readonly byCategoryState = signal<Record<string, ExpensePage>>({});
   private readonly monthsState = signal<ProjectMonths | null>(null);
-  private readonly byMonthState = signal<Record<string, Nested>>({});
+  private readonly byMonthState = signal<Record<string, ExpensePage>>({});
   private readonly filterState = signal<ExpenseFilters>({});
   private readonly totalAmountState = signal(0);
 
   readonly expenses = this.state.asReadonly();
-  readonly spend = this.spendState.asReadonly();
+  readonly summary = this.summaryState.asReadonly();
   readonly total = this.totalState.asReadonly();
   readonly byCategory = this.byCategoryState.asReadonly();
   readonly months = this.monthsState.asReadonly();
@@ -88,7 +88,7 @@ export class ExpenseService {
         spent_from: filters.from || undefined,
         spent_to: filters.to || undefined,
         sort: filters.sort ?? 'recent',
-        include_deleted: filters.includeArchived ?? false,
+        include_archived: filters.includeArchived ?? false,
         limit: PAGE_SIZE,
         offset: offsetOf(page),
       });
@@ -99,14 +99,16 @@ export class ExpenseService {
     } catch {
       this.error.set('Could not load expenses.');
     }
-    await this.loadSpend(projectId);
+    await this.loadSummary(projectId);
   }
 
-  async loadSpend(projectId: string): Promise<void> {
+  async loadSummary(projectId: string): Promise<void> {
     try {
-      this.spendState.set(await this.api.invoke(getProjectSpend, { project_id: projectId }));
+      this.summaryState.set(
+        await this.api.invoke(getProjectExpenseSummary, { project_id: projectId }),
+      );
     } catch {
-      this.spendState.set(null);
+      this.summaryState.set(null);
     }
   }
 
@@ -114,8 +116,8 @@ export class ExpenseService {
     try {
       const rows = await this.api.invoke(listExpenses, {
         project_id: projectId,
-        category_id: categoryId === UNFILED ? undefined : categoryId,
-        uncategorized_only: categoryId === UNFILED,
+        category_id: categoryId === UNCATEGORISED ? undefined : categoryId,
+        uncategorised_only: categoryId === UNCATEGORISED,
         limit: PAGE_SIZE,
         offset: offsetOf(page),
       });
@@ -178,7 +180,7 @@ export class ExpenseService {
     this.saving.set(true);
     this.error.set(null);
     try {
-      const created = await this.api.invoke(addExpense, { project_id: projectId, body });
+      const created = await this.api.invoke(createExpense, { project_id: projectId, body });
       await this.goTo(projectId, this.pageState());
       return created;
     } catch (e: unknown) {
@@ -199,7 +201,7 @@ export class ExpenseService {
     try {
       const updated = await this.api.invoke(updateExpense, { expense_id: expenseId, body });
       this.state.update((rows) => rows.map((row) => (row.id === expenseId ? updated : row)));
-      await this.loadSpend(projectId);
+      await this.loadSummary(projectId);
       return updated;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not update the expense.');
@@ -209,24 +211,24 @@ export class ExpenseService {
     }
   }
 
-  async file(projectId: string, body: BulkFileExpenses): Promise<number | null> {
+  async categorise(projectId: string, body: BulkCategoriseExpenses): Promise<number | null> {
     this.saving.set(true);
     this.error.set(null);
     try {
-      const result = await this.api.invoke(fileExpenses, { project_id: projectId, body });
+      const result = await this.api.invoke(categoriseExpenses, { project_id: projectId, body });
       await this.refresh(projectId);
-      await this.loadSpend(projectId);
-      return result.filed_count;
+      await this.loadSummary(projectId);
+      return result.categorised_count;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not assign those expenses.');
+      this.error.set(detailOf(e) ?? 'Could not assign a category to those expenses.');
       return null;
     } finally {
       this.saving.set(false);
     }
   }
 
-  async remove(projectId: string, expenseId: string): Promise<void> {
-    await this.api.invoke(deleteExpense, { expense_id: expenseId });
+  async archive(projectId: string, expenseId: string): Promise<void> {
+    await this.api.invoke(archiveExpense, { expense_id: expenseId });
     await this.refresh(projectId);
   }
 
@@ -236,10 +238,10 @@ export class ExpenseService {
   }
 
   private async refresh(projectId: string): Promise<void> {
-    const here = this.pageState();
-    await this.goTo(projectId, here);
-    if (this.state().length === 0 && here > 1) {
-      await this.goTo(projectId, here - 1);
+    const currentPage = this.pageState();
+    await this.goTo(projectId, currentPage);
+    if (this.state().length === 0 && currentPage > 1) {
+      await this.goTo(projectId, currentPage - 1);
     }
   }
 }

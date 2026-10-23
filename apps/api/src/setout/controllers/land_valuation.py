@@ -15,19 +15,19 @@ from setout.schemas.land_valuation import (
     LandValuationUpdate,
 )
 
-NO_SUCH_LAND = "Land not found"
-NO_SUCH_VALUATION = "Valuation not found"
-DUPLICATE_PURCHASE = "This land already records what it was bought for"
+NOT_FOUND_LAND = "Land not found"
+NOT_FOUND_VALUATION = "Valuation not found"
+DUPLICATE_PURCHASE = "This land record already has a purchase price"
 
 
 class LandValuationController:
     async def list(
-        self, land_id: str, *, limit: int, offset: int, include_deleted: bool
+        self, land_id: str, *, limit: int, offset: int, include_archived: bool
     ) -> LandValuationPage:
         await self._land_or_404(land_id)
         query = LandValuation.filter(land_id=land_id)
-        if not include_deleted:
-            query = query.filter(deleted_at__isnull=True)
+        if not include_archived:
+            query = query.filter(archived_at__isnull=True)
         total = await query.count()
         rows = await query.offset(offset).limit(limit)
         exponents = await self._exponents(rows)
@@ -50,7 +50,7 @@ class LandValuationController:
         if land.currency_id is not None and land.currency_id != code:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail=f"This land's valuations are in {land.currency_id}",
+                detail=f"This land's valuations must use {land.currency_id}",
             )
         if req.kind is LandValuationKind.PURCHASE and await self._has_purchase(land_id):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=DUPLICATE_PURCHASE)
@@ -61,7 +61,7 @@ class LandValuationController:
             amount=req.amount,
             currency_id=code,
             valued_on=req.valued_on,
-            note=req.note,
+            notes=req.notes,
         )
         if land.currency_id is None:
             land.currency_id = code
@@ -73,7 +73,7 @@ class LandValuationController:
         changes = req.model_dump(exclude_unset=True)
         kind = changes.get("kind")
         if kind is LandValuationKind.PURCHASE and await self._has_purchase(
-            row.land_id, besides=row.id
+            row.land_id, exclude_id=row.id
         ):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=DUPLICATE_PURCHASE)
         if changes:
@@ -81,16 +81,16 @@ class LandValuationController:
             await row.save()
         return self._read(row, await self._exponents([row]))
 
-    async def delete(self, valuation_id: str) -> None:
+    async def archive(self, valuation_id: str) -> None:
         row = await self._valuation_or_404(valuation_id)
-        row.deleted_at = datetime.now(UTC)
+        row.archived_at = datetime.now(UTC)
         await row.save()
-        await self._release_currency(row.land_id)
+        await self._clear_unused_currency(row.land_id)
 
     async def restore(self, valuation_id: str) -> LandValuationRead:
-        row = await self._valuation_or_404(valuation_id, include_deleted=True)
-        if row.deleted_at is not None:
-            row.deleted_at = None
+        row = await self._valuation_or_404(valuation_id, include_archived=True)
+        if row.archived_at is not None:
+            row.archived_at = None
             await row.save()
             land = await Land.get_or_none(id=row.land_id)
             if land is not None and land.currency_id is None:
@@ -98,17 +98,17 @@ class LandValuationController:
                 await land.save()
         return self._read(row, await self._exponents([row]))
 
-    async def _has_purchase(self, land_id: str, *, besides: str | None = None) -> bool:
+    async def _has_purchase(self, land_id: str, *, exclude_id: str | None = None) -> bool:
         query = LandValuation.filter(
-            land_id=land_id, kind=LandValuationKind.PURCHASE, deleted_at__isnull=True
+            land_id=land_id, kind=LandValuationKind.PURCHASE, archived_at__isnull=True
         )
-        if besides is not None:
-            query = query.exclude(id=besides)
+        if exclude_id is not None:
+            query = query.exclude(id=exclude_id)
         return await query.exists()
 
-    async def _release_currency(self, land_id: str) -> None:
-        """A land with no valuations left is free to be priced in another currency."""
-        if await LandValuation.filter(land_id=land_id, deleted_at__isnull=True).exists():
+    async def _clear_unused_currency(self, land_id: str) -> None:
+        """Clears the currency once no valuations remain, so another currency can be used."""
+        if await LandValuation.filter(land_id=land_id, archived_at__isnull=True).exists():
             return
         land = await Land.get_or_none(id=land_id)
         if land is not None and land.currency_id is not None:
@@ -130,22 +130,22 @@ class LandValuationController:
             currency_code=row.currency_id,
             currency_exponent=exponents.get(row.currency_id, 2),
             valued_on=row.valued_on,
-            note=row.note,
+            notes=row.notes,
             created_at=row.created_at,
             updated_at=row.updated_at,
-            deleted_at=row.deleted_at,
+            archived_at=row.archived_at,
         )
 
     async def _land_or_404(self, land_id: str) -> Land:
-        land = await Land.get_or_none(id=land_id, deleted_at__isnull=True)
+        land = await Land.get_or_none(id=land_id, archived_at__isnull=True)
         if land is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NO_SUCH_LAND)
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND_LAND)
         return land
 
     async def _valuation_or_404(
-        self, valuation_id: str, *, include_deleted: bool = False
+        self, valuation_id: str, *, include_archived: bool = False
     ) -> LandValuation:
         row = await LandValuation.get_or_none(id=valuation_id)
-        if row is None or (row.deleted_at is not None and not include_deleted):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NO_SUCH_VALUATION)
+        if row is None or (row.archived_at is not None and not include_archived):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND_VALUATION)
         return row

@@ -4,9 +4,10 @@
   @if (loading()) {
     <div class="card"><p class="t-body">Loading…</p></div>
   } @else if (person(); as p) {
-    @if (p.deleted_at) {
+    @if (p.archived_at) {
       <p class="banner warn t-small">
-        Archived. Their expenses still count. They no longer appear as a payer on the expense form.
+        This person is archived. Their expenses are still included in totals. They are no longer
+        listed as a payer on the expense form.
       </p>
     }
 
@@ -16,7 +17,7 @@
         <p class="t-small">{{ p.role ?? notSet }} &middot; {{ countLabel(p) }}</p>
       </div>
       <div class="head-actions">
-        @if (!p.deleted_at) {
+        @if (!p.archived_at) {
           <app-button variant="secondary" (pressed)="edit()">Edit</app-button>
           <app-button variant="danger" (pressed)="archive()">Archive</app-button>
         } @else {
@@ -27,69 +28,59 @@
 
     <div class="facts">
       <div class="fact">
-        <span class="t-micro">Given</span>
-        <span class="fact-figure t-mono">{{ notSet }}</span>
-      </div>
-      <div class="fact">
         <span class="t-micro">Spent</span>
-        @if (spend(); as s) {
+        @if (expenseSummary(); as s) {
           @if (spentTotals(s).length === 0) {
             <span class="fact-figure t-mono">{{ notSet }}</span>
           } @else {
             @for (t of spentTotals(s); track t.currency_code) {
-              <span class="fact-figure t-mono">{{ total(t) }}</span>
+              <span class="fact-figure t-mono">{{ formatTotal(t) }}</span>
             }
           }
         } @else {
           <span class="fact-figure t-mono">{{ notSet }}</span>
         }
       </div>
-      <div class="fact">
-        <span class="t-micro">Outstanding Balance</span>
-        <span class="fact-figure t-mono">{{ notSet }}</span>
-      </div>
     </div>
 
     <p class="t-small muted">
-      A balance belongs to a project so that a total never spans two currencies. Open a project and
-      see Agreements for what someone was given and what they still hold.
+      Advances and balances are tracked per project, on each project's Agreements tab.
     </p>
 
     <section class="block">
-      <h2 class="t-heading">Their Expenses</h2>
+      <h2 class="t-heading">Expenses</h2>
 
-      @if (spend(); as s) {
+      @if (expenseSummary(); as s) {
         @if (s.projects.length === 0) {
           <div class="card"><p class="t-body">No expenses yet.</p></div>
         } @else {
           <div class="table">
             <div class="row head-row">
               <span class="t-micro">Project</span>
-              <span class="t-micro right">Purchases</span>
+              <span class="t-micro right">Expenses</span>
               <span class="t-micro right">Spent</span>
             </div>
             @for (row of s.projects; track row.project_id) {
               <div class="row">
                 <span class="t-small">{{ row.project_name }}</span>
                 <span class="right t-mono muted">{{ row.expense_count }}</span>
-                <span class="right t-mono figure">{{ money(row) }}</span>
+                <span class="right t-mono figure">{{ formatSpent(row) }}</span>
               </div>
             }
             @for (t of spentTotals(s); track t.currency_code) {
               <div class="row total">
                 <span class="total-label">Total {{ t.currency_code }}</span>
                 <span class="right t-mono muted">{{ t.expense_count }}</span>
-                <span class="right t-mono total-figure">{{ total(t) }}</span>
+                <span class="right t-mono total-figure">{{ formatTotal(t) }}</span>
               </div>
             }
           </div>
           <p class="t-small muted">
-            Projects are listed separately so that currencies are never combined. Every expense is
-            listed under its project.
+            Totals are shown per project so that currencies are never combined.
           </p>
         }
       } @else {
-        <p class="t-small muted">Could not load their expenses.</p>
+        <p class="t-small muted">Could not load the expenses.</p>
       }
     </section>
 

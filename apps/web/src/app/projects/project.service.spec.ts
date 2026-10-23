@@ -16,7 +16,7 @@ function project(overrides: Partial<ProjectRead> = {}): ProjectRead {
     updated_at: '2026-01-01T00:00:00Z',
     budgeted_amount: 0,
     spent_amount: 0,
-    deleted_at: null,
+    archived_at: null,
     ...overrides,
   };
 }
@@ -30,8 +30,8 @@ const emptySummary = {
   active: 0,
   on_hold: 0,
   completed: 0,
+  closed: 0,
   archived: 0,
-  deleted: 0,
   currency_codes: [],
 };
 
@@ -65,14 +65,14 @@ describe('ProjectService', () => {
     expect(service.loading()).toBe(false);
   });
 
-  it('reports a failure instead of throwing', async () => {
+  it('sets an error when the list fails to load', async () => {
     const service = configure(() => Promise.reject(new Error('offline')));
     await service.load();
-    expect(service.error()).toBe('Could not load projects.');
+    expect(service.error()).toBe('Could not load the projects.');
     expect(service.loading()).toBe(false);
   });
 
-  it('puts a created project at the top', async () => {
+  it('adds a created project to the top of the list', async () => {
     result = page([project({ id: 'p1' })]);
     const service = configure();
     await service.load();
@@ -84,24 +84,24 @@ describe('ProjectService', () => {
     expect(service.projects().map((p) => p.id)).toEqual(['p2', 'p1']);
   });
 
-  it('drops a deleted project from the list', async () => {
+  it('removes an archived project from the list', async () => {
     result = page([project({ id: 'p1' }), project({ id: 'p2' })]);
     const service = configure();
     await service.load();
 
     result = undefined;
-    await service.remove('p1');
+    await service.archive('p1');
     expect(service.projects().map((p) => p.id)).toEqual(['p2']);
   });
 
-  it('replaces the project it restored', async () => {
-    result = page([project({ id: 'p1', deleted_at: '2026-02-01T00:00:00Z' })]);
+  it('replaces the restored project in the list', async () => {
+    result = page([project({ id: 'p1', archived_at: '2026-02-01T00:00:00Z' })]);
     const service = configure();
     await service.load(true);
 
-    result = project({ id: 'p1', deleted_at: null });
+    result = project({ id: 'p1', archived_at: null });
     await service.restore('p1');
-    expect(service.projects()[0].deleted_at).toBeNull();
+    expect(service.projects()[0].archived_at).toBeNull();
   });
 
   it('only fetches currencies once', async () => {
@@ -125,7 +125,7 @@ describe('ProjectService', () => {
     expect(service.hasMore()).toBe(false);
   });
 
-  it('does not ask for more when everything is loaded', async () => {
+  it('does not request more when every project is loaded', async () => {
     result = page([project()]);
     const service = configure();
     await service.load();

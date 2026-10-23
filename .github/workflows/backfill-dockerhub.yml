@@ -1,4 +1,4 @@
-name: Back-fill Docker Hub
+name: Backfill Docker Hub
 
 on:
   workflow_dispatch:

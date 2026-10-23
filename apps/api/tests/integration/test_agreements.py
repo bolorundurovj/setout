@@ -11,7 +11,7 @@ async def _project(client: AsyncClient) -> str:
     await Currency.bulk_create(
         [Currency(code=c[0], name=c[1], exponent=c[2]) for c in CURRENCIES if c[0] == "NGN"]
     )
-    await client.post("/api/auth/setup", json={"name": "Admin", "password": "password123"})
+    await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": "password123"})
     resp = await client.post(
         "/api/projects", json={"name": "Jacaranda Close, Ewuru", "currency_code": "NGN"}
     )
@@ -56,7 +56,7 @@ async def test_agreements_require_authentication(client: AsyncClient) -> None:
     assert (await client.get("/api/projects/nope/agreements")).status_code == 401
 
 
-async def test_a_new_agreement_owes_the_whole_amount(client: AsyncClient) -> None:
+async def test_new_agreement_balance_equals_agreed_amount(client: AsyncClient) -> None:
     project_id = await _project(client)
     vendor_id = await _vendor(client)
     agreement = await _agreement(client, project_id, vendor_id, 223_000_00)
@@ -67,7 +67,7 @@ async def test_a_new_agreement_owes_the_whole_amount(client: AsyncClient) -> Non
     assert agreement["vendor_name"] == "Idris Bricklaying"
 
 
-async def test_part_payments_come_off_the_balance(client: AsyncClient) -> None:
+async def test_part_payments_reduce_the_balance(client: AsyncClient) -> None:
     # Idris Bricklaying: agreed 223,000, paid in five parts, balance 60,000.
     project_id = await _project(client)
     vendor_id = await _vendor(client)
@@ -81,21 +81,21 @@ async def test_part_payments_come_off_the_balance(client: AsyncClient) -> None:
     assert read["balance_amount"] == 60_000_00
 
 
-async def test_the_balance_follows_a_deleted_payment(client: AsyncClient) -> None:
+async def test_balance_excludes_an_archived_payment(client: AsyncClient) -> None:
     project_id = await _project(client)
     vendor_id = await _vendor(client)
     agreement = await _agreement(client, project_id, vendor_id, 100_000)
     await _pay(client, project_id, agreement["id"], 40_000)
 
     listed = (await client.get(f"/api/projects/{project_id}/expenses")).json()["items"]
-    await client.delete(f"/api/expenses/{listed[0]['id']}")
+    await client.post(f"/api/expenses/{listed[0]['id']}/archive")
 
     read = (await client.get(f"/api/agreements/{agreement['id']}")).json()
     assert read["paid_amount"] == 0
     assert read["balance_amount"] == 100_000
 
 
-async def test_overpaying_owes_nothing_rather_than_a_negative(client: AsyncClient) -> None:
+async def test_overpayment_gives_zero_balance_not_negative(client: AsyncClient) -> None:
     project_id = await _project(client)
     vendor_id = await _vendor(client)
     agreement = await _agreement(client, project_id, vendor_id, 50_000)
@@ -106,7 +106,7 @@ async def test_overpaying_owes_nothing_rather_than_a_negative(client: AsyncClien
     assert read["balance_amount"] == 0
 
 
-async def test_an_agreement_needs_a_vendor_that_exists(client: AsyncClient) -> None:
+async def test_agreement_with_unknown_vendor_returns_404(client: AsyncClient) -> None:
     project_id = await _project(client)
     resp = await client.post(
         f"/api/projects/{project_id}/agreements",
@@ -115,7 +115,7 @@ async def test_an_agreement_needs_a_vendor_that_exists(client: AsyncClient) -> N
     assert resp.status_code == 404
 
 
-async def test_an_advance_is_recorded_against_a_person(client: AsyncClient) -> None:
+async def test_advance_is_recorded_for_a_person(client: AsyncClient) -> None:
     project_id = await _project(client)
     person_id = await _person(client)
 
@@ -129,8 +129,8 @@ async def test_an_advance_is_recorded_against_a_person(client: AsyncClient) -> N
     assert resp.json()["given_on"]
 
 
-async def test_a_balance_is_what_was_advanced_less_what_was_spent(client: AsyncClient) -> None:
-    # Mummy is handed 100,000 and spends 62,500, so she still holds 37,500.
+async def test_balance_is_advanced_less_spent(client: AsyncClient) -> None:
+    # Advanced 100,000, spent 62,500: balance 37,500.
     project_id = await _project(client)
     person_id = await _person(client)
 
@@ -151,7 +151,7 @@ async def test_a_balance_is_what_was_advanced_less_what_was_spent(client: AsyncC
     assert balances[0]["balance_amount"] == 37_500_00
 
 
-async def test_spending_more_than_was_advanced_leaves_them_owed(client: AsyncClient) -> None:
+async def test_spending_beyond_the_advance_gives_negative_balance(client: AsyncClient) -> None:
     project_id = await _project(client)
     person_id = await _person(client)
 
@@ -164,14 +164,14 @@ async def test_spending_more_than_was_advanced_leaves_them_owed(client: AsyncCli
     assert balances[0]["balance_amount"] == -11_000_00
 
 
-async def test_someone_with_nothing_to_settle_is_left_out(client: AsyncClient) -> None:
+async def test_person_without_advances_or_expenses_is_omitted(client: AsyncClient) -> None:
     project_id = await _project(client)
     await _person(client, "Nobody")
 
     assert (await client.get(f"/api/projects/{project_id}/balances")).json() == []
 
 
-async def test_an_advance_needs_a_person_that_exists(client: AsyncClient) -> None:
+async def test_advance_with_unknown_person_returns_404(client: AsyncClient) -> None:
     project_id = await _project(client)
     resp = await client.post(
         f"/api/projects/{project_id}/advances",
@@ -200,29 +200,31 @@ async def test_agreements_and_advances_are_paginated(client: AsyncClient) -> Non
     assert len(page["items"]) == 2
 
 
-async def test_an_archived_agreement_is_listed_when_asked_for_and_restorable(
+async def test_archived_agreement_is_listed_with_include_archived_and_restorable(
     client: AsyncClient,
 ) -> None:
     project_id = await _project(client)
     vendor_id = await _vendor(client)
     agreement = await _agreement(client, project_id, vendor_id, 100_000)
 
-    assert (await client.delete(f"/api/agreements/{agreement['id']}")).status_code == 204
+    assert (await client.post(f"/api/agreements/{agreement['id']}/archive")).status_code == 204
     assert (await client.get(f"/api/projects/{project_id}/agreements")).json()["total"] == 0
 
     page = (
-        await client.get(f"/api/projects/{project_id}/agreements", params={"include_deleted": True})
+        await client.get(
+            f"/api/projects/{project_id}/agreements", params={"include_archived": True}
+        )
     ).json()
     assert [row["id"] for row in page["items"]] == [agreement["id"]]
-    assert page["items"][0]["deleted_at"]
+    assert page["items"][0]["archived_at"]
 
     restored = await client.post(f"/api/agreements/{agreement['id']}/restore")
     assert restored.status_code == 200
-    assert restored.json()["deleted_at"] is None
+    assert restored.json()["archived_at"] is None
     assert (await client.get(f"/api/projects/{project_id}/agreements")).json()["total"] == 1
 
 
-async def test_an_archived_advance_is_listed_when_asked_for_and_restorable(
+async def test_archived_advance_is_listed_with_include_archived_and_restorable(
     client: AsyncClient,
 ) -> None:
     project_id = await _project(client)
@@ -234,43 +236,43 @@ async def test_an_archived_advance_is_listed_when_asked_for_and_restorable(
         )
     ).json()
 
-    assert (await client.delete(f"/api/advances/{advance['id']}")).status_code == 204
+    assert (await client.post(f"/api/advances/{advance['id']}/archive")).status_code == 204
     assert (await client.get(f"/api/projects/{project_id}/balances")).json() == []
 
     page = (
-        await client.get(f"/api/projects/{project_id}/advances", params={"include_deleted": True})
+        await client.get(f"/api/projects/{project_id}/advances", params={"include_archived": True})
     ).json()
     assert [row["id"] for row in page["items"]] == [advance["id"]]
-    assert page["items"][0]["deleted_at"]
+    assert page["items"][0]["archived_at"]
 
     restored = await client.post(f"/api/advances/{advance['id']}/restore")
     assert restored.status_code == 200
-    assert restored.json()["deleted_at"] is None
+    assert restored.json()["archived_at"] is None
     balances = (await client.get(f"/api/projects/{project_id}/balances")).json()
     assert balances[0]["advanced_amount"] == 100_000_00
 
 
-async def test_missing_things_answer_404(client: AsyncClient) -> None:
+async def test_unknown_agreements_and_advances_return_404(client: AsyncClient) -> None:
     await _project(client)
     assert (await client.get("/api/agreements/nope")).status_code == 404
-    assert (await client.delete("/api/agreements/nope")).status_code == 404
+    assert (await client.post("/api/agreements/nope/archive")).status_code == 404
     assert (await client.post("/api/agreements/nope/restore")).status_code == 404
     stale = await client.patch("/api/agreements/nope", json={"agreed_amount": 1})
     assert stale.status_code == 404
-    assert (await client.delete("/api/advances/nope")).status_code == 404
+    assert (await client.post("/api/advances/nope/archive")).status_code == 404
     assert (await client.post("/api/advances/nope/restore")).status_code == 404
     assert (await client.patch("/api/advances/nope", json={"amount": 1})).status_code == 404
     assert (await client.get("/api/projects/nope/balances")).status_code == 404
 
 
-async def test_the_payments_on_an_agreement_can_be_listed(client: AsyncClient) -> None:
+async def test_expenses_can_be_filtered_by_agreement(client: AsyncClient) -> None:
     project_id = await _project(client)
     vendor_id = await _vendor(client)
     agreement = await _agreement(client, project_id, vendor_id, 223_000_00)
     await _pay(client, project_id, agreement["id"], 70_000_00)
     await _pay(client, project_id, agreement["id"], 20_000_00)
 
-    # Spend that is nothing to do with the agreement stays out of it.
+    # An expense without agreement_id is excluded.
     await client.post(
         f"/api/projects/{project_id}/expenses",
         json={"description": "Cement", "amount": 11_000_00},

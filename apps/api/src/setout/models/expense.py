@@ -42,7 +42,7 @@ class Expense(Model):
         null=True,
         default=None,
         on_delete=fields.SET_NULL,
-        description="What was bought. This is what the price history is built from",
+        description="The item bought. Price history is calculated from it",
     )
     item_id: str | None
     vendor: fields.ForeignKeyNullableRelation[Vendor] = fields.ForeignKeyField(
@@ -51,7 +51,7 @@ class Expense(Model):
         null=True,
         default=None,
         on_delete=fields.SET_NULL,
-        description="Who it was bought from",
+        description="The vendor paid",
     )
     vendor_id: str | None
     paid_by: fields.ForeignKeyNullableRelation[Person] = fields.ForeignKeyField(
@@ -60,7 +60,7 @@ class Expense(Model):
         null=True,
         default=None,
         on_delete=fields.SET_NULL,
-        description="Who handed over the money. Null means you paid it yourself",
+        description="The person who paid. Null when you paid",
     )
     paid_by_id: str | None
     spent_on = fields.DateField()
@@ -73,7 +73,7 @@ class Expense(Model):
         max_length=16,
         null=True,
         default=None,
-        description="Optional. Splits the project total three ways when it is set",
+        description="Optional. Labour, material or fixed, for the cost type breakdown",
     )
     agreement: fields.ForeignKeyNullableRelation[Agreement] = fields.ForeignKeyField(
         "models.Agreement",
@@ -81,13 +81,13 @@ class Expense(Model):
         null=True,
         default=None,
         on_delete=fields.SET_NULL,
-        description="A part payment against what was agreed",
+        description="The agreement this expense is a payment against",
     )
     agreement_id: str | None
     notes = fields.TextField(null=True, default=None)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    deleted_at = fields.DatetimeField(null=True, default=None)
+    archived_at = fields.DatetimeField(null=True, default=None)
 
     class Meta:
         table = "expense"

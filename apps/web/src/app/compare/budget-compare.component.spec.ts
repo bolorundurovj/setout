@@ -17,7 +17,7 @@ const project: ProjectRead = {
   spent_amount: 0,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
-  deleted_at: null,
+  archived_at: null,
 };
 
 function category(over: Partial<CategoryRead> = {}): CategoryRead {
@@ -37,7 +37,7 @@ function category(over: Partial<CategoryRead> = {}): CategoryRead {
     own_expense_count: 0,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
     ...over,
   };
 }
@@ -49,7 +49,7 @@ function row(over: Partial<CompareRow> = {}): CompareRow {
     budgeted: 0,
     spent: 0,
     count: 0,
-    isUncategorized: false,
+    isUncategorised: false,
     ...over,
   };
 }
@@ -59,10 +59,10 @@ describe('BudgetCompareComponent', () => {
 
   function render(
     categories: CategoryRead[] = [],
-    spend: Record<string, unknown> | null = null,
+    summary: Record<string, unknown> | null = null,
     byCategory: Record<string, ExpenseRead[]> = {},
     expenseCount = 0,
-    asked = '',
+    openCategory = '',
   ) {
     loaded = [];
     TestBed.resetTestingModule();
@@ -76,7 +76,7 @@ describe('BudgetCompareComponent', () => {
         {
           provide: ExpenseService,
           useValue: {
-            spend: () => spend,
+            summary: () => summary,
             total: () => expenseCount,
             byCategory: () => byCategory,
             load: async () => undefined,
@@ -89,82 +89,87 @@ describe('BudgetCompareComponent', () => {
     });
     const fixture = TestBed.createComponent(BudgetCompareComponent);
     fixture.componentRef.setInput('project', project);
-    fixture.componentRef.setInput('openCategory', asked);
+    fixture.componentRef.setInput('openCategory', openCategory);
     fixture.detectChanges();
     return fixture.componentInstance;
   }
 
-  const spend = (budgeted: number, spent: number, uncategorized = 0, uncategorizedCount = 0) => ({
+  const summary = (budgeted: number, spent: number, uncategorised = 0, uncategorisedCount = 0) => ({
     budgeted_amount: budgeted,
     spent_amount: spent,
-    uncategorized_amount: uncategorized,
-    uncategorized_count: uncategorizedCount,
+    uncategorised_amount: uncategorised,
+    uncategorised_count: uncategorisedCount,
     variance_percent: null,
   });
 
-  it('keeps every category, in the order the budget puts them', () => {
+  it('lists every category in budget order', () => {
     const c = render(
       [
         category({ id: 'a', name: 'Groundwork' }),
         category({ id: 'b', name: 'Roof' }),
         category({ id: 'c', name: 'Untouched' }),
       ],
-      spend(1000, 500),
+      summary(1000, 500),
     );
     expect(c.rows().map((r) => r.name)).toEqual(['Groundwork', 'Roof', 'Untouched']);
   });
 
-  it('adds a line for spend that reached no category, and only when there is some', () => {
-    const withUncategorized = render([category()], spend(1000, 500, 6_100_000));
-    const last = withUncategorized.rows()[withUncategorized.rows().length - 1];
-    expect(last.isUncategorized).toBe(true);
+  it('adds an Uncategorised row only when uncategorised expenses exist', () => {
+    const withUncategorised = render([category()], summary(1000, 500, 6_100_000));
+    const last = withUncategorised.rows()[withUncategorised.rows().length - 1];
+    expect(last.isUncategorised).toBe(true);
     expect(last.spent).toBe(6_100_000);
 
     expect(
-      render([category()], spend(1000, 500))
+      render([category()], summary(1000, 500))
         .rows()
-        .some((r) => r.isUncategorized),
+        .some((r) => r.isUncategorised),
     ).toBe(false);
   });
 
-  it('shows a dash rather than a figure where no budget was set', () => {
-    const c = render([], spend(0, 500));
-    expect(c.budgetCell(row({ budgeted: 0, spent: 5000 }))).toBe('—');
-    expect(c.left(row({ budgeted: 0, spent: 5000 }))).toBe('—');
+  it('shows a dash for a category without a budget', () => {
+    const c = render([], summary(0, 500));
+    expect(c.budgetedCell(row({ budgeted: 0, spent: 5000 }))).toBe('—');
+    expect(c.remaining(row({ budgeted: 0, spent: 5000 }))).toBe('—');
     expect(c.used(row({ budgeted: 0, spent: 5000 }))).toBe('—');
-    expect(c.over(row({ budgeted: 0, spent: 5000 }))).toBe(false);
+    expect(c.isOverBudget(row({ budgeted: 0, spent: 5000 }))).toBe(false);
   });
 
-  it('works out what is left, and lets it go negative when overspent', () => {
-    const c = render([], spend(1000, 500));
-    expect(c.left(row({ budgeted: 100_000, spent: 40_000 }))).toBe('600');
-    expect(c.left(row({ budgeted: 100_000, spent: 140_000 }))).toBe('-400');
-    expect(c.over(row({ budgeted: 100_000, spent: 140_000 }))).toBe(true);
+  it('computes a negative remaining amount when over budget', () => {
+    const c = render([], summary(1000, 500));
+    expect(c.remaining(row({ budgeted: 100_000, spent: 40_000 }))).toBe('600');
+    expect(c.remaining(row({ budgeted: 100_000, spent: 140_000 }))).toBe('-400');
+    expect(c.isOverBudget(row({ budgeted: 100_000, spent: 140_000 }))).toBe(true);
   });
 
-  it('reports the share of a budget used', () => {
-    const c = render([], spend(1000, 500));
+  it('computes the percentage of the budget used', () => {
+    const c = render([], summary(1000, 500));
     expect(c.used(row({ budgeted: 1000, spent: 250 }))).toBe('25%');
     expect(c.used(row({ budgeted: 1000, spent: 1500 }))).toBe('150%');
   });
 
-  it('totals from the project figures, not from the visible rows', () => {
-    const c = render([category({ budgeted_amount: 100 })], spend(215_000_000, 232_630_000), {}, 15);
-    expect(c.totalOver()).toBe(true);
-    expect(c.totalLeft()).toBe(-17_630_000);
+  it('takes totals from the project summary, not the visible rows', () => {
+    const c = render(
+      [category({ budgeted_amount: 100 })],
+      summary(215_000_000, 232_630_000),
+      {},
+      15,
+    );
+    expect(c.totalOverBudget()).toBe(true);
+    expect(c.totalRemaining()).toBe(-17_630_000);
     expect(c.totalUsed()).toBe('108%');
     expect(c.countLabel()).toBe('15 expenses');
   });
 
-  it('will not claim a total variance without a budget', () => {
-    const c = render([], spend(0, 500_000), {}, 1);
-    expect(c.totalOver()).toBe(false);
+  it('shows no total variance without a budget', () => {
+    const c = render([], summary(0, 500_000), {}, 1);
+    expect(c.totalOverBudget()).toBe(false);
     expect(c.totalUsed()).toBe('—');
     expect(c.countLabel()).toBe('1 expense');
   });
 
-  it('fetches a row on first open, and not again on reopen', async () => {
-    const c = render([category({ id: 'a' })], spend(1000, 500));
+  it('loads category expenses on first open only', async () => {
+    const c = render([category({ id: 'a' })], summary(1000, 500));
     c.toggle(row({ id: 'a' }));
     expect(c.isOpen(row({ id: 'a' }))).toBe(true);
     expect(loaded).toEqual(['a']);
@@ -174,47 +179,47 @@ describe('BudgetCompareComponent', () => {
     expect(loaded).toEqual(['a']);
   });
 
-  it('does not refetch a row it already holds', () => {
-    const c = render([category({ id: 'a' })], spend(1000, 500), { a: [] });
+  it('uses cached category expenses', () => {
+    const c = render([category({ id: 'a' })], summary(1000, 500), { a: [] });
     c.toggle(row({ id: 'a' }));
     expect(loaded).toEqual([]);
   });
 
   it('opens one row at a time', () => {
-    const c = render([category({ id: 'a' }), category({ id: 'b' })], spend(1000, 500));
+    const c = render([category({ id: 'a' }), category({ id: 'b' })], summary(1000, 500));
     c.toggle(row({ id: 'a' }));
     c.toggle(row({ id: 'b' }));
     expect(c.isOpen(row({ id: 'a' }))).toBe(false);
     expect(c.isOpen(row({ id: 'b' }))).toBe(true);
   });
 
-  it('tells a row that is still loading apart from one with nothing in it', () => {
-    const c = render([category({ id: 'a' })], spend(1000, 500), { a: [] });
+  it('distinguishes a loading row from an empty one', () => {
+    const c = render([category({ id: 'a' })], summary(1000, 500), { a: [] });
     expect(c.rowExpenses(row({ id: 'a' }))).toEqual([]);
     expect(c.rowExpenses(row({ id: 'b' }))).toBeUndefined();
   });
 
-  it('carries the count of expenses filed to each category', () => {
-    const c = render([category({ id: 'a', expense_count: 4 })], spend(1000, 500));
+  it('counts expenses per category', () => {
+    const c = render([category({ id: 'a', expense_count: 4 })], summary(1000, 500));
     expect(c.rows()[0].count).toBe(4);
     expect(c.rowCount(row({ count: 4 }))).toBe('4 expenses');
   });
 
-  it('says so plainly when a category has none, rather than showing a nought', () => {
-    const c = render([category({ id: 'a' })], spend(1000, 500));
+  it("shows 'no expenses' for a category with none", () => {
+    const c = render([category({ id: 'a' })], summary(1000, 500));
     expect(c.rowCount(row({ count: 0 }))).toBe('no expenses');
     expect(c.rowCount(row({ count: 1 }))).toBe('1 expense');
   });
 
-  it('counts the uncategorized spend on its own line', () => {
-    const c = render([], spend(1000, 500, 6_100_000, 2));
+  it('counts uncategorised expenses on their own row', () => {
+    const c = render([], summary(1000, 500, 6_100_000, 2));
     expect(c.rows()[0].count).toBe(2);
   });
 
-  it('opens the category it was sent to, and reads what is filed to it', () => {
+  it('opens and loads the requested category', () => {
     const c = render(
       [category({ id: 's1', budgeted_amount: 1000 }), category({ id: 's2', name: 'Interior' })],
-      spend(1000, 500),
+      summary(1000, 500),
       {},
       0,
       's2',
@@ -224,21 +229,21 @@ describe('BudgetCompareComponent', () => {
     expect(loaded).toContain('s2');
   });
 
-  it('says how many expenses were taken off the record, and nothing when none were', () => {
-    expect(render([], { ...spend(1000, 500), removed_count: 2 }).removedNote()).toBe(
-      '2 expenses archived and not counted.',
+  it('reports the archived expense count, and nothing when there are none', () => {
+    expect(render([], { ...summary(1000, 500), archived_count: 2 }).archivedNote()).toBe(
+      '2 archived expenses are excluded from the totals.',
     );
-    expect(render([], { ...spend(1000, 500), removed_count: 1 }).removedNote()).toContain(
-      '1 expense archived',
+    expect(render([], { ...summary(1000, 500), archived_count: 1 }).archivedNote()).toContain(
+      '1 archived expense is',
     );
-    expect(render([], spend(1000, 500)).removedNote()).toBe('');
+    expect(render([], summary(1000, 500)).archivedNote()).toBe('');
   });
 
-  it('gives each category its own colour and the uncategorized line a warning one', () => {
-    const c = render([category({ id: 's1', budgeted_amount: 1000 })], spend(1000, 900, 400, 1));
-    const [filed, uncategorized] = c.rows();
+  it('tints each category and gives the Uncategorised row the warning tint', () => {
+    const c = render([category({ id: 's1', budgeted_amount: 1000 })], summary(1000, 900, 400, 1));
+    const [categorised, uncategorised] = c.rows();
 
-    expect(c.tint(filed)).toMatch(/^#[0-9a-f]{6}$/);
-    expect(c.tint(uncategorized)).toBe('var(--warn-surface)');
+    expect(c.tint(categorised)).toMatch(/^#[0-9a-f]{6}$/);
+    expect(c.tint(uncategorised)).toBe('var(--warn-surface)');
   });
 });

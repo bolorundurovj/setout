@@ -143,8 +143,8 @@
   color: var(--ink);
 }
 
-.figure-value.owed,
-.paid.owed {
+.figure-value.balance,
+.paid.balance {
   color: var(--over-ink);
 }
 
@@ -173,12 +173,12 @@
   border-bottom: 1px solid var(--field);
 }
 
-.when {
+.date {
   font-size: 13px;
   color: var(--ink-3);
 }
 
-.note {
+.description {
   color: var(--ink-2);
 }
 
@@ -189,20 +189,20 @@
   color: var(--ink);
 }
 
-.payment.left-to-pay {
+.payment.balance-row {
   padding: 13px 18px;
   background: var(--field);
   border-bottom: none;
 }
 
-.left-label {
+.balance-label {
   font:
     500 13px/1.45 'DM Sans',
     sans-serif;
   color: var(--ink);
 }
 
-.payment.left-to-pay .paid {
+.payment.balance-row .paid {
   font-weight: 500;
 }
 
@@ -245,7 +245,7 @@
       0 0 0 4px var(--accent);
   }
 
-  &.destructive:hover {
+  &.archive-action:hover {
     background: var(--over-surface);
     border-color: var(--over-edge);
     color: var(--over-ink);
@@ -256,7 +256,6 @@
   margin-left: auto;
 }
 
-// The people tables under Money held. The agreements above are cards.
 .table {
   border: 1.5px solid var(--rule);
   border-radius: 14px;
@@ -320,7 +319,7 @@
   color: var(--ink);
 }
 
-.cell-figure.owed {
+.cell-figure.negative {
   color: var(--over);
 }
 
@@ -332,7 +331,7 @@
   padding-top: 18px;
 }
 
-.figure.owed {
+.figure.balance {
   color: var(--over);
 }
 
@@ -371,6 +370,19 @@
 
   .figure-value {
     font-size: 17px;
+  }
+}
+
+.confirm-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  .delete-input {
+    width: 80px;
+    padding: 4px 6px;
+    font-size: 12px;
+    text-transform: uppercase;
   }
 }
 

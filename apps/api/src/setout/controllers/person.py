@@ -9,22 +9,22 @@ from setout.models.person import Person
 from setout.schemas.person import (
     PersonCreate,
     PersonCurrencyTotal,
+    PersonExpenseSummary,
     PersonPage,
-    PersonProjectSpend,
+    PersonProjectExpenseSummary,
     PersonRead,
-    PersonSpend,
     PersonUpdate,
 )
 
 NOT_FOUND_PERSON = "Person not found"
-DUPLICATE_NAME = "Somebody with that name already exists"
+DUPLICATE_NAME = "A person with that name already exists"
 
 
 class PersonController:
     async def list_people(
         self, *, search: str | None, include_archived: bool, limit: int, offset: int
     ) -> PersonPage:
-        query = Person.all() if include_archived else Person.filter(deleted_at__isnull=True)
+        query = Person.all() if include_archived else Person.filter(archived_at__isnull=True)
         if search:
             query = query.filter(name__icontains=search)
         total = await query.count()
@@ -43,7 +43,7 @@ class PersonController:
         return self._read(person, [])
 
     async def get(self, person_id: str) -> PersonRead:
-        person = await self._person_or_404(person_id, include_deleted=True)
+        person = await self._person_or_404(person_id, include_archived=True)
         totals = await self._totals([person.id])
         return self._read(person, totals.get(person.id, []))
 
@@ -59,28 +59,28 @@ class PersonController:
         totals = await self._totals([person.id])
         return self._read(person, totals.get(person.id, []))
 
-    async def delete(self, person_id: str) -> None:
+    async def archive(self, person_id: str) -> None:
         person = await self._person_or_404(person_id)
-        person.deleted_at = datetime.now(UTC)
+        person.archived_at = datetime.now(UTC)
         await person.save()
 
     async def restore(self, person_id: str) -> PersonRead:
-        person = await self._person_or_404(person_id, include_deleted=True)
-        if person.deleted_at is not None:
-            person.deleted_at = None
+        person = await self._person_or_404(person_id, include_archived=True)
+        if person.archived_at is not None:
+            person.archived_at = None
             await person.save()
         totals = await self._totals([person.id])
         return self._read(person, totals.get(person.id, []))
 
-    async def spend(self, person_id: str) -> PersonSpend:
-        person = await self._person_or_404(person_id, include_deleted=True)
-        rows: dict[str, PersonProjectSpend] = {}
+    async def expense_summary(self, person_id: str) -> PersonExpenseSummary:
+        person = await self._person_or_404(person_id, include_archived=True)
+        rows: dict[str, PersonProjectExpenseSummary] = {}
         for expense in await Expense.filter(
-            paid_by_id=person_id, deleted_at__isnull=True
+            paid_by_id=person_id, archived_at__isnull=True
         ).prefetch_related("project__currency"):
             row = rows.get(expense.project_id)
             if row is None:
-                rows[expense.project_id] = PersonProjectSpend(
+                rows[expense.project_id] = PersonProjectExpenseSummary(
                     project_id=expense.project_id,
                     project_name=expense.project.name,
                     currency_code=expense.project.currency_id,
@@ -91,7 +91,7 @@ class PersonController:
             else:
                 row.expense_count += 1
                 row.spent_amount += expense.amount
-        return PersonSpend(
+        return PersonExpenseSummary(
             person_id=person.id,
             name=person.name,
             projects=sorted(rows.values(), key=lambda row: row.project_name),
@@ -102,13 +102,13 @@ class PersonController:
             return {}
         grouped: dict[str, dict[tuple[str, int], PersonCurrencyTotal]] = {}
         for expense in await Expense.filter(
-            paid_by_id__in=person_ids, deleted_at__isnull=True
+            paid_by_id__in=person_ids, archived_at__isnull=True
         ).prefetch_related("project__currency"):
-            owner = expense.paid_by_id
-            if owner is None:
+            payer_id = expense.paid_by_id
+            if payer_id is None:
                 continue
             key = (expense.project.currency_id, expense.project.currency.exponent)
-            rows = grouped.setdefault(owner, {})
+            rows = grouped.setdefault(payer_id, {})
             row = rows.get(key)
             if row is None:
                 rows[key] = PersonCurrencyTotal(
@@ -120,7 +120,7 @@ class PersonController:
             else:
                 row.expense_count += 1
                 row.spent_amount += expense.amount
-        return {owner: [rows[key] for key in sorted(rows)] for owner, rows in grouped.items()}
+        return {payer_id: [rows[key] for key in sorted(rows)] for payer_id, rows in grouped.items()}
 
     def _read(self, person: Person, totals: list[PersonCurrencyTotal]) -> PersonRead:
         return PersonRead(
@@ -133,15 +133,15 @@ class PersonController:
             totals=totals,
             created_at=person.created_at,
             updated_at=person.updated_at,
-            deleted_at=person.deleted_at,
+            archived_at=person.archived_at,
         )
 
     async def _reject_duplicate(self, name: str) -> None:
-        if await Person.filter(name__iexact=name, deleted_at__isnull=True).exists():
+        if await Person.filter(name__iexact=name, archived_at__isnull=True).exists():
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=DUPLICATE_NAME)
 
-    async def _person_or_404(self, person_id: str, *, include_deleted: bool = False) -> Person:
+    async def _person_or_404(self, person_id: str, *, include_archived: bool = False) -> Person:
         person = await Person.get_or_none(id=person_id)
-        if person is None or (person.deleted_at is not None and not include_deleted):
+        if person is None or (person.archived_at is not None and not include_archived):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND_PERSON)
         return person

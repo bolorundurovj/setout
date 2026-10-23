@@ -12,7 +12,7 @@ async def _setup(client: AsyncClient, *codes: str) -> dict[str, str]:
     await Currency.bulk_create(
         [Currency(code=c[0], name=c[1], exponent=c[2]) for c in CURRENCIES if c[0] in wanted]
     )
-    await client.post("/api/auth/setup", json={"name": "Admin", "password": "password123"})
+    await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": "password123"})
     projects = {}
     for code in wanted:
         resp = await client.post(
@@ -87,7 +87,7 @@ async def test_archiving_takes_a_vendor_off_the_list(client: AsyncClient) -> Non
     await _setup(client)
     vendor = await _vendor(client, "Corner Depot Cement", notes="no longer trading")
 
-    assert (await client.delete(f"/api/vendors/{vendor['id']}")).status_code == 204
+    assert (await client.post(f"/api/vendors/{vendor['id']}/archive")).status_code == 204
     assert (await client.get("/api/vendors")).json()["total"] == 0
 
     archived = (await client.get("/api/vendors", params={"include_archived": True})).json()
@@ -97,31 +97,31 @@ async def test_archiving_takes_a_vendor_off_the_list(client: AsyncClient) -> Non
 async def test_an_archived_vendor_can_still_be_opened(client: AsyncClient) -> None:
     await _setup(client)
     vendor = await _vendor(client, "Corner Depot Cement")
-    await client.delete(f"/api/vendors/{vendor['id']}")
+    await client.post(f"/api/vendors/{vendor['id']}/archive")
 
     resp = await client.get(f"/api/vendors/{vendor['id']}")
     assert resp.status_code == 200
-    assert resp.json()["deleted_at"] is not None
+    assert resp.json()["archived_at"] is not None
 
 
 async def test_taking_a_vendor_out_of_the_archive(client: AsyncClient) -> None:
     await _setup(client)
     vendor = await _vendor(client, "Idris Bricklaying")
-    await client.delete(f"/api/vendors/{vendor['id']}")
+    await client.post(f"/api/vendors/{vendor['id']}/archive")
 
     restored = await client.post(f"/api/vendors/{vendor['id']}/restore")
     assert restored.status_code == 200
-    assert restored.json()["deleted_at"] is None
+    assert restored.json()["archived_at"] is None
     assert (await client.get("/api/vendors")).json()["total"] == 1
 
 
-async def test_spend_filed_against_an_archived_vendor_still_counts(client: AsyncClient) -> None:
+async def test_spend_recorded_against_an_archived_vendor_still_counts(client: AsyncClient) -> None:
     projects = await _setup(client)
     vendor = await _vendor(client, "Bright Star Aluminium")
     await _spend(client, projects["NGN"], vendor["id"], 750_000_00)
-    await client.delete(f"/api/vendors/{vendor['id']}")
+    await client.post(f"/api/vendors/{vendor['id']}/archive")
 
-    spend = (await client.get(f"/api/vendors/{vendor['id']}/spend")).json()
+    spend = (await client.get(f"/api/vendors/{vendor['id']}/expense-summary")).json()
     assert spend["projects"][0]["spent_amount"] == 750_000_00
 
 
@@ -133,7 +133,7 @@ async def test_spend_is_listed_per_project_never_added_across_currencies(
     await _spend(client, projects["NGN"], vendor["id"], 750_000_00)
     await _spend(client, projects["USD"], vendor["id"], 400_00)
 
-    spend = (await client.get(f"/api/vendors/{vendor['id']}/spend")).json()
+    spend = (await client.get(f"/api/vendors/{vendor['id']}/expense-summary")).json()
     assert len(spend["projects"]) == 2
     by_code = {row["currency_code"]: row for row in spend["projects"]}
     assert by_code["NGN"]["spent_amount"] == 750_000_00
@@ -148,7 +148,7 @@ async def test_several_purchases_from_one_vendor_are_summed_within_a_project(
     await _spend(client, projects["NGN"], vendor["id"], 150_000_00)
     await _spend(client, projects["NGN"], vendor["id"], 50_000_00)
 
-    row = (await client.get(f"/api/vendors/{vendor['id']}/spend")).json()["projects"][0]
+    row = (await client.get(f"/api/vendors/{vendor['id']}/expense-summary")).json()["projects"][0]
     assert row["expense_count"] == 2
     assert row["spent_amount"] == 200_000_00
 
@@ -157,7 +157,9 @@ async def test_a_vendor_with_no_spend_reports_no_projects(client: AsyncClient) -
     await _setup(client)
     vendor = await _vendor(client, "Segun Blocks Owode")
 
-    assert (await client.get(f"/api/vendors/{vendor['id']}/spend")).json()["projects"] == []
+    assert (await client.get(f"/api/vendors/{vendor['id']}/expense-summary")).json()[
+        "projects"
+    ] == []
 
 
 async def test_the_expense_count_ignores_removed_expenses(client: AsyncClient) -> None:
@@ -165,7 +167,7 @@ async def test_the_expense_count_ignores_removed_expenses(client: AsyncClient) -
     vendor = await _vendor(client, "Segun Blocks Owode")
     expense = await _spend(client, projects["NGN"], vendor["id"], 150_000_00)
 
-    await client.delete(f"/api/expenses/{expense['id']}")
+    await client.post(f"/api/expenses/{expense['id']}/archive")
 
     assert (await client.get(f"/api/vendors/{vendor['id']}")).json()["expense_count"] == 0
 
@@ -205,7 +207,7 @@ async def test_removing_a_vendor_leaves_the_expense_on_the_record(client: AsyncC
     vendor = await _vendor(client, "Segun Blocks Owode")
     expense = await _spend(client, projects["NGN"], vendor["id"], 150_000_00)
 
-    await client.delete(f"/api/vendors/{vendor['id']}")
+    await client.post(f"/api/vendors/{vendor['id']}/archive")
 
     still_there = (await client.get(f"/api/expenses/{expense['id']}")).json()
     assert still_there["amount"] == 150_000_00

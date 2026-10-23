@@ -7,7 +7,7 @@ from tortoise import BaseDBAsyncClient
 from setout.utils.ids import short_id
 from setout.utils.placeholders import bound
 
-# The usual categories of a house build, roughly in the order they happen.
+# Common house build categories, in approximate construction order.
 CATEGORY_PRESETS: list[str] = [
     "Administrative expenses",
     "Land and site preparation",
@@ -26,7 +26,7 @@ CATEGORY_PRESETS: list[str] = [
     "Fittings and fixtures",
     "External works and drainage",
     "Landscaping",
-    "Finalization and inspections",
+    "Finalisation and inspections",
 ]
 
 INSERT = "INSERT INTO category_preset (id, name, sort_order) VALUES (?, ?, ?)"

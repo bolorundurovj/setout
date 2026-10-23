@@ -16,7 +16,7 @@ class LandValuationKind(StrEnum):
 
 
 class LandValuation(Model):
-    """What the plot was worth, and when. The purchase is the first of them."""
+    """The value of a land record at a date. The purchase price is the first valuation."""
 
     id = fields.CharField(max_length=12, primary_key=True, default=short_id)
     land: fields.ForeignKeyRelation[Land] = fields.ForeignKeyField(
@@ -29,7 +29,7 @@ class LandValuation(Model):
         LandValuationKind,
         max_length=16,
         default=LandValuationKind.VALUATION,
-        description="Whether this is what it was bought for, or what it is worth now",
+        description="Purchase price or current value",
     )
     # Minor units of the land's currency. Never a float.
     amount = fields.BigIntField()
@@ -42,12 +42,12 @@ class LandValuation(Model):
     )
     currency_id: str
     valued_on = fields.DateField()
-    note = fields.CharField(
-        max_length=255, null=True, default=None, description="Who valued it, or why"
+    notes = fields.CharField(
+        max_length=255, null=True, default=None, description="Who made the valuation, or why"
     )
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    deleted_at = fields.DatetimeField(null=True, default=None)
+    archived_at = fields.DatetimeField(null=True, default=None)
 
     class Meta:
         table = "land_valuation"

@@ -38,9 +38,9 @@ class CategoryRead(BaseModel):
     name: str
     parent_id: str | None
     sort_order: int
-    # A category with children groups other categories and holds no spend itself.
+    # A category with subcategories holds no expenses of its own.
     is_group: bool
-    # All computed from the rows below the category, never stored.
+    # Computed from budget items and expenses; not stored.
     budgeted_amount: int
     own_budgeted_amount: int
     spent_amount: int
@@ -49,7 +49,7 @@ class CategoryRead(BaseModel):
     own_expense_count: int
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
+    archived_at: datetime | None
 
 
 class BudgetItemCreate(BaseModel):
@@ -75,7 +75,7 @@ class BudgetItemRead(BaseModel):
     set_at: datetime
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
+    archived_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True)
 

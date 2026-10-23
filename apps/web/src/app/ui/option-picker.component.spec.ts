@@ -1,8 +1,7 @@
 import { TestBed } from '@angular/core/testing';
-import type { Chip } from './chip-group.component';
-import { OptionPickerComponent } from './option-picker.component';
+import { OptionPickerComponent, type Option } from './option-picker.component';
 
-const TRADES: Chip[] = [
+const VENDORS: Option[] = [
   { value: '', label: 'No vendor' },
   { value: 'v1', label: 'Corner Depot', detail: 'cement' },
   { value: 'v2', label: 'Riverside Sawmill', detail: 'timber' },
@@ -10,11 +9,11 @@ const TRADES: Chip[] = [
 ];
 
 describe('OptionPickerComponent', () => {
-  async function render(chips: Chip[] = TRADES, value = '') {
+  async function render(options: Option[] = VENDORS, value = '') {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({ imports: [OptionPickerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(OptionPickerComponent);
-    fixture.componentRef.setInput('chips', chips);
+    fixture.componentRef.setInput('options', options);
     fixture.componentRef.setInput('value', value);
     fixture.componentRef.setInput('label', 'Vendor');
     fixture.detectChanges();
@@ -29,19 +28,19 @@ describe('OptionPickerComponent', () => {
       element,
       trigger,
       picked,
-      search: () => element.querySelector('.search') as HTMLInputElement | null,
+      filter: () => element.querySelector('.filter') as HTMLInputElement | null,
       options: () =>
         Array.from(element.querySelectorAll('.option-label')).map((o) => o.textContent?.trim()),
       activeOption: () =>
         element.querySelector('.option.active .option-label')?.textContent?.trim(),
       type(text: string) {
-        const box = view.search() as HTMLInputElement;
+        const box = view.filter() as HTMLInputElement;
         box.value = text;
         box.dispatchEvent(new Event('input'));
         fixture.detectChanges();
       },
       key(key: string) {
-        (view.search() as HTMLInputElement).dispatchEvent(
+        (view.filter() as HTMLInputElement).dispatchEvent(
           new KeyboardEvent('keydown', { key, bubbles: true }),
         );
         fixture.detectChanges();
@@ -50,13 +49,13 @@ describe('OptionPickerComponent', () => {
     return view;
   }
 
-  it('shows the chosen option on the trigger', async () => {
-    const view = await render(TRADES, 'v2');
+  it('shows the selected option on the trigger', async () => {
+    const view = await render(VENDORS, 'v2');
     expect(view.trigger.textContent).toContain('Riverside Sawmill');
     expect(view.trigger.textContent).toContain('timber');
   });
 
-  it('keeps the list shut until the trigger is pressed', async () => {
+  it('keeps the list closed until the trigger is clicked', async () => {
     const view = await render();
     expect(view.options().length).toBe(0);
     expect(view.trigger.getAttribute('aria-expanded')).toBe('false');
@@ -73,14 +72,14 @@ describe('OptionPickerComponent', () => {
     expect(view.trigger.getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('puts the cursor in the search box as it opens', async () => {
+  it('focuses the filter box on open', async () => {
     const view = await render();
     view.trigger.click();
     view.fixture.detectChanges();
-    expect(document.activeElement).toBe(view.search());
+    expect(document.activeElement).toBe(view.filter());
   });
 
-  it('narrows the list by label', async () => {
+  it('filters the list by label', async () => {
     const view = await render();
     view.trigger.click();
     view.fixture.detectChanges();
@@ -88,7 +87,7 @@ describe('OptionPickerComponent', () => {
     expect(view.options()).toEqual(['Riverside Sawmill']);
   });
 
-  it('narrows the list by detail as well as label', async () => {
+  it('filters the list by detail as well as label', async () => {
     const view = await render();
     view.trigger.click();
     view.fixture.detectChanges();
@@ -96,16 +95,16 @@ describe('OptionPickerComponent', () => {
     expect(view.options()).toEqual(['Ajayi Electrical']);
   });
 
-  it('says so when nothing matches', async () => {
+  it('shows a message when nothing matches', async () => {
     const view = await render();
     view.trigger.click();
     view.fixture.detectChanges();
     view.type('plumbing');
     expect(view.options().length).toBe(0);
-    expect(view.element.querySelector('.empty')?.textContent).toContain('Nothing matches');
+    expect(view.element.querySelector('.empty')?.textContent).toContain('No matches');
   });
 
-  it('walks the list with the arrow keys and wraps', async () => {
+  it('moves through the list with the arrow keys and wraps', async () => {
     const view = await render();
     view.trigger.click();
     view.fixture.detectChanges();
@@ -119,7 +118,7 @@ describe('OptionPickerComponent', () => {
     expect(view.activeOption()).toBe('Ajayi Electrical');
   });
 
-  it('jumps to the ends with Home and End', async () => {
+  it('moves to the first and last options with Home and End', async () => {
     const view = await render();
     view.trigger.click();
     view.fixture.detectChanges();
@@ -129,14 +128,14 @@ describe('OptionPickerComponent', () => {
     expect(view.activeOption()).toBe('No vendor');
   });
 
-  it('opens on the option already chosen', async () => {
-    const view = await render(TRADES, 'v3');
+  it('opens with the selected option active', async () => {
+    const view = await render(VENDORS, 'v3');
     view.trigger.click();
     view.fixture.detectChanges();
     expect(view.activeOption()).toBe('Ajayi Electrical');
   });
 
-  it('emits the id of the option that was pressed', async () => {
+  it('emits the value of the clicked option', async () => {
     const view = await render();
     view.trigger.click();
     view.fixture.detectChanges();
@@ -148,8 +147,8 @@ describe('OptionPickerComponent', () => {
     expect(view.options().length).toBe(0);
   });
 
-  it('emits the empty sentinel like any other option', async () => {
-    const view = await render(TRADES, 'v1');
+  it('emits an empty value like any other option', async () => {
+    const view = await render(VENDORS, 'v1');
     view.trigger.click();
     view.fixture.detectChanges();
     const options = view.element.querySelectorAll('.option');
@@ -159,7 +158,7 @@ describe('OptionPickerComponent', () => {
     expect(view.picked).toEqual(['']);
   });
 
-  it('chooses the active option on Enter', async () => {
+  it('selects the active option on Enter', async () => {
     const view = await render();
     view.trigger.click();
     view.fixture.detectChanges();
@@ -169,7 +168,7 @@ describe('OptionPickerComponent', () => {
     expect(view.picked).toEqual(['v2']);
   });
 
-  it('shuts on Escape without choosing', async () => {
+  it('closes on Escape without selecting', async () => {
     const view = await render();
     view.trigger.click();
     view.fixture.detectChanges();
@@ -179,7 +178,7 @@ describe('OptionPickerComponent', () => {
     expect(view.picked).toEqual([]);
   });
 
-  it('shuts when the click lands outside', async () => {
+  it('closes on an outside click', async () => {
     const view = await render();
     view.trigger.click();
     view.fixture.detectChanges();
@@ -190,7 +189,7 @@ describe('OptionPickerComponent', () => {
     expect(view.options().length).toBe(0);
   });
 
-  it('forgets what was typed the next time it opens', async () => {
+  it('clears the filter on reopen', async () => {
     const view = await render();
     view.trigger.click();
     view.fixture.detectChanges();
@@ -200,7 +199,7 @@ describe('OptionPickerComponent', () => {
     view.trigger.click();
     view.fixture.detectChanges();
 
-    expect(view.search()?.value).toBe('');
+    expect(view.filter()?.value).toBe('');
     expect(view.options().length).toBe(4);
   });
 });

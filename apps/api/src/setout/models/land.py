@@ -18,13 +18,15 @@ class LandSizeUnit(StrEnum):
 
 
 class Land(Model):
-    """A plot of ground. Shared across every project built on it."""
+    """A land record. Shared across every project built on it."""
 
     id = fields.CharField(max_length=12, primary_key=True, default=short_id)
-    name = fields.CharField(max_length=255, description="What you call it: Ikeja plot, the farm")
+    name = fields.CharField(
+        max_length=255, description="Your name for the land record, such as Ikeja plot"
+    )
     address = fields.TextField(null=True, default=None, description="Street address or description")
     geocoded_address = fields.TextField(
-        null=True, default=None, description="What the map calls the spot the pin is on"
+        null=True, default=None, description="The map address of the pin, from reverse geocoding"
     )
     city = fields.CharField(max_length=255, null=True, default=None)
     state = fields.CharField(max_length=255, null=True, default=None)
@@ -38,7 +40,7 @@ class Land(Model):
     )
     country_id: str | None
     purchased_on = fields.DateField(null=True, default=None)
-    # Set by the first valuation, so a history is never two currencies deep.
+    # Set by the first valuation, so every valuation uses one currency.
     currency: fields.ForeignKeyNullableRelation[Currency] = fields.ForeignKeyField(
         "models.Currency",
         source_field="currency_id",
@@ -51,14 +53,14 @@ class Land(Model):
     latitude = fields.DecimalField(max_digits=10, decimal_places=7, null=True, default=None)
     longitude = fields.DecimalField(max_digits=10, decimal_places=7, null=True, default=None)
     boundary = fields.TextField(
-        null=True, default=None, description="GeoJSON Polygon of the plot's edge"
+        null=True, default=None, description="GeoJSON Polygon of the boundary"
     )
     size_value = fields.DecimalField(max_digits=14, decimal_places=2, null=True, default=None)
     size_unit = fields.CharEnumField(LandSizeUnit, max_length=16, null=True, default=None)
     notes = fields.TextField(null=True, default=None)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    deleted_at = fields.DatetimeField(null=True, default=None)
+    archived_at = fields.DatetimeField(null=True, default=None)
 
     class Meta:
         table = "land"

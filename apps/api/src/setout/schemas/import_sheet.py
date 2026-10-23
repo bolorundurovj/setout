@@ -12,7 +12,7 @@ class DecisionKind(StrEnum):
     UNPAID = "unpaid"
     NO_DESCRIPTION = "no_description"
     ABOVE_ANY_CATEGORY = "above_any_category"
-    OWED_NOT_IMPORTABLE = "owed_not_importable"
+    OUTSTANDING_NOT_IMPORTABLE = "outstanding_not_importable"
     DUPLICATES = "duplicates"
 
 
@@ -51,16 +51,16 @@ class SampleRow(BaseModel):
 
 
 class Answers(BaseModel):
-    """What to do about everything the report raised."""
+    """Choices for the issues raised in the import preview."""
 
     model_config = ConfigDict(extra="forbid")
 
     create_missing_categories: bool = True
     skip_duplicates: bool = True
     take_unpaid: bool = True
-    # Where a row names several cost codes: "first" files it under the first,
-    # "uncategorized" leaves it against no category at all.
-    several_codes: str = Field("first", pattern="^(first|uncategorized)$")
+    # For rows with several cost codes: "first" uses the first code, "uncategorised"
+    # leaves the row without a category.
+    several_codes: str = Field("first", pattern="^(first|uncategorised)$")
 
 
 class ImportReport(BaseModel):
@@ -73,11 +73,11 @@ class ImportReport(BaseModel):
     categories: list[CategoryMatch]
     budgeted_amount: int
     budgeted_lines: int
-    spend_rows: int
-    spend_amount: int
+    expense_rows: int
+    spent_amount: int
     vendors_new: int
     vendors_known: int
-    owed_rows: int
+    outstanding_rows: int
     decisions: list[Decision]
     sample: list[SampleRow] = Field(
         ..., description="The first expense rows as they would be imported"
@@ -90,11 +90,11 @@ class ImportReport(BaseModel):
 class ImportResult(BaseModel):
     project_id: str
     project_name: str
-    categories: int
-    budget_items: int
+    category_count: int
+    budget_item_count: int
     budgeted_amount: int
-    expenses: int
-    spend_amount: int
-    vendors: int
-    people: int
+    expense_count: int
+    spent_amount: int
+    vendor_count: int
+    person_count: int
     skipped_duplicates: int

@@ -4,9 +4,9 @@ import {
   Backup,
   Install,
   RestoreResult,
-  exportRecord,
+  exportBackup,
   getInstall,
-  restoreRecord,
+  restoreBackup,
 } from '@setout/api-client';
 import { detailOf } from '../api-error';
 
@@ -16,37 +16,37 @@ import { detailOf } from '../api-error';
 export class InstallService {
   private readonly api = inject(Api);
 
-  private readonly state = signal<Install | null>(null);
+  private readonly installState = signal<Install | null>(null);
 
-  readonly install = this.state.asReadonly();
-  readonly reading = signal(false);
-  readonly writing = signal(false);
+  readonly install = this.installState.asReadonly();
+  readonly loading = signal(false);
+  readonly exporting = signal(false);
   readonly restoring = signal(false);
   readonly error = signal<string | null>(null);
 
   async load(): Promise<void> {
-    this.reading.set(true);
+    this.loading.set(true);
     this.error.set(null);
     try {
-      this.state.set(await this.api.invoke(getInstall));
+      this.installState.set(await this.api.invoke(getInstall));
     } catch {
-      this.state.set(null);
-      this.error.set('The server did not answer.');
+      this.installState.set(null);
+      this.error.set('Could not load the server details.');
     } finally {
-      this.reading.set(false);
+      this.loading.set(false);
     }
   }
 
   async export(): Promise<Backup | null> {
-    this.writing.set(true);
+    this.exporting.set(true);
     this.error.set(null);
     try {
-      return await this.api.invoke(exportRecord);
+      return await this.api.invoke(exportBackup);
     } catch {
-      this.error.set('Could not write a copy.');
+      this.error.set('Could not create the backup.');
       return null;
     } finally {
-      this.writing.set(false);
+      this.exporting.set(false);
     }
   }
 
@@ -54,11 +54,11 @@ export class InstallService {
     this.restoring.set(true);
     this.error.set(null);
     try {
-      return await this.api.invoke(restoreRecord, {
+      return await this.api.invoke(restoreBackup, {
         body: { backup, accept_version_change: acceptVersionChange },
       });
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not read that file back.');
+      this.error.set(detailOf(e) ?? 'Could not restore the backup.');
       return null;
     } finally {
       this.restoring.set(false);

@@ -30,5 +30,5 @@ async def list_countries(user: CurrentUser) -> list[CountryRead]:
     responses={status.HTTP_404_NOT_FOUND: {"description": "Not found"}},
 )
 async def list_states(country_code: str, user: CurrentUser) -> list[StateRead]:
-    """The states, provinces or regions of one country. What a plot's state must be one of."""
+    """The states, provinces or regions of a country. A land record's state must be one of these."""
     return await controller.list_states(country_code)

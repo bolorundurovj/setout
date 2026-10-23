@@ -14,22 +14,17 @@ import { ToastService } from '../toast.service';
     <div class="setup-container">
       <div class="setup-box">
         <div class="header">
-          <div class="t-display">Welcome to SetOut</div>
-          <div class="t-body" style="color: var(--ink-2)">Let's set up your private server.</div>
+          <div class="t-display">Welcome to Setout</div>
+          <div class="t-body" style="color: var(--ink-2)">Set up your private server.</div>
         </div>
 
         <div class="form-section">
           <div class="form-group">
-            <div class="t-micro">Account name</div>
-            <input
-              type="text"
-              [(ngModel)]="name"
-              placeholder="Your name, or this device"
-              class="input-field"
-            />
+            <div class="t-micro">Account Name</div>
+            <input type="text" [(ngModel)]="name" placeholder="Your name" class="input-field" />
           </div>
           <div class="form-group">
-            <div class="t-micro">Email (optional)</div>
+            <div class="t-micro">Email (Optional)</div>
             <input
               type="email"
               [(ngModel)]="email"
@@ -39,19 +34,19 @@ import { ToastService } from '../toast.service';
             />
           </div>
           <div class="form-group">
-            <div class="t-micro">Choose a passphrase</div>
+            <div class="t-micro">Passphrase</div>
             <input
               type="password"
-              [(ngModel)]="password"
+              [(ngModel)]="passphrase"
               placeholder="••••••••••"
               class="input-field"
             />
           </div>
           <div class="form-group">
-            <div class="t-micro">Type it again</div>
+            <div class="t-micro">Confirm Passphrase</div>
             <input
               type="password"
-              [(ngModel)]="confirmPassword"
+              [(ngModel)]="confirmPassphrase"
               placeholder="••••••••••"
               class="input-field"
               (keyup.enter)="onSubmit()"
@@ -59,18 +54,18 @@ import { ToastService } from '../toast.service';
           </div>
 
           <div class="info-box t-small">
-            Setup puts a cookie on this device so it remembers you. We don't track you. You'll need
+            Setup stores a session cookie on this device. The cookie is not used for tracking. Use
             this passphrase to sign in on other devices.
           </div>
         </div>
         <app-button
-          size="major"
+          size="large"
           class="block"
           [disabled]="!isValid()"
           [loading]="authService.loading()"
           (pressed)="onSubmit()"
         >
-          {{ authService.loading() ? 'Creating...' : 'Continue' }}
+          {{ authService.loading() ? 'Setting up…' : 'Continue' }}
         </app-button>
 
         @if (authService.error()) {
@@ -78,14 +73,14 @@ import { ToastService } from '../toast.service';
             {{ authService.error() }}
           </div>
         }
-        @if (passwordMismatch()) {
-          <div class="error-msg t-small">Passphrases do not match</div>
+        @if (passphraseMismatch()) {
+          <div class="error-msg t-small">Passphrases do not match.</div>
         }
 
         <div class="footer">
           <div class="t-small">
-            Already set up or clicked by mistake?
-            <a routerLink="/login" class="link">Go to login</a>
+            Server already set up?
+            <a routerLink="/login" class="link">Sign in</a>
           </div>
         </div>
       </div>
@@ -103,8 +98,8 @@ import { ToastService } from '../toast.service';
         justify-content: center;
         padding: 48px 24px;
       }
-      /* auto margins centre without clipping the top when the form is taller
-         than the viewport, which align-items: center would do. */
+      /* Auto margins centre the box without clipping its top when it is taller than the
+         viewport, which align-items: center does not. */
       .setup-box {
         width: 100%;
         max-width: 560px;
@@ -157,21 +152,28 @@ import { ToastService } from '../toast.service';
 export class SetupComponent {
   name = signal('');
   email = signal('');
-  password = signal('');
-  confirmPassword = signal('');
+  passphrase = signal('');
+  confirmPassphrase = signal('');
 
   authService = inject(AuthService);
   router = inject(Router);
 
   toast = inject(ToastService);
 
-  passwordMismatch() {
-    return this.password() && this.confirmPassword() && this.password() !== this.confirmPassword();
+  passphraseMismatch() {
+    return (
+      this.passphrase() &&
+      this.confirmPassphrase() &&
+      this.passphrase() !== this.confirmPassphrase()
+    );
   }
 
   isValid() {
     return (
-      this.name() && this.password() && this.password().length >= 8 && !this.passwordMismatch()
+      this.name() &&
+      this.passphrase() &&
+      this.passphrase().length >= 8 &&
+      !this.passphraseMismatch()
     );
   }
 
@@ -181,10 +183,10 @@ export class SetupComponent {
     const success = await this.authService.setup(
       this.name(),
       this.email().trim() || undefined,
-      this.password(),
+      this.passphrase(),
     );
     if (success) {
-      this.toast.show('Server ready. Welcome to Setout.');
+      this.toast.show('Server set up.');
       await this.router.navigate(['/']);
     }
   }

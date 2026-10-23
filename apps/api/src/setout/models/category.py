@@ -28,7 +28,7 @@ class Category(Model):
     sort_order = fields.IntField(default=0)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    deleted_at = fields.DatetimeField(null=True, default=None)
+    archived_at = fields.DatetimeField(null=True, default=None)
 
     class Meta:
         table = "category"

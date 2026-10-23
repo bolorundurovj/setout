@@ -1,4 +1,3 @@
-@use '../shared/breakpoints' as bp;
 @use '../shared/rows' as rows;
 
 .prose {
@@ -56,7 +55,7 @@
   font: inherit;
   text-align: left;
   display: grid;
-  grid-template-columns: 1fr 140px 140px 140px;
+  grid-template-columns: 1fr 140px;
   align-items: center;
   gap: 10px;
   padding: 12px 18px;
@@ -159,20 +158,6 @@ button.row {
 
 .error {
   color: var(--over);
-}
-
-@media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
-  .row,
-  .row.head {
-    grid-template-columns: 1fr 140px;
-  }
-
-  .row > *:nth-child(2),
-  .row > *:nth-child(4),
-  .row.head > *:nth-child(2),
-  .row.head > *:nth-child(4) {
-    display: none;
-  }
 }
 
 @include rows.stacked-rows;

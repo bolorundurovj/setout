@@ -1,12 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
-import type { PersonRead, PersonSpend } from '@setout/api-client';
+import type { PersonExpenseSummary, PersonRead } from '@setout/api-client';
 import { ToastService } from '../toast.service';
 import { PersonDetailComponent } from './person-detail.component';
 import { PersonService } from './person.service';
 
-function person(over: Partial<PersonRead> = {}): PersonRead {
+function person(overrides: Partial<PersonRead> = {}): PersonRead {
   return {
     id: 'pe1',
     name: 'A Person',
@@ -17,12 +17,12 @@ function person(over: Partial<PersonRead> = {}): PersonRead {
     totals: [],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
-const spend: PersonSpend = {
+const summary: PersonExpenseSummary = {
   person_id: 'pe1',
   name: 'A Person',
   projects: [
@@ -54,7 +54,7 @@ describe('PersonDetailComponent', () => {
     const people = {
       error: () => null,
       get: async () => current,
-      spend: async () => (current ? spend : null),
+      expenseSummary: async () => (current ? summary : null),
       edit: async (_id: string, body: unknown) => void edits.push(body),
       archive: async (id: string) => void archived.push(id),
       restore: async (id: string) => void restored.push(id),
@@ -86,31 +86,31 @@ describe('PersonDetailComponent', () => {
     return component;
   }
 
-  it('reads the person and what they spent', async () => {
+  it('loads the person and their expense summary', async () => {
     const component = await render();
     expect(component.person()?.name).toBe('A Person');
-    expect(component.spend()?.projects.length).toBe(1);
+    expect(component.expenseSummary()?.projects.length).toBe(1);
     expect(component.loading()).toBe(false);
   });
 
-  it('goes to the form screen to edit', async () => {
+  it('opens the edit form', async () => {
     (await render()).edit();
     expect(navigations[0][0]).toEqual(['/people', 'pe1', 'edit']);
   });
 
-  it('counts purchases in words', async () => {
+  it('describes the expense count in words', async () => {
     const component = await render();
-    expect(component.countLabel(person({ expense_count: 0 }))).toBe('nothing recorded yet');
-    expect(component.countLabel(person({ expense_count: 1 }))).toBe('1 purchase');
-    expect(component.countLabel(person({ expense_count: 2 }))).toBe('2 purchases');
+    expect(component.countLabel(person({ expense_count: 0 }))).toBe('no expenses yet');
+    expect(component.countLabel(person({ expense_count: 1 }))).toBe('1 expense');
+    expect(component.countLabel(person({ expense_count: 2 }))).toBe('2 expenses');
   });
 
-  it('totals what they spent per currency', async () => {
+  it('totals the spent amount per currency', async () => {
     const component = await render();
-    const totals = component.spentTotals(spend);
+    const totals = component.spentTotals(summary);
     expect(totals.length).toBe(1);
     expect(totals[0].spent_amount).toBe(37_500_00);
-    expect(component.total(totals[0])).toContain('37,500');
+    expect(component.formatTotal(totals[0])).toContain('37,500');
   });
 
   it('archives and restores', async () => {
@@ -122,23 +122,23 @@ describe('PersonDetailComponent', () => {
     expect(restored).toEqual(['pe1']);
   });
 
-  it('formats spend in the project currency', async () => {
+  it('formats a project row in the project currency', async () => {
     const component = await render();
-    expect(component.money(spend.projects[0])).toContain('37,500');
+    expect(component.formatSpent(summary.projects[0])).toContain('37,500');
   });
 
-  it('copes with somebody who is not there', async () => {
+  it('shows no person when the person is not found', async () => {
     const component = await render(null);
     expect(component.person()).toBeNull();
   });
 
-  it('names the person in the page title', async () => {
+  it('shows the person name in the page title', async () => {
     await render(person({ name: 'Aunty Ngozi' }));
     TestBed.tick();
     expect(TestBed.inject(Title).getTitle()).toBe('Aunty Ngozi · Setout');
   });
 
-  it('leaves the title alone for someone who is not there', async () => {
+  it('keeps the page title when the person is not found', async () => {
     TestBed.inject(Title).setTitle('Person · Setout');
     await render(null);
     TestBed.tick();

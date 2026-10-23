@@ -17,10 +17,10 @@ const project: ProjectRead = {
   spent_amount: 0,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
-  deleted_at: null,
+  archived_at: null,
 };
 
-function owed(over: Partial<DeliveryRead> = {}): DeliveryRead {
+function delivery(overrides: Partial<DeliveryRead> = {}): DeliveryRead {
   return {
     id: 'd1',
     project_id: 'p1',
@@ -28,7 +28,7 @@ function owed(over: Partial<DeliveryRead> = {}): DeliveryRead {
     vendor_id: 'v1',
     vendor_name: 'Corner Depot Cement',
     description: '17 bags of cement',
-    promised: 'this week',
+    expected: 'this week',
     amount: 7_650_000,
     currency_code: 'NGN',
     currency_exponent: 2,
@@ -36,35 +36,37 @@ function owed(over: Partial<DeliveryRead> = {}): DeliveryRead {
     received_at: null,
     created_at: '2026-08-14T00:00:00Z',
     updated_at: '2026-08-14T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
-function bucket(rows: DeliveryRead[], over: Record<string, unknown> = {}) {
+function deliveryList(rows: DeliveryRead[], overrides: Record<string, unknown> = {}) {
   return {
     rows,
     total: rows.length,
-    owed: rows.filter((row) => !row.received_at).reduce((sum, row) => sum + row.amount, 0),
-    ...over,
+    outstandingAmount: rows
+      .filter((row) => !row.received_at)
+      .reduce((sum, row) => sum + row.amount, 0),
+    ...overrides,
   };
 }
 
 describe('DeliveriesComponent', () => {
-  let received: string[];
-  let putBack: string[];
-  let removed: string[];
+  let markedReceived: string[];
+  let markedOutstanding: string[];
+  let archived: string[];
   let restored: string[];
   let changed: Record<string, unknown>[];
   let pagesAsked: number[];
 
   function render(
-    waiting: ReturnType<typeof bucket> = bucket([]),
-    arrived: ReturnType<typeof bucket> = bucket([]),
+    outstanding: ReturnType<typeof deliveryList> = deliveryList([]),
+    received: ReturnType<typeof deliveryList> = deliveryList([]),
   ) {
-    received = [];
-    putBack = [];
-    removed = [];
+    markedReceived = [];
+    markedOutstanding = [];
+    archived = [];
     restored = [];
     changed = [];
     pagesAsked = [];
@@ -76,28 +78,28 @@ describe('DeliveriesComponent', () => {
           provide: DeliveryService,
           useValue: {
             error: () => null,
-            waiting: () => waiting,
-            arrived: () => arrived,
-            loadWaiting: async (_id: string, page = 1) => {
+            outstanding: () => outstanding,
+            received: () => received,
+            loadOutstanding: async (_id: string, page = 1) => {
               pagesAsked.push(page);
             },
-            loadArrived: async () => undefined,
-            receive: async (id: string) => {
-              received.push(id);
+            loadReceived: async () => undefined,
+            markReceived: async (id: string) => {
+              markedReceived.push(id);
             },
-            unreceive: async (id: string) => {
-              putBack.push(id);
+            markOutstanding: async (id: string) => {
+              markedOutstanding.push(id);
             },
-            remove: async (id: string) => {
-              removed.push(id);
+            archive: async (id: string) => {
+              archived.push(id);
             },
             restore: async (id: string) => {
               restored.push(id);
-              return owed({ id });
+              return delivery({ id });
             },
             update: async (id: string, body: Record<string, unknown>) => {
               changed.push({ id, ...body });
-              return owed({ id, description: String(body['description']) });
+              return delivery({ id, description: String(body['description']) });
             },
           },
         },
@@ -110,78 +112,83 @@ describe('DeliveriesComponent', () => {
     return fixture.componentInstance;
   }
 
-  it('counts and adds up everything outstanding, not the page in hand', () => {
-    const component = render(bucket([owed({ id: 'a' })], { total: 14, owed: 20_000_000 }));
-    expect(component.owedNote()).toContain('14 things outstanding');
-    expect(component.owedNote()).toContain('200,000');
+  it('summarises the outstanding count and total from the server', () => {
+    const component = render(
+      deliveryList([delivery({ id: 'a' })], { total: 14, outstandingAmount: 20_000_000 }),
+    );
+    expect(component.outstandingSummary()).toContain('14 items outstanding');
+    expect(component.outstandingSummary()).toContain('200,000');
   });
 
-  it('says so plainly when everything has arrived', () => {
-    const component = render(bucket([]), bucket([owed({ received_at: '2026-08-16T00:00:00Z' })]));
-    expect(component.owedNote()).toBe('Everything paid for has arrived.');
+  it('says all items are received when none are outstanding', () => {
+    const component = render(
+      deliveryList([]),
+      deliveryList([delivery({ received_at: '2026-08-16T00:00:00Z' })]),
+    );
+    expect(component.outstandingSummary()).toBe('All paid items have been received.');
   });
 
-  it('asks the server for the page it was sent to', async () => {
-    const component = render(bucket([owed({ id: 'a' })], { total: 30 }));
-    await component.goToWaiting(3);
-    expect(component.waitingPage()).toBe(3);
+  it('loads the requested page', async () => {
+    const component = render(deliveryList([delivery({ id: 'a' })], { total: 30 }));
+    await component.goToOutstanding(3);
+    expect(component.outstandingPage()).toBe(3);
     expect(pagesAsked).toContain(3);
   });
 
-  it('corrects what is outstanding, and reads an emptied promise as nobody having said', async () => {
-    const component = render(bucket([owed({ id: 'd1' })]));
-    component.startEdit(owed({ id: 'd1', description: '17 bags of cement' }));
-    expect(component.editWhat()).toBe('17 bags of cement');
+  it('updates a delivery and sends a blank expected date as null', async () => {
+    const component = render(deliveryList([delivery({ id: 'd1' })]));
+    component.startEdit(delivery({ id: 'd1', description: '17 bags of cement' }));
+    expect(component.editDescription()).toBe('17 bags of cement');
 
-    component.editWhat.set('18 bags of cement');
-    component.editPromised.set('  ');
-    await component.saveEdit(owed({ id: 'd1' }));
+    component.editDescription.set('18 bags of cement');
+    component.editExpected.set('  ');
+    await component.saveEdit(delivery({ id: 'd1' }));
 
-    expect(changed).toEqual([{ id: 'd1', description: '18 bags of cement', promised: null }]);
+    expect(changed).toEqual([{ id: 'd1', description: '18 bags of cement', expected: null }]);
     expect(component.editing()).toBeNull();
   });
 
-  it('will not save a correction with nothing left in it', () => {
-    const component = render(bucket([owed({ id: 'd1' })]));
-    component.startEdit(owed({ id: 'd1' }));
-    component.editWhat.set('   ');
+  it('disables saving when the description is blank', () => {
+    const component = render(deliveryList([delivery({ id: 'd1' })]));
+    component.startEdit(delivery({ id: 'd1' }));
+    component.editDescription.set('   ');
     expect(component.canSaveEdit()).toBe(false);
   });
 
-  it('takes off a delivery that should never have been recorded', async () => {
-    const component = render(bucket([owed({ id: 'd1' })]));
-    await component.remove(owed({ id: 'd1' }));
-    expect(removed).toEqual(['d1']);
+  it('archives a delivery', async () => {
+    const component = render(deliveryList([delivery({ id: 'd1' })]));
+    await component.archive(delivery({ id: 'd1' }));
+    expect(archived).toEqual(['d1']);
   });
 
-  it('offers to put back what was just taken off, and does', async () => {
-    const component = render(bucket([owed({ id: 'd1' })]));
-    await component.remove(owed({ id: 'd1', description: '17 bags' }));
-    expect(component.justRemoved()?.description).toBe('17 bags');
+  it('restores the last archived delivery', async () => {
+    const component = render(deliveryList([delivery({ id: 'd1' })]));
+    await component.archive(delivery({ id: 'd1', description: '17 bags' }));
+    expect(component.lastArchived()?.description).toBe('17 bags');
 
-    await component.putBackRemoved();
+    await component.restoreLastArchived();
 
     expect(restored).toEqual(['d1']);
-    expect(component.justRemoved()).toBeNull();
+    expect(component.lastArchived()).toBeNull();
   });
 
-  it('reads the promise alongside the day it was paid', () => {
+  it('shows the expected date after the paid date', () => {
     const component = render();
-    expect(component.waiting(owed())).toContain('promised this week');
-    expect(component.waiting(owed({ promised: null }))).not.toContain('promised');
+    expect(component.outstandingDetail(delivery())).toContain('expected this week');
+    expect(component.outstandingDetail(delivery({ expected: null }))).not.toContain('expected');
   });
 
-  it('says when nobody recorded the vendor', () => {
+  it('shows a placeholder when the vendor is not recorded', () => {
     const component = render();
-    expect(component.vendorName(owed({ vendor_name: null }))).toBe('vendor not recorded');
+    expect(component.vendorName(delivery({ vendor_name: null }))).toBe('vendor not recorded');
   });
 
-  it('marks a delivery, and puts one back that was marked by mistake', async () => {
-    const component = render(bucket([owed({ id: 'd1' })]));
-    await component.markDelivered(owed({ id: 'd1' }));
-    expect(received).toEqual(['d1']);
+  it('marks a delivery received and then outstanding', async () => {
+    const component = render(deliveryList([delivery({ id: 'd1' })]));
+    await component.markReceived(delivery({ id: 'd1' }));
+    expect(markedReceived).toEqual(['d1']);
 
-    await component.putBack(owed({ id: 'd1' }));
-    expect(putBack).toEqual(['d1']);
+    await component.markOutstanding(delivery({ id: 'd1' }));
+    expect(markedOutstanding).toEqual(['d1']);
   });
 });

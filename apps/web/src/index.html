@@ -15,8 +15,7 @@
         try {
           theme = localStorage.getItem('setout-theme');
         } catch (e) {
-          // Storage can be unavailable in private mode. Fall back to the
-          // system preference.
+          // localStorage is unavailable in private mode; use the system preference.
         }
         if (theme !== 'light' && theme !== 'dark') {
           theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';

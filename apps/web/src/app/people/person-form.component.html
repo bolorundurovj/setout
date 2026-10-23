@@ -1,5 +1,5 @@
 <div class="page">
-  <a class="link t-mono back" routerLink="/people">&#8592; Back</a>
+  <a class="link t-mono back" routerLink="/people">&#8592; People</a>
 
   <div class="head">
     <h1 class="t-display">{{ title() }}</h1>
@@ -13,23 +13,23 @@
         class="input-field"
         type="text"
         autocomplete="off"
-        placeholder="Their name"
+        placeholder="Full name"
         [value]="name()"
-        (input)="name.set(value($event))"
+        (input)="name.set(inputValue($event))"
         (keyup.enter)="save()"
       />
     </label>
 
     <div class="pair">
       <label class="field">
-        <span class="t-micro">Relationship to the Project</span>
+        <span class="t-micro">Role</span>
         <input
           class="input-field"
           type="text"
           autocomplete="off"
           placeholder="family, site supervisor, driver"
           [value]="role()"
-          (input)="role.set(value($event))"
+          (input)="role.set(inputValue($event))"
         />
       </label>
       <label class="field">
@@ -40,7 +40,7 @@
           autocomplete="off"
           placeholder="Phone number"
           [value]="phone()"
-          (input)="phone.set(value($event))"
+          (input)="phone.set(inputValue($event))"
         />
       </label>
     </div>
@@ -51,21 +51,19 @@
         class="input-field"
         type="text"
         autocomplete="off"
-        placeholder="Anything worth remembering"
+        placeholder="Optional notes"
         [value]="notes()"
-        (input)="notes.set(value($event))"
+        (input)="notes.set(inputValue($event))"
       />
     </label>
 
     <div class="form-actions">
-      <app-button [disabled]="!isValid()" [loading]="people.saving()" (pressed)="save()">
+      <app-button [disabled]="!isValid()" [loading]="personService.saving()" (pressed)="save()">
         Save
       </app-button>
       <app-button variant="secondary" (pressed)="cancel()">Cancel</app-button>
     </div>
 
-    <p class="t-small muted">
-      People are shared across every project, so this one will come up on any of them.
-    </p>
+    <p class="t-small muted">People are shared across all projects.</p>
   </div>
 </div>

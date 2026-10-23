@@ -3,8 +3,8 @@ import { detailOf } from '../api-error';
 import {
   Api,
   AttachmentRead,
-  addAttachment,
-  deleteAttachment,
+  archiveAttachment,
+  createAttachment,
   downloadAttachment,
   listAttachments,
   restoreAttachment,
@@ -34,10 +34,10 @@ export class AttachmentService {
         expense_id: expenseId,
         limit: PAGE_SIZE,
       });
-      this.put(expenseId, page.items);
+      this.setForExpense(expenseId, page.items);
     } catch {
-      this.error.set('Could not read what is attached.');
-      this.put(expenseId, []);
+      this.error.set('Could not load the attachments.');
+      this.setForExpense(expenseId, []);
     }
   }
 
@@ -45,12 +45,12 @@ export class AttachmentService {
     this.saving.set(true);
     this.error.set(null);
     try {
-      const created = await this.api.invoke(addAttachment, {
+      const created = await this.api.invoke(createAttachment, {
         project_id: projectId,
         expense_id: expenseId,
         body: { file: file as unknown as string },
       });
-      this.put(expenseId, [created, ...this.forExpense(expenseId)]);
+      this.setForExpense(expenseId, [created, ...this.forExpense(expenseId)]);
       return created;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not attach that file.');
@@ -60,21 +60,25 @@ export class AttachmentService {
     }
   }
 
-  async remove(expenseId: string, attachmentId: string): Promise<void> {
-    await this.api.invoke(deleteAttachment, { attachment_id: attachmentId });
-    this.put(
+  async archive(expenseId: string, attachmentId: string): Promise<void> {
+    await this.api.invoke(archiveAttachment, { attachment_id: attachmentId });
+    this.setForExpense(
       expenseId,
       this.forExpense(expenseId).filter((row) => row.id !== attachmentId),
     );
   }
 
+  async remove(expenseId: string, attachmentId: string): Promise<void> {
+    return this.archive(expenseId, attachmentId);
+  }
+
   async restore(expenseId: string, attachmentId: string): Promise<AttachmentRead | null> {
     try {
-      const back = await this.api.invoke(restoreAttachment, { attachment_id: attachmentId });
-      this.put(expenseId, [back, ...this.forExpense(expenseId)]);
-      return back;
+      const restored = await this.api.invoke(restoreAttachment, { attachment_id: attachmentId });
+      this.setForExpense(expenseId, [restored, ...this.forExpense(expenseId)]);
+      return restored;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not restore the file.');
+      this.error.set(detailOf(e) ?? 'Could not restore the attachment.');
       return null;
     }
   }
@@ -84,17 +88,21 @@ export class AttachmentService {
     return `${this.api.rootUrl}${path}`;
   }
 
-  size(bytes: number): string {
+  formatSize(bytes: number): string {
     if (bytes < 1024) {
       return `${bytes} B`;
     }
     if (bytes < 1024 * 1024) {
-      return `${Math.round(bytes / 1024)} KB`;
+      return `${Math.round(bytes / 1024)} KiB`;
     }
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
   }
 
-  private put(expenseId: string, rows: AttachmentRead[]): void {
+  size(bytes: number): string {
+    return this.formatSize(bytes);
+  }
+
+  private setForExpense(expenseId: string, rows: AttachmentRead[]): void {
     this.state.update((all) => ({ ...all, [expenseId]: rows }));
   }
 }

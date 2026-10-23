@@ -9,14 +9,14 @@ function group(kind: HitGroup['kind'], hits: HitGroup['hits'], total?: number): 
 }
 
 describe('SearchComponent', () => {
-  let asked: string[];
+  let queries: string[];
   let navigations: unknown[][];
-  let found: SearchResults | null;
+  let response: SearchResults | null;
 
   function render(query = 'cement', results: SearchResults | null = null) {
-    asked = [];
+    queries = [];
     navigations = [];
-    found = results;
+    response = results;
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -26,11 +26,11 @@ describe('SearchComponent', () => {
         {
           provide: SearchService,
           useValue: {
-            results: () => found,
-            looking: () => false,
+            results: () => response,
+            loading: () => false,
             error: () => null,
-            look: async (wanted: string) => {
-              asked.push(wanted);
+            search: async (term: string) => {
+              queries.push(term);
             },
           },
         },
@@ -47,20 +47,20 @@ describe('SearchComponent', () => {
     return fixture.componentInstance;
   }
 
-  it('looks for what the address asks for', () => {
+  it('searches for the q parameter', () => {
     render('cement');
-    expect(asked).toEqual(['cement']);
+    expect(queries).toEqual(['cement']);
   });
 
-  it('counts the matches in words', () => {
+  it('formats the match count', () => {
     const component = render('cement', { query: 'cement', total: 4, groups: [] });
-    expect(component.line()).toBe('4 matches for "cement"');
+    expect(component.summary()).toBe('4 matches for "cement"');
 
     const one = render('cement', { query: 'cement', total: 1, groups: [] });
-    expect(one.line()).toBe('1 match for "cement"');
+    expect(one.summary()).toBe('1 match for "cement"');
   });
 
-  it('says when a group holds more than it lists', () => {
+  it('shows "showing N of M" when a group is truncated', () => {
     const component = render();
     expect(component.heading(group('vendors', [{ id: 'v1', title: 'A', detail: '' }], 5))).toBe(
       'Vendors · showing 1 of 5',
@@ -70,12 +70,12 @@ describe('SearchComponent', () => {
     );
   });
 
-  it('says plainly when nothing matched', () => {
+  it('reports no results', () => {
     const component = render('helicopter', { query: 'helicopter', total: 0, groups: [] });
     expect(component.empty()).toBe(true);
   });
 
-  it('shows a figure only where the hit carries one', () => {
+  it('formats an amount only for hits that have one', () => {
     const component = render();
     expect(
       component.money({
@@ -90,7 +90,7 @@ describe('SearchComponent', () => {
     expect(component.money({ id: 'v1', title: 'A vendor', detail: '' })).toBe('');
   });
 
-  it('opens each kind where that kind lives', () => {
+  it("navigates to each result kind's page", () => {
     const component = render();
     const hit = { id: 'x1', title: 'A', detail: '', project_id: 'p1' };
 

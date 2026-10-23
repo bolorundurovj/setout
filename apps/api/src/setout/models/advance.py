@@ -9,10 +9,9 @@ from setout.utils.ids import short_id
 
 
 class Advance(Model):
-    """Money handed to someone before they spend it.
+    """Money given to a person before they spend it.
 
-    Their balance is what they were given less what they have spent, so an
-    advance and an expense they paid for cancel each other out.
+    A person's balance is their advances less the expenses they paid.
     """
 
     id = fields.CharField(max_length=12, primary_key=True, default=short_id)
@@ -34,7 +33,7 @@ class Advance(Model):
     notes = fields.TextField(null=True, default=None)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    deleted_at = fields.DatetimeField(null=True, default=None)
+    archived_at = fields.DatetimeField(null=True, default=None)
 
     class Meta:
         table = "advance"

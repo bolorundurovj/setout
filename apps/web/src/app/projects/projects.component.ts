@@ -19,14 +19,14 @@ import { ToggleComponent } from '../ui/toggle.component';
 import { TopbarComponent } from '../ui/topbar.component';
 import { ToastService } from '../toast.service';
 import { LandService } from '../lands/land.service';
-import { whereLabel } from '../lands/land-labels';
+import { locationLabel } from '../lands/land-labels';
 import { ProjectService } from './project.service';
 
 const STATUS_LINES: Record<ProjectStatus, string> = {
   active: 'Active.',
   on_hold: 'On hold.',
   completed: 'Completed.',
-  archived: 'Closed. It can be archived.',
+  closed: 'Closed. It can be archived.',
 };
 
 @Component({
@@ -61,11 +61,11 @@ export class ProjectsComponent {
       return '';
     }
     const parts = [`${summary.total} ${summary.total === 1 ? 'project' : 'projects'}`];
-    if (summary.archived) {
-      parts.push(`${summary.archived} closed`);
+    if (summary.closed) {
+      parts.push(`${summary.closed} closed`);
     }
-    if (summary.deleted) {
-      parts.push(`${summary.deleted} archived`);
+    if (summary.archived) {
+      parts.push(`${summary.archived} archived`);
     }
     return parts.join(' · ');
   });
@@ -92,7 +92,7 @@ export class ProjectsComponent {
     { value: '', label: 'No land' },
     ...this.lands
       .choices()
-      .map((land) => ({ value: land.id, label: land.name, detail: whereLabel(land) })),
+      .map((land) => ({ value: land.id, label: land.name, detail: locationLabel(land) })),
   ]);
 
   constructor() {
@@ -118,11 +118,11 @@ export class ProjectsComponent {
     void this.router.navigate(['/projects', id, 'expense']);
   }
 
-  importSheet(): void {
+  importWorkbook(): void {
     void this.router.navigate(['/import']);
   }
 
-  budget(project: ProjectRead): string {
+  budgetedLabel(project: ProjectRead): string {
     if (!project.budgeted_amount) {
       return 'Not set';
     }
@@ -139,7 +139,7 @@ export class ProjectsComponent {
   }
 
   statusLine(project: ProjectRead): string {
-    if (project.deleted_at) {
+    if (project.archived_at) {
       return 'Archived. It can be restored.';
     }
     if (project.status === 'active' && !project.budgeted_amount) {
@@ -179,27 +179,28 @@ export class ProjectsComponent {
     }
   }
 
+  archivedLabel(): string {
+    return this.includeArchived() ? 'Hide archived' : 'Show archived';
+  }
+
   async setIncludeArchived(value: boolean): Promise<void> {
     this.pending.set(null);
     this.includeArchived.set(value);
     await this.projects.load(value);
   }
 
-  // Budgets arrive with the next slice. Until a project has one, there is
-  // nothing spent against it, so the remainder is what is left.
-  spent(project: ProjectRead): string {
+  spentLabel(project: ProjectRead): string {
     return formatMoney(project.spent_amount, project.currency_code, project.currency_exponent);
   }
 
-  isOver(project: ProjectRead): boolean {
+  isOverBudget(project: ProjectRead): boolean {
     return project.budgeted_amount > 0 && project.spent_amount > project.budgeted_amount;
   }
 
   varianceLabel(project: ProjectRead): string {
-    return this.isOver(project) ? 'Over by' : 'Left';
+    return this.isOverBudget(project) ? 'Over budget by' : 'Remaining';
   }
 
-  // Nothing to be left of, and nothing to be over, without a budget.
   variance(project: ProjectRead): string {
     if (!project.budgeted_amount) {
       return this.notSet;
@@ -215,15 +216,15 @@ export class ProjectsComponent {
     return Math.min(100, (project.spent_amount / project.budgeted_amount) * 100);
   }
 
-  overPercent(project: ProjectRead): number {
+  overBudgetPercent(project: ProjectRead): number {
     if (!project.budgeted_amount || project.spent_amount <= project.budgeted_amount) {
       return 0;
     }
-    const over = project.spent_amount - project.budgeted_amount;
-    return Math.min(100 - this.usedPercent(project), (over / project.budgeted_amount) * 100);
+    const overspend = project.spent_amount - project.budgeted_amount;
+    return Math.min(100 - this.usedPercent(project), (overspend / project.budgeted_amount) * 100);
   }
 
-  ask(id: string, action: 'close' | 'archive'): void {
+  requestConfirmation(id: string, action: 'close' | 'archive'): void {
     this.pending.set({ id, action });
   }
 
@@ -236,8 +237,12 @@ export class ProjectsComponent {
     return pending?.id === id && pending.action === action;
   }
 
+  value(event: Event): string {
+    return (event.target as HTMLInputElement).value;
+  }
+
   async close(id: string): Promise<void> {
-    await this.projects.update(id, { status: 'archived' });
+    await this.projects.update(id, { status: 'closed' });
     this.pending.set(null);
     this.toast.show('Project closed. It can be reopened or archived.');
   }
@@ -247,8 +252,8 @@ export class ProjectsComponent {
     this.toast.show('Project reopened.');
   }
 
-  async remove(id: string): Promise<void> {
-    await this.projects.remove(id);
+  async archive(id: string): Promise<void> {
+    await this.projects.archive(id);
     this.pending.set(null);
     this.toast.show('Project archived. Show archived to restore it.');
   }

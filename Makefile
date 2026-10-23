@@ -1,7 +1,7 @@
-# Setout: the only interface anyone needs.
+# Setout development, test and build targets.
 #
-# Every target works from a clean checkout on Linux and macOS. Targets print a
-# clear error when a required tool is missing, rather than failing obscurely.
+# Every target works from a clean checkout on Linux and macOS. Targets exit with
+# an error message when a required tool is missing.
 
 # Windows ships two programs called bash: the one from Git for Windows, and
 # C:\Windows\System32\bash.exe, which starts WSL. Running the build under WSL
@@ -43,7 +43,7 @@ endif
 	sdk migration migrate downgrade seed backup restore reset-passphrase check check-parallel run-check \
 	build docker-build kill clean line-endings require-uv require-yarn require-docker
 
-# file is the archive argument to `make restore` or `make reset-passphrase`.
+# file is the server backup path for `make restore`, or the recovery text file for `make reset-passphrase`.
 file ?=
 
 help: ## Show this help.
@@ -58,9 +58,9 @@ require-yarn:
 	@command -v yarn >/dev/null 2>&1 || { \
 		echo "Error: yarn is not installed. Run: corepack enable"; exit 1; }
 	@# Windows yarn writes .cmd shims into node_modules/.bin; Linux yarn writes
-	@# symlinks. Sharing one checkout between Git Bash and WSL leaves shims the
-	@# other cannot run, so say so plainly instead of failing later on a
-	@# "not recognized as an internal or external command" from cmd.exe.
+	@# symlinks. A checkout shared between Git Bash and WSL has shims the other
+	@# cannot run, which otherwise fails later with a cmd.exe
+	@# "not recognized as an internal or external command" error.
 	@if [ -d node_modules/.bin ]; then \
 		case "$$(uname -s)" in \
 		MINGW*|MSYS*|CYGWIN*) \
@@ -90,8 +90,8 @@ setup: require-uv require-yarn ## Install everything, backend and frontend.
 dev: ## Run API and web together with reload.
 	@echo "Starting API and web. Press Ctrl-C to stop both."
 	@# kill 0 signals the whole process group. Without it the reloader and
-	@# its child survive Ctrl-C and keep holding the port. When one gets away
-	@# regardless, `make kill` frees the ports.
+	@# its child survive Ctrl-C and keep holding the port. `make kill` frees
+	@# any port still held.
 	@trap 'trap - INT TERM EXIT; kill 0' INT TERM EXIT; \
 	$(MAKE) api & \
 	$(MAKE) web & \
@@ -149,10 +149,10 @@ downgrade: require-uv ## Roll back one migration.
 seed: require-uv ## Load the sample data.
 	cd $(API_DIR) && uv run python ../../scripts/seed.py
 
-backup: ## Write the database and uploaded files into one dated archive.
+backup: ## Write the database and uploaded files into one dated server backup file.
 	$(BASH) scripts/backup.sh
 
-restore: ## Read a backup archive back, after asking. Pass file=<archive>.
+restore: ## Restore a server backup after confirmation. Pass file=<backup>.
 	$(BASH) scripts/restore.sh $(file)
 
 reset-passphrase: require-uv ## Reset the admin passphrase (prompts or reads reset-passphrase.txt). Pass file=<txt>.
@@ -215,7 +215,7 @@ kill: ## Stop anything left holding the dev ports.
 			echo "$$port: stopped $$pid"; \
 		done; \
 	done
-	@# watch-sdk holds no port of its own, so it is named rather than found.
+	@# watch-sdk holds no port, so it is matched by command line.
 	@pkill -f "watchfiles --filter python" 2>/dev/null \
 		&& echo "stopped the SDK watcher" || true
 

@@ -17,7 +17,7 @@ class Sheet:
 
 
 class SheetError(Exception):
-    """The file could not be opened as a spreadsheet."""
+    pass
 
 
 def read(data: bytes, filename: str) -> list[Sheet]:
@@ -38,10 +38,10 @@ def _csv(data: bytes, filename: str) -> Sheet:
 
 def _xlsx(data: bytes) -> list[Sheet]:
     try:
-        # data_only reads what the sheet last showed, not the formulas behind it.
+        # data_only returns cached formula results, not the formulas.
         book = load_workbook(io.BytesIO(data), data_only=True, read_only=True)
     except Exception as exc:  # noqa: BLE001
-        raise SheetError("That file could not be opened as a spreadsheet") from exc
+        raise SheetError("Could not open the file as a spreadsheet") from exc
 
     sheets: list[Sheet] = []
     for name in book.sheetnames[:MAX_SHEETS]:
@@ -58,8 +58,7 @@ def _xlsx(data: bytes) -> list[Sheet]:
 CURRENCY_LABELS = {"currency code", "currency"}
 
 
-def currency_in(sheets: list[Sheet]) -> str:
-    """The currency a Setout workbook names on its Project sheet, if it has one."""
+def detect_currency(sheets: list[Sheet]) -> str:
     for sheet in sheets:
         for row in sheet.rows[:12]:
             for index, cell in enumerate(row[:-1]):

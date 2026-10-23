@@ -37,8 +37,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-setout}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-setout}
       POSTGRES_DB: ${POSTGRES_DB:-setout}
-    # 5433 on the host by default: 5432 is usually taken by a Postgres already
-    # installed on the machine, and that one answers first.
+    # Host port defaults to 5433 because a local Postgres usually holds 5432.
     ports:
       - "${POSTGRES_PORT:-5433}:5432"
     volumes:

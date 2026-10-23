@@ -153,7 +153,7 @@ CURRENCIES: list[tuple[str, str, int]] = [
     ("WST", "Samoan Tala", 2),
     ("XAF", "Central African CFA Franc", 0),
     ("XCD", "East Caribbean Dollar", 2),
-    ("XCG", "Caribbean guilder", 2),
+    ("XCG", "Caribbean Guilder", 2),
     ("XOF", "West African CFA Franc", 0),
     ("XPF", "CFP Franc", 0),
     ("YER", "Yemeni Rial", 0),

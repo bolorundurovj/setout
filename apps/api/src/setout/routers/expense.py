@@ -9,17 +9,18 @@ from setout.controllers.expense import ExpenseController
 from setout.models.user import User
 from setout.routers.auth import get_current_user
 from setout.schemas.expense import (
-    BulkFileExpenses,
-    BulkFileResult,
+    BulkCategoriseExpenses,
+    BulkCategoriseResult,
     CategorySuggestion,
     ExpenseCreate,
     ExpensePage,
     ExpenseRead,
     ExpenseSort,
     ExpenseUpdate,
+    ProjectExpenseSummary,
     ProjectMonths,
-    ProjectSpend,
 )
+from setout.services.storage import Storage, get_storage
 
 router = APIRouter(
     tags=["expenses"],
@@ -27,6 +28,7 @@ router = APIRouter(
 )
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+Store = Annotated[Storage, Depends(get_storage)]
 
 controller = ExpenseController()
 
@@ -41,7 +43,7 @@ async def list_expenses(
     user: CurrentUser,
     category_id: Annotated[str | None, Query(description="Only this category")] = None,
     agreement_id: Annotated[
-        str | None, Query(description="Only payments on this agreement")
+        str | None, Query(description="Only expenses against this agreement")
     ] = None,
     month: Annotated[
         str | None,
@@ -54,20 +56,20 @@ async def list_expenses(
         str | None, Query(description="Match part of the description or the notes")
     ] = None,
     vendor_id: Annotated[str | None, Query(description="Only this vendor")] = None,
-    paid_by_id: Annotated[str | None, Query(description="Only what this person paid for")] = None,
+    paid_by_id: Annotated[
+        str | None, Query(description="Only expenses paid by this person")
+    ] = None,
     item_id: Annotated[str | None, Query(description="Only this item")] = None,
     spent_from: Annotated[date | None, Query(description="Spent on this day or after")] = None,
     spent_to: Annotated[date | None, Query(description="Spent on this day or before")] = None,
-    sort: Annotated[ExpenseSort, Query(description="The order rows come back in")] = (
-        ExpenseSort.RECENT
-    ),
-    uncategorized_only: Annotated[
+    sort: Annotated[ExpenseSort, Query(description="Sort order")] = (ExpenseSort.RECENT),
+    uncategorised_only: Annotated[
         bool, Query(description="Only expenses with no category")
     ] = False,
     agreement_only: Annotated[
-        bool, Query(description="Only payments assigned to an agreement")
+        bool, Query(description="Only expenses linked to an agreement")
     ] = False,
-    include_deleted: Annotated[bool, Query(description="Include archived expenses")] = False,
+    include_archived: Annotated[bool, Query(description="Include archived expenses")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> ExpensePage:
@@ -83,9 +85,9 @@ async def list_expenses(
         spent_from=spent_from,
         spent_to=spent_to,
         sort=sort,
-        uncategorized_only=uncategorized_only,
+        uncategorised_only=uncategorised_only,
         agreement_only=agreement_only,
-        include_deleted=include_deleted,
+        include_archived=include_archived,
         limit=limit,
         offset=offset,
     )
@@ -93,7 +95,7 @@ async def list_expenses(
 
 @router.patch(
     "/projects/{project_id}/expenses",
-    operation_id="fileExpenses",
+    operation_id="categoriseExpenses",
     responses={
         **NOT_FOUND,
         status.HTTP_409_CONFLICT: {
@@ -101,15 +103,15 @@ async def list_expenses(
         },
     },
 )
-async def file_expenses(
-    project_id: str, req: BulkFileExpenses, user: CurrentUser
-) -> BulkFileResult:
-    return await controller.bulk_file(project_id, req)
+async def categorise_expenses(
+    project_id: str, req: BulkCategoriseExpenses, user: CurrentUser
+) -> BulkCategoriseResult:
+    return await controller.bulk_categorise(project_id, req)
 
 
 @router.post(
     "/projects/{project_id}/expenses",
-    operation_id="addExpense",
+    operation_id="createExpense",
     status_code=status.HTTP_201_CREATED,
     responses={
         **NOT_FOUND,
@@ -118,7 +120,7 @@ async def file_expenses(
         },
     },
 )
-async def add_expense(project_id: str, req: ExpenseCreate, user: CurrentUser) -> ExpenseRead:
+async def create_expense(project_id: str, req: ExpenseCreate, user: CurrentUser) -> ExpenseRead:
     return await controller.create(project_id, req)
 
 
@@ -130,15 +132,19 @@ async def add_expense(project_id: str, req: ExpenseCreate, user: CurrentUser) ->
 async def suggest_category(
     project_id: str,
     user: CurrentUser,
-    item_id: Annotated[str | None, Query(description="What was bought")] = None,
-    vendor_id: Annotated[str | None, Query(description="Who it was bought from")] = None,
+    item_id: Annotated[str | None, Query(description="The item purchased")] = None,
+    vendor_id: Annotated[str | None, Query(description="The vendor")] = None,
 ) -> CategorySuggestion:
     return await controller.suggest_category(project_id, item_id, vendor_id)
 
 
-@router.get("/projects/{project_id}/spend", operation_id="getProjectSpend", responses=NOT_FOUND)
-async def get_project_spend(project_id: str, user: CurrentUser) -> ProjectSpend:
-    return await controller.spend(project_id)
+@router.get(
+    "/projects/{project_id}/expense-summary",
+    operation_id="getProjectExpenseSummary",
+    responses=NOT_FOUND,
+)
+async def get_project_expense_summary(project_id: str, user: CurrentUser) -> ProjectExpenseSummary:
+    return await controller.expense_summary(project_id)
 
 
 @router.get("/projects/{project_id}/months", operation_id="getProjectMonths", responses=NOT_FOUND)
@@ -156,14 +162,14 @@ async def update_expense(expense_id: str, req: ExpenseUpdate, user: CurrentUser)
     return await controller.update(expense_id, req)
 
 
-@router.delete(
-    "/expenses/{expense_id}",
-    operation_id="deleteExpense",
+@router.post(
+    "/expenses/{expense_id}/archive",
+    operation_id="archiveExpense",
     status_code=status.HTTP_204_NO_CONTENT,
     responses=NOT_FOUND,
 )
-async def delete_expense(expense_id: str, user: CurrentUser) -> None:
-    await controller.delete(expense_id)
+async def archive_expense(expense_id: str, user: CurrentUser) -> None:
+    await controller.archive(expense_id)
 
 
 @router.post("/expenses/{expense_id}/restore", operation_id="restoreExpense", responses=NOT_FOUND)

@@ -20,13 +20,13 @@ describe('ComboboxComponent', () => {
     };
   }
 
-  it('hides the list until it is asked for', async () => {
+  it('hides the list until it is opened', async () => {
     const view = await render(['Interior work']);
     expect(view.options().length).toBe(0);
     expect(view.input.getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('shows every option when the chevron is pressed', async () => {
+  it('shows every option when the chevron is clicked', async () => {
     const view = await render(['Interior work', 'Roofing']);
     view.chevron.click();
     view.fixture.detectChanges();
@@ -34,14 +34,14 @@ describe('ComboboxComponent', () => {
     expect(view.input.getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('narrows the list to what was typed', async () => {
+  it('filters the list by the typed text', async () => {
     const view = await render(['Interior work', 'Roofing', 'Tiling'], 'ing');
     view.chevron.click();
     view.fixture.detectChanges();
     expect(view.options()).toEqual(['Roofing', 'Tiling']);
   });
 
-  it('emits the option that was picked', async () => {
+  it('emits the clicked option', async () => {
     const view = await render(['Interior work', 'Roofing']);
     let picked = '';
     view.fixture.componentInstance.valueChange.subscribe((v) => (picked = v));
@@ -53,7 +53,7 @@ describe('ComboboxComponent', () => {
     expect(picked).toBe('Interior work');
   });
 
-  it('emits whatever was typed, preset or not', async () => {
+  it('emits typed text that matches no option', async () => {
     const view = await render(['Interior work']);
     let emitted = '';
     view.fixture.componentInstance.valueChange.subscribe((v) => (emitted = v));
@@ -62,7 +62,7 @@ describe('ComboboxComponent', () => {
     expect(emitted).toBe('Borehole and water tank');
   });
 
-  it('submits on enter when the list is closed', async () => {
+  it('submits on Enter when the list is closed', async () => {
     const view = await render(['Interior work']);
     let submitted = 0;
     view.fixture.componentInstance.submitted.subscribe(() => (submitted += 1));

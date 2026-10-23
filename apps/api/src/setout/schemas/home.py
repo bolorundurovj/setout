@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 class CurrencyChoice(BaseModel):
     currency_code: str
     currency_exponent: int
-    projects: int
+    project_count: int
 
 
 class HomeAlert(BaseModel):
@@ -20,13 +20,13 @@ class HomeAlert(BaseModel):
 
 
 class HomeSummary(BaseModel):
-    """The figures for one currency. Nothing here is ever added across two."""
+    """Figures for one currency. Amounts in different currencies are never added together."""
 
-    projects: int = Field(..., description="Every project, whatever its currency")
+    project_count: int = Field(..., description="All projects, in any currency")
     currencies: list[CurrencyChoice]
     currency_code: str | None
     currency_exponent: int | None
-    currency_projects: int = Field(0, description="Projects using this currency")
+    currency_project_count: int = Field(0, description="Projects using this currency")
     budgeted_amount: int
     spent_amount: int
     alerts: list[HomeAlert]
@@ -41,7 +41,7 @@ class HomeMonths(BaseModel):
     currency_code: str | None
     currency_exponent: int | None
     months: list[HomeMonth]
-    busiest_month: str | None
+    highest_month: str | None
 
 
 class HomeProject(BaseModel):
@@ -58,7 +58,7 @@ class HomeProjects(BaseModel):
     rows: list[HomeProject]
 
 
-class HomeSpend(BaseModel):
+class HomeExpenseSummary(BaseModel):
     id: str
     project_id: str
     project_name: str
@@ -71,4 +71,4 @@ class HomeSpend(BaseModel):
 
 
 class HomeLatest(BaseModel):
-    rows: list[HomeSpend]
+    rows: list[HomeExpenseSummary]

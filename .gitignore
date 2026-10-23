@@ -26,7 +26,7 @@ packages/api-client/src/
 .yarn/
 *.tsbuildinfo
 
-# Backups (archives are ignored; keep the dir out of git)
+# Shell backups (.tar.gz)
 backups/
 
 # Local data and secrets

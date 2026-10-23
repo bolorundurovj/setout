@@ -12,35 +12,31 @@ from setout.schemas.decimals import PlainDecimal
 # Longitude first, the way GeoJSON orders a position.
 Position = tuple[float, float]
 
-# A plot boundary is a handful of corners. This only stops a pasted county.
+# Rejects oversized polygons; a land boundary has far fewer boundary points.
 MAX_POSITIONS = 1000
 
 
 class LandSize(BaseModel):
-    """A size is only meaningful with the unit it was measured in."""
-
     @model_validator(mode="after")
-    def size_needs_its_unit(self) -> LandSize:
+    def validate_stated_area(self) -> LandSize:
         value = getattr(self, "size_value", None)
         unit = getattr(self, "size_unit", None)
         if value is not None and unit is None:
-            raise ValueError("A size needs the unit it was measured in")
+            raise ValueError("A stated area requires a unit")
         if unit is not None and value is None:
-            raise ValueError("A unit needs a size to go with it")
+            raise ValueError("A unit requires a stated area")
         return self
 
 
 class LandPoint(BaseModel):
-    """A coordinate is only a place with both halves of it."""
-
     @model_validator(mode="after")
-    def a_point_needs_both_halves(self) -> LandPoint:
+    def validate_coordinates(self) -> LandPoint:
         latitude = getattr(self, "latitude", None)
         longitude = getattr(self, "longitude", None)
         if latitude is not None and longitude is None:
-            raise ValueError("A latitude needs a longitude to go with it")
+            raise ValueError("A latitude requires a longitude")
         if longitude is not None and latitude is None:
-            raise ValueError("A longitude needs a latitude to go with it")
+            raise ValueError("A longitude requires a latitude")
         return self
 
 
@@ -51,22 +47,22 @@ class LandBoundary(BaseModel):
     coordinates: list[list[Position]]
 
     @model_validator(mode="after")
-    def a_ring_encloses_something(self) -> LandBoundary:
+    def validate_boundary(self) -> LandBoundary:
         if not self.coordinates:
-            raise ValueError("A boundary needs at least one ring")
+            raise ValueError("A boundary requires at least one ring")
         closed: list[list[Position]] = []
         for ring in self.coordinates:
             if len(ring) > MAX_POSITIONS:
-                raise ValueError(f"A ring cannot have more than {MAX_POSITIONS} corners")
-            shut = ring if len(ring) > 1 and ring[0] == ring[-1] else [*ring, *ring[:1]]
-            if len(shut) < 4:
-                raise ValueError("A ring needs three corners before it encloses anything")
-            for longitude, latitude in shut:
+                raise ValueError(f"A ring cannot have more than {MAX_POSITIONS} boundary points")
+            closed_ring = ring if len(ring) > 1 and ring[0] == ring[-1] else [*ring, *ring[:1]]
+            if len(closed_ring) < 4:
+                raise ValueError("A ring requires at least three boundary points")
+            for longitude, latitude in closed_ring:
                 if not -180 <= longitude <= 180:
                     raise ValueError(f"Longitude out of range: {longitude}")
                 if not -90 <= latitude <= 90:
                     raise ValueError(f"Latitude out of range: {latitude}")
-            closed.append(shut)
+            closed.append(closed_ring)
         self.coordinates = closed
         return self
 
@@ -78,7 +74,10 @@ class LandCreate(LandSize, LandPoint):
     city: str | None = Field(None, max_length=255)
     state: str | None = Field(None, max_length=255)
     country_code: str | None = Field(
-        None, min_length=2, max_length=2, description="Give one and the state is checked against it"
+        None,
+        min_length=2,
+        max_length=2,
+        description="When given, the state is validated against this country",
     )
     purchased_on: date | None = None
     latitude: Decimal | None = Field(None, ge=-90, le=90, max_digits=10, decimal_places=7)
@@ -98,7 +97,10 @@ class LandUpdate(LandSize, LandPoint):
     city: str | None = Field(None, max_length=255)
     state: str | None = Field(None, max_length=255)
     country_code: str | None = Field(
-        None, min_length=2, max_length=2, description="Give one and the state is checked against it"
+        None,
+        min_length=2,
+        max_length=2,
+        description="When given, the state is validated against this country",
     )
     purchased_on: date | None = None
     latitude: Decimal | None = Field(None, ge=-90, le=90, max_digits=10, decimal_places=7)
@@ -113,7 +115,7 @@ class LandProject(BaseModel):
     id: str
     name: str
     status: str
-    deleted_at: datetime | None
+    archived_at: datetime | None
 
 
 class LandRead(BaseModel):
@@ -130,26 +132,26 @@ class LandRead(BaseModel):
     longitude: PlainDecimal | None
     boundary: LandBoundary | None
     boundary_area_sqm: float | None = Field(
-        None, description="Worked out from the boundary, never stored"
+        None, description="Calculated from the boundary; not stored"
     )
     size_value: PlainDecimal | None
     size_unit: LandSizeUnit | None
     notes: str | None
     currency_code: str | None = Field(
-        None, description="Every valuation is in this. Set by the first one"
+        None, description="The currency of every valuation. Set by the first valuation"
     )
     currency_exponent: int | None = None
-    purchase_amount: int | None = Field(None, description="Minor units. What it was bought for")
+    purchase_amount: int | None = Field(None, description="Minor units. The purchase price")
     current_value: int | None = Field(None, description="Minor units. The newest valuation")
-    valuation_count: int = Field(0, description="Not counting removed ones")
-    document_count: int = Field(..., description="Not counting removed ones")
+    valuation_count: int = Field(0, description="Excludes archived ones")
+    document_count: int = Field(..., description="Excludes archived ones")
     missing_kinds: list[str] = Field(
         ..., description="Required documents that have not been uploaded yet"
     )
-    projects: list[LandProject] = Field(..., description="What is being built on it")
+    projects: list[LandProject] = Field(..., description="Projects on this land record")
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
+    archived_at: datetime | None
 
 
 class LandPage(BaseModel):

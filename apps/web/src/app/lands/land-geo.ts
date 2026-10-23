@@ -1,6 +1,6 @@
 import type { LandBoundary, LandSizeUnit } from '@setout/api-client';
 
-/** Longitude first, the way GeoJSON orders a position. */
+/** Longitude first, as in GeoJSON. */
 export type Position = [number, number];
 
 const SQM_PER: Partial<Record<LandSizeUnit, number>> = {
@@ -9,13 +9,9 @@ const SQM_PER: Partial<Record<LandSizeUnit, number>> = {
   acre: 4046.8564224,
 };
 
-// WGS84 semi-major axis, in metres.
-const EARTH_RADIUS = 6378137;
+const WGS84_SEMI_MAJOR_AXIS_M = 6378137;
 
-/**
- * Spherical excess, the same formula the server measures with. Kept here as
- * well so a boundary being typed in shows its size before it is saved.
- */
+/** Spherical excess, as on the server, so a boundary's area shows before it is saved. */
 export function polygonAreaSqm(ring: Position[]): number {
   if (ring.length < 3) {
     return 0;
@@ -27,10 +23,10 @@ export function polygonAreaSqm(ring: Position[]): number {
     const [lon2, lat2] = ring[(i + 1) % ring.length];
     total += radians(lon2 - lon1) * (2 + Math.sin(radians(lat1)) + Math.sin(radians(lat2)));
   }
-  return Math.abs((total * EARTH_RADIUS * EARTH_RADIUS) / 2);
+  return Math.abs((total * WGS84_SEMI_MAJOR_AXIS_M * WGS84_SEMI_MAJOR_AXIS_M) / 2);
 }
 
-/** Ray cast: a point is inside when a line drawn east of it crosses an odd number of sides. */
+/** Ray casting: a point is inside when an eastward ray crosses an odd number of edges. */
 export function pointInRing(point: Position, ring: Position[]): boolean {
   if (ring.length < 3) {
     return false;
@@ -47,10 +43,7 @@ export function pointInRing(point: Position, ring: Position[]): boolean {
   return inside;
 }
 
-/**
- * The area weighted centre. A concave plot can put this outside its own edge,
- * so anything offering it as a place to stand should check with pointInRing.
- */
+/** Area-weighted centroid. Can fall outside a concave ring, so check it with pointInRing. */
 export function centroidOf(ring: Position[]): Position | null {
   if (ring.length < 3) {
     return null;
@@ -72,7 +65,7 @@ export function centroidOf(ring: Position[]): Position | null {
   return [x / (3 * twiceArea), y / (3 * twiceArea)];
 }
 
-/** A plot is not measured in plots anywhere twice, so it is never offered. */
+/** Excludes plot, whose size in square metres varies by region. */
 export const AREA_UNITS: LandSizeUnit[] = ['sqm', 'hectare', 'acre'];
 
 export function closeRing(ring: Position[]): Position[] {
@@ -88,7 +81,7 @@ export function boundaryOf(ring: Position[]): LandBoundary | null {
   return ring.length < 3 ? null : { type: 'Polygon', coordinates: [closeRing(ring)] };
 }
 
-/** The corners to draw, without the repeated closing one. */
+/** Ring positions without the repeated closing position. */
 export function ringOf(boundary: LandBoundary | null | undefined): Position[] {
   const ring = boundary?.coordinates?.[0];
   if (!ring || ring.length < 3) {
@@ -100,14 +93,14 @@ export function ringOf(boundary: LandBoundary | null | undefined): Position[] {
   return (closed ? ring.slice(0, -1) : ring).map((position) => [position[0], position[1]]);
 }
 
-export function inMetres(sqm: number, unit: LandSizeUnit): number | null {
+export function fromSquareMetres(sqm: number, unit: LandSizeUnit): number | null {
   const per = SQM_PER[unit];
   return per === undefined ? null : sqm / per;
 }
 
-/** Rounded the way the size field stores it: two places, as a string. */
-export function asSize(sqm: number, unit: LandSizeUnit): string | null {
-  const value = inMetres(sqm, unit);
+/** Two decimal places as a string, matching the stated area field. */
+export function formatAreaIn(sqm: number, unit: LandSizeUnit): string | null {
+  const value = fromSquareMetres(sqm, unit);
   return value === null ? null : String(Math.round(value * 100) / 100);
 }
 
@@ -122,21 +115,21 @@ export function parseBoundary(text: string): { boundary?: LandBoundary; error?: 
   } catch {
     return { error: 'Not valid JSON.' };
   }
-  // A Feature or a FeatureCollection is what geojson.io hands you.
-  const geometry = geometryIn(parsed);
+  // geojson.io exports a Feature or a FeatureCollection.
+  const geometry = findGeometry(parsed);
   if (!geometry) {
     return { error: 'No polygon found.' };
   }
   if (geometry.type !== 'Polygon') {
-    return { error: `A mapped survey must be a Polygon, not a ${geometry.type}.` };
+    return { error: `A boundary must be a Polygon, not a ${geometry.type}.` };
   }
   const ring = ringOf(geometry as LandBoundary);
   if (ring.length < 3) {
-    return { error: 'A mapped survey needs at least three survey points.' };
+    return { error: 'A boundary needs at least three boundary points.' };
   }
   for (const [lon, lat] of ring) {
     if (typeof lon !== 'number' || typeof lat !== 'number' || Number.isNaN(lon + lat)) {
-      return { error: 'Survey point coordinates must be numbers.' };
+      return { error: 'Boundary point coordinates must be numbers.' };
     }
     if (lon < -180 || lon > 180 || lat < -90 || lat > 90) {
       return { error: 'Coordinates are out of range. Longitude comes first.' };
@@ -145,17 +138,17 @@ export function parseBoundary(text: string): { boundary?: LandBoundary; error?: 
   return { boundary: boundaryOf(ring) ?? undefined };
 }
 
-function geometryIn(parsed: unknown): { type?: string; coordinates?: unknown } | null {
+function findGeometry(parsed: unknown): { type?: string; coordinates?: unknown } | null {
   const value = parsed as Record<string, unknown> | null;
   if (!value || typeof value !== 'object') {
     return null;
   }
   if (value['type'] === 'FeatureCollection') {
     const features = value['features'];
-    return Array.isArray(features) && features.length ? geometryIn(features[0]) : null;
+    return Array.isArray(features) && features.length ? findGeometry(features[0]) : null;
   }
   if (value['type'] === 'Feature') {
-    return geometryIn(value['geometry']);
+    return findGeometry(value['geometry']);
   }
   return 'coordinates' in value ? (value as { type?: string; coordinates?: unknown }) : null;
 }
@@ -164,10 +157,7 @@ export function boundaryText(boundary: LandBoundary | null | undefined): string 
   return boundary ? JSON.stringify(boundary) : '';
 }
 
-/**
- * One coordinate, in whatever a survey plan wrote it: a decimal degree, or
- * degrees-minutes-seconds with a hemisphere on either end.
- */
+/** Parses decimal degrees or degrees-minutes-seconds with a hemisphere letter on either side. */
 export function degreesFrom(token: string): number | null {
   const text = token.trim();
   if (!text) {
@@ -180,19 +170,19 @@ export function degreesFrom(token: string): number | null {
   }
   const [degrees, minutes, seconds] = numbers.map(Number);
   if (numbers.length > 1 && degrees < 0) {
-    return null; // A sign and a hemisphere disagree about which way is down.
+    return null; // Negative degrees-minutes-seconds are rejected; use a hemisphere letter.
   }
-  const size = Math.abs(degrees) + (minutes ?? 0) / 60 + (seconds ?? 0) / 3600;
-  if (Number.isNaN(size)) {
+  const magnitude = Math.abs(degrees) + (minutes ?? 0) / 60 + (seconds ?? 0) / 3600;
+  if (Number.isNaN(magnitude)) {
     return null;
   }
   const negative = degrees < 0 || hemisphere === 'S' || hemisphere === 'W';
-  return negative ? -size : size;
+  return negative ? -magnitude : magnitude;
 }
 
-/** A line of a survey list: latitude first, then longitude. */
+/** Parses one boundary point line, latitude first. */
 export function parseCoordinate(line: string): Position | null {
-  // "Beacon 3: 6.5244, 3.3792" is how a plan is usually copied out.
+  // Strips a label prefix, as in "Beacon 3: 6.5244, 3.3792".
   const body = line.includes(':') ? line.slice(line.lastIndexOf(':') + 1) : line;
   const text = body.trim();
   if (!text) {
@@ -214,7 +204,7 @@ export function parseCoordinate(line: string): Position | null {
 }
 
 function splitPair(text: string): [string, string] | null {
-  // A hemisphere letter ends its own half, whichever side of the number it sits.
+  // A latitude hemisphere letter ends the first half, before or after its number.
   const marked = /^(.*?[NSns])[\s,]*(.*[EWew].*)$/.exec(text);
   if (marked) {
     return [marked[1], marked[2]];
@@ -223,8 +213,7 @@ function splitPair(text: string): [string, string] | null {
   return parts.length === 2 ? [parts[0], parts[1]] : null;
 }
 
-/** Every corner of a pasted list, in the order they were written. */
-export function parseCorners(text: string): { boundary?: LandBoundary; error?: string } {
+export function parseBoundaryPoints(text: string): { boundary?: LandBoundary; error?: string } {
   const trimmed = text.trim();
   if (!trimmed) {
     return { boundary: undefined };
@@ -235,23 +224,23 @@ export function parseCorners(text: string): { boundary?: LandBoundary; error?: s
   const lines = trimmed.split(/\r?\n/).filter((line) => /\d/.test(line));
   const ring: Position[] = [];
   for (const [index, line] of lines.entries()) {
-    const corner = parseCoordinate(line);
-    if (!corner) {
+    const point = parseCoordinate(line);
+    if (!point) {
       return { error: `Line ${index + 1} is not a valid coordinate.` };
     }
-    ring.push(corner);
+    ring.push(point);
   }
   if (ring.length < 3) {
     const short = 3 - ring.length;
     return {
-      error: `${short} more corner${short === 1 ? '' : 's'} before it encloses anything.`,
+      error: `${short} more boundary point${short === 1 ? '' : 's'} needed to enclose an area.`,
     };
   }
   return { boundary: boundaryOf(ring) ?? undefined };
 }
 
-/** The corners written back out the way they were typed: latitude first. */
-export function cornerText(boundary: LandBoundary | null | undefined): string {
+/** Formats boundary points latitude first, matching the input format. */
+export function boundaryPointsText(boundary: LandBoundary | null | undefined): string {
   return ringOf(boundary)
     .map(([lon, lat]) => `${lat}, ${lon}`)
     .join('\n');

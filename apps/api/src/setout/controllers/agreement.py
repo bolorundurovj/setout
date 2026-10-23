@@ -27,12 +27,12 @@ from setout.utils.balances import balance_of, paid_by_agreement, person_balances
 
 class AgreementController:
     async def list_agreements(
-        self, project_id: str, *, include_deleted: bool, limit: int, offset: int
+        self, project_id: str, *, include_archived: bool, limit: int, offset: int
     ) -> AgreementPage:
         await self._project_or_404(project_id)
         query = Agreement.filter(project_id=project_id)
-        if not include_deleted:
-            query = query.filter(deleted_at__isnull=True)
+        if not include_archived:
+            query = query.filter(archived_at__isnull=True)
         total = await query.count()
         rows = await query.offset(offset).limit(limit).prefetch_related("vendor")
         paid = await paid_by_agreement([row.id for row in rows])
@@ -45,7 +45,7 @@ class AgreementController:
 
     async def create(self, project_id: str, req: AgreementCreate) -> AgreementRead:
         await self._project_or_404(project_id)
-        vendor = await Vendor.get_or_none(id=req.vendor_id, deleted_at__isnull=True)
+        vendor = await Vendor.get_or_none(id=req.vendor_id, archived_at__isnull=True)
         if vendor is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vendor not found")
         agreement = await Agreement.create(project_id=project_id, **req.model_dump())
@@ -66,26 +66,26 @@ class AgreementController:
         paid = await paid_by_agreement([agreement.id])
         return self._read(agreement, paid.get(agreement.id, 0))
 
-    async def delete(self, agreement_id: str) -> None:
+    async def archive(self, agreement_id: str) -> None:
         agreement = await self._agreement_or_404(agreement_id)
-        agreement.deleted_at = datetime.now(UTC)
+        agreement.archived_at = datetime.now(UTC)
         await agreement.save()
 
     async def restore(self, agreement_id: str) -> AgreementRead:
-        agreement = await self._agreement_or_404(agreement_id, include_deleted=True)
-        if agreement.deleted_at is not None:
-            agreement.deleted_at = None
+        agreement = await self._agreement_or_404(agreement_id, include_archived=True)
+        if agreement.archived_at is not None:
+            agreement.archived_at = None
             await agreement.save()
         paid = await paid_by_agreement([agreement.id])
         return self._read(agreement, paid.get(agreement.id, 0))
 
     async def list_advances(
-        self, project_id: str, *, include_deleted: bool, limit: int, offset: int
+        self, project_id: str, *, include_archived: bool, limit: int, offset: int
     ) -> AdvancePage:
         await self._project_or_404(project_id)
         query = Advance.filter(project_id=project_id)
-        if not include_deleted:
-            query = query.filter(deleted_at__isnull=True)
+        if not include_archived:
+            query = query.filter(archived_at__isnull=True)
         total = await query.count()
         rows = await query.offset(offset).limit(limit).prefetch_related("person")
         return AdvancePage(
@@ -95,9 +95,9 @@ class AgreementController:
             offset=offset,
         )
 
-    async def add_advance(self, project_id: str, req: AdvanceCreate) -> AdvanceRead:
+    async def create_advance(self, project_id: str, req: AdvanceCreate) -> AdvanceRead:
         await self._project_or_404(project_id)
-        person = await Person.get_or_none(id=req.person_id, deleted_at__isnull=True)
+        person = await Person.get_or_none(id=req.person_id, archived_at__isnull=True)
         if person is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Person not found")
         advance = await Advance.create(
@@ -118,26 +118,26 @@ class AgreementController:
             await advance.save()
         return self._advance(advance)
 
-    async def delete_advance(self, advance_id: str) -> None:
+    async def archive_advance(self, advance_id: str) -> None:
         advance = await self._advance_or_404(advance_id)
-        advance.deleted_at = datetime.now(UTC)
+        advance.archived_at = datetime.now(UTC)
         await advance.save()
 
     async def restore_advance(self, advance_id: str) -> AdvanceRead:
-        advance = await self._advance_or_404(advance_id, include_deleted=True)
-        if advance.deleted_at is not None:
-            advance.deleted_at = None
+        advance = await self._advance_or_404(advance_id, include_archived=True)
+        if advance.archived_at is not None:
+            advance.archived_at = None
             await advance.save()
         return self._advance(advance)
 
     async def balances(self, project_id: str) -> list[PersonBalance]:
         project = await self._project_or_404(project_id)
-        people = await Person.filter(deleted_at__isnull=True)
+        people = await Person.filter(archived_at__isnull=True)
         ids = [person.id for person in people]
         balances = await person_balances(ids, project_id)
 
         advanced: dict[str, int] = defaultdict(int)
-        for row in await Advance.filter(project_id=project_id, deleted_at__isnull=True).values(
+        for row in await Advance.filter(project_id=project_id, archived_at__isnull=True).values(
             "amount", "person_id"
         ):
             advanced[str(row["person_id"])] += int(row["amount"])
@@ -145,7 +145,7 @@ class AgreementController:
         spent: dict[str, int] = defaultdict(int)
         for row in await Expense.filter(
             project_id=project_id,
-            deleted_at__isnull=True,
+            archived_at__isnull=True,
             paid_by_id__not_isnull=True,
         ).values("amount", "paid_by_id"):
             spent[str(row["paid_by_id"])] += int(row["amount"])
@@ -178,7 +178,7 @@ class AgreementController:
             notes=agreement.notes,
             created_at=agreement.created_at,
             updated_at=agreement.updated_at,
-            deleted_at=agreement.deleted_at,
+            archived_at=agreement.archived_at,
         )
 
     def _advance(self, advance: Advance) -> AdvanceRead:
@@ -192,27 +192,27 @@ class AgreementController:
             notes=advance.notes,
             created_at=advance.created_at,
             updated_at=advance.updated_at,
-            deleted_at=advance.deleted_at,
+            archived_at=advance.archived_at,
         )
 
     async def _project_or_404(self, project_id: str) -> Project:
         project = await Project.get_or_none(
-            id=project_id, deleted_at__isnull=True
+            id=project_id, archived_at__isnull=True
         ).prefetch_related("currency")
         if project is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
         return project
 
     async def _agreement_or_404(
-        self, agreement_id: str, *, include_deleted: bool = False
+        self, agreement_id: str, *, include_archived: bool = False
     ) -> Agreement:
         agreement = await Agreement.get_or_none(id=agreement_id).prefetch_related("vendor")
-        if agreement is None or (agreement.deleted_at is not None and not include_deleted):
+        if agreement is None or (agreement.archived_at is not None and not include_archived):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agreement not found")
         return agreement
 
-    async def _advance_or_404(self, advance_id: str, *, include_deleted: bool = False) -> Advance:
+    async def _advance_or_404(self, advance_id: str, *, include_archived: bool = False) -> Advance:
         advance = await Advance.get_or_none(id=advance_id).prefetch_related("person")
-        if advance is None or (advance.deleted_at is not None and not include_deleted):
+        if advance is None or (advance.archived_at is not None and not include_archived):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Advance not found")
         return advance

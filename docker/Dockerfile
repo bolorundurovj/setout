@@ -3,12 +3,11 @@
 FROM node:26-bookworm-slim AS web
 WORKDIR /build
 RUN npm install -g corepack && corepack enable
-# The web app consumes the SDK by path alias, so bring both in.
+# The web app imports the SDK through a path alias, so both are copied.
 COPY package.json yarn.lock* ./
 COPY packages/api-client ./packages/api-client
 COPY apps/web ./apps/web
 RUN yarn install --frozen-lockfile || yarn install
-# Generate the SDK from the openapi.json.
 RUN cd packages/api-client && yarn generate && yarn format
 WORKDIR /build/apps/web
 RUN yarn build
@@ -49,5 +48,5 @@ USER setout
 VOLUME ["/var/lib/setout"]
 EXPOSE 8474
 
-# The app applies migrations on start through its lifespan.
+# The app applies migrations at startup in its lifespan handler.
 CMD ["sh", "-c", "uv run uvicorn setout.main:app --host 0.0.0.0 --port ${SETOUT_PORT}"]

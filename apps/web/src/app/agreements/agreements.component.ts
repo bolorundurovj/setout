@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import type { AdvanceRead, AgreementRead, ExpenseRead, ProjectRead } from '@setout/api-client';
-import { formatMoney, parseMoney } from '../budget/money';
+import { formatAmount, formatAmountInput, formatMoney, parseMoney } from '../budget/money';
 import { ExpenseService } from '../expenses/expense.service';
 import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
@@ -35,7 +35,7 @@ export class AgreementsComponent {
   readonly includeArchived = signal(false);
   readonly personId = signal('');
   readonly advanceAmount = signal('');
-  readonly paying = signal<string | null>(null);
+  readonly payingAgreementId = signal<string | null>(null);
   readonly editing = signal<string | null>(null);
   readonly editDescription = signal('');
   readonly editAgreed = signal('');
@@ -77,16 +77,12 @@ export class AgreementsComponent {
     return this.agreements.payments()[agreementId] ?? [];
   }
 
-  /** The column already says which currency, so the figure does not repeat it. */
-  bare(minor: number): string {
-    const exponent = this.project().currency_exponent;
-    return new Intl.NumberFormat('en', {
-      minimumFractionDigits: exponent === 0 ? 0 : 0,
-      maximumFractionDigits: 0,
-    }).format(minor / 10 ** exponent);
+  /** Omits the currency symbol because the column header shows it. */
+  formatAmount(minor: number): string {
+    return formatAmount(minor, this.project().currency_exponent);
   }
 
-  day(value: string): string {
+  formatDate(value: string): string {
     return new Date(value).toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'short',
@@ -97,7 +93,9 @@ export class AgreementsComponent {
   startEdit(agreement: AgreementRead): void {
     this.editing.set(agreement.id);
     this.editDescription.set(agreement.description);
-    this.editAgreed.set(this.bare(agreement.agreed_amount).replace(/,/g, ''));
+    this.editAgreed.set(
+      formatAmountInput(agreement.agreed_amount, this.project().currency_exponent),
+    );
   }
 
   cancelEdit(): void {
@@ -123,12 +121,14 @@ export class AgreementsComponent {
       return;
     }
     this.cancelEdit();
-    this.toast.show(`${changed.vendor_name}: now ${this.money(changed.agreed_amount)} agreed.`);
+    this.toast.show(
+      `Agreement with ${changed.vendor_name} updated to ${this.money(changed.agreed_amount)}.`,
+    );
   }
 
   startEditAdvance(advance: AdvanceRead): void {
     this.editingAdvance.set(advance.id);
-    this.editAdvanceAmount.set(this.bare(advance.amount).replace(/,/g, ''));
+    this.editAdvanceAmount.set(formatAmountInput(advance.amount, this.project().currency_exponent));
   }
 
   cancelEditAdvance(): void {
@@ -146,16 +146,16 @@ export class AgreementsComponent {
       return;
     }
     this.cancelEditAdvance();
-    this.toast.show(`${changed.person_name} now holds ${this.money(changed.amount)}.`);
+    this.toast.show(`Advance to ${changed.person_name} updated to ${this.money(changed.amount)}.`);
   }
 
   startPayment(agreementId: string): void {
-    this.paying.set(agreementId);
+    this.payingAgreementId.set(agreementId);
     this.paymentAmount.set('');
   }
 
   cancelPayment(): void {
-    this.paying.set(null);
+    this.payingAgreementId.set(null);
     this.paymentAmount.set('');
   }
 
@@ -164,7 +164,7 @@ export class AgreementsComponent {
     return amount !== null && amount > 0;
   }
 
-  /** A payment is an expense filed against the agreement, so paid moves with it. */
+  /** Recorded as an expense linked to the agreement, so the server recalculates paid_amount. */
   async savePayment(agreement: AgreementRead): Promise<void> {
     const amount = parseMoney(this.paymentAmount(), this.project().currency_exponent);
     if (!this.canPay() || amount === null) {
@@ -191,7 +191,6 @@ export class AgreementsComponent {
     return formatMoney(minor, project.currency_code, project.currency_exponent);
   }
 
-  /** How much of the agreed amount has been paid, for the meter. */
   paidPercent(agreement: AgreementRead): number {
     if (!agreement.agreed_amount) {
       return 0;
@@ -228,13 +227,15 @@ export class AgreementsComponent {
     if (!this.canSave() || agreed === null) {
       return;
     }
-    const created = await this.agreements.add(this.project().id, {
+    const created = await this.agreements.create(this.project().id, {
       vendor_id: this.vendorId(),
       description: this.description().trim(),
       agreed_amount: agreed,
     });
     if (created) {
-      this.toast.show(`Agreed ${this.money(created.agreed_amount)} with ${created.vendor_name}.`);
+      this.toast.show(
+        `Agreement with ${created.vendor_name} saved for ${this.money(created.agreed_amount)}.`,
+      );
       this.cancel();
     } else {
       this.toast.show(this.agreements.error() ?? 'Could not save the agreement.', 'error');
@@ -251,7 +252,7 @@ export class AgreementsComponent {
     if (!this.canSaveAdvance() || amount === null) {
       return;
     }
-    const created = await this.agreements.addAdvance(this.project().id, {
+    const created = await this.agreements.createAdvance(this.project().id, {
       person_id: this.personId(),
       amount,
     });
@@ -264,18 +265,18 @@ export class AgreementsComponent {
     }
   }
 
-  async removeAdvance(advanceId: string): Promise<void> {
-    await this.agreements.removeAdvance(this.project().id, advanceId);
+  async archiveAdvance(advanceId: string): Promise<void> {
+    await this.agreements.archiveAdvance(this.project().id, advanceId);
     this.toast.show('Advance archived. Show archived to restore it.');
   }
 
   async restoreAdvance(advanceId: string): Promise<void> {
-    const back = await this.agreements.restoreAdvance(this.project().id, advanceId);
-    if (!back) {
+    const restored = await this.agreements.restoreAdvance(this.project().id, advanceId);
+    if (!restored) {
       this.toast.show(this.agreements.error() ?? 'Could not restore that advance.', 'error');
       return;
     }
-    this.toast.show(`Advance to ${back.person_name} restored.`);
+    this.toast.show(`Advance to ${restored.person_name} restored.`);
   }
 
   async setIncludeArchived(on: boolean): Promise<void> {
@@ -291,22 +292,22 @@ export class AgreementsComponent {
     return this.includeArchived() ? 'Hide archived' : 'Show archived';
   }
 
-  /** Positive means they still hold money, negative means they are owed it. */
-  holding(balance: number): string {
-    return balance >= 0 ? 'holds' : 'is owed';
+  /** A positive balance is unspent money the person holds; a negative balance is owed to them. */
+  balanceDirection(balance: number): string {
+    return balance >= 0 ? 'Unspent' : 'Owed';
   }
 
-  async remove(agreementId: string): Promise<void> {
-    await this.agreements.remove(agreementId);
+  async archive(agreementId: string): Promise<void> {
+    await this.agreements.archive(agreementId);
     this.toast.show('Agreement archived. Show archived to restore it.');
   }
 
   async restore(agreementId: string): Promise<void> {
-    const back = await this.agreements.restore(agreementId);
-    if (!back) {
+    const restored = await this.agreements.restore(agreementId);
+    if (!restored) {
       this.toast.show(this.agreements.error() ?? 'Could not restore that agreement.', 'error');
       return;
     }
-    this.toast.show(`Agreement with ${back.vendor_name} restored.`);
+    this.toast.show(`Agreement with ${restored.vendor_name} restored.`);
   }
 }

@@ -34,31 +34,31 @@ NOT_FOUND: dict[int | str, dict[str, Any]] = {
 async def list_attachments(
     expense_id: str,
     user: CurrentUser,
-    include_deleted: Annotated[bool, Query(description="Include archived files")] = False,
+    include_archived: Annotated[bool, Query(description="Include archived attachments")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> AttachmentPage:
     return await controller.list(
-        expense_id, limit=limit, offset=offset, include_deleted=include_deleted
+        expense_id, limit=limit, offset=offset, include_archived=include_archived
     )
 
 
 @router.post(
     "/projects/{project_id}/expenses/{expense_id}/attachments",
-    operation_id="addAttachment",
+    operation_id="createAttachment",
     status_code=status.HTTP_201_CREATED,
     responses={
         **NOT_FOUND,
         status.HTTP_413_CONTENT_TOO_LARGE: {"description": "File too large"},
-        status.HTTP_415_UNSUPPORTED_MEDIA_TYPE: {"description": "Not a photograph or a PDF"},
+        status.HTTP_415_UNSUPPORTED_MEDIA_TYPE: {"description": "Not an image or a PDF"},
     },
 )
-async def add_attachment(
+async def create_attachment(
     project_id: str,
     expense_id: str,
     user: CurrentUser,
     storage: Store,
-    file: Annotated[UploadFile, File(description="The photograph or PDF")],
+    file: Annotated[UploadFile, File(description="An image or a PDF")],
 ) -> AttachmentRead:
     return await controller.create(
         project_id,
@@ -81,7 +81,7 @@ async def get_attachment(attachment_id: str, user: CurrentUser) -> AttachmentRea
     responses={
         **NOT_FOUND,
         status.HTTP_200_OK: {
-            "description": "The file itself",
+            "description": "The file contents",
             "content": {
                 "application/octet-stream": {"schema": {"type": "string", "format": "binary"}}
             },
@@ -90,27 +90,28 @@ async def get_attachment(attachment_id: str, user: CurrentUser) -> AttachmentRea
     response_class=Response,
 )
 async def download_attachment(attachment_id: str, user: CurrentUser, storage: Store) -> Response:
-    """The file. Where the store can hand out a link of its own, this redirects
-    to it and the bytes never pass through Setout."""
+    """Serve the file inline, for the browser to display. Redirects to the storage URL when the
+    store provides one.
+    """
     link = await controller.link(attachment_id, storage)
     if link is not None:
         return RedirectResponse(link, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
-    found = await controller.read_file(attachment_id, storage)
+    stored_file = await controller.read_file(attachment_id, storage)
     return Response(
-        content=found.data,
-        media_type=found.content_type,
-        headers={"Content-Disposition": f'inline; filename="{found.filename}"'},
+        content=stored_file.data,
+        media_type=stored_file.content_type,
+        headers={"Content-Disposition": f'inline; filename="{stored_file.filename}"'},
     )
 
 
-@router.delete(
-    "/attachments/{attachment_id}",
-    operation_id="deleteAttachment",
+@router.post(
+    "/attachments/{attachment_id}/archive",
+    operation_id="archiveAttachment",
     status_code=status.HTTP_204_NO_CONTENT,
     responses=NOT_FOUND,
 )
-async def delete_attachment(attachment_id: str, user: CurrentUser) -> None:
-    await controller.delete(attachment_id)
+async def archive_attachment(attachment_id: str, user: CurrentUser) -> None:
+    await controller.archive(attachment_id)
 
 
 @router.post(

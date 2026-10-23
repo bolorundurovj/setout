@@ -1,5 +1,3 @@
-"""Build the workbook a project came from, so nothing is trapped in Setout."""
-
 from __future__ import annotations
 
 import csv
@@ -22,39 +20,43 @@ XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 DATE_FORMAT = "dd mmm yyyy"
 
 BUDGET_HEAD = [
-    "Cost Codes",
-    "Activities",
-    "Labor Costs",
+    "Cost Code",
+    "Description",
+    "Labour Costs",
     "Material Costs",
     "Fixed Costs",
     "Budget",
 ]
 VENDOR_HEAD = ["Company Name", "Trade", "Point of Contact", "Phone", "Email", "Notes"]
-SPEND_HEAD = [
+EXPENSE_HEAD = [
     "Invoice No.",
     "Subcontractors & Vendors",
     "Cost Code",
     "Description",
     "Date Invoiced",
-    "Total Cost",
-    "Documents",
-    "Purchased By",
+    "Amount",
+    "Attachment",
+    "Paid By",
     "Paid",
     "Date Paid",
     "Notes",
 ]
-OWED_HEAD = ["Item", "Vendor", "Qty", "Location", "Status"]
+OUTSTANDING_HEAD = ["Item", "Vendor", "Qty", "Expected", "Status"]
 PEOPLE_HEAD = ["Person", "Role", "Phone", "Notes"]
-AGREEMENT_HEAD = ["Vendor", "Work Agreed", "Agreed", "Paid", "Remaining", "Notes"]
-PRICE_HEAD = ["Item Name", "Unit", "Last Price", "Purchased From", "Date"]
-FILE_HEAD = ["File", "Attached To", "Size in Bytes", "Checksum"]
+AGREEMENT_HEAD = ["Vendor", "Description", "Agreed Amount", "Paid", "Balance", "Notes"]
+PRICE_HEAD = ["Item Name", "Unit", "Latest Unit Rate", "Vendor", "Date"]
+ATTACHMENT_HEAD = ["File", "Attached To", "Size in Bytes", "Checksum"]
+
+VENDORS_SHEET = "Vendors and subcontractors"
+EXPENSES_SHEET = "Expenses"
+OUTSTANDING_SHEET = "Outstanding deliveries"
 
 
 COST_COLUMN = {"labour": 0, "material": 1, "fixed": 2}
 
 
 @dataclass
-class PlanLine:
+class BudgetLine:
     code: str
     name: str
     budgeted_amount: int
@@ -62,10 +64,10 @@ class PlanLine:
 
 
 @dataclass
-class PlanCategory:
+class BudgetCategory:
     code: str
     name: str
-    lines: list[PlanLine] = field(default_factory=list)
+    lines: list[BudgetLine] = field(default_factory=list)
 
     @property
     def budgeted_amount(self) -> int:
@@ -73,13 +75,13 @@ class PlanCategory:
 
 
 @dataclass
-class SpendRow:
+class ExpenseRow:
     vendor: str
     code: str
     description: str
     spent_on: date | None
     amount: int
-    document: str
+    attachment: str
     paid_by: str
     notes: str
 
@@ -95,10 +97,10 @@ class VendorRow:
 
 
 @dataclass
-class OwedRow:
+class OutstandingRow:
     description: str
     vendor: str
-    promised: str
+    expected: date | str | None
     received_on: date | None
 
 
@@ -128,46 +130,45 @@ class PriceRow:
 
 
 @dataclass
-class FileRow:
+class AttachmentRow:
     filename: str
-    against: str
+    expense_description: str
     byte_size: int
     checksum: str
 
 
 @dataclass
-class Book:
+class ExportWorkbook:
     project_name: str
     exponent: int
     currency_code: str = ""
-    categories: list[PlanCategory] = field(default_factory=list)
+    categories: list[BudgetCategory] = field(default_factory=list)
     vendors: list[VendorRow] = field(default_factory=list)
-    spend: list[SpendRow] = field(default_factory=list)
-    owed: list[OwedRow] = field(default_factory=list)
+    expenses: list[ExpenseRow] = field(default_factory=list)
+    outstanding: list[OutstandingRow] = field(default_factory=list)
     people: list[PersonRow] = field(default_factory=list)
     agreements: list[AgreementRow] = field(default_factory=list)
     prices: list[PriceRow] = field(default_factory=list)
-    files: list[FileRow] = field(default_factory=list)
+    attachments: list[AttachmentRow] = field(default_factory=list)
 
 
 def major(minor: int, exponent: int) -> Decimal:
     return Decimal(minor).scaleb(-exponent)
 
 
-def compose(book: Book) -> Workbook:
-    """One writer, so a sample cannot drift from an export."""
+def compose(book: ExportWorkbook) -> Workbook:
     wb = Workbook()
     wb.remove(wb.active)
 
     _project(wb.create_sheet("Project"), book)
     _budget(wb.create_sheet("Budget"), book)
-    _vendors(wb.create_sheet("Vendors & Subcontractors"), book)
-    _spend(wb.create_sheet("Invoices and Purchases"), book)
-    _owed(wb.create_sheet("Outstanding"), book)
+    _vendors(wb.create_sheet(VENDORS_SHEET), book)
+    _expenses(wb.create_sheet(EXPENSES_SHEET), book)
+    _outstanding(wb.create_sheet(OUTSTANDING_SHEET), book)
     _people(wb.create_sheet("People"), book)
     _agreements(wb.create_sheet("Agreements"), book)
     _prices(wb.create_sheet("Item prices"), book)
-    _files(wb.create_sheet("Attachments"), book)
+    _attachments(wb.create_sheet("Attachments"), book)
     return wb
 
 
@@ -177,20 +178,20 @@ def as_bytes(wb: Workbook) -> bytes:
     return out.getvalue()
 
 
-def build(book: Book) -> bytes:
+def build(book: ExportWorkbook) -> bytes:
     return as_bytes(compose(book))
 
 
 CURRENCY_LABEL = "Currency code"
 
 
-def _project(sheet: Worksheet, book: Book) -> None:
+def _project(sheet: Worksheet, book: ExportWorkbook) -> None:
     sheet.append([f"{book.project_name}"])
     sheet.append([])
     for label, value in [
         ("Project", book.project_name),
         (CURRENCY_LABEL, book.currency_code),
-        ("Amounts are written in", "whole units, not minor units"),
+        ("Amounts", "Whole currency units, for example 1,500.00, not cents or kobo"),
     ]:
         sheet.append([label, value])
     sheet["A1"].font = TITLE_FONT
@@ -199,7 +200,7 @@ def _project(sheet: Worksheet, book: Book) -> None:
     _widths(sheet, [26, 44])
 
 
-def _money_format(book: Book) -> str:
+def _money_format(book: ExportWorkbook) -> str:
     return f'"{book.currency_code} "#,##0.00' if book.currency_code else MONEY_FORMAT
 
 
@@ -235,39 +236,38 @@ def _format(
             row[column].number_format = DATE_FORMAT
 
 
-def _budget(sheet: Worksheet, book: Book) -> None:
+def _budget(sheet: Worksheet, book: ExportWorkbook) -> None:
     _title(sheet, f"{book.project_name}: budget", BUDGET_HEAD)
 
-    def figure(minor: int) -> Decimal:
+    def to_major(minor: int) -> Decimal:
         return major(minor, book.exponent)
 
     for category in book.categories:
-        # Setout adds the lines up itself, so a re-import reads them alone.
         totals = _by_cost_type(category.lines)
         sheet.append(
             [
                 category.code,
                 category.name,
-                figure(totals["labour"]) if totals["labour"] else "",
-                figure(totals["material"]) if totals["material"] else "",
-                figure(totals["fixed"]) if totals["fixed"] else "",
-                figure(category.budgeted_amount),
+                to_major(totals["labour"]) if totals["labour"] else "",
+                to_major(totals["material"]) if totals["material"] else "",
+                to_major(totals["fixed"]) if totals["fixed"] else "",
+                to_major(category.budgeted_amount),
             ]
         )
         sheet.cell(row=sheet.max_row, column=1).font = CATEGORY_FONT
         sheet.cell(row=sheet.max_row, column=2).font = CATEGORY_FONT
         sheet.cell(row=sheet.max_row, column=6).font = CATEGORY_FONT
         for line in category.lines:
-            split: list[object] = ["", "", ""]
+            cost_type_cells: list[object] = ["", "", ""]
             if line.cost_type in COST_COLUMN:
-                split[COST_COLUMN[line.cost_type]] = figure(line.budgeted_amount)
-            sheet.append([line.code, line.name, *split, figure(line.budgeted_amount)])
+                cost_type_cells[COST_COLUMN[line.cost_type]] = to_major(line.budgeted_amount)
+            sheet.append([line.code, line.name, *cost_type_cells, to_major(line.budgeted_amount)])
 
     _widths(sheet, [14, 40, 15, 15, 15, 16])
     _format(sheet, money=[2, 3, 4, 5], money_format=_money_format(book))
 
 
-def _by_cost_type(lines: list[PlanLine]) -> dict[str, int]:
+def _by_cost_type(lines: list[BudgetLine]) -> dict[str, int]:
     totals = {"labour": 0, "material": 0, "fixed": 0}
     for line in lines:
         if line.cost_type in totals:
@@ -275,8 +275,8 @@ def _by_cost_type(lines: list[PlanLine]) -> dict[str, int]:
     return totals
 
 
-def _vendors(sheet: Worksheet, book: Book) -> None:
-    _title(sheet, "Vendors & subcontractors", VENDOR_HEAD)
+def _vendors(sheet: Worksheet, book: ExportWorkbook) -> None:
+    _title(sheet, VENDORS_SHEET, VENDOR_HEAD)
     for vendor in book.vendors:
         sheet.append(
             [
@@ -291,9 +291,9 @@ def _vendors(sheet: Worksheet, book: Book) -> None:
     _widths(sheet, [28, 20, 22, 18, 26, 30])
 
 
-def _spend(sheet: Worksheet, book: Book) -> None:
-    _title(sheet, "Invoices & purchases", SPEND_HEAD)
-    for row in book.spend:
+def _expenses(sheet: Worksheet, book: ExportWorkbook) -> None:
+    _title(sheet, EXPENSES_SHEET, EXPENSE_HEAD)
+    for row in book.expenses:
         sheet.append(
             [
                 "",
@@ -302,7 +302,7 @@ def _spend(sheet: Worksheet, book: Book) -> None:
                 row.description,
                 row.spent_on,
                 major(row.amount, book.exponent),
-                row.document,
+                row.attachment,
                 row.paid_by,
                 "Yes",
                 row.spent_on,
@@ -313,32 +313,35 @@ def _spend(sheet: Worksheet, book: Book) -> None:
     _format(sheet, money=[5], dates=[4, 9], money_format=_money_format(book))
 
 
-def _owed(sheet: Worksheet, book: Book) -> None:
-    _title(sheet, "Paid for, not delivered", OWED_HEAD)
-    for row in book.owed:
-        arrived = f"Delivered {row.received_on:%d %b %Y}" if row.received_on else "Waiting"
-        sheet.append([row.description, row.vendor, "", row.promised, arrived])
+def _outstanding(sheet: Worksheet, book: ExportWorkbook) -> None:
+    _title(sheet, OUTSTANDING_SHEET, OUTSTANDING_HEAD)
+    for row in book.outstanding:
+        status = f"Received {row.received_on:%d %b %Y}" if row.received_on else "Not received"
+        expected_str = (
+            row.expected.isoformat() if isinstance(row.expected, date) else (row.expected or "")
+        )
+        sheet.append([row.description, row.vendor, "", expected_str, status])
     _widths(sheet, [34, 26, 10, 22, 22])
 
 
-def _people(sheet: Worksheet, book: Book) -> None:
+def _people(sheet: Worksheet, book: ExportWorkbook) -> None:
     _title(sheet, "People", PEOPLE_HEAD)
     for person in book.people:
         sheet.append([person.name, person.role, person.phone, person.notes])
     _widths(sheet, [26, 20, 18, 30])
 
 
-def _agreements(sheet: Worksheet, book: Book) -> None:
+def _agreements(sheet: Worksheet, book: ExportWorkbook) -> None:
     _title(sheet, "Agreements", AGREEMENT_HEAD)
     for row in book.agreements:
-        left = row.agreed_amount - row.paid_amount
+        balance = row.agreed_amount - row.paid_amount
         sheet.append(
             [
                 row.vendor,
                 row.description,
                 major(row.agreed_amount, book.exponent),
                 major(row.paid_amount, book.exponent),
-                major(left, book.exponent),
+                major(balance, book.exponent),
                 "",
             ]
         )
@@ -346,7 +349,7 @@ def _agreements(sheet: Worksheet, book: Book) -> None:
     _format(sheet, money=[2, 3, 4], money_format=_money_format(book))
 
 
-def _prices(sheet: Worksheet, book: Book) -> None:
+def _prices(sheet: Worksheet, book: ExportWorkbook) -> None:
     _title(sheet, "Item prices", PRICE_HEAD)
     for row in book.prices:
         rate = "" if row.unit_rate is None else major(row.unit_rate, book.exponent)
@@ -355,59 +358,60 @@ def _prices(sheet: Worksheet, book: Book) -> None:
     _format(sheet, money=[2], dates=[4], money_format=_money_format(book))
 
 
-def _files(sheet: Worksheet, book: Book) -> None:
-    _title(sheet, "Attachments, which are not in this workbook", FILE_HEAD)
-    for row in book.files:
-        sheet.append([row.filename, row.against, row.byte_size, row.checksum])
+def _attachments(sheet: Worksheet, book: ExportWorkbook) -> None:
+    _title(sheet, "Attachments (files are not included in this workbook)", ATTACHMENT_HEAD)
+    for row in book.attachments:
+        sheet.append([row.filename, row.expense_description, row.byte_size, row.checksum])
     _widths(sheet, [30, 34, 16, 66])
 
 
-HOW_TO = [
-    "A blank sheet to fill in and bring into Setout",
+INSTRUCTIONS = [
+    "Setout import template",
     "",
-    "Each sheet below is recognised by its headings, so keep the heading row as it is.",
-    "Add rows underneath. Delete a sheet you have nothing for.",
+    "Setout recognises each sheet by its header row. Do not change the header rows.",
+    "Add rows below the header row. Delete any sheet you do not need.",
     "",
-    "Budget: a cost code ending in 000 is a category heading. Anything else is a line",
-    "under the heading above it, so 3000 is a category and 3001 sits inside it.",
-    "Only the lines are read; a heading total is worked out from them.",
+    "Budget: a cost code ending in 000 is a category. Any other cost code is a budget line",
+    "in the category above it. For example, 3000 is a category and 3001 is a line in it.",
+    "Category rows create categories. Their amounts are ignored: each category total is",
+    "calculated from its lines.",
     "",
-    "Put a budgeted figure in one of the labour, material or fixed columns and it is",
-    "kept under that heading. The last column is the figure that counts either way.",
+    "The Budget column is the amount that is imported. To set a cost type, also enter",
+    "the amount in the Labour Costs, Material Costs or Fixed Costs column.",
     "",
-    "Invoices and Purchases: one row is one payment. The cost code says which category",
-    "it belongs to; leave it empty and the spending arrives uncategorized, which is allowed.",
+    "Expenses: each row is one expense. The cost code sets the category.",
+    "A row with no cost code is imported as uncategorised.",
     "",
-    "Amounts are plain numbers. No currency symbols, no thousands separators.",
-    "Dates can be written any way a spreadsheet understands.",
+    "Enter amounts as plain numbers, without currency symbols or thousands separators.",
+    "Enter dates in any format the spreadsheet recognises.",
     "",
-    "Nothing here writes a budget from a spending row, or spending from a budget row.",
+    "Budget rows do not create expenses, and expense rows do not create budget lines.",
     "",
-    "The last four sheets are what Setout adds when it exports a project. They are",
-    "kept for you to read; nothing in them is brought back in, so leave them empty.",
+    "The last four sheets are included in Setout exports for reference only.",
+    "They are not imported, so leave them empty.",
 ]
 
 
-def example_book(currency_code: str = "NGN") -> Book:
-    return Book(
+def example_book(currency_code: str = "NGN") -> ExportWorkbook:
+    return ExportWorkbook(
         project_name="Jacaranda Close, Ewuru",
         exponent=2,
         currency_code=currency_code,
         categories=[
-            PlanCategory(
+            BudgetCategory(
                 code="1000",
                 name="Administrative expenses",
                 lines=[
-                    PlanLine("1001", "Drawings and permits", 120_000_00, "fixed"),
-                    PlanLine("1002", "Beacons", 30_000_00, "material"),
+                    BudgetLine("1001", "Drawings and permits", 120_000_00, "fixed"),
+                    BudgetLine("1002", "Beacons", 30_000_00, "material"),
                 ],
             ),
-            PlanCategory(
+            BudgetCategory(
                 code="2000",
                 name="Concrete foundation",
                 lines=[
-                    PlanLine("2001", "Sand and cement", 450_000_00, "material"),
-                    PlanLine("2002", "Block work", 180_000_00, "labour"),
+                    BudgetLine("2001", "Sand and cement", 450_000_00, "material"),
+                    BudgetLine("2002", "Block work", 180_000_00, "labour"),
                 ],
             ),
         ],
@@ -418,7 +422,7 @@ def example_book(currency_code: str = "NGN") -> Book:
                 contact_name="Mr Sola",
                 phone="0800 000 0002",
                 email="sales@cornerdepot.example",
-                notes="Delivers within the day",
+                notes="Same-day delivery",
             ),
             VendorRow(
                 name="Kunle Bricklaying",
@@ -426,55 +430,55 @@ def example_book(currency_code: str = "NGN") -> Book:
                 contact_name="Kunle",
                 phone="0800 000 0001",
                 email="",
-                notes="Agreed a price for the whole job",
+                notes="Fixed price for the whole job",
             ),
         ],
-        spend=[
-            SpendRow(
+        expenses=[
+            ExpenseRow(
                 vendor="Corner Depot Cement",
                 code="2001",
                 description="17 bags of cement",
                 spent_on=date(2026, 6, 11),
                 amount=76_500_00,
-                document="receipt-11jun.jpg",
+                attachment="receipt-11jun.jpg",
                 paid_by="Aunty Ngozi",
                 notes="Bought on site",
             ),
-            SpendRow(
+            ExpenseRow(
                 vendor="Kunle Bricklaying",
                 code="2002",
                 description="Block work, first payment",
                 spent_on=date(2026, 7, 2),
                 amount=60_000_00,
-                document="",
+                attachment="",
                 paid_by="",
                 notes="",
             ),
-            SpendRow(
+            ExpenseRow(
                 vendor="",
                 code="",
                 description="Nails and sundries",
                 spent_on=date(2026, 7, 18),
                 amount=8_400_00,
-                document="",
+                attachment="",
                 paid_by="",
-                notes="No cost code, so this arrives uncategorized",
+                notes="No cost code, so this is imported as uncategorised",
             ),
         ],
-        owed=[
-            OwedRow(
+        outstanding=[
+            OutstandingRow(
                 description="20 lengths of reinforcement",
                 vendor="Corner Depot Cement",
-                promised="this week",
+                expected="this week",
                 received_on=None,
             )
         ],
         people=[
             PersonRow(
                 name="Aunty Ngozi",
-                role="Buys on site",
+                role="Site purchasing",
                 phone="0800 000 0003",
-                notes="Holds money for small purchases",
+                notes="Receives advances for small purchases",
             )
         ],
         agreements=[
@@ -494,10 +498,10 @@ def example_book(currency_code: str = "NGN") -> Book:
                 spent_on=date(2026, 6, 11),
             )
         ],
-        files=[
-            FileRow(
+        attachments=[
+            AttachmentRow(
                 filename="receipt-11jun.jpg",
-                against="17 bags of cement",
+                expense_description="17 bags of cement",
                 byte_size=248_512,
                 checksum="0" * 64,
             )
@@ -509,15 +513,17 @@ def template(filled: bool = False) -> bytes:
     book = (
         example_book()
         if filled
-        else Book(project_name="Your project", exponent=2, currency_code="put yours here")
+        else ExportWorkbook(
+            project_name="Your project", exponent=2, currency_code="Enter a currency code"
+        )
     )
     wb = compose(book)
 
-    guide = wb.create_sheet("How to fill this in", 0)
-    for line in HOW_TO:
-        guide.append([line])
-    guide["A1"].font = TITLE_FONT
-    _widths(guide, [96])
+    instructions_sheet = wb.create_sheet("Instructions", 0)
+    for line in INSTRUCTIONS:
+        instructions_sheet.append([line])
+    instructions_sheet["A1"].font = TITLE_FONT
+    _widths(instructions_sheet, [96])
 
     return as_bytes(wb)
 
@@ -538,17 +544,19 @@ def budget_csv(filled: bool = False) -> bytes:
                 [category.code, category.name, "", "", "", major(category.budgeted_amount, 2)]
             )
             for line in category.lines:
-                split: list[object] = ["", "", ""]
+                cost_type_cells: list[object] = ["", "", ""]
                 if line.cost_type in COST_COLUMN:
-                    split[COST_COLUMN[line.cost_type]] = major(line.budgeted_amount, 2)
-                rows.append([line.code, line.name, *split, major(line.budgeted_amount, 2)])
+                    cost_type_cells[COST_COLUMN[line.cost_type]] = major(line.budgeted_amount, 2)
+                rows.append(
+                    [line.code, line.name, *cost_type_cells, major(line.budgeted_amount, 2)]
+                )
     return as_csv(rows)
 
 
-def spend_csv(filled: bool = False) -> bytes:
-    rows: list[list[object]] = [list(SPEND_HEAD)]
+def expenses_csv(filled: bool = False) -> bytes:
+    rows: list[list[object]] = [list(EXPENSE_HEAD)]
     if filled:
-        for row in example_book().spend:
+        for row in example_book().expenses:
             rows.append(
                 [
                     "",
@@ -557,7 +565,7 @@ def spend_csv(filled: bool = False) -> bytes:
                     row.description,
                     row.spent_on,
                     major(row.amount, 2),
-                    row.document,
+                    row.attachment,
                     row.paid_by,
                     "Yes",
                     row.spent_on,
@@ -587,5 +595,5 @@ def sample(kind: str) -> bytes:
     if kind == "budget-csv":
         return budget_csv(filled=True)
     if kind == "spending-csv":
-        return spend_csv(filled=True)
+        return expenses_csv(filled=True)
     return template()

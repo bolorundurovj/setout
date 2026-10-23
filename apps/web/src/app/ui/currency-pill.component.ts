@@ -51,8 +51,7 @@ export class CurrencyPillComponent {
   readonly code = input.required<string>();
   readonly tone = input<CurrencyPillTone>('field');
 
-  // Currencies without a distinct symbol return their code, and "KWD KWD"
-  // helps nobody.
+  // Currencies without a distinct symbol return their code; this avoids labels like "KWD KWD".
   readonly label = computed(() => {
     const symbol = currencySymbol(this.code());
     return symbol === this.code() ? this.code() : `${symbol} ${this.code()}`;

@@ -1,11 +1,10 @@
 """Contract test: the API must match its published OpenAPI schema.
 
-We use schemathesis to property test every endpoint against the schema, so no
-response can drift from what it promises. schemathesis has no lifespan support,
-and Tortoise 1.x binds connections to an event loop, so we run the app in a
-real uvicorn server on an ephemeral port and point schemathesis at its URL. The
-server owns its loop and runs the lifespan, so migrations apply and the
-database is initialised exactly as in production.
+Property-tests every endpoint against the published schema with schemathesis.
+schemathesis has no lifespan support, and Tortoise 1.x binds connections to an
+event loop, so the app runs in a real uvicorn server on an ephemeral port and
+schemathesis targets its URL. The server owns its loop and runs the lifespan,
+so migrations apply and the database is initialised as in production.
 """
 
 from __future__ import annotations
@@ -55,10 +54,9 @@ def app_schema(
 ) -> Iterator[schemathesis.BaseSchema]:
     db_file = tmp_path / "contract.sqlite3"
     monkeypatch.setenv("SETOUT_DATABASE_URL", f"sqlite://{db_file.as_posix()}")
-    # Generated passphrases are a burst of failures, which the throttle answers
-    # with 429 and a growing wait. The throttle has its own tests.
-    monkeypatch.setenv("SETOUT_LOGIN_DELAY_SECONDS", "0")
-    monkeypatch.setenv("SETOUT_LOGIN_MAX_ATTEMPTS", "1000000")
+    # Generated cases fail sign-in repeatedly and would get 429; the throttle has its own tests.
+    monkeypatch.setenv("SETOUT_SIGN_IN_DELAY_SECONDS", "0")
+    monkeypatch.setenv("SETOUT_SIGN_IN_MAX_ATTEMPTS", "1000000")
     get_settings.cache_clear()
     monkeypatch.setattr(db_module, "TORTOISE_ORM", db_module.build_tortoise_config())
 

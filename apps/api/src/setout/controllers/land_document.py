@@ -15,8 +15,8 @@ from setout.schemas.land_document import (
 )
 from setout.services.storage import Storage, checksum_of, key_for
 
-NO_SUCH_DOCUMENT = "Document not found"
-NO_SUCH_LAND = "Land not found"
+NOT_FOUND_DOCUMENT = "Document not found"
+NOT_FOUND_LAND = "Land not found"
 
 ALLOWED: dict[str, str] = {
     "image/jpeg": ".jpg",
@@ -37,12 +37,12 @@ class LandDocumentFile:
 
 class LandDocumentController:
     async def list(
-        self, land_id: str, *, limit: int, offset: int, include_deleted: bool
+        self, land_id: str, *, limit: int, offset: int, include_archived: bool
     ) -> LandDocumentPage:
         await self._land_or_404(land_id)
         query = LandDocument.filter(land_id=land_id)
-        if not include_deleted:
-            query = query.filter(deleted_at__isnull=True)
+        if not include_archived:
+            query = query.filter(archived_at__isnull=True)
         total = await query.count()
         rows = await query.offset(offset).limit(limit)
         return LandDocumentPage(
@@ -57,7 +57,7 @@ class LandDocumentController:
         land_id: str,
         *,
         kind: LandDocumentKind,
-        note: str | None,
+        notes: str | None,
         filename: str,
         content_type: str,
         data: bytes,
@@ -69,28 +69,28 @@ class LandDocumentController:
         if media_type not in ALLOWED:
             raise HTTPException(
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                detail="A land document must be a photograph or a PDF",
+                detail="A land document must be an image or a PDF",
             )
         if not data:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="That file is empty"
             )
-        cap = get_settings().max_attachment_bytes
-        if len(data) > cap:
+        max_bytes = get_settings().max_attachment_bytes
+        if len(data) > max_bytes:
             raise HTTPException(
                 status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-                detail=f"That file is larger than the {cap // (1024 * 1024)} MB limit",
+                detail=f"That file is larger than the {max_bytes // (1024 * 1024)} MiB limit",
             )
 
         checksum = checksum_of(data)
-        name = self._clean(filename) or f"document{ALLOWED[media_type]}"
+        name = self._strip_path(filename) or f"document{ALLOWED[media_type]}"
         key = key_for(checksum, name if "." in name else f"{name}{ALLOWED[media_type]}")
         if not await storage.exists(key):
             await storage.put(key, data, content_type=media_type)
         row = await LandDocument.create(
             land_id=land_id,
             kind=kind,
-            note=note,
+            notes=notes,
             filename=name,
             content_type=media_type,
             byte_size=len(data),
@@ -118,7 +118,8 @@ class LandDocumentController:
             data = await storage.get(row.storage_key)
         except FileNotFoundError as e:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=NO_SUCH_DOCUMENT
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="The file is missing from storage",
             ) from e
         return LandDocumentFile(filename=row.filename, content_type=row.content_type, data=data)
 
@@ -128,33 +129,33 @@ class LandDocumentController:
             row.storage_key, filename=row.filename, content_type=row.content_type
         )
 
-    async def delete(self, document_id: str) -> None:
+    async def archive(self, document_id: str) -> None:
         row = await self._document_or_404(document_id)
-        row.deleted_at = datetime.now(UTC)
+        row.archived_at = datetime.now(UTC)
         await row.save()
 
     async def restore(self, document_id: str) -> LandDocumentRead:
-        row = await self._document_or_404(document_id, include_deleted=True)
-        if row.deleted_at is not None:
-            row.deleted_at = None
+        row = await self._document_or_404(document_id, include_archived=True)
+        if row.archived_at is not None:
+            row.archived_at = None
             await row.save()
         return LandDocumentRead.model_validate(row, from_attributes=True)
 
     @staticmethod
-    def _clean(filename: str) -> str:
-        # Whatever the browser sent, keep only the last path segment.
+    def _strip_path(filename: str) -> str:
+        # Some browsers send the full client path.
         return filename.replace("\\", "/").rsplit("/", 1)[-1].strip()
 
     async def _land_or_404(self, land_id: str) -> Land:
-        land = await Land.get_or_none(id=land_id, deleted_at__isnull=True)
+        land = await Land.get_or_none(id=land_id, archived_at__isnull=True)
         if land is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NO_SUCH_LAND)
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND_LAND)
         return land
 
     async def _document_or_404(
-        self, document_id: str, *, include_deleted: bool = False
+        self, document_id: str, *, include_archived: bool = False
     ) -> LandDocument:
         row = await LandDocument.get_or_none(id=document_id)
-        if row is None or (row.deleted_at is not None and not include_deleted):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NO_SUCH_DOCUMENT)
+        if row is None or (row.archived_at is not None and not include_archived):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND_DOCUMENT)
         return row

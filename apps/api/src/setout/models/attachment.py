@@ -9,7 +9,7 @@ from setout.utils.ids import short_id
 
 
 class Attachment(Model):
-    """A photograph of a receipt, or any file kept beside an expense."""
+    """A file attached to an expense: an image or a PDF, such as a receipt."""
 
     id = fields.CharField(max_length=12, primary_key=True, default=short_id)
     project: fields.ForeignKeyRelation[Project] = fields.ForeignKeyField(
@@ -24,16 +24,18 @@ class Attachment(Model):
         on_delete=fields.CASCADE,
     )
     expense_id: str
-    filename = fields.CharField(max_length=255, description="What it was called where it came from")
+    filename = fields.CharField(max_length=255, description="The original filename")
     content_type = fields.CharField(max_length=127)
     byte_size = fields.IntField()
     checksum = fields.CharField(
-        max_length=64, db_index=True, description="sha256 of the contents, and the stored name"
+        max_length=64,
+        db_index=True,
+        description="SHA-256 of the contents, also used as the stored filename",
     )
     storage_key = fields.CharField(max_length=255)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    deleted_at = fields.DatetimeField(null=True, default=None)
+    archived_at = fields.DatetimeField(null=True, default=None)
 
     class Meta:
         table = "attachment"

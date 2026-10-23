@@ -9,10 +9,10 @@ from setout.utils.ids import short_id
 
 
 class Agreement(Model):
-    """What a vendor agreed to do for a fixed price on one project.
+    """A fixed price agreed with a vendor for work on one project.
 
-    Paid and balance are worked out from the expenses filed against it, so a
-    part payment is recorded once and counted everywhere.
+    Paid and balance are calculated from the expenses linked to the agreement,
+    so a part payment is recorded once.
     """
 
     id = fields.CharField(max_length=12, primary_key=True, default=short_id)
@@ -34,7 +34,7 @@ class Agreement(Model):
     notes = fields.TextField(null=True, default=None)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    deleted_at = fields.DatetimeField(null=True, default=None)
+    archived_at = fields.DatetimeField(null=True, default=None)
 
     class Meta:
         table = "agreement"

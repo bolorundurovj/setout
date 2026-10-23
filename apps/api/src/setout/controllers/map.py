@@ -6,5 +6,7 @@ from setout.schemas.map import MapSettings
 
 class MapController:
     def settings(self) -> MapSettings:
-        found = get_settings()
-        return MapSettings(tile_url=found.map_tile_url, attribution=found.map_attribution)
+        app_settings = get_settings()
+        return MapSettings(
+            tile_url=app_settings.map_tile_url, attribution=app_settings.map_attribution
+        )

@@ -24,7 +24,7 @@ const project: ProjectRead = {
   notes: null,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
-  deleted_at: null,
+  archived_at: null,
 };
 
 describe('ProjectDetailComponent', () => {
@@ -34,7 +34,7 @@ describe('ProjectDetailComponent', () => {
     const projects = { get: async () => project, error: () => null };
     const expenses = {
       expenses: () => [],
-      spend: () => null,
+      summary: () => null,
       total: () => 0,
       page: () => 1,
       months: () => null,
@@ -44,11 +44,12 @@ describe('ProjectDetailComponent', () => {
       error: () => null,
       load: async () => undefined,
       goTo: async () => undefined,
+      loadSummary: async () => undefined,
       loadMonths: async () => undefined,
       loadForMonth: async () => undefined,
       loadForCategory: async () => undefined,
       add: async () => null,
-      remove: async () => undefined,
+      archive: async () => undefined,
     };
     const budget = {
       categories: () => [],
@@ -77,7 +78,7 @@ describe('ProjectDetailComponent', () => {
       add: async () => null,
       lastPrice: async () => null,
       prices: async () => null,
-      spend: async () => null,
+      expenseSummary: async () => null,
     };
 
     TestBed.resetTestingModule();
@@ -103,7 +104,7 @@ describe('ProjectDetailComponent', () => {
     return fixture.componentInstance;
   }
 
-  it('gathers the filters out of the address for the expense tab', () => {
+  it('reads the expense filters from the URL', () => {
     const component = render('expense');
     fixture.componentRef.setInput('q', 'cement');
     fixture.componentRef.setInput('vendor', 'v1');
@@ -122,33 +123,33 @@ describe('ProjectDetailComponent', () => {
     });
   });
 
-  it('asks for the newest first when the address says nothing about order', () => {
+  it('sorts by most recent when the URL has no sort', () => {
     const component = render('expense');
     expect(component.expenseFilters().sort).toBe('recent');
   });
 
-  it('opens on the dashboard by default', () => {
+  it('opens the dashboard tab by default', () => {
     expect(render().activeTab()).toBe('dashboard');
   });
 
-  it('opens straight onto the tab named in the address', () => {
+  it('opens the tab named in the URL', () => {
     expect(render('expense').activeTab()).toBe('expense');
   });
 
-  it('opens the deliveries tab now that it is built', () => {
+  it('opens the deliveries tab', () => {
     expect(render('deliveries').activeTab()).toBe('deliveries');
   });
 
-  it('ignores a tab name that means nothing', () => {
+  it('falls back to the dashboard tab for an unknown tab name', () => {
     expect(render('nonsense').activeTab()).toBe('dashboard');
   });
 
-  it('has the expense tab enabled', () => {
+  it('includes the expenses tab', () => {
     const component = render();
-    expect(component.tabs.find((tab) => tab.key === 'expense')?.ready).toBe(true);
+    expect(component.tabs.some((tab) => tab.key === 'expense')).toBe(true);
   });
 
-  it('names the tab that is open', () => {
+  it('names the open tab', () => {
     expect(render('expense').activeTabName()).toBe('Expenses');
   });
 
@@ -159,7 +160,7 @@ describe('ProjectDetailComponent', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('shows one tab at a time, and no placeholder beneath it', async () => {
+  it('renders only the open tab', async () => {
     const months = await body('months');
     expect(months.querySelectorAll('.page > *').length).toBe(1);
     expect(months.querySelector('app-months')).toBeTruthy();
@@ -170,36 +171,36 @@ describe('ProjectDetailComponent', () => {
     expect(dashboard.querySelector('app-project-dashboard')).toBeTruthy();
   });
 
-  it('puts the chosen tab in the address, so a refresh lands back on it', () => {
+  it('writes the selected tab to the URL', () => {
     const component = render();
     const router = TestBed.inject(Router);
-    const went: unknown[][] = [];
+    const navigations: unknown[][] = [];
     router.navigate = async (commands: unknown[]) => {
-      went.push(commands);
+      navigations.push(commands);
       return true;
     };
 
     component.selectTab('table');
 
     expect(component.activeTab()).toBe('table');
-    expect(went[0]).toEqual(['/projects', 'p1', 'table']);
+    expect(navigations[0]).toEqual(['/projects', 'p1', 'table']);
   });
 
-  it('sends the dashboard to its own address rather than a bare one', () => {
+  it('navigates to the dashboard tab path explicitly', () => {
     const component = render('table');
     const router = TestBed.inject(Router);
-    const went: unknown[][] = [];
+    const navigations: unknown[][] = [];
     router.navigate = async (commands: unknown[]) => {
-      went.push(commands);
+      navigations.push(commands);
       return true;
     };
 
     component.selectTab('dashboard');
 
-    expect(went[0]).toEqual(['/projects', 'p1', 'dashboard']);
+    expect(navigations[0]).toEqual(['/projects', 'p1', 'dashboard']);
   });
 
-  it('names the project and the open tab in the page title', async () => {
+  it('shows the project and open tab in the page title', async () => {
     const component = render('table');
     await component.load();
     fixture.detectChanges();
@@ -209,33 +210,33 @@ describe('ProjectDetailComponent', () => {
     );
   });
 
-  it('follows the tab as it changes', async () => {
+  it('updates the page title when the tab changes', async () => {
     const component = render();
     await component.load();
     fixture.detectChanges();
     const title = TestBed.inject(Title);
     expect(title.getTitle()).toBe('Jacaranda Close, Ewuru · Dashboard · Setout');
 
-    // Where the address goes is covered above. This is only about the title.
+    // Stub navigate so only the title effect runs.
     TestBed.inject(Router).navigate = async () => true;
     component.selectTab('agreements');
     fixture.detectChanges();
     expect(title.getTitle()).toBe('Jacaranda Close, Ewuru · Agreements · Setout');
   });
 
-  it('sends a pressed category to the table, naming it in the address', () => {
+  it('opens the selected category in the Budget vs Spent tab', () => {
     const component = render();
     const router = TestBed.inject(Router);
-    const went: unknown[][] = [];
+    const navigations: unknown[][] = [];
     router.navigate = async (commands: unknown[], extras?: unknown) => {
-      went.push([commands, extras]);
+      navigations.push([commands, extras]);
       return true;
     };
 
     component.openCategory('s1');
 
     expect(component.activeTab()).toBe('table');
-    expect(went[0][0]).toEqual(['/projects', 'p1', 'table']);
-    expect(went[0][1]).toEqual({ queryParams: { category: 's1' } });
+    expect(navigations[0][0]).toEqual(['/projects', 'p1', 'table']);
+    expect(navigations[0][1]).toEqual({ queryParams: { category: 's1' } });
   });
 });

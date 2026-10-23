@@ -6,7 +6,7 @@ import { ToastService } from '../toast.service';
 import { PersonFormComponent } from './person-form.component';
 import { PersonService } from './person.service';
 
-function person(over: Partial<PersonRead> = {}): PersonRead {
+function person(overrides: Partial<PersonRead> = {}): PersonRead {
   return {
     id: 'pe1',
     name: 'A Person',
@@ -17,8 +17,8 @@ function person(over: Partial<PersonRead> = {}): PersonRead {
     totals: [],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
@@ -76,24 +76,24 @@ describe('PersonFormComponent', () => {
     return component;
   }
 
-  it('starts empty when adding somebody', async () => {
+  it('starts empty when creating a person', async () => {
     const component = await render();
     expect(component.isEdit()).toBe(false);
-    expect(component.title()).toBe('Add Someone');
+    expect(component.title()).toBe('New Person');
     expect(component.name()).toBe('');
   });
 
-  it('fills itself from the person being edited', async () => {
+  it('populates the fields from the person being edited', async () => {
     const component = await render('pe1');
     expect(component.isEdit()).toBe(true);
-    expect(component.title()).toBe('Edit');
+    expect(component.title()).toBe('Edit Person');
     expect(component.name()).toBe('A Person');
     expect(component.role()).toBe('a role');
     expect(component.phone()).toBe('0000 000 0000');
     expect(component.notes()).toBe('a note');
   });
 
-  it('adds somebody and opens them', async () => {
+  it('creates a person and opens it', async () => {
     const component = await render();
     component.name.set('  A New Person  ');
     component.role.set(' a role ');
@@ -110,7 +110,7 @@ describe('PersonFormComponent', () => {
     expect(navigations[0][0]).toEqual(['/people', 'pe9']);
   });
 
-  it('saves an edit rather than adding a second person', async () => {
+  it('updates the person when editing instead of creating one', async () => {
     const component = await render('pe1');
     component.role.set('another role');
 
@@ -125,7 +125,7 @@ describe('PersonFormComponent', () => {
     });
   });
 
-  it('will not save without a name', async () => {
+  it('does not save without a name', async () => {
     const component = await render();
     component.name.set('   ');
 
@@ -134,7 +134,7 @@ describe('PersonFormComponent', () => {
     expect(added.length).toBe(0);
   });
 
-  it('reports a save that was refused and stays put', async () => {
+  it('shows the error and does not navigate when the save fails', async () => {
     const component = await render();
     saveResult = null;
     component.name.set('A Person');
@@ -145,7 +145,7 @@ describe('PersonFormComponent', () => {
     expect(navigations.length).toBe(0);
   });
 
-  it('cancels back to the list when new, and to the person when editing', async () => {
+  it('cancels to the list when creating and to the person when editing', async () => {
     (await render()).cancel();
     expect(navigations[0][0]).toEqual(['/people']);
 
@@ -153,22 +153,22 @@ describe('PersonFormComponent', () => {
     expect(navigations[0][0]).toEqual(['/people', 'pe1']);
   });
 
-  it('copes with somebody who is not there', async () => {
+  it('leaves the fields empty when the person is not found', async () => {
     const component = await render('pe1', null);
     expect(component.name()).toBe('');
     expect(component.loading()).toBe(false);
   });
 
-  it('names who is being edited in the page title', async () => {
+  it('shows the edited name in the page title', async () => {
     await render('x1', person({ name: 'Aunty Ngozi' }));
     TestBed.tick();
     expect(TestBed.inject(Title).getTitle()).toBe('Edit Aunty Ngozi · Setout');
   });
 
-  it('leaves the title alone when adding a new one', async () => {
-    TestBed.inject(Title).setTitle('Add · Setout');
+  it('keeps the page title when creating a person', async () => {
+    TestBed.inject(Title).setTitle('New · Setout');
     await render('');
     TestBed.tick();
-    expect(TestBed.inject(Title).getTitle()).toBe('Add · Setout');
+    expect(TestBed.inject(Title).getTitle()).toBe('New · Setout');
   });
 });

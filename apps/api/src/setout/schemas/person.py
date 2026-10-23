@@ -40,7 +40,7 @@ class PersonRead(BaseModel):
     )
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
+    archived_at: datetime | None
 
 
 class PersonPage(BaseModel):
@@ -50,7 +50,7 @@ class PersonPage(BaseModel):
     offset: int
 
 
-class PersonProjectSpend(BaseModel):
+class PersonProjectExpenseSummary(BaseModel):
     project_id: str
     project_name: str
     currency_code: str
@@ -59,9 +59,9 @@ class PersonProjectSpend(BaseModel):
     spent_amount: int
 
 
-class PersonSpend(BaseModel):
+class PersonExpenseSummary(BaseModel):
     person_id: str
     name: str
-    projects: list[PersonProjectSpend] = Field(
-        ..., description="What they spent, per project. Two currencies are never added together"
+    projects: list[PersonProjectExpenseSummary] = Field(
+        ..., description="Amount paid per project. Two currencies are never added together"
     )

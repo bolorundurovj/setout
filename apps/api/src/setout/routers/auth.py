@@ -13,17 +13,17 @@ from setout.models.user import Session, User
 from setout.schemas.auth import (
     AccountUpdate,
     AuthStatus,
-    LoginRequest,
-    PasswordChange,
+    PassphraseChange,
     SetupRequest,
+    SignInRequest,
     UserResponse,
 )
 from setout.services.auth import (
     delay_for,
-    hash_password,
+    hash_passphrase,
     read_session_id,
     sign_session_id,
-    verify_password,
+    verify_passphrase,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -84,15 +84,15 @@ async def update_account(
     req: AccountUpdate, user: Annotated[User, Depends(get_current_user)]
 ) -> UserResponse:
     changes = req.model_dump(exclude_unset=True)
-    wanted = changes.get("base_currency")
-    if wanted:
-        wanted = wanted.upper()
-        if await Currency.get_or_none(code=wanted) is None:
+    currency_code = changes.get("base_currency")
+    if currency_code:
+        currency_code = currency_code.upper()
+        if await Currency.get_or_none(code=currency_code) is None:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail=f"Unknown currency: {wanted}",
+                detail=f"Unknown currency: {currency_code}",
             )
-        changes["base_currency"] = wanted
+        changes["base_currency"] = currency_code
     if changes:
         user.update_from_dict(changes)
         await user.save()
@@ -100,30 +100,29 @@ async def update_account(
 
 
 @router.post(
-    "/password",
+    "/passphrase",
     operation_id="changePassphrase",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": "Not authenticated"},
-        status.HTTP_403_FORBIDDEN: {"description": "The passphrase given does not match"},
+        status.HTTP_403_FORBIDDEN: {"description": "The current passphrase is incorrect"},
     },
 )
 async def change_passphrase(
-    req: PasswordChange,
+    req: PassphraseChange,
     response: Response,
     user: Annotated[User, Depends(get_current_user)],
     setout_session: Annotated[str | None, Cookie()] = None,
 ) -> None:
-    if not verify_password(req.current_password, user.password_hash):
+    if not verify_passphrase(req.current_passphrase, user.passphrase_hash):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="That is not the current passphrase"
+            status_code=status.HTTP_403_FORBIDDEN, detail="The current passphrase is incorrect"
         )
-    user.password_hash = hash_password(req.new_password)
+    user.passphrase_hash = hash_passphrase(req.new_passphrase)
     await user.save()
-    # Every other device is signed out, which is the point of changing it. The
-    # one doing the changing keeps its session.
-    keep = read_session_id(setout_session or "")
-    await Session.filter(user_id=user.id).exclude(id=keep or "").delete()
+    # Ends every other session; the session that made the change is kept.
+    current_session_id = read_session_id(setout_session or "")
+    await Session.filter(user_id=user.id).exclude(id=current_session_id or "").delete()
 
 
 def session_window() -> timedelta:
@@ -181,8 +180,8 @@ async def setup_admin(req: SetupRequest, response: Response) -> UserResponse:
             status_code=status.HTTP_409_CONFLICT, detail="This server is already set up"
         )
 
-    hashed = hash_password(req.password)
-    user = await User.create(name=req.name, email=req.email, password_hash=hashed)
+    hashed = hash_passphrase(req.passphrase)
+    user = await User.create(name=req.name, email=req.email, passphrase_hash=hashed)
 
     session_id = secrets.token_urlsafe(32)
     expires = datetime.now(UTC) + session_window()
@@ -193,16 +192,16 @@ async def setup_admin(req: SetupRequest, response: Response) -> UserResponse:
 
 
 @router.post(
-    "/login",
-    operation_id="login",
+    "/sign-in",
+    operation_id="signIn",
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": "Invalid credentials"},
         status.HTTP_429_TOO_MANY_REQUESTS: {
-            "description": "Too many wrong passphrases. Wait and try again"
+            "description": "Too many failed sign-in attempts. Try again later"
         },
     },
 )
-async def login(req: LoginRequest, response: Response) -> UserResponse:
+async def sign_in(req: SignInRequest, response: Response) -> UserResponse:
     settings = get_settings()
     user = await User.first()
     if not user:
@@ -212,19 +211,19 @@ async def login(req: LoginRequest, response: Response) -> UserResponse:
         )
 
     now = datetime.now(UTC)
-    failures = _failures_remembered(user, now, settings.login_retry_after_seconds)
+    failures = _recent_failure_count(user, now, settings.sign_in_retry_after_seconds)
     wait = delay_for(failures, settings)
     if wait is None:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many wrong passphrases. Wait and try again",
-            headers={"Retry-After": str(settings.login_retry_after_seconds)},
+            detail="Too many failed sign-in attempts. Try again later",
+            headers={"Retry-After": str(settings.sign_in_retry_after_seconds)},
         )
     if wait:
         await asyncio.sleep(wait)
 
-    if not verify_password(req.password, user.password_hash):
-        user.failed_logins = failures + 1
+    if not verify_passphrase(req.passphrase, user.passphrase_hash):
+        user.failed_sign_ins = failures + 1
         user.last_failed_at = now
         await user.save()
         raise HTTPException(
@@ -232,8 +231,8 @@ async def login(req: LoginRequest, response: Response) -> UserResponse:
             detail="Invalid credentials",
         )
 
-    if user.failed_logins:
-        user.failed_logins = 0
+    if user.failed_sign_ins:
+        user.failed_sign_ins = 0
         user.last_failed_at = None
         await user.save()
 
@@ -246,17 +245,17 @@ async def login(req: LoginRequest, response: Response) -> UserResponse:
     return UserResponse.model_validate(user)
 
 
-def _failures_remembered(user: User, now: datetime, window_seconds: int) -> int:
+def _recent_failure_count(user: User, now: datetime, window_seconds: int) -> int:
     """Failures older than the window are not counted."""
     if user.last_failed_at is None:
         return 0
     if (now - user.last_failed_at).total_seconds() > window_seconds:
         return 0
-    return user.failed_logins
+    return user.failed_sign_ins
 
 
-@router.post("/logout", operation_id="logout", status_code=204)
-async def logout(
+@router.post("/sign-out", operation_id="signOut", status_code=204)
+async def sign_out(
     response: Response, setout_session: Annotated[str | None, Cookie()] = None
 ) -> None:
     if setout_session:

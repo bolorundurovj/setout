@@ -7,7 +7,7 @@ from setout.utils.ids import short_id
 
 
 class Item(Model):
-    """Something bought more than once. Prices are read from the expenses."""
+    """An item bought more than once. Prices are calculated from its expenses."""
 
     id = fields.CharField(max_length=12, primary_key=True, default=short_id)
     name = fields.CharField(max_length=255)
@@ -15,12 +15,12 @@ class Item(Model):
         max_length=32,
         null=True,
         default=None,
-        description="What the price is quoted in: bag, each, truck, sheet",
+        description="The unit of the price, such as bag, each, truck or sheet",
     )
     notes = fields.TextField(null=True, default=None)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    deleted_at = fields.DatetimeField(null=True, default=None)
+    archived_at = fields.DatetimeField(null=True, default=None)
 
     class Meta:
         table = "item"

@@ -1,33 +1,33 @@
 from __future__ import annotations
 
-from setout.services.sheets.detect import Found
+from setout.services.sheets.detect import DetectedSheet
 from setout.services.sheets.parsed import (
     BudgetedCategory,
     BudgetedLine,
-    BudgetRead,
+    ParsedBudget,
     Problem,
-    Trouble,
+    ProblemKind,
 )
 from setout.services.sheets.values import as_code, as_minor, as_text, is_category_code
 
-MISSING = "MISSING"
+NO_DESCRIPTION_PLACEHOLDER = "(No description)"
 
 
-def read(found: Found, exponent: int) -> BudgetRead:
-    """The budget sheet as categories and their lines. A heading total is not read twice."""
-    out = BudgetRead()
-    code_at = found.columns.get("cost codes", 0)
-    name_at = found.columns.get("activities", 1)
-    budgeted_at = found.columns.get("budget", 5)
-    split_at = {
-        "labour": found.columns.get("labor costs", found.columns.get("labour costs", -1)),
-        "material": found.columns.get("material costs", -1),
-        "fixed": found.columns.get("fixed costs", -1),
+def read(detected: DetectedSheet, exponent: int) -> ParsedBudget:
+    """Category row amounts are ignored; a category total is the sum of its lines."""
+    out = ParsedBudget()
+    code_at = detected.columns.get("cost code", 0)
+    name_at = detected.columns.get("description", 1)
+    budgeted_at = detected.columns.get("budget", 5)
+    cost_type_columns = {
+        "labour": detected.columns.get("labour costs", -1),
+        "material": detected.columns.get("material costs", -1),
+        "fixed": detected.columns.get("fixed costs", -1),
     }
 
     current: BudgetedCategory | None = None
-    for offset, row in enumerate(found.sheet.rows[found.header_row + 1 :]):
-        number = found.header_row + offset + 2
+    for offset, row in enumerate(detected.sheet.rows[detected.header_row + 1 :]):
+        number = detected.header_row + offset + 2
         code = as_code(_cell(row, code_at))
         name = as_text(_cell(row, name_at))
         budgeted = as_minor(_cell(row, budgeted_at), exponent)
@@ -48,9 +48,9 @@ def read(found: Found, exponent: int) -> BudgetRead:
         if current is None:
             out.problems.append(
                 Problem(
-                    kind=Trouble.NO_CATEGORY_YET,
+                    kind=ProblemKind.BEFORE_FIRST_CATEGORY,
                     row=number,
-                    detail=f"{name or code} sits above every category heading",
+                    detail=f"{name or code} is above the first category row",
                 )
             )
             continue
@@ -58,9 +58,9 @@ def read(found: Found, exponent: int) -> BudgetRead:
         if not name:
             out.problems.append(
                 Problem(
-                    kind=Trouble.NO_DESCRIPTION,
+                    kind=ProblemKind.NO_DESCRIPTION,
                     row=number,
-                    detail=f"an amount under {current.name} with no description",
+                    detail=f"an amount in {current.name} has no description",
                 )
             )
 
@@ -68,20 +68,22 @@ def read(found: Found, exponent: int) -> BudgetRead:
             BudgetedLine(
                 row=number,
                 code=code,
-                description=name or MISSING,
+                description=name or NO_DESCRIPTION_PLACEHOLDER,
                 budgeted_amount=budgeted,
-                cost_type=_split(row, split_at, exponent),
+                cost_type=_cost_type(row, cost_type_columns, exponent),
             )
         )
 
     return out
 
 
-def _split(row: list[object], at: dict[str, int], exponent: int) -> str | None:
-    written = [
-        kind for kind, index in at.items() if index >= 0 and as_minor(_cell(row, index), exponent)
+def _cost_type(row: list[object], columns: dict[str, int], exponent: int) -> str | None:
+    filled = [
+        cost_type
+        for cost_type, index in columns.items()
+        if index >= 0 and as_minor(_cell(row, index), exponent)
     ]
-    return written[0] if len(written) == 1 else None
+    return filled[0] if len(filled) == 1 else None
 
 
 def _cell(row: list[object], index: int) -> object:

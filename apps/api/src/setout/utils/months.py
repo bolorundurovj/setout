@@ -5,9 +5,9 @@ from datetime import date
 
 from setout.models.category import Category
 from setout.models.expense import Expense
-from setout.schemas.expense import MonthCategorySpend, MonthSpend
+from setout.schemas.expense import MonthCategoryExpenseSummary, MonthExpenseSummary
 
-UNFILED_NAME = "Not filed to a category"
+UNCATEGORISED_NAME = "Uncategorised"
 
 
 def month_key(day: date) -> str:
@@ -24,11 +24,9 @@ def month_range(month: str) -> tuple[date, date]:
 
 
 def top_of_branch(categories: list[Category]) -> dict[str, Category]:
-    """Every category mapped to the category at the top of its branch.
+    """Map every category to its top-level ancestor.
 
-    A month is split by branch rather than by leaf. A project with thirty leaf
-    categories would otherwise draw thirty segments in one bar, which reads as
-    noise.
+    Months are split by top-level category, not by leaf, to limit the segments per bar.
     """
     by_id = {category.id: category for category in categories}
     tops: dict[str, Category] = {}
@@ -45,18 +43,18 @@ def top_of_branch(categories: list[Category]) -> dict[str, Category]:
     return tops
 
 
-def to_months(expenses: list[Expense], categories: list[Category]) -> list[MonthSpend]:
-    """Spend gathered into the calendar months it happened in, oldest first.
+def to_months(expenses: list[Expense], categories: list[Category]) -> list[MonthExpenseSummary]:
+    """Expenses grouped by calendar month, oldest first.
 
-    Segments stay in budget order rather than largest first, so a category keeps
-    the same place in every bar and the months can be read against each other.
+    Segments are in budget order, not by size, so each category has the same
+    position in every bar.
     """
     tops = top_of_branch(categories)
     order = {category.id: category.sort_order for category in categories}
     totals: dict[str, int] = defaultdict(int)
     counts: dict[str, int] = defaultdict(int)
     splits: dict[str, dict[str | None, int]] = defaultdict(lambda: defaultdict(int))
-    names: dict[str | None, str] = {None: UNFILED_NAME}
+    names: dict[str | None, str] = {None: UNCATEGORISED_NAME}
 
     for expense in expenses:
         month = month_key(expense.spent_on)
@@ -67,24 +65,26 @@ def to_months(expenses: list[Expense], categories: list[Category]) -> list[Month
         if top is not None:
             names[top.id] = top.name
 
-    def place(category_id: str | None) -> tuple[int, int, str]:
+    def sort_key(category_id: str | None) -> tuple[int, int, str]:
         if category_id is None:
             return 1, 0, ""
         return 0, order.get(category_id, 0), category_id
 
-    def split(month: str) -> list[MonthCategorySpend]:
-        ordered = sorted(splits[month].items(), key=lambda pair: place(pair[0]))
+    def category_split(month: str) -> list[MonthCategoryExpenseSummary]:
+        ordered = sorted(splits[month].items(), key=lambda pair: sort_key(pair[0]))
         return [
-            MonthCategorySpend(category_id=category_id, name=names[category_id], amount=amount)
+            MonthCategoryExpenseSummary(
+                category_id=category_id, name=names[category_id], amount=amount
+            )
             for category_id, amount in ordered
         ]
 
     return [
-        MonthSpend(
+        MonthExpenseSummary(
             month=month,
             amount=totals[month],
             expense_count=counts[month],
-            categories=split(month),
+            categories=category_split(month),
         )
         for month in sorted(totals)
     ]

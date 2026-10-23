@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Api } from '@setout/api-client';
 import { VendorService } from './vendor.service';
 
-function vendor(id: string, over: Record<string, unknown> = {}) {
+function vendor(id: string, overrides: Record<string, unknown> = {}) {
   return {
     id,
     name: 'Segun Blocks Owode',
@@ -14,8 +14,8 @@ function vendor(id: string, over: Record<string, unknown> = {}) {
     expense_count: 0,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
@@ -50,7 +50,7 @@ describe('VendorService', () => {
     expect(service.total()).toBe(1);
   });
 
-  it('leaves archived rows out unless the page includes them', async () => {
+  it('excludes archived vendors unless include_archived is set', async () => {
     const service = configure(() => page([]));
     await service.load();
     expect((calls[0] as { include_archived?: boolean }).include_archived).toBe(false);
@@ -59,7 +59,7 @@ describe('VendorService', () => {
     expect((calls[1] as { include_archived?: boolean }).include_archived).toBe(true);
   });
 
-  it('reports a failure instead of throwing', async () => {
+  it('sets an error when the list fails to load', async () => {
     const service = configure(() => {
       throw new Error('offline');
     });
@@ -69,7 +69,7 @@ describe('VendorService', () => {
     expect(service.loading()).toBe(false);
   });
 
-  it('asks for ten rows at the offset of the page wanted', async () => {
+  it('requests ten rows at the offset of the requested page', async () => {
     const service = configure(() => page([vendor('v1')], 24));
     await service.load();
     expect((calls[0] as { limit?: number }).limit).toBe(10);
@@ -79,7 +79,7 @@ describe('VendorService', () => {
     expect(service.page()).toBe(3);
   });
 
-  it('keeps the search and the archived choice when turning a page', async () => {
+  it('keeps the search and archived filter when changing page', async () => {
     const service = configure(() => page([vendor('v1')], 24));
     await service.load('block', true);
     await service.goTo(2);
@@ -88,14 +88,14 @@ describe('VendorService', () => {
     expect(asked.include_archived).toBe(true);
   });
 
-  it('holds every choice apart from the page, for the pickers', async () => {
+  it('loads picker choices separately from the paged list', async () => {
     const service = configure(() => page([vendor('v1'), vendor('v2')], 2));
     await service.loadChoices();
     expect(service.choices().length).toBe(2);
     expect((calls[0] as { limit?: number }).limit).toBe(100);
   });
 
-  it('reads the page back after adding, and offers the new choice', async () => {
+  it('reloads the page after creating a vendor and adds it to the choices', async () => {
     const service = configure((name) =>
       name === 'createVendor'
         ? vendor('v2', { name: 'Sawmill Jacaranda Close' })
@@ -110,7 +110,7 @@ describe('VendorService', () => {
     expect(service.choices()[0].name).toBe('Sawmill Jacaranda Close');
   });
 
-  it('surfaces the reason a duplicate name was refused', async () => {
+  it('shows the API error when a duplicate name is rejected', async () => {
     const service = configure((name) => {
       if (name === 'createVendor') {
         throw { error: { detail: 'A vendor with that name already exists' } };
@@ -122,7 +122,7 @@ describe('VendorService', () => {
     expect(service.error()).toBe('A vendor with that name already exists');
   });
 
-  it('replaces the row it edited', async () => {
+  it('replaces the edited row in the list', async () => {
     const service = configure((name) =>
       name === 'updateVendor' ? vendor('v1', { phone: '0800 000 0001' }) : page([vendor('v1')]),
     );
@@ -132,17 +132,17 @@ describe('VendorService', () => {
     expect(service.vendors()[0].phone).toBe('0800 000 0001');
   });
 
-  it('reads the page back after archiving one', async () => {
+  it('reloads the page after archiving a vendor', async () => {
     const service = configure(() => page([vendor('v1')]));
     await service.load();
 
     await service.archive('v1');
 
-    expect(names).toContain('deleteVendor');
+    expect(names).toContain('archiveVendor');
     expect(names.filter((n) => n === 'listVendors').length).toBe(2);
   });
 
-  it('reloads after taking one out of the archive', async () => {
+  it('reloads the page after restoring a vendor', async () => {
     const service = configure(() => page([vendor('v1')]));
     await service.restore('v1');
 
@@ -150,30 +150,30 @@ describe('VendorService', () => {
     expect(names).toContain('listVendors');
   });
 
-  it('reads spend per project', async () => {
+  it('loads the expense summary per project', async () => {
     const service = configure(() => ({
       vendor_id: 'v1',
       name: 'Bright Star Aluminium',
       projects: [{ project_id: 'p1', currency_code: 'NGN', spent_amount: 750_000_00 }],
     }));
 
-    const spend = await service.spend('v1');
-    expect(spend?.projects.length).toBe(1);
+    const summary = await service.expenseSummary('v1');
+    expect(summary?.projects.length).toBe(1);
   });
 
-  it('returns null rather than throwing when spend cannot be read', async () => {
+  it('returns null when the expense summary fails to load', async () => {
     const service = configure(() => {
       throw new Error('offline');
     });
-    expect(await service.spend('v1')).toBeNull();
+    expect(await service.expenseSummary('v1')).toBeNull();
   });
 
-  it('ignores a slow reply for a search that has been typed past', async () => {
-    const held: (() => void)[] = [];
+  it('ignores a stale response for an earlier search', async () => {
+    const pendingReplies: (() => void)[] = [];
     const service = configure((_name, args) => {
       if ((args as { search?: string }).search === 'On') {
         return new Promise((settle) =>
-          held.push(() => settle(page([vendor('v-stale', { name: 'Stale' })]))),
+          pendingReplies.push(() => settle(page([vendor('v-stale', { name: 'Stale' })]))),
         );
       }
       return page([vendor('v-fresh', { name: 'Fresh' })]);
@@ -181,7 +181,7 @@ describe('VendorService', () => {
 
     const slow = service.load('On');
     await service.load('Ondo');
-    held.forEach((release) => release());
+    pendingReplies.forEach((release) => release());
     await slow;
 
     expect(service.vendors().map((row) => row.name)).toEqual(['Fresh']);

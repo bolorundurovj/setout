@@ -4,10 +4,10 @@ from tortoise import BaseDBAsyncClient
 
 
 def bind(query: str, dialect: str) -> str:
-    """Rewrite ? placeholders for the driver in front of us.
+    """Rewrite ? placeholders for the active driver.
 
-    asyncpg speaks $1, $2, not the %s of psycopg, and rejects anything else
-    before it reaches the database.
+    asyncpg requires $1, $2 rather than %s, and rejects other styles before the
+    query reaches the database.
     """
     if dialect == "sqlite":
         return query

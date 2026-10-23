@@ -4,8 +4,8 @@ from pydantic import BaseModel, Field
 
 
 class Counts(BaseModel):
-    projects: int = Field(..., description="Not counting deleted ones")
-    vendors: int = Field(..., description="Not counting archived ones")
-    items: int = Field(..., description="Not counting archived ones")
-    people: int = Field(..., description="Not counting archived ones")
-    lands: int = Field(..., description="Not counting archived ones")
+    projects: int = Field(..., description="Excludes archived projects")
+    vendors: int = Field(..., description="Excludes archived records")
+    items: int = Field(..., description="Excludes archived records")
+    people: int = Field(..., description="Excludes archived records")
+    lands: int = Field(..., description="Excludes archived records")

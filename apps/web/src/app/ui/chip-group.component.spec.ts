@@ -24,48 +24,48 @@ describe('ChipGroupComponent', () => {
       fixture,
       element,
       picked,
-      pills: () => Array.from(element.querySelectorAll('.chip')) as HTMLButtonElement[],
+      chips: () => Array.from(element.querySelectorAll('.chip')) as HTMLButtonElement[],
       picker: () => element.querySelector('app-option-picker'),
     };
   }
 
-  it('shows a short list as pills', async () => {
+  it('shows up to eight options as chips', async () => {
     const view = await render(chips(8));
-    expect(view.pills().length).toBe(8);
+    expect(view.chips().length).toBe(8);
     expect(view.picker()).toBeNull();
   });
 
-  it('hands a long list to the picker instead', async () => {
+  it('shows more than eight options in an option picker', async () => {
     const view = await render(chips(9));
-    expect(view.pills().length).toBe(0);
+    expect(view.chips().length).toBe(0);
     expect(view.picker()).not.toBeNull();
   });
 
-  it('marks the chosen pill', async () => {
+  it('marks the selected chip as pressed', async () => {
     const view = await render(chips(3), 'c1');
-    expect(view.pills()[1].getAttribute('aria-pressed')).toBe('true');
-    expect(view.pills()[0].getAttribute('aria-pressed')).toBe('false');
+    expect(view.chips()[1].getAttribute('aria-pressed')).toBe('true');
+    expect(view.chips()[0].getAttribute('aria-pressed')).toBe('false');
   });
 
-  it('emits the value of the pill that was pressed', async () => {
+  it('emits the value of the clicked chip', async () => {
     const view = await render(chips(3));
-    view.pills()[2].click();
+    view.chips()[2].click();
     expect(view.picked).toEqual(['c2']);
   });
 
-  it('clears when a chosen pill is pressed again and clearing is allowed', async () => {
+  it('emits an empty value when the selected chip is clicked and clearable is set', async () => {
     const view = await render(chips(3), 'c2', true);
-    view.pills()[2].click();
+    view.chips()[2].click();
     expect(view.picked).toEqual(['']);
   });
 
-  it('keeps the value when clearing is not allowed', async () => {
+  it('re-emits the value when the selected chip is clicked and clearable is not set', async () => {
     const view = await render(chips(3), 'c2');
-    view.pills()[2].click();
+    view.chips()[2].click();
     expect(view.picked).toEqual(['c2']);
   });
 
-  it('passes a choice made in the picker up to the parent', async () => {
+  it('emits a value selected in the option picker', async () => {
     const view = await render(chips(9));
     const trigger = view.element.querySelector('.trigger') as HTMLButtonElement;
     trigger.click();

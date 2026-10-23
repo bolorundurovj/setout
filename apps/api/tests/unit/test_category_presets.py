@@ -13,7 +13,7 @@ FROM_THE_BRIEF = [
     "Concrete foundation",
     "Structure and exterior",
     "Interior work",
-    "Finalization and inspections",
+    "Finalisation and inspections",
 ]
 
 
@@ -29,7 +29,7 @@ def test_names_are_not_blank() -> None:
     assert all(name.strip() for name in CATEGORY_PRESETS)
 
 
-def test_administrative_comes_before_finalization() -> None:
+def test_administrative_comes_before_finalisation() -> None:
     assert CATEGORY_PRESETS.index("Administrative expenses") < CATEGORY_PRESETS.index(
-        "Finalization and inspections"
+        "Finalisation and inspections"
     )

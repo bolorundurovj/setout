@@ -1,60 +1,72 @@
 import type { GeocodedPlace } from '@setout/api-client';
-import { disagreementNote, placeDisagrees, type PlotPlace } from './land-place';
+import { findLocationMismatch, locationMismatchMessage, type LandLocation } from './land-place';
 
-const PLOT: PlotPlace = { city: 'Ewuru', state: 'Ogun', countryCode: 'NG' };
+const LOCATION: LandLocation = { city: 'Ewuru', state: 'Ogun', countryCode: 'NG' };
 
-function pin(over: Partial<GeocodedPlace> = {}): GeocodedPlace {
+function geocoded(over: Partial<GeocodedPlace> = {}): GeocodedPlace {
   return { address: null, city: 'Ewuru', state: 'Ogun', country_code: 'NG', ...over };
 }
 
-describe('a pin against what the plot says', () => {
-  it('says nothing when they agree', () => {
-    expect(placeDisagrees(pin(), PLOT)).toBeNull();
+describe('findLocationMismatch', () => {
+  it('returns null when the map address matches the location', () => {
+    expect(findLocationMismatch(geocoded(), LOCATION)).toBeNull();
   });
 
-  it('does not care about case or padding', () => {
-    expect(placeDisagrees(pin({ city: '  ewuru ', state: 'OGUN' }), PLOT)).toBeNull();
+  it('ignores case and whitespace', () => {
+    expect(
+      findLocationMismatch(geocoded({ city: '  ewuru ', state: 'OGUN' }), LOCATION),
+    ).toBeNull();
   });
 
-  it('reads Ogun and Ogun State as the same place', () => {
-    expect(placeDisagrees(pin({ state: 'Ogun State' }), PLOT)).toBeNull();
+  it('matches Ogun and Ogun State', () => {
+    expect(findLocationMismatch(geocoded({ state: 'Ogun State' }), LOCATION)).toBeNull();
   });
 
-  it('drops the other words a geocoder tacks on', () => {
+  it('strips administrative suffixes', () => {
     for (const suffix of ['Province', 'Region', 'Territory', 'District', 'County']) {
-      expect(placeDisagrees(pin({ state: `Ogun ${suffix}` }), PLOT)).toBeNull();
+      expect(findLocationMismatch(geocoded({ state: `Ogun ${suffix}` }), LOCATION)).toBeNull();
     }
   });
 
-  it('catches a pin in another town', () => {
-    expect(placeDisagrees(pin({ city: 'Ikeja' }), PLOT)).toBe('town');
+  it('reports a city mismatch', () => {
+    expect(findLocationMismatch(geocoded({ city: 'Ikeja' }), LOCATION)).toBe('city');
   });
 
-  it('catches a pin in another state', () => {
-    expect(placeDisagrees(pin({ state: 'Lagos' }), PLOT)).toBe('state');
+  it('reports a state mismatch', () => {
+    expect(findLocationMismatch(geocoded({ state: 'Lagos' }), LOCATION)).toBe('state');
   });
 
-  it('catches a pin in another country', () => {
-    expect(placeDisagrees(pin({ country_code: 'GH' }), PLOT)).toBe('country');
+  it('reports a country mismatch', () => {
+    expect(findLocationMismatch(geocoded({ country_code: 'GH' }), LOCATION)).toBe('country');
   });
 
-  it('says the coarsest thing that is wrong', () => {
-    const abroad = pin({ city: 'Accra', state: 'Greater Accra', country_code: 'GH' });
-    expect(placeDisagrees(abroad, PLOT)).toBe('country');
+  it('returns the coarsest mismatch', () => {
+    const otherCountry = geocoded({ city: 'Accra', state: 'Greater Accra', country_code: 'GH' });
+    expect(findLocationMismatch(otherCountry, LOCATION)).toBe('country');
 
-    const away = pin({ city: 'Ikeja', state: 'Lagos' });
-    expect(placeDisagrees(away, PLOT)).toBe('state');
+    const otherState = geocoded({ city: 'Ikeja', state: 'Lagos' });
+    expect(findLocationMismatch(otherState, LOCATION)).toBe('state');
   });
 
-  it('treats a blank on either side as unknown, not as a difference', () => {
-    expect(placeDisagrees(pin({ city: null, state: null, country_code: null }), PLOT)).toBeNull();
-    expect(placeDisagrees(pin(), { city: '', state: '', countryCode: '' })).toBeNull();
+  it('treats an empty value on either side as unknown, not a mismatch', () => {
+    expect(
+      findLocationMismatch(geocoded({ city: null, state: null, country_code: null }), LOCATION),
+    ).toBeNull();
+    expect(findLocationMismatch(geocoded(), { city: '', state: '', countryCode: '' })).toBeNull();
   });
+});
 
-  it('names what the map called it', () => {
-    expect(disagreementNote('town', pin({ city: 'Ikeja' }))).toBe(
-      'The location pin is in a different town. The map address is Ikeja.',
+describe('locationMismatchMessage', () => {
+  it('names the mismatched value from the map address', () => {
+    expect(locationMismatchMessage('city', geocoded({ city: 'Ikeja' }))).toBe(
+      'The location pin is in a different city: Ikeja.',
     );
-    expect(disagreementNote('country', pin({ country_code: 'GH' }))).toContain('GH');
+  });
+
+  it('shows the country name when a lookup is given', () => {
+    const name = (code: string) => (code === 'GH' ? 'Ghana' : code);
+    expect(locationMismatchMessage('country', geocoded({ country_code: 'GH' }), name)).toBe(
+      'The location pin is in a different country: Ghana.',
+    );
   });
 });

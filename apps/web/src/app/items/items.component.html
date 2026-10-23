@@ -1,11 +1,11 @@
-<app-topbar title="Items" [subtitle]="items.total() + ' in the catalogue'">
+<app-topbar title="Items" [subtitle]="items.total() + ' total'">
   <app-button (pressed)="openForm()">New Item</app-button>
 </app-topbar>
 
 <div class="page">
   <p class="prose">
-    What items cost now and what they cost before. Each expense assigned to an item builds its price
-    history. Items are shared across every project.
+    Current and past prices for each item. Each expense assigned to an item adds to its price
+    history. Items are shared across all projects.
   </p>
 
   <div class="controls">
@@ -30,7 +30,7 @@
     <div class="card form">
       <h2 class="t-heading">New Item</h2>
       <p class="t-small">
-        The unit is what the price is quoted in. Future purchases build a price history.
+        Prices are quoted per unit. Expenses assigned to the item build its price history.
       </p>
       <label class="field">
         <span class="t-micro">Name (required)</span>
@@ -58,7 +58,7 @@
       </label>
       <div class="form-actions">
         <app-button [disabled]="!isValid()" [loading]="items.saving()" (pressed)="save()">
-          Add to Catalogue
+          Save Item
         </app-button>
         <app-button variant="secondary" (pressed)="cancel()">Cancel</app-button>
       </div>
@@ -68,10 +68,10 @@
   @if (items.items().length === 0) {
     <div class="card">
       <p class="t-body">
-        {{ search() ? 'Nothing matches that.' : 'Nothing in the catalogue yet.' }}
+        {{ search() ? 'No items match the search.' : 'No items yet.' }}
       </p>
       <p class="t-small">
-        Add the items you buy more than once. Assigning an expense to one starts its price history.
+        Add items you buy more than once. Assigning an expense to an item starts its price history.
       </p>
     </div>
   } @else {
@@ -86,12 +86,12 @@
       </div>
 
       @for (item of items.items(); track item.id) {
-        <div class="row" [class.archived]="item.deleted_at">
-          <button type="button" class="name-cell" (click)="open(item.id)">
+        <div class="row" [class.archived]="item.archived_at">
+          <button type="button" class="name-cell" (click)="openItem(item.id)">
             <span class="item-name">{{ item.name }}</span>
             <span class="t-micro">
               {{ countLabel(item) }}
-              @if (item.deleted_at) {
+              @if (item.archived_at) {
                 &middot; archived
               }
             </span>
@@ -110,16 +110,18 @@
             <span class="right t-mono figure">
               {{ money(item.prices[0].last_price, item.prices[0]) }}
             </span>
-            <span class="right t-mono" [class.over]="hasRisen(item.prices[0])">
+            <span class="right t-mono" [class.over]="hasIncreased(item.prices[0])">
               {{ changeLabel(item.prices[0]) }}
             </span>
           } @else {
             <span class="right t-small muted">{{ item.prices.length }} currencies</span>
-            <span class="right t-small muted">open it</span>
+            <button type="button" class="link-action right t-small" (click)="openItem(item.id)">
+              View details
+            </button>
             <span class="right t-small muted">{{ notSet }}</span>
           }
 
-          @if (item.deleted_at) {
+          @if (item.archived_at) {
             <button
               type="button"
               class="link-action t-mono"

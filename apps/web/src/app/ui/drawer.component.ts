@@ -6,13 +6,18 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (open()) {
-      <button type="button" class="backdrop" aria-label="Close" (click)="closed.emit()"></button>
+      <button
+        type="button"
+        class="backdrop"
+        aria-label="Close"
+        (click)="closeRequested.emit()"
+      ></button>
       <aside
         class="panel"
         role="dialog"
         aria-modal="true"
         [attr.aria-label]="title()"
-        (keyup.escape)="closed.emit()"
+        (keyup.escape)="closeRequested.emit()"
       >
         <header class="panel-head">
           <div class="titles">
@@ -21,7 +26,12 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
               <p class="t-small">{{ subtitle() }}</p>
             }
           </div>
-          <button type="button" class="close t-mono" aria-label="Close" (click)="closed.emit()">
+          <button
+            type="button"
+            class="close t-mono"
+            aria-label="Close"
+            (click)="closeRequested.emit()"
+          >
             Close
           </button>
         </header>
@@ -116,5 +126,5 @@ export class DrawerComponent {
   readonly title = input('');
   readonly subtitle = input('');
 
-  readonly closed = output<void>();
+  readonly closeRequested = output<void>();
 }

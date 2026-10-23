@@ -3,8 +3,7 @@
     <div class="intro-text">
       <h2 class="t-heading">Expenses</h2>
       <p class="prose">
-        All expenses for {{ project().name }}, newest first. An expense can be added without a
-        budget.
+        All expenses for {{ project().name }}. An expense can be added without a budget.
       </p>
     </div>
     <div class="intro-actions">
@@ -12,21 +11,21 @@
       <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
         {{ archivedLabel() }}
       </app-toggle>
-      @if (!filing() && expenses.spend()?.uncategorized_count) {
-        <app-button variant="secondary" (pressed)="startFiling()">Assign Uncategorized</app-button>
+      @if (!assigning() && expenses.summary()?.uncategorised_count) {
+        <app-button variant="secondary" (pressed)="startAssigning()">Assign Categories</app-button>
       }
-      <app-button (pressed)="openDrawer()">Add Expense</app-button>
+      <app-button (pressed)="openDrawer()">New Expense</app-button>
     </div>
   </div>
 
   @if (showFilters()) {
     <div class="filters panel">
       <label class="field">
-        <span class="t-micro">Description or notes</span>
+        <span class="t-micro">Description or Notes</span>
         <input
           class="input-field"
           type="search"
-          placeholder="What was bought"
+          placeholder="Search expenses"
           [value]="search()"
           (input)="onSearch($event)"
         />
@@ -38,17 +37,17 @@
           label="Vendor"
           [chips]="vendorChips()"
           [value]="vendorId()"
-          (valueChange)="pick('vendorId', $event)"
+          (valueChange)="setFilter('vendorId', $event)"
         />
       </div>
 
       <div class="field">
-        <span class="t-micro">Paid by</span>
+        <span class="t-micro">Paid By</span>
         <app-chip-group
-          label="Paid by"
+          label="Paid By"
           [chips]="personChips()"
           [value]="paidById()"
-          (valueChange)="pick('paidById', $event)"
+          (valueChange)="setFilter('paidById', $event)"
         />
       </div>
 
@@ -58,7 +57,7 @@
           label="Item"
           [chips]="itemChips()"
           [value]="itemId()"
-          (valueChange)="pick('itemId', $event)"
+          (valueChange)="setFilter('itemId', $event)"
         />
       </div>
 
@@ -84,9 +83,9 @@
       </div>
 
       <div class="field">
-        <span class="t-micro">Order</span>
+        <span class="t-micro">Sort</span>
         <app-chip-group
-          label="Order"
+          label="Sort"
           [chips]="sortChips"
           [value]="sort()"
           (valueChange)="pickSort($event)"
@@ -104,20 +103,20 @@
     <p class="t-small muted match-line">{{ matchLine() }}</p>
   }
 
-  @if (expenses.spend(); as spend) {
+  @if (expenses.summary(); as summary) {
     <div class="summary">
       <span class="t-micro">Spent</span>
-      <span class="summary-figure t-mono">{{ money(spend.spent_amount) }}</span>
+      <span class="summary-figure t-mono">{{ money(summary.spent_amount) }}</span>
       <span class="t-micro">Budgeted</span>
-      <span class="summary-figure t-mono">{{ money(spend.budgeted_amount) }}</span>
-      @if (spend.uncategorized_amount > 0) {
-        <span class="t-micro">Uncategorized</span>
-        <span class="summary-figure t-mono">{{ money(spend.uncategorized_amount) }}</span>
+      <span class="summary-figure t-mono">{{ money(summary.budgeted_amount) }}</span>
+      @if (summary.uncategorised_amount > 0) {
+        <span class="t-micro">Uncategorised</span>
+        <span class="summary-figure t-mono">{{ money(summary.uncategorised_amount) }}</span>
       }
-      @if (spend.variance_percent !== null) {
-        <span class="t-micro">Against Budget</span>
-        <span class="summary-figure t-mono" [class.over]="spend.variance_percent > 0">
-          {{ variance(spend.variance_percent) }}
+      @if (summary.variance_percent !== null) {
+        <span class="t-micro">Used</span>
+        <span class="summary-figure t-mono" [class.over]="summary.variance_percent > 0">
+          {{ usedPercent(summary.variance_percent) }}
         </span>
       }
     </div>
@@ -127,7 +126,7 @@
     <p class="t-small error">{{ expenses.error() }}</p>
   }
 
-  @if (filing()) {
+  @if (assigning()) {
     <div class="bulk-bar">
       <label class="bulk-check">
         <input
@@ -144,21 +143,21 @@
         (ngModelChange)="bulkCategoryId.set($event)"
       >
         <option value="">Select a category</option>
-        @for (category of fileableCategories(); track category.id) {
+        @for (category of assignableCategories(); track category.id) {
           <option [value]="category.id">{{ category.name }}</option>
         }
       </select>
       <div class="bulk-actions">
-        <app-button variant="secondary" (pressed)="stopFiling()">Cancel</app-button>
-        <app-button [disabled]="!canFile()" (pressed)="fileSelected()">
+        <app-button variant="secondary" (pressed)="stopAssigning()">Cancel</app-button>
+        <app-button [disabled]="!canAssign()" (pressed)="assignSelected()">
           Assign {{ selectedCount() }} expense{{ selectedCount() === 1 ? '' : 's' }}
         </app-button>
       </div>
     </div>
 
-    @if (uncategorized().length === 0) {
+    @if (uncategorised().length === 0) {
       <div class="card">
-        <p class="t-body">Nothing left to assign.</p>
+        <p class="t-body">No uncategorised expenses.</p>
       </div>
     } @else {
       <div class="table bulk">
@@ -169,7 +168,7 @@
           <span class="t-micro right">Date</span>
         </div>
 
-        @for (expense of uncategorized(); track expense.id) {
+        @for (expense of uncategorised(); track expense.id) {
           <div class="row">
             <input
               type="checkbox"
@@ -180,11 +179,13 @@
               <span class="desc">
                 {{ expense.description }}
                 @if (expense.attachment_count > 0) {
-                  <span class="chip photo t-mono" [title]="photoTitle(expense)">photo</span>
+                  <span class="chip attachment t-mono" [title]="attachmentTitle(expense)"
+                    >attachment</span
+                  >
                 }
               </span>
-              @if (meta(expense)) {
-                <span class="t-micro">{{ meta(expense) }}</span>
+              @if (detailLine(expense)) {
+                <span class="t-micro">{{ detailLine(expense) }}</span>
               }
             </span>
             <span class="right t-mono figure">{{ money(expense.amount) }}</span>
@@ -194,20 +195,20 @@
       </div>
 
       <app-pagination
-        [total]="uncategorizedTotal()"
-        [page]="uncategorizedPage()"
+        [total]="uncategorisedTotal()"
+        [page]="uncategorisedPage()"
         noun="expenses"
-        (pageChange)="goToUncategorized($event)"
+        (pageChange)="goToUncategorised($event)"
       />
     }
   } @else if (expenses.expenses().length === 0) {
     <div class="card">
       @if (filtered()) {
-        <p class="t-body">Nothing matches those filters.</p>
-        <p class="t-small">Widen them, or clear them to see the whole project.</p>
+        <p class="t-body">No expenses match the filters.</p>
+        <p class="t-small">Change or clear the filters.</p>
       } @else {
-        <p class="t-body">Nothing recorded yet.</p>
-        <p class="t-small">The first expense you add appears here.</p>
+        <p class="t-body">No expenses yet.</p>
+        <p class="t-small">Expenses you add are listed here.</p>
       }
     </div>
   } @else {
@@ -221,27 +222,29 @@
       </div>
 
       @for (expense of expenses.expenses(); track expense.id) {
-        <div class="row" [class.archived]="expense.deleted_at">
+        <div class="row" [class.archived]="expense.archived_at">
           <span class="main">
             <span class="desc">
               {{ expense.description }}
               @if (expense.attachment_count > 0) {
-                <span class="chip photo t-mono" [title]="photoTitle(expense)">photo</span>
+                <span class="chip attachment t-mono" [title]="attachmentTitle(expense)"
+                  >attachment</span
+                >
               }
             </span>
-            @if (expense.deleted_at) {
-              <span class="t-micro">Archived. It counts towards nothing until it is restored.</span>
-            } @else if (meta(expense)) {
-              <span class="t-micro">{{ meta(expense) }}</span>
+            @if (expense.archived_at) {
+              <span class="t-micro">Archived. Excluded from totals until restored.</span>
+            } @else if (detailLine(expense)) {
+              <span class="t-micro">{{ detailLine(expense) }}</span>
             }
           </span>
-          <span class="chip t-micro" [class.uncategorized]="!expense.category_id">
+          <span class="chip t-micro" [class.uncategorised]="!expense.category_id">
             {{ categoryName(expense) }}
           </span>
           <span class="right t-mono figure">{{ money(expense.amount) }}</span>
           <span class="right t-mono muted">{{ expense.spent_on }}</span>
           <span class="row-actions">
-            @if (expense.deleted_at) {
+            @if (expense.archived_at) {
               <button
                 type="button"
                 class="link-action"
@@ -254,16 +257,16 @@
               <button
                 type="button"
                 class="link-action"
-                [attr.aria-label]="'Change ' + expense.description"
+                [attr.aria-label]="'Edit ' + expense.description"
                 (click)="edit(expense)"
               >
                 Edit
               </button>
               <button
                 type="button"
-                class="link-action destructive"
+                class="link-action archive"
                 [attr.aria-label]="'Archive ' + expense.description"
-                (click)="remove(expense.id)"
+                (click)="archive(expense.id)"
               >
                 Archive
               </button>
@@ -283,17 +286,17 @@
 </div>
 
 <app-drawer
-  [open]="adding()"
-  [title]="editingExpense() ? 'Change Expense' : 'Add Expense'"
-  [subtitle]="'Filing to ' + project().name"
+  [open]="drawerOpen()"
+  [title]="editingExpense() ? 'Edit Expense' : 'New Expense'"
+  [subtitle]="project().name"
   (closed)="closeDrawer()"
 >
-  @if (adding()) {
+  @if (drawerOpen()) {
     <app-add-expense
       [project]="project()"
-      [editing]="editingExpense()"
+      [expenseToEdit]="editingExpense()"
       (saved)="onSaved()"
-      (done)="closeDrawer()"
+      (closed)="closeDrawer()"
     />
   }
 </app-drawer>

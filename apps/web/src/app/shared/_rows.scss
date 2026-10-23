@@ -1,12 +1,7 @@
 @use 'breakpoints' as bp;
 
-// A row stops being a line of columns and becomes a card: the name leads, the
-// figure sits beside it, and the rest pairs up underneath. Cells are ordered
-// rather than reordered in the markup, because the columns differ per screen.
-//
-// The variants are named because each carries its own grid-template-columns and
-// would otherwise out-specify a bare .row. Include this last in a stylesheet so
-// equally specific rules resolve here.
+// On phones each row stacks as a card; cells are placed with order because columns differ per screen.
+// Variants are listed because their grid-template-columns have higher specificity than .row; include this mixin last.
 @mixin stacked-rows {
   @media (max-width: bp.$phone) {
     .row,

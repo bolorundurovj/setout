@@ -11,19 +11,19 @@ import { Router } from '@angular/router';
 import { Api, exportProject } from '@setout/api-client';
 import type { ProjectRead, ProjectStatus, CategoryRead } from '@setout/api-client';
 import { BudgetService } from '../budget/budget.service';
-import { currencyShape } from '../budget/currency-shape';
+import { currencyFormat } from '../budget/currency-format';
 import { formatMoney } from '../budget/money';
 import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
 import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
 import { ToggleComponent } from '../ui/toggle.component';
 import { LandService } from '../lands/land.service';
-import { whereLabel } from '../lands/land-labels';
+import { locationLabel } from '../lands/land-labels';
 import { ProjectService } from './project.service';
 
-const TINTS = 5;
+const TINT_COUNT = 5;
 
-const SAMPLE = 4_889_300;
+const PREVIEW_AMOUNT = 4_889_300;
 
 interface StatusChoice {
   value: ProjectStatus;
@@ -58,23 +58,23 @@ export class ProjectSettingsComponent {
 
   readonly renaming = signal<string | null>(null);
   readonly newName = signal('');
-  readonly removing = signal<string | null>(null);
-  readonly justRemoved = signal<CategoryRead | null>(null);
+  readonly archiving = signal<string | null>(null);
+  readonly lastArchived = signal<CategoryRead | null>(null);
   readonly includeArchived = signal(false);
 
   readonly statuses: StatusChoice[] = [
-    { value: 'active', name: 'In progress' },
+    { value: 'active', name: 'Active' },
     { value: 'on_hold', name: 'On hold' },
-    { value: 'completed', name: 'Finished' },
-    { value: 'archived', name: 'Closed' },
+    { value: 'completed', name: 'Completed' },
+    { value: 'closed', name: 'Closed' },
   ];
 
-  readonly shape = computed(() =>
-    currencyShape(this.project().currency_code, this.project().currency_exponent),
+  readonly currencyFormat = computed(() =>
+    currencyFormat(this.project().currency_code, this.project().currency_exponent),
   );
 
   readonly preview = computed(() =>
-    formatMoney(SAMPLE, this.project().currency_code, this.project().currency_exponent),
+    formatMoney(PREVIEW_AMOUNT, this.project().currency_code, this.project().currency_exponent),
   );
 
   readonly dirty = computed(() => {
@@ -93,7 +93,7 @@ export class ProjectSettingsComponent {
     { value: '', label: 'No land' },
     ...this.lands
       .choices()
-      .map((land) => ({ value: land.id, label: land.name, detail: whereLabel(land) })),
+      .map((land) => ({ value: land.id, label: land.name, detail: locationLabel(land) })),
   ]);
 
   constructor() {
@@ -108,12 +108,12 @@ export class ProjectSettingsComponent {
     });
   }
 
-  value(event: Event): string {
+  inputValue(event: Event): string {
     return (event.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement).value;
   }
 
   setStatus(event: Event): void {
-    this.status.set(this.value(event) as ProjectStatus);
+    this.status.set(this.inputValue(event) as ProjectStatus);
   }
 
   async save(): Promise<void> {
@@ -135,8 +135,8 @@ export class ProjectSettingsComponent {
 
   tint(category: CategoryRead): string {
     const roots = this.budget.categories().filter((row) => row.parent_id === null);
-    const at = roots.findIndex((row) => row.id === (category.parent_id ?? category.id));
-    return at < 0 ? 'tint-uncategorized' : `tint-${(at % TINTS) + 1}`;
+    const rootIndex = roots.findIndex((row) => row.id === (category.parent_id ?? category.id));
+    return rootIndex < 0 ? 'tint-uncategorised' : `tint-${(rootIndex % TINT_COUNT) + 1}`;
   }
 
   countLabel(category: CategoryRead): string {
@@ -146,12 +146,12 @@ export class ProjectSettingsComponent {
     return `${category.expense_count} ${category.expense_count === 1 ? 'expense' : 'expenses'}`;
   }
 
-  canRemove(category: CategoryRead): boolean {
+  canArchive(category: CategoryRead): boolean {
     return category.expense_count === 0;
   }
 
   startRename(category: CategoryRead): void {
-    this.removing.set(null);
+    this.archiving.set(null);
     this.renaming.set(category.id);
     this.newName.set(category.name);
   }
@@ -180,37 +180,37 @@ export class ProjectSettingsComponent {
     return `${this.api.rootUrl}${path}`;
   }
 
-  exportSheet(): void {
+  exportWorkbook(): void {
     const link = document.createElement('a');
     link.href = this.exportUrl();
     link.click();
-    this.toast.show('Workbook written. It reads back into Setout as it stands.');
+    this.toast.show('Workbook download started.');
   }
 
-  importSheet(): void {
+  importWorkbook(): void {
     void this.router.navigate(['/import'], { queryParams: { project: this.project().id } });
   }
 
-  ask(category: CategoryRead): void {
+  confirmArchive(category: CategoryRead): void {
     this.renaming.set(null);
-    this.removing.set(category.id);
+    this.archiving.set(category.id);
   }
 
-  cancelRemove(): void {
-    this.removing.set(null);
+  cancelArchive(): void {
+    this.archiving.set(null);
   }
 
-  async putCategoryBack(): Promise<void> {
-    const gone = this.justRemoved();
-    if (!gone) {
+  async restoreLastArchived(): Promise<void> {
+    const archived = this.lastArchived();
+    if (!archived) {
       return;
     }
-    await this.restore(gone);
+    await this.restore(archived);
   }
 
   async restore(category: CategoryRead): Promise<void> {
-    const done = await this.budget.putCategoryBack(this.project().id, category.id);
-    this.justRemoved.set(null);
+    const done = await this.budget.restoreCategory(this.project().id, category.id);
+    this.lastArchived.set(null);
     await this.budget.load(this.project().id, this.includeArchived());
     this.toast.show(
       done
@@ -223,7 +223,7 @@ export class ProjectSettingsComponent {
   async setIncludeArchived(on: boolean): Promise<void> {
     this.includeArchived.set(on);
     this.renaming.set(null);
-    this.removing.set(null);
+    this.archiving.set(null);
     await this.budget.load(this.project().id, on);
   }
 
@@ -231,14 +231,14 @@ export class ProjectSettingsComponent {
     return this.includeArchived() ? 'Hide archived' : 'Show archived';
   }
 
-  async remove(category: CategoryRead): Promise<void> {
-    const done = await this.budget.removeCategory(
+  async archive(category: CategoryRead): Promise<void> {
+    const done = await this.budget.archiveCategory(
       this.project().id,
       category.id,
       this.includeArchived(),
     );
-    this.removing.set(null);
-    this.justRemoved.set(done ? category : null);
+    this.archiving.set(null);
+    this.lastArchived.set(done ? category : null);
     this.toast.show(
       done
         ? `${category.name} archived.`

@@ -56,7 +56,7 @@
   font: inherit;
   text-align: left;
   display: grid;
-  grid-template-columns: 1fr 150px 150px 150px;
+  grid-template-columns: 1fr 150px 150px;
   align-items: center;
   gap: 10px;
   padding: 12px 18px;
@@ -168,9 +168,7 @@ button.row {
   }
 
   .row > *:nth-child(2),
-  .row > *:nth-child(4),
-  .row.head > *:nth-child(2),
-  .row.head > *:nth-child(4) {
+  .row.head > *:nth-child(2) {
     display: none;
   }
 }

@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Api } from '@setout/api-client';
 import { DeliveryService } from './delivery.service';
 
-function owed(id: string, over: Record<string, unknown> = {}) {
+function delivery(id: string, overrides: Record<string, unknown> = {}) {
   return {
     id,
     project_id: 'p1',
@@ -10,7 +10,7 @@ function owed(id: string, over: Record<string, unknown> = {}) {
     vendor_id: 'v1',
     vendor_name: 'Corner Depot Cement',
     description: '17 bags of cement',
-    promised: 'this week',
+    expected: 'this week',
     amount: 7_650_000,
     currency_code: 'NGN',
     currency_exponent: 2,
@@ -18,31 +18,33 @@ function owed(id: string, over: Record<string, unknown> = {}) {
     received_at: null,
     created_at: '2026-08-14T00:00:00Z',
     updated_at: '2026-08-14T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
-function page(items: ReturnType<typeof owed>[], over: Record<string, unknown> = {}) {
+function page(items: ReturnType<typeof delivery>[], overrides: Record<string, unknown> = {}) {
   return {
     items,
     total: items.length,
-    owed_amount: items.filter((row) => !row.received_at).reduce((sum, row) => sum + row.amount, 0),
+    outstanding_amount: items
+      .filter((row) => !row.received_at)
+      .reduce((sum, row) => sum + row.amount, 0),
     limit: 10,
     offset: 0,
-    ...over,
+    ...overrides,
   };
 }
 
 describe('DeliveryService', () => {
-  const asked: Record<string, unknown>[] = [];
+  const requests: Record<string, unknown>[] = [];
 
   function configure(reply: (name: string, params: Record<string, unknown>) => unknown) {
     TestBed.resetTestingModule();
-    asked.length = 0;
+    requests.length = 0;
     const api = {
       invoke: async (fn: { name?: string }, params: Record<string, unknown>) => {
-        asked.push({ call: fn?.name ?? '', ...params });
+        requests.push({ call: fn?.name ?? '', ...params });
         return reply(fn?.name ?? '', params ?? {});
       },
     };
@@ -50,121 +52,129 @@ describe('DeliveryService', () => {
     return TestBed.inject(DeliveryService);
   }
 
-  it('keeps waiting, delivered and a vendor apart, so loading one empties none', async () => {
+  it('caches outstanding, received and vendor lists separately', async () => {
     const service = configure((name, params) => {
       if (name === 'listAllDeliveries') {
-        return page([owed('b')]);
+        return page([delivery('b')]);
       }
-      return params['received_only'] ? page([owed('c', { received_at: 'x' })]) : page([owed('a')]);
+      return params['received_only']
+        ? page([delivery('c', { received_at: 'x' })])
+        : page([delivery('a')]);
     });
 
-    await service.loadWaiting('p1');
-    await service.loadArrived('p1');
+    await service.loadOutstanding('p1');
+    await service.loadReceived('p1');
     await service.loadForVendor('v1');
 
-    expect(service.waiting('p1').rows.map((r) => r.id)).toEqual(['a']);
-    expect(service.arrived('p1').rows.map((r) => r.id)).toEqual(['c']);
+    expect(service.outstanding('p1').rows.map((r) => r.id)).toEqual(['a']);
+    expect(service.received('p1').rows.map((r) => r.id)).toEqual(['c']);
     expect(service.forVendor('v1').rows.map((r) => r.id)).toEqual(['b']);
   });
 
-  it('answers with nothing for a project it has not loaded', () => {
+  it('returns an empty list for a project that is not loaded', () => {
     const service = configure(() => page([]));
-    expect(service.waiting('unknown').rows).toEqual([]);
-    expect(service.arrived('unknown').total).toBe(0);
-    expect(service.forVendor('unknown').owed).toBe(0);
+    expect(service.outstanding('unknown').rows).toEqual([]);
+    expect(service.received('unknown').total).toBe(0);
+    expect(service.forVendor('unknown').outstandingAmount).toBe(0);
   });
 
-  it('asks for one page of ten and skips to the page it was sent to', async () => {
+  it('requests ten rows at the offset of the requested page', async () => {
     const service = configure(() => page([]));
 
-    await service.loadWaiting('p1', 3);
+    await service.loadOutstanding('p1', 3);
 
-    expect(asked[0]['limit']).toBe(10);
-    expect(asked[0]['offset']).toBe(20);
+    expect(requests[0]['limit']).toBe(10);
+    expect(requests[0]['offset']).toBe(20);
   });
 
-  it('counts what is outstanding across every page, not the rows in hand', async () => {
-    const service = configure(() => page([owed('a')], { total: 14, owed_amount: 20_000_000 }));
+  it('takes the outstanding total from the server, not the loaded rows', async () => {
+    const service = configure(() =>
+      page([delivery('a')], { total: 14, outstanding_amount: 20_000_000 }),
+    );
 
-    await service.loadWaiting('p1');
+    await service.loadOutstanding('p1');
 
-    expect(service.waiting('p1').rows.length).toBe(1);
-    expect(service.waiting('p1').total).toBe(14);
-    expect(service.waiting('p1').owed).toBe(20_000_000);
+    expect(service.outstanding('p1').rows.length).toBe(1);
+    expect(service.outstanding('p1').total).toBe(14);
+    expect(service.outstanding('p1').outstandingAmount).toBe(20_000_000);
   });
 
-  it('moves every copy of a row that gets marked delivered', async () => {
+  it('updates every cached copy when a delivery is marked received', async () => {
     const service = configure((name) => {
       if (name === 'receiveDelivery') {
-        return owed('b', { received_at: '2026-08-16T00:00:00Z' });
+        return delivery('b', { received_at: '2026-08-16T00:00:00Z' });
       }
-      return name === 'listAllDeliveries' ? page([owed('b')]) : page([owed('a'), owed('b')]);
+      return name === 'listAllDeliveries'
+        ? page([delivery('b')])
+        : page([delivery('a'), delivery('b')]);
     });
-    await service.loadWaiting('p1');
+    await service.loadOutstanding('p1');
     await service.loadForVendor('v1');
 
-    await service.receive('b');
+    await service.markReceived('b');
 
-    expect(service.waiting('p1').rows.find((r) => r.id === 'b')?.received_at).toBeTruthy();
+    expect(service.outstanding('p1').rows.find((r) => r.id === 'b')?.received_at).toBeTruthy();
     expect(service.forVendor('v1').rows[0].received_at).toBeTruthy();
-    expect(service.waiting('p1').owed).toBe(7_650_000);
+    expect(service.outstanding('p1').outstandingAmount).toBe(7_650_000);
   });
 
-  it('leaves deleted rows out unless the page includes them', async () => {
-    const service = configure(() => page([owed('a')]));
-    await service.loadWaiting('p1');
-    await service.loadArrived('p1', 1, true);
+  it('excludes archived rows unless requested', async () => {
+    const service = configure(() => page([delivery('a')]));
+    await service.loadOutstanding('p1');
+    await service.loadReceived('p1', 1, true);
 
-    expect(asked[0]['include_deleted']).toBe(false);
-    expect(asked[1]['include_deleted']).toBe(true);
+    expect(requests[0]['include_archived']).toBe(false);
+    expect(requests[1]['include_archived']).toBe(true);
   });
 
-  it('takes a deleted row out of every list holding it', async () => {
+  it('removes an archived row from every cached list', async () => {
     const service = configure((name) =>
-      name === 'listAllDeliveries' ? page([owed('b')]) : page([owed('a'), owed('b')]),
+      name === 'listAllDeliveries' ? page([delivery('b')]) : page([delivery('a'), delivery('b')]),
     );
-    await service.loadWaiting('p1');
+    await service.loadOutstanding('p1');
     await service.loadForVendor('v1');
 
-    await service.remove('b');
+    await service.archive('b');
 
-    expect(service.waiting('p1').rows.map((r) => r.id)).toEqual(['a']);
-    expect(service.waiting('p1').total).toBe(1);
-    expect(service.waiting('p1').owed).toBe(7_650_000);
+    expect(service.outstanding('p1').rows.map((r) => r.id)).toEqual(['a']);
+    expect(service.outstanding('p1').total).toBe(1);
+    expect(service.outstanding('p1').outstandingAmount).toBe(7_650_000);
     expect(service.forVendor('v1').rows).toEqual([]);
   });
 
-  it('files a new one under what the project is still waiting for', async () => {
-    const service = configure((name) => (name === 'addDelivery' ? owed('new') : page([owed('a')])));
-    await service.loadWaiting('p1');
+  it('adds a created delivery to the outstanding list', async () => {
+    const service = configure((name) =>
+      name === 'createDelivery' ? delivery('new') : page([delivery('a')]),
+    );
+    await service.loadOutstanding('p1');
 
     await service.add('p1', { expense_id: 'e9' });
 
-    expect(service.waiting('p1').rows.map((r) => r.id)).toEqual(['new', 'a']);
-    expect(service.waiting('p1').total).toBe(2);
-    expect(service.waiting('p1').owed).toBe(15_300_000);
+    expect(service.outstanding('p1').rows.map((r) => r.id)).toEqual(['new', 'a']);
+    expect(service.outstanding('p1').total).toBe(2);
+    expect(service.outstanding('p1').outstandingAmount).toBe(15_300_000);
   });
 
-  it('puts a corrected row back in place of the old one', async () => {
+  it('replaces an updated row in place', async () => {
     const service = configure((name) =>
       name === 'updateDelivery'
-        ? owed('a', { description: '18 bags of cement' })
-        : page([owed('a')]),
+        ? delivery('a', { description: '18 bags of cement' })
+        : page([delivery('a')]),
     );
-    await service.loadWaiting('p1');
+    await service.loadOutstanding('p1');
 
     const changed = await service.update('a', { description: '18 bags of cement' });
 
     expect(changed?.description).toBe('18 bags of cement');
-    expect(service.waiting('p1').rows[0].description).toBe('18 bags of cement');
+    expect(service.outstanding('p1').rows[0].description).toBe('18 bags of cement');
   });
 
-  it('says so when the list cannot be read', async () => {
+  it('shows an error when the list cannot be loaded', async () => {
     const service = configure(() => {
       throw new Error('offline');
     });
-    await service.loadWaiting('p1');
-    expect(service.error()).toBe('Could not load what is outstanding.');
-    expect(service.waiting('p1').rows).toEqual([]);
+    await service.loadOutstanding('p1');
+    expect(service.error()).toBe('Could not load the deliveries.');
+    expect(service.outstanding('p1').rows).toEqual([]);
   });
 });

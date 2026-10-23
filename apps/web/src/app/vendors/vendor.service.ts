@@ -4,13 +4,13 @@ import {
   VendorCreate,
   VendorRead,
   VendorAgreement,
-  VendorSpend,
+  VendorExpenseSummary,
   VendorUpdate,
+  archiveVendor,
   createVendor,
-  deleteVendor,
   getVendor,
   getVendorAgreements,
-  getVendorSpend,
+  getVendorExpenseSummary,
   listVendors,
   restoreVendor,
   updateVendor,
@@ -26,24 +26,24 @@ export class VendorService {
   private readonly api = inject(Api);
   private readonly counts = inject(CountsService);
 
-  private readonly state = signal<VendorRead[]>([]);
+  private readonly vendorsState = signal<VendorRead[]>([]);
   private readonly totalState = signal(0);
   private readonly pageState = signal(1);
   private readonly choiceState = signal<VendorRead[]>([]);
   private readonly searchState = signal('');
   private readonly archivedState = signal(false);
 
-  readonly vendors = this.state.asReadonly();
+  readonly vendors = this.vendorsState.asReadonly();
   readonly total = this.totalState.asReadonly();
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
 
   readonly page = this.pageState.asReadonly();
-  // Every choice for the pickers, which cannot work off one page of the table.
+  // Up to CHOICE_LIMIT rows for the pickers, independent of the paged list.
   readonly choices = this.choiceState.asReadonly();
 
-  private asked = 0;
+  private requestSeq = 0;
 
   async load(search?: string, includeArchived = false): Promise<void> {
     this.searchState.set(search ?? '');
@@ -61,7 +61,7 @@ export class VendorService {
   }
 
   async goTo(page: number): Promise<void> {
-    const ticket = ++this.asked;
+    const requestId = ++this.requestSeq;
     this.loading.set(true);
     this.error.set(null);
     try {
@@ -71,29 +71,29 @@ export class VendorService {
         limit: PAGE_SIZE,
         offset: offsetOf(page),
       });
-      if (ticket !== this.asked) {
+      if (requestId !== this.requestSeq) {
         return;
       }
-      this.state.set(rows.items);
+      this.vendorsState.set(rows.items);
       this.totalState.set(rows.total);
       this.pageState.set(page);
     } catch {
-      if (ticket !== this.asked) {
+      if (requestId !== this.requestSeq) {
         return;
       }
       this.error.set('Could not load the vendors.');
     } finally {
-      if (ticket === this.asked) {
+      if (requestId === this.requestSeq) {
         this.loading.set(false);
       }
     }
   }
 
   private async refresh(): Promise<void> {
-    const here = this.pageState();
-    await this.goTo(here);
-    if (this.state().length === 0 && here > 1) {
-      await this.goTo(here - 1);
+    const currentPage = this.pageState();
+    await this.goTo(currentPage);
+    if (this.vendorsState().length === 0 && currentPage > 1) {
+      await this.goTo(currentPage - 1);
     }
   }
 
@@ -107,7 +107,7 @@ export class VendorService {
       void this.counts.load();
       return created;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not add that vendor.');
+      this.error.set(detailOf(e) ?? 'Could not create the vendor.');
       return null;
     } finally {
       this.saving.set(false);
@@ -118,16 +118,16 @@ export class VendorService {
     this.error.set(null);
     try {
       const updated = await this.api.invoke(updateVendor, { vendor_id: vendorId, body });
-      this.state.update((rows) => rows.map((row) => (row.id === vendorId ? updated : row)));
+      this.vendorsState.update((rows) => rows.map((row) => (row.id === vendorId ? updated : row)));
       return updated;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not save that vendor.');
+      this.error.set(detailOf(e) ?? 'Could not save the vendor.');
       return null;
     }
   }
 
   async archive(vendorId: string): Promise<void> {
-    await this.api.invoke(deleteVendor, { vendor_id: vendorId });
+    await this.api.invoke(archiveVendor, { vendor_id: vendorId });
     await this.refresh();
     void this.counts.load();
   }
@@ -142,14 +142,14 @@ export class VendorService {
     try {
       return await this.api.invoke(getVendor, { vendor_id: vendorId });
     } catch {
-      this.error.set('Could not load that vendor.');
+      this.error.set('Could not load the vendor.');
       return null;
     }
   }
 
-  async spend(vendorId: string): Promise<VendorSpend | null> {
+  async expenseSummary(vendorId: string): Promise<VendorExpenseSummary | null> {
     try {
-      return await this.api.invoke(getVendorSpend, { vendor_id: vendorId });
+      return await this.api.invoke(getVendorExpenseSummary, { vendor_id: vendorId });
     } catch {
       return null;
     }

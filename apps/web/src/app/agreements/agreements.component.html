@@ -3,8 +3,8 @@
     <div class="intro-text">
       <h2 class="t-heading">Agreements</h2>
       <p class="prose">
-        What a vendor agreed to do for a fixed price. Paid and balance are calculated from the
-        expenses assigned to each agreement, so a part payment is recorded once.
+        What a vendor agreed to do for a fixed price. The Paid and Balance amounts are calculated
+        from the expenses assigned to each agreement, so a part payment is recorded once.
       </p>
     </div>
     <div class="intro-actions">
@@ -38,9 +38,9 @@
         </select>
       </div>
       <div class="field">
-        <label class="t-micro" for="agreement-what">Description</label>
+        <label class="t-micro" for="agreement-description">Description</label>
         <input
-          id="agreement-what"
+          id="agreement-description"
           class="input-field"
           type="text"
           placeholder="Blockwork"
@@ -49,7 +49,7 @@
         />
       </div>
       <div class="field">
-        <label class="t-micro" for="agreement-amount">Agreed Price</label>
+        <label class="t-micro" for="agreement-amount">Agreed Amount</label>
         <span class="amount">
           <span class="amount-prefix t-mono">{{ symbol() }}</span>
           <input
@@ -80,7 +80,7 @@
     </div>
   } @else {
     @for (agreement of agreements.agreements(); track agreement.id) {
-      <article class="agreement" [class.archived]="agreement.deleted_at">
+      <article class="agreement" [class.archived]="agreement.archived_at">
         <div class="agreement-head">
           <div class="titles">
             @if (editing() === agreement.id) {
@@ -88,7 +88,7 @@
                 <input
                   class="input-field"
                   type="text"
-                  [attr.aria-label]="'What ' + agreement.vendor_name + ' agreed to do'"
+                  [attr.aria-label]="'Description of the agreement with ' + agreement.vendor_name"
                   [value]="editDescription()"
                   (input)="editDescription.set(value($event))"
                 />
@@ -97,7 +97,7 @@
                   <input
                     class="amount-input t-mono"
                     inputmode="decimal"
-                    aria-label="Agreed price"
+                    aria-label="Agreed Amount"
                     [value]="editAgreed()"
                     (input)="editAgreed.set(value($event))"
                     (keyup.enter)="saveEdit(agreement)"
@@ -118,16 +118,18 @@
 
           <div class="figures">
             <div class="figure">
-              <span class="t-micro">Agreed {{ symbol() }}</span>
-              <span class="figure-value t-mono">{{ bare(agreement.agreed_amount) }}</span>
+              <span class="t-micro">Agreed Amount {{ symbol() }}</span>
+              <span class="figure-value t-mono">{{ formatAmount(agreement.agreed_amount) }}</span>
             </div>
             <div class="figure">
               <span class="t-micro">Paid {{ symbol() }}</span>
-              <span class="figure-value t-mono">{{ bare(agreement.paid_amount) }}</span>
+              <span class="figure-value t-mono">{{ formatAmount(agreement.paid_amount) }}</span>
             </div>
             <div class="figure">
               <span class="t-micro">Balance {{ symbol() }}</span>
-              <span class="figure-value t-mono owed">{{ bare(agreement.balance_amount) }}</span>
+              <span class="figure-value t-mono balance">{{
+                formatAmount(agreement.balance_amount)
+              }}</span>
             </div>
           </div>
 
@@ -139,27 +141,27 @@
         <div class="payments">
           @for (payment of paymentsFor(agreement.id); track payment.id) {
             <div class="payment">
-              <span class="t-mono when">{{ day(payment.spent_on) }}</span>
-              <span class="t-small note">{{ payment.description }}</span>
-              <span class="t-mono paid">{{ bare(payment.amount) }}</span>
+              <span class="t-mono date">{{ formatDate(payment.spent_on) }}</span>
+              <span class="t-small description">{{ payment.description }}</span>
+              <span class="t-mono paid">{{ formatAmount(payment.amount) }}</span>
             </div>
           }
           @if (paymentsFor(agreement.id).length === 0) {
             <div class="payment">
               <span></span>
-              <span class="t-small note">No payments yet.</span>
+              <span class="t-small description">No payments yet.</span>
               <span></span>
             </div>
           }
 
-          <div class="payment left-to-pay">
+          <div class="payment balance-row">
             <span></span>
-            <span class="left-label">Remaining to Pay</span>
-            <span class="t-mono paid owed">{{ bare(agreement.balance_amount) }}</span>
+            <span class="balance-label">Balance</span>
+            <span class="t-mono paid balance">{{ formatAmount(agreement.balance_amount) }}</span>
           </div>
 
           <div class="agreement-actions">
-            @if (agreement.deleted_at) {
+            @if (agreement.archived_at) {
               <span class="t-small hint">Archived. Its payments are unchanged.</span>
               <button
                 type="button"
@@ -169,7 +171,7 @@
               >
                 Restore
               </button>
-            } @else if (paying() === agreement.id) {
+            } @else if (payingAgreementId() === agreement.id) {
               <span class="amount">
                 <span class="amount-prefix t-mono">{{ symbol() }}</span>
                 <input
@@ -194,19 +196,19 @@
               <button
                 type="button"
                 class="link-action"
-                [attr.aria-label]="'Change the agreement with ' + agreement.vendor_name"
+                [attr.aria-label]="'Edit the agreement with ' + agreement.vendor_name"
                 (click)="startEdit(agreement)"
               >
-                Change
+                Edit
               </button>
               <span class="t-small hint">
                 A payment creates one expense on this project and one entry here.
               </span>
               <button
                 type="button"
-                class="link-action destructive"
+                class="link-action archive-action"
                 [attr.aria-label]="'Archive the agreement with ' + agreement.vendor_name"
-                (click)="remove(agreement.id)"
+                (click)="archive(agreement.id)"
               >
                 Archive
               </button>
@@ -232,15 +234,16 @@
   <section class="block">
     <div class="intro">
       <div class="intro-text">
-        <h2 class="t-heading">Money Held</h2>
+        <h2 class="t-heading">Advances</h2>
         <p class="prose">
-          Money given to someone before they spend it. The balance is the advance less what they
-          have paid out.
+          Money given to a person before they spend it. The balance is the advance less the amount
+          spent: a positive balance is unspent money the person holds, a negative balance is owed to
+          them.
         </p>
       </div>
       @if (!addingAdvance()) {
         <app-button variant="secondary" (pressed)="addingAdvance.set(true)">
-          Issue an Advance
+          New Advance
         </app-button>
       }
     </div>
@@ -248,7 +251,7 @@
     @if (addingAdvance()) {
       <div class="panel">
         <div class="field">
-          <label class="t-micro" for="advance-person">People</label>
+          <label class="t-micro" for="advance-person">Person</label>
           <select
             id="advance-person"
             class="input-field"
@@ -290,16 +293,16 @@
 
     @if (agreements.balances().length === 0) {
       <div class="card">
-        <p class="t-body">Nobody is holding money.</p>
-        <p class="t-small">Issue an advance, or record who paid for a purchase.</p>
+        <p class="t-body">No advances yet.</p>
+        <p class="t-small">Issue an advance, or record who paid for an expense.</p>
       </div>
     } @else {
       <div class="table">
         <div class="row head">
           <span class="t-micro">Person</span>
-          <span class="t-micro right">Given</span>
+          <span class="t-micro right">Advanced</span>
           <span class="t-micro right">Spent</span>
-          <span class="t-micro right">Outstanding Balance</span>
+          <span class="t-micro right">Balance</span>
           <span></span>
         </div>
         @for (balance of balanceRows(); track balance.person_id) {
@@ -307,7 +310,7 @@
             <span class="main">
               <span class="vendor">{{ balance.person_name }}</span>
               <span class="t-small">
-                {{ holding(balance.balance_amount) }}
+                {{ balanceDirection(balance.balance_amount) }}
                 {{
                   money(
                     balance.balance_amount < 0 ? -balance.balance_amount : balance.balance_amount
@@ -317,7 +320,7 @@
             </span>
             <span class="right t-mono muted">{{ money(balance.advanced_amount) }}</span>
             <span class="right t-mono muted">{{ money(balance.spent_amount) }}</span>
-            <span class="right t-mono cell-figure" [class.owed]="balance.balance_amount < 0">
+            <span class="right t-mono cell-figure" [class.negative]="balance.balance_amount < 0">
               {{ money(balance.balance_amount) }}
             </span>
             <span></span>
@@ -338,16 +341,16 @@
         <div class="row head">
           <span class="t-micro">Advance</span>
           <span class="t-micro right">Amount</span>
-          <span class="t-micro right">Given On</span>
+          <span class="t-micro right">Date Advanced</span>
           <span></span>
           <span></span>
         </div>
         @for (advance of agreements.advances(); track advance.id) {
-          <div class="row" [class.archived]="advance.deleted_at">
+          <div class="row" [class.archived]="advance.archived_at">
             <span class="main"
               ><span class="vendor">{{ advance.person_name }}</span></span
             >
-            @if (advance.deleted_at) {
+            @if (advance.archived_at) {
               <span class="right t-mono cell-figure">{{ money(advance.amount) }}</span>
               <span class="right t-mono muted">{{ advance.given_on }}</span>
               <span class="t-small muted">archived</span>
@@ -365,7 +368,7 @@
                 <input
                   class="amount-input t-mono"
                   inputmode="decimal"
-                  [attr.aria-label]="'How much was given to ' + advance.person_name"
+                  [attr.aria-label]="'Amount advanced to ' + advance.person_name"
                   [value]="editAdvanceAmount()"
                   (input)="editAdvanceAmount.set(value($event))"
                   (keyup.enter)="saveEditAdvance(advance)"
@@ -384,16 +387,16 @@
               <button
                 type="button"
                 class="link-action"
-                [attr.aria-label]="'Change the advance to ' + advance.person_name"
+                [attr.aria-label]="'Edit the advance to ' + advance.person_name"
                 (click)="startEditAdvance(advance)"
               >
-                Change
+                Edit
               </button>
               <button
                 type="button"
-                class="link-action destructive"
+                class="link-action archive-action"
                 [attr.aria-label]="'Archive the advance to ' + advance.person_name"
-                (click)="removeAdvance(advance.id)"
+                (click)="archiveAdvance(advance.id)"
               >
                 Archive
               </button>

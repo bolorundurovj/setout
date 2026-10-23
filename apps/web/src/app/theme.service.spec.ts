@@ -8,7 +8,7 @@ describe('ThemeService', () => {
     TestBed.resetTestingModule();
   });
 
-  it('reads the theme index.html already applied', () => {
+  it('reads the theme index.html applied before load', () => {
     document.documentElement.setAttribute('data-theme', 'dark');
     expect(TestBed.inject(ThemeService).theme()).toBe('dark');
   });
@@ -25,49 +25,49 @@ describe('ThemeService', () => {
     expect(service.theme()).toBe('light');
   });
 
-  it('remembers the choice', () => {
-    TestBed.inject(ThemeService).set('dark');
+  it('stores the chosen theme', () => {
+    TestBed.inject(ThemeService).choose('dark');
     expect(localStorage.getItem('setout-theme')).toBe('dark');
   });
 
-  it('still applies the theme when storage throws', () => {
+  it('applies the theme when storage throws', () => {
     const setItem = Storage.prototype.setItem;
     Storage.prototype.setItem = () => {
       throw new Error('private mode');
     };
     try {
       const service = TestBed.inject(ThemeService);
-      service.set('dark');
+      service.choose('dark');
       expect(service.theme()).toBe('dark');
       expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
     } finally {
       Storage.prototype.setItem = setItem;
     }
   });
-  it('follows the device until a choice is made', () => {
+  it('uses the system theme until a choice is stored', () => {
     const service = TestBed.inject(ThemeService);
     expect(service.choice()).toBe('system');
-    expect(service.followsDevice()).toBe(true);
+    expect(service.followsSystem()).toBe(true);
   });
 
-  it('remembers a choice as the choice, not as the outcome', () => {
+  it('stores the choice, not the resolved theme', () => {
     const service = TestBed.inject(ThemeService);
     service.choose('dark');
     expect(service.choice()).toBe('dark');
-    expect(service.followsDevice()).toBe(false);
+    expect(service.followsSystem()).toBe(false);
     expect(localStorage.getItem('setout-theme')).toBe('dark');
   });
 
-  it('forgets the choice when handed back to the device', () => {
+  it('clears the stored choice when set to system', () => {
     const service = TestBed.inject(ThemeService);
     service.choose('dark');
     service.choose('system');
     expect(localStorage.getItem('setout-theme')).toBeNull();
-    expect(service.followsDevice()).toBe(true);
+    expect(service.followsSystem()).toBe(true);
     expect(['light', 'dark']).toContain(service.theme());
   });
 
-  it('reads a stored choice back on the next visit', () => {
+  it('reads the stored choice on load', () => {
     localStorage.setItem('setout-theme', 'dark');
     TestBed.resetTestingModule();
     expect(TestBed.inject(ThemeService).choice()).toBe('dark');

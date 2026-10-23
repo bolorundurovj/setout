@@ -1,5 +1,5 @@
 <app-topbar title="Import Spreadsheet" [subtitle]="targetName()">
-  <app-button variant="secondary" (pressed)="leave()">All Projects</app-button>
+  <app-button variant="secondary" (pressed)="goToProjects()">Projects</app-button>
 </app-topbar>
 
 <div class="page">
@@ -7,32 +7,32 @@
     <h1 class="t-heading">Import an Existing Spreadsheet</h1>
     <p class="prose">
       The whole workbook is read at once and each sheet is recognised by its headings. Budget
-      amounts come only from a budget sheet and expenses only from an invoices sheet, so an expense
-      sheet can never write a budget.
+      amounts come only from a budget sheet and expenses only from an expenses sheet, so an expenses
+      sheet cannot change the budget.
     </p>
   </div>
 
   <div class="steps">
     @for (stage of steps; track stage.key) {
-      <div class="step" [class.on]="reached(stage.key)">
+      <div class="step" [class.reached]="reached(stage.key)">
         <span class="step-bar"></span>
         <span class="t-micro">{{ stage.label }}</span>
       </div>
     }
   </div>
 
-  @if (sheets.error()) {
-    <p class="banner warn t-small">{{ sheets.error() }}</p>
+  @if (importer.error()) {
+    <p class="banner warn t-small">{{ importer.error() }}</p>
   }
 
-  @if (at('file')) {
+  @if (isStep('file')) {
     <section class="card block">
       <span class="t-micro">Destination</span>
       <div class="fields">
         <label class="field">
           <span class="t-micro">Project</span>
           <select class="input-field" [value]="projectId()" (change)="projectId.set(value($event))">
-            <option value="" [selected]="intoNew()">Start a new project</option>
+            <option value="" [selected]="isNewProject()">New project</option>
             @for (option of projects.projects(); track option.id) {
               <option [value]="option.id" [selected]="option.id === projectId()">
                 {{ option.name }}
@@ -41,7 +41,7 @@
           </select>
         </label>
 
-        @if (intoNew()) {
+        @if (isNewProject()) {
           <label class="field">
             <span class="t-micro">New Project Name</span>
             <input
@@ -69,10 +69,9 @@
         }
       </div>
 
-      @if (intoNew()) {
+      @if (isNewProject()) {
         <p class="t-small note">
-          The spreadsheet carries no currency, so a new project needs one before any amount can be
-          read as money.
+          Spreadsheets do not store a currency, so select one for the new project.
         </p>
       } @else {
         <p class="t-small note">
@@ -83,16 +82,15 @@
     </section>
 
     <section class="card block">
-      <span class="t-micro">Nothing to import yet</span>
+      <span class="t-micro">Templates</span>
       <p class="t-small note">
-        Start from one of these. Each has the headings Setout recognises and instructions for
-        filling it in.
+        Each template has the headings Setout recognises and instructions for completing it.
       </p>
-      <div class="samples">
-        @for (choice of samples; track choice.kind) {
-          <a class="sample" [href]="sampleUrl(choice.kind)">
-            <span class="t-body">{{ choice.name }}</span>
-            <span class="t-small muted">{{ choice.detail }}</span>
+      <div class="templates">
+        @for (template of templates; track template.kind) {
+          <a class="template" [href]="templateUrl(template.kind)">
+            <span class="t-body">{{ template.name }}</span>
+            <span class="t-small muted">{{ template.detail }}</span>
           </a>
         }
       </div>
@@ -101,71 +99,71 @@
     <section class="card block">
       <span class="t-micro">File</span>
 
-      @if (file(); as chosen) {
-        <div class="chosen">
-          <span class="chosen-text">
-            <span class="t-body">{{ chosen.name }}</span>
+      @if (file(); as selectedFile) {
+        <div class="selected-file">
+          <span class="selected-file-text">
+            <span class="t-body">{{ selectedFile.name }}</span>
             <span class="t-small muted">{{ fileNote() }}</span>
           </span>
           <button type="button" class="link-action" (click)="clearFile()">Choose Another</button>
         </div>
       } @else {
-        <button type="button" class="drop" (click)="pick()">
+        <button type="button" class="file-picker" (click)="openFilePicker()">
           <span class="t-body">Choose a .xlsx or .csv file</span>
           <span class="t-small muted">
-            The file is not uploaded. It is read where Setout runs.
+            The file is read by your Setout server and not sent anywhere else.
           </span>
         </button>
       }
 
       <input
-        #sheet
+        #fileInput
         type="file"
         class="offscreen"
         accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
-        (change)="onPicked($event)"
+        (change)="onFileSelected($event)"
       />
 
       <div class="actions">
-        <app-button [disabled]="!canRead()" [loading]="sheets.working()" (pressed)="read()">
-          Read Spreadsheet
+        <app-button [disabled]="!canPreview()" [loading]="importer.busy()" (pressed)="preview()">
+          Preview Import
         </app-button>
-        <span class="t-small muted">Nothing is written until you have reviewed the contents.</span>
+        <span class="t-small muted">No data is saved until you review the contents.</span>
       </div>
     </section>
   }
 
-  @if (at('review') && report(); as found) {
+  @if (isStep('review') && report(); as report) {
     <section class="card block">
       <span class="t-micro">Spreadsheet Contents</span>
       <div class="counts">
         <div class="count">
           <span class="t-micro">Budgeted</span>
-          <span class="count-value t-mono">{{ money(found.budgeted_amount) }}</span>
+          <span class="count-value t-mono">{{ money(report.budgeted_amount) }}</span>
           <span class="t-small muted">
-            {{ found.budgeted_lines }} lines across {{ found.categories.length }} categories
+            {{ report.budgeted_lines }} lines across {{ report.categories.length }} categories
           </span>
         </div>
         <div class="count">
           <span class="t-micro">Expenses</span>
-          <span class="count-value t-mono">{{ money(found.spend_amount) }}</span>
-          <span class="t-small muted">{{ found.spend_rows }} rows</span>
+          <span class="count-value t-mono">{{ money(report.spent_amount) }}</span>
+          <span class="t-small muted">{{ report.expense_rows }} rows</span>
         </div>
         <div class="count">
           <span class="t-micro">Vendors</span>
-          <span class="count-value t-mono">{{ found.vendors_new }}</span>
-          <span class="t-small muted">{{ found.vendors_known }} already known</span>
+          <span class="count-value t-mono">{{ report.vendors_new }}</span>
+          <span class="t-small muted">{{ report.vendors_known }} already exist</span>
         </div>
       </div>
 
       <div class="sheets">
-        @for (sheet of found.read; track sheet.name) {
+        @for (sheet of report.read; track sheet.name) {
           <span class="sheet">
             <span class="t-body">{{ sheet.name }}</span>
             <span class="t-small muted">{{ sheetNote(sheet.holds, sheet.rows) }}</span>
           </span>
         }
-        @for (sheet of found.skipped; track sheet.name) {
+        @for (sheet of report.skipped; track sheet.name) {
           <span class="sheet skipped">
             <span class="t-body">{{ sheet.name }}</span>
             <span class="t-small muted">{{ sheet.why }}</span>
@@ -174,11 +172,11 @@
       </div>
     </section>
 
-    @if (found.categories.length > 0) {
+    @if (report.categories.length > 0) {
       <section class="card block">
-        <span class="t-micro">Categories found in the spreadsheet</span>
+        <span class="t-micro">Categories in the Spreadsheet</span>
         <div class="categories">
-          @for (category of found.categories; track category.code) {
+          @for (category of report.categories; track category.code) {
             <div class="category">
               <span class="category-name">
                 <span class="t-mono code">{{ category.code }}</span>
@@ -193,10 +191,10 @@
       </section>
     }
 
-    @if (found.decisions.length > 0) {
+    @if (report.decisions.length > 0) {
       <section class="card block">
         <span class="t-micro">Rows That Need Attention</span>
-        @for (decision of found.decisions; track decision.kind) {
+        @for (decision of report.decisions; track decision.kind) {
           <div class="decision" [class.blocking]="decision.blocking">
             <span class="decision-text">
               <span class="t-body">{{ decision.count }} · {{ decision.detail }}</span>
@@ -209,23 +207,21 @@
               <app-chip-group
                 [chips]="choicesFor(decision)"
                 [value]="answerFor(decision)"
-                [label]="'What to do about ' + decision.detail"
+                [label]="'Action for ' + decision.detail"
                 (valueChange)="answer(decision, $event)"
               />
               <span class="t-small muted">{{ consequenceFor(decision) }}</span>
             } @else {
-              <span class="t-small muted"
-                >Nothing to decide. It is listed so it is not a surprise later.</span
-              >
+              <span class="t-small muted">No action required. Listed for information.</span>
             }
           </div>
         }
       </section>
     }
 
-    @if (found.sample.length > 0) {
+    @if (report.sample.length > 0) {
       <section class="card block">
-        <span class="t-micro">First rows, as they will be imported</span>
+        <span class="t-micro">Preview of First Rows</span>
         <div class="rows">
           <div class="row head">
             <span class="t-micro">Date</span>
@@ -233,7 +229,7 @@
             <span class="t-micro">Category</span>
             <span class="t-micro right">Amount</span>
           </div>
-          @for (row of found.sample; track $index) {
+          @for (row of report.sample; track $index) {
             <div class="row">
               <span class="t-small">{{ sampleDay(row) }}</span>
               <span class="t-small">{{ row.description }}</span>
@@ -245,66 +241,66 @@
       </section>
     }
 
-    @if (found.left_behind.length > 0) {
+    @if (report.left_behind.length > 0) {
       <section class="card block">
-        <span class="t-micro">Columns Setout does not store</span>
+        <span class="t-micro">Columns Not Imported</span>
         <p class="t-small note">
-          {{ found.left_behind.join(', ') }}. Everything else in the sheet comes across.
+          {{ report.left_behind.join(', ') }}. All other columns are imported.
         </p>
       </section>
     }
 
     <div class="actions">
-      <app-button variant="secondary" (pressed)="back()">Choose Another File</app-button>
-      <app-button [disabled]="blocking()" [loading]="sheets.working()" (pressed)="bringIn()">
+      <app-button variant="secondary" (pressed)="backToFile()">Choose Another File</app-button>
+      <app-button [disabled]="blocking()" [loading]="importer.busy()" (pressed)="runImport()">
         Import
       </app-button>
       @if (blocking()) {
         <span class="t-small muted">
-          The rows marked above have no category heading, so they cannot be assigned. Fix the
-          spreadsheet and read it again.
+          The rows marked above have no category heading, so they cannot be assigned. Correct the
+          spreadsheet and upload it again.
         </span>
       } @else {
         <span class="t-small muted"
-          >Written all at once. If any row fails, nothing is imported.</span
+          >All rows are imported together. If any row fails, nothing is imported.</span
         >
       }
     </div>
   }
 
-  @if (at('done') && result(); as done) {
+  @if (isStep('done') && result(); as result) {
     <section class="card block">
       <span class="t-micro">Imported</span>
-      <h2 class="t-heading">{{ done.project_name }}</h2>
+      <h2 class="t-heading">{{ result.project_name }}</h2>
       <div class="counts">
         <div class="count">
           <span class="t-micro">Budgeted</span>
-          <span class="count-value t-mono">{{ money(done.budgeted_amount) }}</span>
+          <span class="count-value t-mono">{{ money(result.budgeted_amount) }}</span>
           <span class="t-small muted">
-            {{ done.budget_items }} lines across {{ done.categories }} categories
+            {{ result.budget_item_count }} lines across {{ result.category_count }} categories
           </span>
         </div>
         <div class="count">
-          <span class="t-micro">Spending</span>
-          <span class="count-value t-mono">{{ money(done.spend_amount) }}</span>
-          <span class="t-small muted">{{ done.expenses }} expenses</span>
+          <span class="t-micro">Expenses</span>
+          <span class="count-value t-mono">{{ money(result.spent_amount) }}</span>
+          <span class="t-small muted">{{ result.expense_count }} expenses</span>
         </div>
         <div class="count">
-          <span class="t-micro">Names</span>
-          <span class="count-value t-mono">{{ done.vendors }}</span>
-          <span class="t-small muted">vendors, and {{ done.people }} people</span>
+          <span class="t-micro">Vendors and People</span>
+          <span class="count-value t-mono">{{ result.vendor_count }}</span>
+          <span class="t-small muted">vendors and {{ result.person_count }} people</span>
         </div>
       </div>
 
-      @if (done.skipped_duplicates > 0) {
+      @if (result.skipped_duplicates > 0) {
         <p class="t-small note">
-          {{ done.skipped_duplicates }} rows were already in the project and were skipped.
+          {{ result.skipped_duplicates }} rows were already in the project and were skipped.
         </p>
       }
 
       <div class="actions">
         <app-button (pressed)="openProject()">Open Project</app-button>
-        <app-button variant="secondary" (pressed)="leave()">All Projects</app-button>
+        <app-button variant="secondary" (pressed)="goToProjects()">Projects</app-button>
       </div>
     </section>
   }

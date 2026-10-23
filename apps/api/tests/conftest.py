@@ -25,7 +25,7 @@ def _ignore_local_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep a developer's own .env out of the suite.
 
     Settings reads the .env at the repository root so the app can be started
-    from apps/api. Tests must not answer differently on a machine that has one.
+    from apps/api. A local .env must not change test results.
     """
     monkeypatch.setitem(Settings.model_config, "env_file", None)
     for name in list(os.environ):
@@ -42,8 +42,7 @@ async def client(tmp_path: Path) -> AsyncIterator[AsyncClient]:
     )
     await Tortoise.generate_schemas()
     app = create_app()
-    # Files go to a scratch directory for the length of one test. The real
-    # local backend does the writing, so the path that ships is the one tested.
+    # Real LocalStorage under tmp_path, so the production write path is exercised.
     app.dependency_overrides[get_storage] = lambda: LocalStorage(tmp_path / "attachments")
     transport = ASGITransport(app=app)
     try:

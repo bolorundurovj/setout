@@ -11,11 +11,11 @@ describe('SetoutTitleStrategy', () => {
   }
 
   it('appends the app name to the page title', () => {
-    strategyWith('All Projects').updateTitle({} as RouterStateSnapshot);
-    expect(TestBed.inject(Title).getTitle()).toBe('All Projects · Setout');
+    strategyWith('Projects').updateTitle({} as RouterStateSnapshot);
+    expect(TestBed.inject(Title).getTitle()).toBe('Projects · Setout');
   });
 
-  it('falls back to the app name alone', () => {
+  it('uses the app name alone when the route has no title', () => {
     strategyWith(undefined).updateTitle({} as RouterStateSnapshot);
     expect(TestBed.inject(Title).getTitle()).toBe('Setout');
   });

@@ -9,18 +9,18 @@ from tortoise.transactions import in_transaction
 from setout import __version__
 from setout.config import get_settings
 from setout.schemas.install import Backup, Install, RestoreRequest, RestoreResult
-from setout.utils.dump import FORMAT, TABLES, applied_migration, forward, read_all, write_all
+from setout.utils.backup import FORMAT, TABLES, applied_migration, forward, read_all, write_all
 
 
 class InstallController:
-    async def facts(self) -> Install:
+    async def info(self) -> Install:
         data_dir = get_settings().data_dir
-        size, changed = self._weigh(data_dir)
+        size, changed = self._data_dir_usage(data_dir)
         return Install(
             version=__version__,
             migration=await applied_migration(),
-            record_bytes=size,
-            record_changed_at=changed,
+            data_bytes=size,
+            data_changed_at=changed,
         )
 
     async def export(self) -> Backup:
@@ -39,16 +39,19 @@ class InstallController:
         if backup.format > FORMAT:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail=f"That file uses format {backup.format}. Setout reads format {FORMAT}",
+                detail=(
+                    f"The backup uses format {backup.format}. "
+                    f"This version of Setout reads backup formats up to {FORMAT}"
+                ),
             )
         tables = forward(dict(backup.tables), backup.format)
         unknown = sorted(set(tables) - set(TABLES))
         if unknown:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail=f"That file holds tables Setout does not recognise: {', '.join(unknown)}",
+                detail=f"The backup has tables Setout does not recognise: {', '.join(unknown)}",
             )
-        await self._same_shape_or_confirmed(backup, req.accept_version_change)
+        await self._require_matching_version(backup, req.accept_version_change)
 
         try:
             async with in_transaction():
@@ -59,29 +62,29 @@ class InstallController:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=(
-                    "The record was left as it was: those rows do not fit this schema. "
-                    f"The database reported: {exc}"
+                    "Your data was not changed: the rows do not match this schema. "
+                    f"Database error: {exc}"
                 ),
             ) from exc
 
         return RestoreResult(row_counts=written, signed_out=True)
 
-    async def _same_shape_or_confirmed(self, backup: Backup, accepted: bool) -> None:
+    async def _require_matching_version(self, backup: Backup, accepted: bool) -> None:
         if accepted:
             return
-        here = await applied_migration()
-        if backup.app_version == __version__ and backup.migration == here:
+        current_migration = await applied_migration()
+        if backup.app_version == __version__ and backup.migration == current_migration:
             return
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
-                f"That copy was written by Setout {backup.app_version} on schema "
-                f"{backup.migration or 'unknown'}. This server is {__version__} on "
-                f"{here or 'unknown'}. Restoring may fail if the schema has changed"
+                f"This backup was created by Setout {backup.app_version} on schema "
+                f"{backup.migration or 'unknown'}. This server runs {__version__} on schema "
+                f"{current_migration or 'unknown'}. The restore may fail if the schema has changed"
             ),
         )
 
-    def _weigh(self, data_dir: Path) -> tuple[int, datetime | None]:
+    def _data_dir_usage(self, data_dir: Path) -> tuple[int, datetime | None]:
         if not data_dir.is_dir():
             return 0, None
         size = 0

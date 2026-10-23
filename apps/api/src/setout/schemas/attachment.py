@@ -15,7 +15,7 @@ class AttachmentRead(BaseModel):
     checksum: str
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
+    archived_at: datetime | None
 
 
 class AttachmentPage(BaseModel):

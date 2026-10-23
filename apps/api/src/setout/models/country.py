@@ -17,7 +17,7 @@ class Country(Model):
 
 
 class State(Model):
-    """A state, province or region. What a plot's address calls the state."""
+    """A state, province or region of a country."""
 
     code = fields.CharField(max_length=6, primary_key=True)
     country: fields.ForeignKeyRelation[Country] = fields.ForeignKeyField(

@@ -1,5 +1,5 @@
 <app-topbar title="Land" [subtitle]="countLabel()">
-  <app-button (pressed)="newLand()">New Land</app-button>
+  <app-button (pressed)="newLand()">New Land Record</app-button>
 </app-topbar>
 
 <div class="page">
@@ -7,8 +7,8 @@
     <input
       class="input-field search"
       type="search"
-      placeholder="Search land"
-      aria-label="Search land"
+      placeholder="Search land records"
+      aria-label="Search land records"
       [value]="search()"
       (input)="onSearch($event)"
     />
@@ -23,9 +23,11 @@
 
   @if (lands.lands().length === 0) {
     <div class="card">
-      <p class="t-body">{{ search() ? 'No land matches your search.' : 'No land yet.' }}</p>
+      <p class="t-body">
+        {{ search() ? 'No land records match your search.' : 'No land records yet.' }}
+      </p>
       <p class="t-small">
-        Add a land record to keep its documents together. A project can reference it later.
+        Create a land record to keep its documents together. A project can reference it later.
       </p>
     </div>
   } @else {
@@ -42,28 +44,28 @@
         <button
           type="button"
           class="row"
-          [class.archived]="land.deleted_at"
+          [class.archived]="land.archived_at"
           (click)="open(land.id)"
         >
           <span class="name-cell">
             <span class="land-name">{{ land.name }}</span>
             <span class="t-micro">
               {{ projectsLabel(land) }}
-              @if (land.deleted_at) {
+              @if (land.archived_at) {
                 &middot; archived
               }
             </span>
           </span>
 
-          <span class="t-small">{{ where(land) }}</span>
+          <span class="t-small">{{ location(land) }}</span>
 
-          <span class="right t-mono figure">{{ size(land) }}</span>
+          <span class="right t-mono figure">{{ statedArea(land) }}</span>
 
-          <span class="right t-mono figure">{{ worth(land) }}</span>
+          <span class="right t-mono figure">{{ valuation(land) }}</span>
 
-          <span class="right papers">
+          <span class="right documents">
             <span class="t-small" [class.muted]="land.missing_kinds.length === 0">
-              {{ papersLabel(land) }}
+              {{ missingDocumentsLabel(land) }}
             </span>
             <span class="t-micro">{{ documentsLabel(land) }}</span>
           </span>
@@ -79,8 +81,8 @@
     />
 
     <p class="t-small muted">
-      Documents tracks the Certificate of Occupancy, survey plan and deed. Other documents can be
-      stored but are not required.
+      The Documents column tracks the Certificate of Occupancy, Survey Plan and Deed. Other
+      documents can be stored but are not required.
     </p>
   }
 </div>

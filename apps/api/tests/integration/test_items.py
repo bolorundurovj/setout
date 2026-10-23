@@ -12,7 +12,7 @@ async def _setup(client: AsyncClient, *codes: str) -> dict[str, str]:
     await Currency.bulk_create(
         [Currency(code=c[0], name=c[1], exponent=c[2]) for c in CURRENCIES if c[0] in wanted]
     )
-    await client.post("/api/auth/setup", json={"name": "Admin", "password": "password123"})
+    await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": "password123"})
     projects = {}
     for code in wanted:
         resp = await client.post(
@@ -66,7 +66,7 @@ async def test_the_same_name_twice_is_refused(client: AsyncClient) -> None:
 async def test_a_name_freed_by_archiving_can_be_used_again(client: AsyncClient) -> None:
     await _setup(client)
     item = await _item(client, "Cement")
-    assert (await client.delete(f"/api/items/{item['id']}")).status_code == 204
+    assert (await client.post(f"/api/items/{item['id']}/archive")).status_code == 204
 
     assert (await client.post("/api/items", json={"name": "Cement"})).status_code == 201
 
@@ -85,24 +85,24 @@ async def test_archiving_hides_an_item_and_restoring_brings_it_back(client: Asyn
     await _setup(client)
     item = await _item(client, "Cement")
 
-    await client.delete(f"/api/items/{item['id']}")
+    await client.post(f"/api/items/{item['id']}/archive")
     assert (await client.get("/api/items")).json()["total"] == 0
     assert (await client.get(f"/api/items/{item['id']}")).status_code == 404
 
     restored = await client.post(f"/api/items/{item['id']}/restore")
     assert restored.status_code == 200
-    assert restored.json()["deleted_at"] is None
+    assert restored.json()["archived_at"] is None
     assert (await client.get("/api/items")).json()["total"] == 1
 
 
 async def test_an_archived_item_is_listed_only_when_asked_for(client: AsyncClient) -> None:
     await _setup(client)
     item = await _item(client, "Cement")
-    await client.delete(f"/api/items/{item['id']}")
+    await client.post(f"/api/items/{item['id']}/archive")
 
     page = (await client.get("/api/items", params={"include_archived": True})).json()
     assert [row["id"] for row in page["items"]] == [item["id"]]
-    assert page["items"][0]["deleted_at"]
+    assert page["items"][0]["archived_at"]
 
     searched = await client.get("/api/items", params={"include_archived": True, "search": "ceme"})
     assert searched.json()["total"] == 1
@@ -215,7 +215,7 @@ async def test_a_removed_expense_leaves_the_price_history(client: AsyncClient) -
     item = await _item(client, "Cement")
     expense = await _buy(client, projects["NGN"], item["id"], 11_000_00, "2026-05-05")
 
-    await client.delete(f"/api/expenses/{expense['id']}")
+    await client.post(f"/api/expenses/{expense['id']}/archive")
 
     assert (await client.get(f"/api/items/{item['id']}/prices")).json()["series"] == []
     assert (await client.get(f"/api/items/{item['id']}")).json()["purchase_count"] == 0

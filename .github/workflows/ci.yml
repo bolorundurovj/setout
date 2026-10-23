@@ -101,7 +101,7 @@ jobs:
       - name: Build the single deployment image
         run: make docker-build
 
-      - name: Answer /healthz with no configuration
+      - name: Check /healthz with the default configuration
         run: |
           docker run -d --name setout -p 8474:8474 setout:latest
           for i in $(seq 1 30); do

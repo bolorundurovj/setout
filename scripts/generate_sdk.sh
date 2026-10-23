@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Regenerate the TypeScript SDK from the backend OpenAPI schema.
 #
-# Steps: import the FastAPI app and write openapi.json, generate the client with
-# ng-openapi-gen, which needs no Java runtime, then format the output.
+# ng-openapi-gen is used because it needs no Java runtime.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -18,7 +17,7 @@ if command -v uv >/dev/null 2>&1; then
 elif command -v uv.exe >/dev/null 2>&1; then
   UV_CMD="uv.exe"
 else
-  # Fallback to Powershell invoking uv if all else fails
+  # Fall back to running uv through PowerShell.
   UV_CMD="powershell.exe -Command uv"
 fi
 
@@ -39,9 +38,8 @@ echo "Generating TypeScript client"
 rm -rf "$SDK_DIR/src"
 ( cd "$SDK_DIR" && yarn ng-openapi-gen --config ng-openapi-gen.json )
 
-# The generator writes CRLF on Windows, which leaves the committed client
-# looking modified. Prettier rewrites it with LF, so the output is the same
-# on every platform.
+# The generator writes CRLF on Windows. Prettier rewrites the output with LF
+# so the committed client is identical on every platform.
 echo "Formatting the generated client"
 ( cd "$SDK_DIR" && yarn prettier --write "src/**/*.ts" >/dev/null )
 

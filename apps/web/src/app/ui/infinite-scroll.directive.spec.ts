@@ -3,12 +3,12 @@ import { TestBed } from '@angular/core/testing';
 import { InfiniteScrollDirective } from './infinite-scroll.directive';
 
 class FakeObserver {
-  static made: FakeObserver[] = [];
+  static instances: FakeObserver[] = [];
   readonly watched: Element[] = [];
   disconnected = false;
 
-  constructor(private readonly onSeen: IntersectionObserverCallback) {
-    FakeObserver.made.push(this);
+  constructor(private readonly callback: IntersectionObserverCallback) {
+    FakeObserver.instances.push(this);
   }
 
   observe(element: Element): void {
@@ -19,8 +19,8 @@ class FakeObserver {
     this.disconnected = true;
   }
 
-  arriveAt(isIntersecting: boolean): void {
-    this.onSeen([{ isIntersecting }] as IntersectionObserverEntry[], this as never);
+  trigger(isIntersecting: boolean): void {
+    this.callback([{ isIntersecting }] as IntersectionObserverEntry[], this as never);
   }
 }
 
@@ -29,21 +29,21 @@ class FakeObserver {
   imports: [InfiniteScrollDirective],
   template: `<div
     (appInfiniteScroll)="reached()"
-    [appInfiniteScrollDisabled]="off()"
+    [appInfiniteScrollDisabled]="disabled()"
     class="sentinel"
   ></div>`,
 })
 class Host {
-  readonly off = signal(false);
-  readonly hits = signal(0);
+  readonly disabled = signal(false);
+  readonly emitCount = signal(0);
   reached(): void {
-    this.hits.update((count) => count + 1);
+    this.emitCount.update((count) => count + 1);
   }
 }
 
 describe('InfiniteScrollDirective', () => {
   function render() {
-    FakeObserver.made = [];
+    FakeObserver.instances = [];
     (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver = FakeObserver;
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({ imports: [Host] });
@@ -52,48 +52,48 @@ describe('InfiniteScrollDirective', () => {
     return fixture;
   }
 
-  it('watches the element it sits on', () => {
+  it('observes the host element', () => {
     const fixture = render();
-    const watching = FakeObserver.made[0];
+    const observer = FakeObserver.instances[0];
 
-    expect(watching.watched.length).toBe(1);
-    expect((watching.watched[0] as HTMLElement).className).toBe('sentinel');
-    expect(fixture.componentInstance.hits()).toBe(0);
+    expect(observer.watched.length).toBe(1);
+    expect((observer.watched[0] as HTMLElement).className).toBe('sentinel');
+    expect(fixture.componentInstance.emitCount()).toBe(0);
   });
 
-  it('says so when the element comes into view', () => {
+  it('emits when the element intersects', () => {
     const fixture = render();
 
-    FakeObserver.made[0].arriveAt(true);
+    FakeObserver.instances[0].trigger(true);
 
-    expect(fixture.componentInstance.hits()).toBe(1);
+    expect(fixture.componentInstance.emitCount()).toBe(1);
   });
 
-  it('says nothing while the element is still out of view', () => {
+  it('does not emit while the element does not intersect', () => {
     const fixture = render();
 
-    FakeObserver.made[0].arriveAt(false);
+    FakeObserver.instances[0].trigger(false);
 
-    expect(fixture.componentInstance.hits()).toBe(0);
+    expect(fixture.componentInstance.emitCount()).toBe(0);
   });
 
-  it('stops watching once it is turned off', () => {
+  it('disconnects when disabled', () => {
     const fixture = render();
-    const first = FakeObserver.made[0];
+    const first = FakeObserver.instances[0];
 
-    fixture.componentInstance.off.set(true);
+    fixture.componentInstance.disabled.set(true);
     fixture.detectChanges();
 
     expect(first.disconnected).toBe(true);
-    expect(FakeObserver.made.length).toBe(1);
+    expect(FakeObserver.instances.length).toBe(1);
   });
 
-  it('lets go of the element when the screen does', () => {
+  it('disconnects when the host is destroyed', () => {
     const fixture = render();
-    const watching = FakeObserver.made[0];
+    const observer = FakeObserver.instances[0];
 
     fixture.destroy();
 
-    expect(watching.disconnected).toBe(true);
+    expect(observer.disconnected).toBe(true);
   });
 });

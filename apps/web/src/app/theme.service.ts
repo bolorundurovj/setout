@@ -9,8 +9,7 @@ function currentTheme(): Theme {
   return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
 }
 
-// index.html reads anything that is not light or dark as follow the device, so
-// storing the choice rather than the outcome needs nothing of it.
+// index.html treats any stored value other than light or dark as the system theme.
 function storedChoice(): ThemeChoice {
   try {
     const value = localStorage.getItem(STORAGE_KEY);
@@ -20,7 +19,7 @@ function storedChoice(): ThemeChoice {
   }
 }
 
-function deviceTheme(): Theme {
+function systemTheme(): Theme {
   try {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   } catch {
@@ -37,14 +36,10 @@ export class ThemeService {
 
   readonly theme = this.state.asReadonly();
   readonly choice = this.choiceState.asReadonly();
-  readonly followsDevice = computed(() => this.choiceState() === 'system');
-
-  set(theme: Theme): void {
-    this.choose(theme);
-  }
+  readonly followsSystem = computed(() => this.choiceState() === 'system');
 
   choose(choice: ThemeChoice): void {
-    const resolved = choice === 'system' ? deviceTheme() : choice;
+    const resolved = choice === 'system' ? systemTheme() : choice;
     this.choiceState.set(choice);
     this.state.set(resolved);
     document.documentElement.setAttribute('data-theme', resolved);
@@ -55,7 +50,7 @@ export class ThemeService {
         localStorage.setItem(STORAGE_KEY, choice);
       }
     } catch {
-      // Private mode. The theme applies for this session but is not remembered.
+      // localStorage is unavailable in private mode; the theme applies to this session only.
     }
   }
 

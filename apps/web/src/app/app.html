@@ -22,7 +22,7 @@
       <button
         type="button"
         class="nav-backdrop"
-        aria-label="Close the menu"
+        aria-label="Close menu"
         (click)="closeNav()"
       ></button>
     }
@@ -67,17 +67,17 @@
         </div>
       </nav>
 
-      <div class="sidebar-foot">
-        <button type="button" class="foot-action t-mono" (click)="logout()">Sign Out</button>
-        <span class="foot-note">Self-hosted &middot; {{ host }}</span>
+      <div class="sidebar-footer">
+        <button type="button" class="footer-action t-mono" (click)="signOut()">Sign Out</button>
+        <span class="footer-note">Self-hosted &middot; {{ host }}</span>
       </div>
     </aside>
 
     <div class="content">
       @if (toast.message()) {
-        <div class="global-banner" role="status" [class]="'global-banner ' + toast.type()">
+        <div role="status" [class]="'toast ' + toast.type()">
           {{ toast.message() }}
-          <button type="button" class="banner-close" aria-label="Dismiss" (click)="toast.dismiss()">
+          <button type="button" class="toast-close" aria-label="Dismiss" (click)="toast.dismiss()">
             &times;
           </button>
         </div>
@@ -89,9 +89,9 @@
   </div>
 } @else {
   @if (toast.message()) {
-    <div class="global-banner" role="status" [class]="'global-banner ' + toast.type()">
+    <div role="status" [class]="'toast ' + toast.type()">
       {{ toast.message() }}
-      <button type="button" class="banner-close" aria-label="Dismiss" (click)="toast.dismiss()">
+      <button type="button" class="toast-close" aria-label="Dismiss" (click)="toast.dismiss()">
         &times;
       </button>
     </div>

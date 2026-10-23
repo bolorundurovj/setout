@@ -7,7 +7,7 @@ import { PaginationComponent } from '../ui/pagination.component';
 import { ToggleComponent } from '../ui/toggle.component';
 import { TopbarComponent } from '../ui/topbar.component';
 import { LandService } from './land.service';
-import { kindName, sizeLabel, whereLabel, worthLabel } from './land-labels';
+import { kindName, locationLabel, statedAreaLabel, valuationLabel } from './land-labels';
 
 @Component({
   selector: 'app-lands',
@@ -25,13 +25,13 @@ export class LandsComponent {
 
   readonly search = signal('');
   readonly includeArchived = signal(false);
-  private readonly typing = debounce<string>(
+  private readonly debouncedSearch = debounce<string>(
     (text) => void this.lands.load(text, this.includeArchived()),
   );
 
   constructor() {
     void this.lands.load();
-    inject(DestroyRef).onDestroy(() => this.typing.cancel());
+    inject(DestroyRef).onDestroy(() => this.debouncedSearch.cancel());
   }
 
   value(event: Event): string {
@@ -40,11 +40,11 @@ export class LandsComponent {
 
   onSearch(event: Event): void {
     this.search.set(this.value(event));
-    this.typing.call(this.search());
+    this.debouncedSearch.call(this.search());
   }
 
   async setIncludeArchived(on: boolean): Promise<void> {
-    this.typing.cancel();
+    this.debouncedSearch.cancel();
     this.includeArchived.set(on);
     await this.lands.load(this.search(), on);
   }
@@ -67,22 +67,22 @@ export class LandsComponent {
   }
 
   archivedLabel(): string {
-    return this.includeArchived() ? 'Hide Archived' : 'Show Archived';
+    return this.includeArchived() ? 'Hide archived' : 'Show archived';
   }
 
-  where(land: LandRead): string {
-    return whereLabel(land) || this.notSet;
+  location(land: LandRead): string {
+    return locationLabel(land) || this.notSet;
   }
 
-  worth(land: LandRead): string {
-    return worthLabel(land) || this.notSet;
+  valuation(land: LandRead): string {
+    return valuationLabel(land) || this.notSet;
   }
 
-  size(land: LandRead): string {
-    return sizeLabel(land) || this.notSet;
+  statedArea(land: LandRead): string {
+    return statedAreaLabel(land) || this.notSet;
   }
 
-  papersLabel(land: LandRead): string {
+  missingDocumentsLabel(land: LandRead): string {
     if (land.missing_kinds.length === 0) {
       return 'All present';
     }

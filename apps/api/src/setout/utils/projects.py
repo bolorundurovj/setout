@@ -6,8 +6,8 @@ from setout.models.project import Project, ProjectStatus
 from setout.schemas.project import ProjectRead
 
 
-def require_archived(project: Project) -> None:
-    if project.status != ProjectStatus.ARCHIVED:
+def require_closed(project: Project) -> None:
+    if project.status != ProjectStatus.CLOSED:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Close the project before archiving it",
@@ -29,5 +29,5 @@ def to_read(project: Project, budgeted_amount: int = 0, spent_amount: int = 0) -
         notes=project.notes,
         created_at=project.created_at,
         updated_at=project.updated_at,
-        deleted_at=project.deleted_at,
+        archived_at=project.archived_at,
     )

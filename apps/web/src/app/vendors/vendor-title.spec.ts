@@ -35,11 +35,11 @@ function vendor(id: string, name: string): VendorRead {
     totals: [],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
   };
 }
 
-describe('the vendor page title, reached by navigating', () => {
+describe('VendorDetailComponent page title via the router', () => {
   function setUp() {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -56,7 +56,7 @@ describe('the vendor page title, reached by navigating', () => {
             error: () => null,
             get: async (id: string) =>
               vendor(id, id === 'v1' ? 'Corner Depot Cement' : 'Riverside Sawmill'),
-            spend: async () => null,
+            expenseSummary: async () => null,
             agreements: async () => [],
           },
         },
@@ -64,7 +64,7 @@ describe('the vendor page title, reached by navigating', () => {
           provide: DeliveryService,
           useValue: {
             error: () => null,
-            forVendor: () => ({ rows: [], total: 0, owed: 0 }),
+            forVendor: () => ({ rows: [], total: 0, outstandingAmount: 0 }),
             loadForVendor: async () => undefined,
           },
         },
@@ -83,7 +83,7 @@ describe('the vendor page title, reached by navigating', () => {
     }
   }
 
-  it('names the vendor once it has loaded', async () => {
+  it('shows the vendor name once it has loaded', async () => {
     const fixture = setUp();
     await TestBed.inject(Router).navigateByUrl('/vendors/v1');
     await settle(fixture);
@@ -91,7 +91,7 @@ describe('the vendor page title, reached by navigating', () => {
     expect(TestBed.inject(Title).getTitle()).toBe('Corner Depot Cement · Setout');
   });
 
-  it('follows a move from one vendor straight to another', async () => {
+  it('updates the title when navigating between vendors', async () => {
     const fixture = setUp();
     const router = TestBed.inject(Router);
     await router.navigateByUrl('/vendors/v1');

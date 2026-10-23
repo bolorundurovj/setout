@@ -13,11 +13,11 @@ import { HomeService } from './home.service';
 
 function summary(over: Partial<HomeSummary> = {}): HomeSummary {
   return {
-    projects: 2,
-    currencies: [{ currency_code: 'NGN', currency_exponent: 2, projects: 2 }],
+    project_count: 2,
+    currencies: [{ currency_code: 'NGN', currency_exponent: 2, project_count: 2 }],
     currency_code: 'NGN',
     currency_exponent: 2,
-    currency_projects: 2,
+    currency_project_count: 2,
     budgeted_amount: 592_830_000,
     spent_amount: 536_930_000,
     alerts: [],
@@ -30,7 +30,7 @@ function months(over: Partial<HomeMonths> = {}): HomeMonths {
     currency_code: 'NGN',
     currency_exponent: 2,
     months: [],
-    busiest_month: null,
+    highest_month: null,
     ...over,
   };
 }
@@ -50,18 +50,18 @@ function project(over: Partial<HomeProject> = {}): HomeProject {
 
 describe('DashboardComponent', () => {
   let navigations: unknown[][];
-  let shown: string[];
+  let selectedCurrencies: string[];
 
   function render(
-    found: {
+    fixtures: {
       summary?: HomeSummary | null;
       months?: HomeMonths;
       projects?: HomeProjects;
-      latest?: HomeLatest;
+      recent?: HomeLatest;
     } = {},
   ) {
     navigations = [];
-    shown = [];
+    selectedCurrencies = [];
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [DashboardComponent],
@@ -70,15 +70,15 @@ describe('DashboardComponent', () => {
         {
           provide: HomeService,
           useValue: {
-            summary: () => (found.summary === undefined ? summary() : found.summary),
-            months: () => found.months ?? months(),
-            projects: () => found.projects ?? { rows: [] },
-            latest: () => found.latest ?? { rows: [] },
+            summary: () => (fixtures.summary === undefined ? summary() : fixtures.summary),
+            months: () => fixtures.months ?? months(),
+            projects: () => fixtures.projects ?? { rows: [] },
+            recent: () => fixtures.recent ?? { rows: [] },
             currency: () => 'NGN',
             loading: () => false,
             error: () => null,
             load: async () => undefined,
-            show: async (code: string) => void shown.push(code),
+            selectCurrency: async (code: string) => void selectedCurrencies.push(code),
           },
         },
         { provide: AuthService, useValue: { user: () => ({ name: 'Vee' }) } },
@@ -94,18 +94,18 @@ describe('DashboardComponent', () => {
     return fixture.componentInstance;
   }
 
-  it('greets whoever is signed in', () => {
+  it('greets the signed-in account by name', () => {
     expect(render().greeting()).toBe('Welcome back, Vee');
   });
 
-  it('says what is open and what is wrong in one line', () => {
+  it('summarises the project count and alerts in one line', () => {
     const component = render({
       summary: summary({
         alerts: [
           {
-            kind: 'uncategorized',
-            title: 'Spend with no category',
-            detail: '1 receipt across 2 projects',
+            kind: 'uncategorised',
+            title: 'Uncategorised Expenses',
+            detail: '1 expense across 2 projects',
             amount: 53_000_00,
             urgent: true,
           },
@@ -113,68 +113,68 @@ describe('DashboardComponent', () => {
       }),
     });
 
-    expect(component.standing()).toBe('2 projects open. 1 receipt across 2 projects.');
+    expect(component.summaryLine()).toBe('2 projects. 1 expense across 2 projects.');
   });
 
-  it('says so plainly when nothing is wrong', () => {
-    expect(render().standing()).toBe('2 projects open. Nothing needs attention.');
+  it('states that nothing needs attention when there are no alerts', () => {
+    expect(render().summaryLine()).toBe('2 projects. Nothing needs attention.');
   });
 
-  it('works out what is left and how much of the plan is used', () => {
+  it('computes the remaining amount and the share of budget used', () => {
     const component = render();
 
-    expect(component.left()).toBe(55_900_000);
-    expect(component.over()).toBe(false);
-    expect(component.leftLabel()).toBe('Remaining');
+    expect(component.remaining()).toBe(55_900_000);
+    expect(component.isOverBudget()).toBe(false);
+    expect(component.remainingLabel()).toBe('Remaining');
     expect(component.usedLabel()).toBe('91%');
   });
 
-  it('says over by rather than left once the plan is passed', () => {
+  it('labels the figure Over budget by when spending exceeds the budget', () => {
     const component = render({ summary: summary({ budgeted_amount: 100, spent_amount: 150 }) });
 
-    expect(component.over()).toBe(true);
-    expect(component.leftLabel()).toBe('Over by');
-    expect(component.left()).toBe(50);
+    expect(component.isOverBudget()).toBe(true);
+    expect(component.remainingLabel()).toBe('Over budget by');
+    expect(component.remaining()).toBe(50);
   });
 
-  it('says the figures are totalled straight when one currency is in use', () => {
+  it('notes a single currency when only one is in use', () => {
     const component = render();
 
-    expect(component.split()).toBe(false);
-    expect(component.currencyNote()).toBe('2 projects, all in NGN. Totalled directly');
+    expect(component.hasMultipleCurrencies()).toBe(false);
+    expect(component.currencyNote()).toBe('2 projects, all in NGN.');
   });
 
-  it('offers a pill per currency and says the figures stay apart', () => {
+  it('shows a pill per currency and notes currencies are not combined', () => {
     const component = render({
       summary: summary({
-        projects: 3,
-        currency_projects: 2,
+        project_count: 3,
+        currency_project_count: 2,
         currencies: [
-          { currency_code: 'NGN', currency_exponent: 2, projects: 2 },
-          { currency_code: 'USD', currency_exponent: 2, projects: 1 },
+          { currency_code: 'NGN', currency_exponent: 2, project_count: 2 },
+          { currency_code: 'USD', currency_exponent: 2, project_count: 1 },
         ],
       }),
     });
 
-    expect(component.split()).toBe(true);
-    expect(component.choices().map((choice) => component.pillLabel(choice))).toEqual([
+    expect(component.hasMultipleCurrencies()).toBe(true);
+    expect(component.currencies().map((choice) => component.pillLabel(choice))).toEqual([
       'NGN 2',
       'USD 1',
     ]);
-    expect(component.showingPill(component.choices()[0])).toBe(true);
-    expect(component.showingPill(component.choices()[1])).toBe(false);
+    expect(component.isSelectedCurrency(component.currencies()[0])).toBe(true);
+    expect(component.isSelectedCurrency(component.currencies()[1])).toBe(false);
     expect(component.currencyNote()).toContain('never combined');
   });
 
-  it('asks for the currency whose pill was pressed', () => {
+  it('selects the currency of the pressed pill', () => {
     const component = render();
 
-    component.showCurrency({ currency_code: 'USD', currency_exponent: 2, projects: 1 });
+    component.showCurrency({ currency_code: 'USD', currency_exponent: 2, project_count: 1 });
 
-    expect(shown).toEqual(['USD']);
+    expect(selectedCurrencies).toEqual(['USD']);
   });
 
-  it('scales every bar against the tallest month and marks the heaviest', () => {
+  it('scales bars against the highest month and marks it', () => {
     const component = render({
       months: months({
         months: [
@@ -182,59 +182,61 @@ describe('DashboardComponent', () => {
           { month: '2026-07', amount: 117_500_000 },
           { month: '2026-08', amount: 39_400_000 },
         ],
-        busiest_month: '2026-07',
+        highest_month: '2026-07',
       }),
     });
 
     const bars = component.bars();
     expect(bars.map((bar) => bar.label)).toEqual(['JUN', 'JUL', 'AUG']);
     expect(bars[1].height).toBe(100);
-    expect(bars[1].busiest).toBe(true);
+    expect(bars[1].highest).toBe(true);
     expect(bars[0].height).toBe(34);
-    expect(component.heaviest()).toContain('Highest month: Jul');
-    expect(component.heaviest()).toContain('include every project in NGN');
+    expect(component.highestMonthCaption()).toContain('Highest month: Jul');
+    expect(component.highestMonthCaption()).toContain('include every project in NGN');
   });
 
-  it('gives a month with nothing in it a sliver rather than no bar at all', () => {
+  it('gives a zero month a minimum bar height', () => {
     const component = render({
       months: months({
         months: [
           { month: '2026-07', amount: 100_000 },
           { month: '2026-08', amount: 0 },
         ],
-        busiest_month: '2026-07',
+        highest_month: '2026-07',
       }),
     });
 
     expect(component.bars()[1].height).toBe(2);
   });
 
-  it('reads each project in its own currency', () => {
+  it('formats each project in its own currency', () => {
     const component = render();
     const row = project({ currency_code: 'USD', currency_exponent: 2, spent_amount: 1_500_00 });
 
     expect(component.rowMoney(row, row.spent_amount)).toContain('1,500');
   });
 
-  it('says how a project stands against its own budget', () => {
+  it('describes each project against its budget', () => {
     const component = render();
 
-    expect(component.rowStanding(project())).toBe('₦60,000.00 left');
-    expect(component.rowStanding(project({ spent_amount: 150_000_00 }))).toContain('Over by');
-    expect(component.rowStanding(project({ budgeted_amount: 0 }))).toBe('No budget set');
+    expect(component.rowBudgetStatus(project())).toBe('₦60,000.00 remaining');
+    expect(component.rowBudgetStatus(project({ spent_amount: 150_000_00 }))).toContain(
+      'Over budget by',
+    );
+    expect(component.rowBudgetStatus(project({ budgeted_amount: 0 }))).toBe('No budget set');
   });
 
-  it('fills a project bar to the spend and marks the overspend past it', () => {
+  it('fills a project bar to the spent share and caps the over-budget segment', () => {
     const component = render();
-    const over = project({ budgeted_amount: 100, spent_amount: 150 });
+    const overBudget = project({ budgeted_amount: 100, spent_amount: 150 });
 
     expect(component.rowFill(project())).toBe(40);
-    expect(component.rowFill(over)).toBe(100);
-    expect(component.rowOverFill(over)).toBe(0);
-    expect(component.rowOverFill(project())).toBe(0);
+    expect(component.rowFill(overBudget)).toBe(100);
+    expect(component.rowOverBudgetPercent(overBudget)).toBe(0);
+    expect(component.rowOverBudgetPercent(project())).toBe(0);
   });
 
-  it('names the category a recent expense was filed to, or says it was not', () => {
+  it('shows the category of a recent expense, or Uncategorised', () => {
     const component = render();
     const row = {
       id: 'e1',
@@ -248,18 +250,18 @@ describe('DashboardComponent', () => {
       spent_on: '2026-08-14',
     };
 
-    expect(component.where(row)).toBe('Jacaranda Close · Foundation');
-    expect(component.where({ ...row, category_name: null })).toBe(
-      'Jacaranda Close · Uncategorized',
+    expect(component.expenseLocation(row)).toBe('Jacaranda Close · Foundation');
+    expect(component.expenseLocation({ ...row, category_name: null })).toBe(
+      'Jacaranda Close · Uncategorised',
     );
   });
 
-  it('opens a project, its expense tab, and the whole list', () => {
+  it('navigates to a project, its expenses tab and the project list', () => {
     const component = render();
 
     component.open(project());
-    component.addExpense(project());
-    component.allProjects();
+    component.newExpense(project());
+    component.openProjects();
 
     expect(navigations.map((call) => call[0])).toEqual([
       ['/projects', 'p1'],
@@ -268,10 +270,10 @@ describe('DashboardComponent', () => {
     ]);
   });
 
-  it('sends each alert to the tab that answers it', () => {
+  it('routes each alert to its tab', () => {
     const component = render({ projects: { rows: [project()] } });
 
-    component.openAlert({ kind: 'uncategorized', title: '', detail: '', amount: 0, urgent: true });
+    component.openAlert({ kind: 'uncategorised', title: '', detail: '', amount: 0, urgent: true });
     component.openAlert({ kind: 'deliveries', title: '', detail: '', amount: 0, urgent: false });
 
     expect(navigations.map((call) => call[0])).toEqual([
@@ -280,12 +282,12 @@ describe('DashboardComponent', () => {
     ]);
   });
 
-  it('shows no figure on an alert that cannot carry one', () => {
+  it('shows no amount on an alert with a zero amount', () => {
     const component = render();
 
     expect(
       component.alertMoney({
-        kind: 'uncategorized',
+        kind: 'uncategorised',
         title: '',
         detail: '',
         amount: 0,
@@ -294,12 +296,17 @@ describe('DashboardComponent', () => {
     ).toBe('');
   });
 
-  it('says what to do first when there are no projects', () => {
+  it('prompts to create a project when there are none', () => {
     const component = render({
-      summary: summary({ projects: 0, currencies: [], currency_code: null, budgeted_amount: 0 }),
+      summary: summary({
+        project_count: 0,
+        currencies: [],
+        currency_code: null,
+        budgeted_amount: 0,
+      }),
     });
 
-    expect(component.standing()).toContain('No projects yet');
+    expect(component.summaryLine()).toContain('No projects yet');
     expect(component.currencyNote()).toBe('');
   });
 });

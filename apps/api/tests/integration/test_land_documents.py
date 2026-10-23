@@ -15,7 +15,7 @@ async def _setup(client: AsyncClient) -> str:
     await Currency.bulk_create(
         [Currency(code=c[0], name=c[1], exponent=c[2]) for c in CURRENCIES if c[0] == "NGN"]
     )
-    await client.post("/api/auth/setup", json={"name": "Admin", "password": "password123"})
+    await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": "password123"})
     resp = await client.post("/api/lands", json={"name": "Ewuru plot"})
     assert resp.status_code == 201, resp.text
     return str(resp.json()["id"])
@@ -29,11 +29,11 @@ async def _upload(
     filename: str = "c-of-o.jpg",
     content_type: str = "image/jpeg",
     kind: str = "certificate_of_occupancy",
-    note: str | None = None,
+    notes: str | None = None,
 ) -> tuple[int, dict]:
     form = {"kind": kind}
-    if note is not None:
-        form["note"] = note
+    if notes is not None:
+        form["notes"] = notes
     resp = await client.post(
         f"/api/lands/{land_id}/documents",
         files={"file": (filename, data, content_type)},
@@ -101,7 +101,7 @@ async def test_a_spreadsheet_is_not_a_land_document(client: AsyncClient) -> None
     )
 
     assert code == 415
-    assert "photograph" in body["detail"]
+    assert body["detail"] == "A land document must be an image or a PDF"
 
 
 async def test_an_empty_file_is_refused(client: AsyncClient) -> None:
@@ -144,7 +144,7 @@ async def test_a_removed_paper_leaves_the_list_and_can_come_back(client: AsyncCl
     land_id = await _setup(client)
     _, body = await _upload(client, land_id)
 
-    assert (await client.delete(f"/api/land-documents/{body['id']}")).status_code == 204
+    assert (await client.post(f"/api/land-documents/{body['id']}/archive")).status_code == 204
     assert (await client.get(f"/api/lands/{land_id}/documents")).json()["total"] == 0
 
     resp = await client.post(f"/api/land-documents/{body['id']}/restore")
@@ -158,7 +158,7 @@ async def test_archiving_the_land_takes_its_papers_and_gives_them_back(
     land_id = await _setup(client)
     _, body = await _upload(client, land_id)
 
-    await client.delete(f"/api/lands/{land_id}")
+    await client.post(f"/api/lands/{land_id}/archive")
     assert (await client.get(f"/api/land-documents/{body['id']}")).status_code == 404
 
     await client.post(f"/api/lands/{land_id}/restore")
@@ -171,8 +171,8 @@ async def test_a_paper_removed_first_stays_removed_when_the_land_comes_back(
     land_id = await _setup(client)
     _, body = await _upload(client, land_id)
 
-    await client.delete(f"/api/land-documents/{body['id']}")
-    await client.delete(f"/api/lands/{land_id}")
+    await client.post(f"/api/land-documents/{body['id']}/archive")
+    await client.post(f"/api/lands/{land_id}/archive")
     await client.post(f"/api/lands/{land_id}/restore")
 
     assert (await client.get(f"/api/land-documents/{body['id']}")).status_code == 404
@@ -181,10 +181,10 @@ async def test_a_paper_removed_first_stays_removed_when_the_land_comes_back(
 async def test_an_other_paper_can_say_what_it_actually_is(client: AsyncClient) -> None:
     land_id = await _setup(client)
 
-    _, row = await _upload(client, land_id, kind="other", note="Land Use Charge receipt")
+    _, row = await _upload(client, land_id, kind="other", notes="Land Use Charge receipt")
 
     assert row["kind"] == "other"
-    assert row["note"] == "Land Use Charge receipt"
+    assert row["notes"] == "Land Use Charge receipt"
 
 
 async def test_a_paper_kept_without_a_note_has_none(client: AsyncClient) -> None:
@@ -192,7 +192,7 @@ async def test_a_paper_kept_without_a_note_has_none(client: AsyncClient) -> None
 
     _, row = await _upload(client, land_id)
 
-    assert row["note"] is None
+    assert row["notes"] is None
 
 
 async def test_a_note_is_written_after_the_file_is_already_kept(client: AsyncClient) -> None:
@@ -200,11 +200,11 @@ async def test_a_note_is_written_after_the_file_is_already_kept(client: AsyncCli
     _, row = await _upload(client, land_id, kind="other")
 
     resp = await client.patch(
-        f"/api/land-documents/{row['id']}", json={"note": "Land Use Charge receipt"}
+        f"/api/land-documents/{row['id']}", json={"notes": "Land Use Charge receipt"}
     )
 
     assert resp.status_code == 200
-    assert resp.json()["note"] == "Land Use Charge receipt"
+    assert resp.json()["notes"] == "Land Use Charge receipt"
 
 
 async def test_a_paper_filed_under_the_wrong_kind_is_moved(client: AsyncClient) -> None:
@@ -220,6 +220,6 @@ async def test_a_paper_filed_under_the_wrong_kind_is_moved(client: AsyncClient) 
 async def test_correcting_a_paper_that_is_not_there(client: AsyncClient) -> None:
     await _setup(client)
 
-    resp = await client.patch("/api/land-documents/nosuchdoc", json={"note": "anything"})
+    resp = await client.patch("/api/land-documents/nosuchdoc", json={"notes": "anything"})
 
     assert resp.status_code == 404

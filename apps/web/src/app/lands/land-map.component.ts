@@ -48,7 +48,7 @@ export class LandMapComponent {
   readonly boundaryChange = output<LandBoundary | null>();
 
   readonly tilesFailed = signal(false);
-  readonly corners = signal<Position[]>([]);
+  readonly points = signal<Position[]>([]);
 
   private map: L.Map | null = null;
   private pin: L.Marker | null = null;
@@ -57,7 +57,7 @@ export class LandMapComponent {
 
   constructor() {
     void this.maps.load();
-    // Tabs build and tear down a map each time one is opened, so it has to let go.
+    // Tabs recreate the map on each switch, so the Leaflet instance is removed on destroy.
     inject(DestroyRef).onDestroy(() => {
       this.map?.remove();
       this.map = null;
@@ -73,7 +73,7 @@ export class LandMapComponent {
       }
     });
     effect(() => {
-      this.corners.set(ringOf(this.boundary()));
+      this.points.set(ringOf(this.boundary()));
       this.draw();
     });
     effect(() => {
@@ -110,9 +110,9 @@ export class LandMapComponent {
     this.handles.forEach((handle) => handle.remove());
     this.handles = [];
 
-    const here = this.point();
-    if (here) {
-      this.pin = L.marker([here.lat, here.lon], {
+    const pinPoint = this.point();
+    if (pinPoint) {
+      this.pin = L.marker([pinPoint.lat, pinPoint.lon], {
         draggable: this.editable(),
         icon: L.divIcon({ html: PIN, className: 'pin', iconSize: [24, 32], iconAnchor: [12, 32] }),
       }).addTo(map);
@@ -124,7 +124,7 @@ export class LandMapComponent {
       });
     }
 
-    const ring = this.corners();
+    const ring = this.points();
     if (ring.length >= 3) {
       this.shape = L.polygon(
         ring.map(([lon, lat]) => [lat, lon] as L.LatLngTuple),
@@ -134,24 +134,24 @@ export class LandMapComponent {
     if (this.editable()) {
       ring.forEach(([lon, lat], index) => this.handleAt(map, lat, lon, index));
     }
-    this.frame();
+    this.fitView();
   }
 
   private handleAt(map: L.Map, lat: number, lon: number, index: number): void {
     const handle = L.marker([lat, lon], {
       draggable: true,
-      icon: L.divIcon({ className: 'corner', iconSize: [14, 14] }),
+      icon: L.divIcon({ className: 'boundary-point', iconSize: [14, 14] }),
     }).addTo(map);
     handle.on('dragend', () => {
       const moved = handle.getLatLng();
-      const next = [...this.corners()];
+      const next = [...this.points()];
       next[index] = [round(moved.lng), round(moved.lat)];
       this.commit(next);
     });
     this.handles.push(handle);
   }
 
-  private frame(): void {
+  private fitView(): void {
     const map = this.map;
     if (!map) {
       return;
@@ -160,9 +160,9 @@ export class LandMapComponent {
       map.fitBounds(this.shape.getBounds(), { padding: [24, 24], maxZoom: 18 });
       return;
     }
-    const here = this.point();
-    if (here) {
-      map.setView([here.lat, here.lon], 16);
+    const pinPoint = this.point();
+    if (pinPoint) {
+      map.setView([pinPoint.lat, pinPoint.lon], 16);
     }
   }
 
@@ -171,21 +171,21 @@ export class LandMapComponent {
       this.pointChange.emit({ lat: round(at.lat), lon: round(at.lng) });
       return;
     }
-    this.commit([...this.corners(), [round(at.lng), round(at.lat)]]);
+    this.commit([...this.points(), [round(at.lng), round(at.lat)]]);
   }
 
   private commit(ring: Position[]): void {
-    this.corners.set(ring);
+    this.points.set(ring);
     this.boundaryChange.emit(boundaryOf(ring));
     this.draw();
   }
 
   ariaLabel(): string {
-    return this.mode() === 'pin' ? 'Location pin' : 'Mapped survey';
+    return this.mode() === 'pin' ? 'Location Pin' : 'Boundary';
   }
 
   undo(): void {
-    this.commit(this.corners().slice(0, -1));
+    this.commit(this.points().slice(0, -1));
   }
 
   clear(): void {
@@ -193,10 +193,10 @@ export class LandMapComponent {
   }
 
   locate(): void {
-    navigator.geolocation?.getCurrentPosition((found) => {
+    navigator.geolocation?.getCurrentPosition((position) => {
       this.pointChange.emit({
-        lat: round(found.coords.latitude),
-        lon: round(found.coords.longitude),
+        lat: round(position.coords.latitude),
+        lon: round(position.coords.longitude),
       });
     });
   }
@@ -213,7 +213,7 @@ export class LandMapComponent {
   }
 }
 
-/** Seven places is about a centimetre, which is the column's limit too. */
+/** Seven decimal places is about 1 cm, the precision of the database column. */
 function round(value: number): number {
   return Math.round(value * 1e7) / 1e7;
 }

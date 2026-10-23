@@ -20,7 +20,7 @@ module.exports = tseslint.config(
         'error',
         { type: 'element', prefix: 'app', style: 'kebab-case' },
       ],
-      // The SDK layer owns all HTTP. Nothing else may touch HttpClient.
+      // Only the generated SDK may import HttpClient.
       'no-restricted-imports': [
         'error',
         {

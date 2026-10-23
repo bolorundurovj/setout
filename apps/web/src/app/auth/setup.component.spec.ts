@@ -5,12 +5,12 @@ import { SetupComponent } from './setup.component';
 import { ToastService } from '../toast.service';
 
 describe('SetupComponent', () => {
-  let asked: unknown[][];
+  let setupCalls: unknown[][];
   let navigations: unknown[][];
   let succeeds: boolean;
 
   function render() {
-    asked = [];
+    setupCalls = [];
     navigations = [];
     succeeds = true;
 
@@ -25,7 +25,7 @@ describe('SetupComponent', () => {
             loading: () => false,
             error: () => null,
             setup: async (...args: unknown[]) => {
-              asked.push(args);
+              setupCalls.push(args);
               return succeeds;
             },
           },
@@ -45,53 +45,53 @@ describe('SetupComponent', () => {
 
   function filled(component: SetupComponent) {
     component.name.set('Vee');
-    component.password.set('a long passphrase');
-    component.confirmPassword.set('a long passphrase');
+    component.passphrase.set('a long passphrase');
+    component.confirmPassphrase.set('a long passphrase');
     return component;
   }
 
-  it('wants a name and a passphrase of at least eight characters', () => {
+  it('requires a name and a passphrase of at least eight characters', () => {
     const component = render();
     expect(component.isValid()).toBeFalsy();
 
     component.name.set('Vee');
-    component.password.set('short');
-    component.confirmPassword.set('short');
+    component.passphrase.set('short');
+    component.confirmPassphrase.set('short');
     expect(component.isValid()).toBeFalsy();
 
-    component.password.set('a long passphrase');
-    component.confirmPassword.set('a long passphrase');
+    component.passphrase.set('a long passphrase');
+    component.confirmPassphrase.set('a long passphrase');
     expect(component.isValid()).toBeTruthy();
   });
 
-  it('says when the two passphrases differ', () => {
+  it('flags a passphrase mismatch as invalid', () => {
     const component = render();
-    component.password.set('a long passphrase');
-    component.confirmPassword.set('another one');
+    component.passphrase.set('a long passphrase');
+    component.confirmPassphrase.set('another one');
 
-    expect(component.passwordMismatch()).toBeTruthy();
+    expect(component.passphraseMismatch()).toBeTruthy();
     expect(component.isValid()).toBeFalsy();
   });
 
-  it('leaves out an email nobody typed rather than sending an empty one', async () => {
+  it('omits a blank email', async () => {
     const component = filled(render());
 
     await component.onSubmit();
 
-    expect(asked[0]).toEqual(['Vee', undefined, 'a long passphrase']);
+    expect(setupCalls[0]).toEqual(['Vee', undefined, 'a long passphrase']);
     expect(navigations[0][0]).toEqual(['/']);
   });
 
-  it('sends the email when there is one', async () => {
+  it('sends the trimmed email when one is entered', async () => {
     const component = filled(render());
     component.email.set('  vee@example.com  ');
 
     await component.onSubmit();
 
-    expect(asked[0][1]).toBe('vee@example.com');
+    expect(setupCalls[0][1]).toBe('vee@example.com');
   });
 
-  it('stays on the screen when setting up fails', async () => {
+  it('does not navigate when setup fails', async () => {
     const component = filled(render());
     succeeds = false;
 

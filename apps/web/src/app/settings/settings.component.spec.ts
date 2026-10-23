@@ -8,17 +8,17 @@ import { ToastService } from '../toast.service';
 import { InstallService } from './install.service';
 import { SettingsComponent } from './settings.component';
 
-function install(over: Partial<Install> = {}): Install {
+function install(overrides: Partial<Install> = {}): Install {
   return {
     version: '0.4.0',
     migration: '0003_agreements_and_advances',
-    record_bytes: 2_306_867,
-    record_changed_at: '2026-08-17T09:14:00Z',
-    ...over,
+    data_bytes: 2_306_867,
+    data_changed_at: '2026-08-17T09:14:00Z',
+    ...overrides,
   };
 }
 
-function backup(over: Partial<Backup> = {}): Backup {
+function backup(overrides: Partial<Backup> = {}): Backup {
   return {
     format: 1,
     app_version: '0.4.0',
@@ -26,7 +26,7 @@ function backup(over: Partial<Backup> = {}): Backup {
     exported_at: '2026-08-17T09:14:00Z',
     row_counts: { project: 2, expense: 15 },
     tables: { project: [], expense: [] },
-    ...over,
+    ...overrides,
   };
 }
 
@@ -34,37 +34,37 @@ describe('SettingsComponent', () => {
   let toasts: { message: string; type?: string }[];
   let renamed: string[];
   let passphrases: { current: string; next: string }[];
-  let chosen: string[];
+  let appearances: string[];
   let loads: number;
   let renameResult: boolean;
   let passphraseResult: boolean;
   let exportResult: Backup | null;
   let restoreResult: { row_counts: Record<string, number>; signed_out: boolean } | null;
   let restores: { backup: Backup; accept: boolean }[];
-  let went: unknown[][];
-  let bases: string[];
-  let baseResult: boolean;
+  let navigations: unknown[][];
+  let defaultCurrencies: string[];
+  let defaultCurrencyResult: boolean;
   let currencies: { code: string; name: string; exponent: number }[];
   let fixture: ReturnType<typeof TestBed.createComponent<SettingsComponent>>;
 
   function render(
-    facts: Install | null = install(),
-    authError = 'Could not save that name.',
-    baseCurrency: string | null = null,
+    installation: Install | null = install(),
+    authError = 'Could not save the account name.',
+    defaultCurrency: string | null = null,
   ) {
     toasts = [];
     renamed = [];
     passphrases = [];
-    chosen = [];
+    appearances = [];
     loads = 0;
     renameResult = true;
     passphraseResult = true;
     exportResult = backup();
     restoreResult = { row_counts: { project: 2 }, signed_out: true };
     restores = [];
-    went = [];
-    bases = [];
-    baseResult = true;
+    navigations = [];
+    defaultCurrencies = [];
+    defaultCurrencyResult = true;
     currencies = [
       { code: 'NGN', name: 'Nigerian naira', exponent: 2 },
       { code: 'USD', name: 'US dollar', exponent: 2 },
@@ -78,7 +78,7 @@ describe('SettingsComponent', () => {
         {
           provide: AuthService,
           useValue: {
-            user: () => ({ id: 'u1', name: 'Vee', email: null, base_currency: baseCurrency }),
+            user: () => ({ id: 'u1', name: 'Vee', email: null, base_currency: defaultCurrency }),
             error: () => authError,
             checkStatus: async () => undefined,
             rename: async (name: string) => {
@@ -90,8 +90,8 @@ describe('SettingsComponent', () => {
               return passphraseResult;
             },
             setBaseCurrency: async (code: string) => {
-              bases.push(code);
-              return baseResult;
+              defaultCurrencies.push(code);
+              return defaultCurrencyResult;
             },
           },
         },
@@ -107,18 +107,17 @@ describe('SettingsComponent', () => {
           useValue: {
             theme: () => 'dark',
             choice: () => 'system',
-            followsDevice: () => true,
-            choose: (choice: string) => void chosen.push(choice),
+            followsSystem: () => true,
+            choose: (choice: string) => void appearances.push(choice),
           },
         },
         {
           provide: InstallService,
           useValue: {
-            install: () => facts,
-            checking: () => false,
-            writing: () => false,
-            error: () => 'Could not write a copy.',
-            reading: () => false,
+            install: () => installation,
+            exporting: () => false,
+            error: () => 'Could not create the backup.',
+            loading: () => false,
             restoring: () => false,
             load: async () => void (loads += 1),
             export: async () => exportResult,
@@ -138,7 +137,7 @@ describe('SettingsComponent', () => {
     });
     const router = TestBed.inject(Router);
     router.navigate = async (commands: unknown[]) => {
-      went.push(commands);
+      navigations.push(commands);
       return true;
     };
     fixture = TestBed.createComponent(SettingsComponent);
@@ -146,24 +145,24 @@ describe('SettingsComponent', () => {
     return fixture.componentInstance;
   }
 
-  async function ready(facts: Install | null = install()) {
-    const component = render(facts);
+  async function ready(installation: Install | null = install()) {
+    const component = render(installation);
     await Promise.resolve();
     return component;
   }
 
-  it('asks the server what it is on the way in', async () => {
+  it('loads the server details on init', async () => {
     await ready();
     expect(loads).toBe(1);
   });
 
-  it('starts on the account name already set', async () => {
+  it('initialises the account name from the signed-in user', async () => {
     const component = await ready();
     expect(component.name()).toBe('Vee');
     expect(component.nameChanged()).toBe(false);
   });
 
-  it('only offers to save a name that changed to something', async () => {
+  it('offers to save the name only when it changed and is not blank', async () => {
     const component = await ready();
     component.name.set('  Vee  ');
     expect(component.nameChanged()).toBe(false);
@@ -185,62 +184,62 @@ describe('SettingsComponent', () => {
     expect(toasts[0].message).toBe('Account name saved.');
   });
 
-  it('passes on why a name would not save', async () => {
+  it('shows the error when the name fails to save', async () => {
     const component = await ready();
     renameResult = false;
     component.name.set('Bolu');
 
     await component.saveName();
 
-    expect(toasts[0]).toEqual({ message: 'Could not save that name.', type: 'error' });
+    expect(toasts[0]).toEqual({ message: 'Could not save the account name.', type: 'error' });
   });
 
-  it('says what the appearance choice means, following the device or not', async () => {
+  it('describes the appearance setting when following the system', async () => {
     const component = await ready();
-    expect(component.appearanceNote()).toContain('Following the device');
+    expect(component.appearanceNote()).toContain('Theme follows the system setting');
     expect(component.appearanceNote()).toContain('dark');
   });
 
-  it('hands the appearance choice to the theme', async () => {
+  it('passes the appearance choice to the theme', async () => {
     const component = await ready();
-    component.pickAppearance('light');
-    expect(chosen).toEqual(['light']);
+    component.selectAppearance('light');
+    expect(appearances).toEqual(['light']);
   });
 
-  it('will not change a passphrase until all three boxes agree', async () => {
+  it('blocks the passphrase change until all three fields are valid', async () => {
     const component = await ready();
     component.startPassphrase();
-    expect(component.passphraseProblem()).toBe('The passphrase in use is needed first.');
+    expect(component.passphraseError()).toBe('Enter the current passphrase.');
 
-    component.current.set('password123');
-    component.next.set('short');
-    expect(component.passphraseProblem()).toContain('at least eight');
+    component.currentPassphrase.set('password123');
+    component.newPassphrase.set('short');
+    expect(component.passphraseError()).toContain('at least eight');
 
-    component.next.set('a longer secret');
-    component.again.set('a longer secre');
-    expect(component.passphraseProblem()).toBe('The two new ones do not match.');
+    component.newPassphrase.set('a longer secret');
+    component.confirmPassphrase.set('a longer secre');
+    expect(component.passphraseError()).toBe('The new passphrases do not match.');
 
-    component.again.set('a longer secret');
-    expect(component.passphraseProblem()).toBeNull();
+    component.confirmPassphrase.set('a longer secret');
+    expect(component.passphraseError()).toBeNull();
   });
 
-  it('sends nothing while there is a problem with what was typed', async () => {
+  it('does not send the change while the fields are invalid', async () => {
     const component = await ready();
     component.startPassphrase();
-    component.current.set('password123');
-    component.next.set('short');
+    component.currentPassphrase.set('password123');
+    component.newPassphrase.set('short');
 
     await component.savePassphrase();
 
     expect(passphrases).toEqual([]);
   });
 
-  it('changes the passphrase and says what it did to other devices', async () => {
+  it('changes the passphrase and reports that other devices were signed out', async () => {
     const component = await ready();
     component.startPassphrase();
-    component.current.set('password123');
-    component.next.set('a longer secret');
-    component.again.set('a longer secret');
+    component.currentPassphrase.set('password123');
+    component.newPassphrase.set('a longer secret');
+    component.confirmPassphrase.set('a longer secret');
 
     await component.savePassphrase();
 
@@ -249,13 +248,13 @@ describe('SettingsComponent', () => {
     expect(toasts[0].message).toContain('signed out');
   });
 
-  it('keeps the boxes open when the server refuses the change', async () => {
+  it('keeps the fields open when the change is rejected', async () => {
     const component = await ready();
     passphraseResult = false;
     component.startPassphrase();
-    component.current.set('wrong');
-    component.next.set('a longer secret');
-    component.again.set('a longer secret');
+    component.currentPassphrase.set('wrong');
+    component.newPassphrase.set('a longer secret');
+    component.confirmPassphrase.set('a longer secret');
 
     await component.savePassphrase();
 
@@ -263,45 +262,43 @@ describe('SettingsComponent', () => {
     expect(toasts[0].type).toBe('error');
   });
 
-  it('sizes the record in units somebody can read', async () => {
-    expect((await ready(install({ record_bytes: 512 }))).recordSize()).toBe('512 B');
-    expect((await ready(install({ record_bytes: 2048 }))).recordSize()).toBe('2.0 kB');
-    expect((await ready(install({ record_bytes: 2_306_867 }))).recordSize()).toBe('2.2 MB');
-    expect((await ready(null)).recordSize()).toBe('—');
+  it('formats the data size in binary units', async () => {
+    expect((await ready(install({ data_bytes: 512 }))).dataSize()).toBe('512 B');
+    expect((await ready(install({ data_bytes: 2048 }))).dataSize()).toBe('2.0 KiB');
+    expect((await ready(install({ data_bytes: 2_306_867 }))).dataSize()).toBe('2.2 MiB');
+    expect((await ready(null)).dataSize()).toBe('—');
   });
 
-  it('says when the record last changed, and when it never has', async () => {
+  it('shows when the data last changed, or that it has not changed', async () => {
     expect((await ready()).lastChanged()).toContain('2026');
-    expect((await ready(install({ record_changed_at: null }))).lastChanged()).toBe(
-      'nothing written yet',
-    );
+    expect((await ready(install({ data_changed_at: null }))).lastChanged()).toBe('no changes yet');
   });
 
-  it('says so rather than pretending when a copy cannot be written', async () => {
+  it('shows an error when the backup export fails', async () => {
     const component = await ready();
     exportResult = null;
 
-    await component.writeCopy();
+    await component.downloadBackup();
 
-    expect(toasts[0]).toEqual({ message: 'Could not write a copy.', type: 'error' });
+    expect(toasts[0]).toEqual({ message: 'Could not create the backup.', type: 'error' });
   });
 
-  it('warns when a copy came from another Setout or another schema', async () => {
+  it('warns when the backup has a different version or schema', async () => {
     const component = await ready();
-    component.picked.set({ name: 'copy.json', bytes: 2048, backup: backup() });
+    component.selectedBackup.set({ name: 'backup.json', bytes: 2048, backup: backup() });
     expect(component.versionChanged()).toBe(false);
     expect(component.versionWarning()).toBeNull();
 
-    component.picked.set({
-      name: 'copy.json',
+    component.selectedBackup.set({
+      name: 'backup.json',
       bytes: 2048,
       backup: backup({ app_version: '0.2.0' }),
     });
     expect(component.versionChanged()).toBe(true);
     expect(component.versionWarning()).toContain('may fail if the schema has changed');
 
-    component.picked.set({
-      name: 'copy.json',
+    component.selectedBackup.set({
+      name: 'backup.json',
       bytes: 2048,
       backup: backup({ migration: '0001_initial' }),
     });
@@ -309,43 +306,43 @@ describe('SettingsComponent', () => {
     expect(component.versionWarning()).toContain('0001_initial');
   });
 
-  it('reads the file back over the record, and accepts the version change it warned about', async () => {
+  it('restores the backup and accepts the version change', async () => {
     const component = await ready();
-    component.picked.set({
-      name: 'copy.json',
+    component.selectedBackup.set({
+      name: 'backup.json',
       bytes: 2048,
       backup: backup({ app_version: '0.2.0' }),
     });
 
-    await component.doRestore();
+    await component.restoreBackup();
 
     expect(restores).toEqual([{ backup: backup({ app_version: '0.2.0' }), accept: true }]);
-    expect(component.picked()).toBeNull();
+    expect(component.selectedBackup()).toBeNull();
     expect(toasts[0].message).toContain('Sign in with the passphrase');
-    expect(went).toEqual([['/login']]);
+    expect(navigations).toEqual([['/login']]);
   });
 
-  it('keeps the file in hand when the server would not take it', async () => {
+  it('keeps the selected backup when the restore fails', async () => {
     const component = await ready();
     restoreResult = null;
-    component.picked.set({ name: 'copy.json', bytes: 2048, backup: backup() });
+    component.selectedBackup.set({ name: 'backup.json', bytes: 2048, backup: backup() });
 
-    await component.doRestore();
+    await component.restoreBackup();
 
-    expect(component.picked()).not.toBeNull();
+    expect(component.selectedBackup()).not.toBeNull();
     expect(toasts[0].type).toBe('error');
   });
 
-  it('describes the file it is about to read back', async () => {
+  it('summarises the selected backup', async () => {
     const component = await ready();
-    component.picked.set({ name: 'copy.json', bytes: 2048, backup: backup() });
+    component.selectedBackup.set({ name: 'backup.json', bytes: 2048, backup: backup() });
 
-    expect(component.pickedLine()).toContain('copy.json');
-    expect(component.pickedLine()).toContain('2.0 kB');
-    expect(component.pickedRows()).toBe('17 rows across 2 tables');
+    expect(component.selectedBackupSummary()).toContain('backup.json');
+    expect(component.selectedBackupSummary()).toContain('2.0 KiB');
+    expect(component.selectedBackupRowCount()).toBe('17 rows across 2 tables');
   });
 
-  it('opens the file picker from the button, so both read the same size', async () => {
+  it('renders both backup buttons compact and opens the file picker', async () => {
     const component = await ready();
     const element = fixture.nativeElement as HTMLElement;
     const buttons = element.querySelectorAll('app-button .btn');
@@ -359,46 +356,46 @@ describe('SettingsComponent', () => {
     expect(opened).toBe(1);
   });
 
-  it('does nothing when the confirm box is dismissed', async () => {
+  it('clears the selected backup when the restore is cancelled', async () => {
     const component = await ready();
-    component.picked.set({ name: 'copy.json', bytes: 2048, backup: backup() });
+    component.selectedBackup.set({ name: 'backup.json', bytes: 2048, backup: backup() });
 
     component.cancelRestore();
 
-    expect(component.picked()).toBeNull();
+    expect(component.selectedBackup()).toBeNull();
     expect(restores).toEqual([]);
   });
 
-  it('offers every currency the install knows as the one Home opens on', () => {
+  it('offers every known currency as the default currency', () => {
     const component = render();
 
     expect(component.currencyChips().map((chip) => chip.value)).toEqual(['NGN', 'USD']);
     expect(component.currencyChips()[0].label).toBe('NGN Nigerian naira');
-    expect(component.baseCurrency()).toBe('');
-    expect(component.currencyNote()).toContain('whichever currency it finds first');
+    expect(component.defaultCurrency()).toBe('');
+    expect(component.currencyNote()).toContain('first currency found');
   });
 
-  it('saves the currency picked and says which one Home now opens on', async () => {
+  it('saves the selected default currency and confirms it', async () => {
     const component = render();
 
-    await component.pickBaseCurrency('USD');
+    await component.selectDefaultCurrency('USD');
 
-    expect(bases).toEqual(['USD']);
-    expect(toasts.at(-1)).toEqual({ message: 'Home opens on USD.', type: 'info' });
+    expect(defaultCurrencies).toEqual(['USD']);
+    expect(toasts.at(-1)).toEqual({ message: 'Home shows USD.', type: 'info' });
   });
 
-  it('says which currency is settled once one is', () => {
-    const component = render(install(), 'Could not save that name.', 'NGN');
+  it('describes the default currency once one is set', () => {
+    const component = render(install(), 'Could not save the account name.', 'NGN');
 
-    expect(component.baseCurrency()).toBe('NGN');
-    expect(component.currencyNote()).toContain('Home opens on NGN');
+    expect(component.defaultCurrency()).toBe('NGN');
+    expect(component.currencyNote()).toContain('Home shows NGN');
   });
 
-  it('says so when the currency will not save', async () => {
+  it('shows an error when the default currency fails to save', async () => {
     const component = render();
-    baseResult = false;
+    defaultCurrencyResult = false;
 
-    await component.pickBaseCurrency('USD');
+    await component.selectDefaultCurrency('USD');
 
     expect(toasts.at(-1)?.type).toBe('error');
   });

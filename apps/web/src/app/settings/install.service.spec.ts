@@ -3,19 +3,19 @@ import { Api } from '@setout/api-client';
 import { InstallService } from './install.service';
 
 describe('InstallService', () => {
-  let asked: Record<string, unknown>[];
+  let calls: Record<string, unknown>[];
 
   function configure(reply: (name: string) => unknown) {
-    asked = [];
+    calls = [];
     TestBed.resetTestingModule();
     const api = {
       invoke: async (fn: { name?: string }, params: Record<string, unknown>) => {
-        asked.push({ call: fn?.name ?? '', ...params });
-        const answer = reply(fn?.name ?? '');
-        if (answer instanceof Error) {
-          throw answer;
+        calls.push({ call: fn?.name ?? '', ...params });
+        const response = reply(fn?.name ?? '');
+        if (response instanceof Error) {
+          throw response;
         }
-        return answer;
+        return response;
       },
     };
     TestBed.configureTestingModule({ providers: [{ provide: Api, useValue: api }] });
@@ -24,59 +24,59 @@ describe('InstallService', () => {
 
   const backup = { format: 1, app_version: '0.1.0', exported_at: '2026-08-19T00:00:00Z' };
 
-  it('reads what the install says about itself', async () => {
-    const service = configure(() => ({ version: '0.1.0', record_bytes: 2048 }));
+  it('loads the server details', async () => {
+    const service = configure(() => ({ version: '0.1.0', data_bytes: 2048 }));
 
     await service.load();
 
     expect(service.install()?.version).toBe('0.1.0');
-    expect(service.reading()).toBe(false);
+    expect(service.loading()).toBe(false);
     expect(service.error()).toBeNull();
   });
 
-  it('says the server did not answer rather than showing stale facts', async () => {
+  it('clears the details and sets an error when loading fails', async () => {
     const service = configure(() => new Error('offline'));
 
     await service.load();
 
     expect(service.install()).toBeNull();
-    expect(service.error()).toBe('The server did not answer.');
+    expect(service.error()).toBe('Could not load the server details.');
   });
 
-  it('hands back the copy it was given', async () => {
+  it('returns the exported backup', async () => {
     const service = configure(() => backup);
 
-    const written = await service.export();
+    const exported = await service.export();
 
-    expect(written).toEqual(backup);
-    expect(service.writing()).toBe(false);
+    expect(exported).toEqual(backup);
+    expect(service.exporting()).toBe(false);
   });
 
-  it('says so when a copy cannot be written', async () => {
+  it('sets an error when the export fails', async () => {
     const service = configure(() => new Error('offline'));
 
     expect(await service.export()).toBeNull();
-    expect(service.error()).toBe('Could not write a copy.');
+    expect(service.error()).toBe('Could not create the backup.');
   });
 
-  it('carries the version answer through to the restore', async () => {
+  it('passes accept_version_change to the restore', async () => {
     const service = configure(() => ({ tables: {}, row_counts: {} }));
 
     await service.restore(backup as never, true);
 
-    expect(asked[0]['call']).toBe('restoreRecord');
-    expect(asked[0]['body']).toEqual({ backup, accept_version_change: true });
+    expect(calls[0]['call']).toBe('restoreBackup');
+    expect(calls[0]['body']).toEqual({ backup, accept_version_change: true });
     expect(service.restoring()).toBe(false);
   });
 
-  it('repeats what the server said about a copy it would not take', async () => {
+  it('shows the API error when the backup is rejected', async () => {
     const service = configure(() =>
       Object.assign(new Error('no'), {
-        error: { detail: 'That file holds tables this Setout does not know' },
+        error: { detail: 'The backup contains unknown tables' },
       }),
     );
 
     expect(await service.restore(backup as never, false)).toBeNull();
-    expect(service.error()).toBe('That file holds tables this Setout does not know');
+    expect(service.error()).toBe('The backup contains unknown tables');
   });
 });

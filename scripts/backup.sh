@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Write the database and the uploaded files into one dated archive.
+# Write the database and the uploaded files into one dated server backup file.
 #
 # Usage: backup.sh [out-dir]
 #
-# Works against either engine. SQLite is copied out of the data directory;
-# Postgres is dumped with pg_dump, since its data never lives there.
+# Supports SQLite and Postgres. SQLite is copied from the data directory;
+# Postgres is dumped with pg_dump.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -37,21 +37,21 @@ if [ "$ENGINE" = "sqlite" ]; then
 		exit 1
 	fi
 	DB_PATH="$(cd "$(dirname "$DB_PATH")" && pwd)/$(basename "$DB_PATH")"
-	# .backup folds in the write-ahead log, which a plain copy of a running
-	# database cannot promise. It is run from the staging directory so the
-	# output name needs no path, which a native sqlite3 on Windows cannot read.
+	# .backup includes the write-ahead log, which a plain copy of a running database
+	# does not. It runs in the staging directory because native sqlite3 on Windows
+	# cannot read a path in the output name.
 	if command -v sqlite3 >/dev/null 2>&1; then
 		(cd "$STAGE" && sqlite3 "$DB_PATH" ".backup 'database.sqlite3'")
 	else
 		echo "Note: sqlite3 not found, copying the file directly."
-		echo "      Stop the app first, or the copy may catch a half-written page."
+		echo "      Stop the app first, or the copy may contain a partially written page."
 		cp "$DB_PATH" "$STAGE/database.sqlite3"
 	fi
 else
 	if ! command -v pg_dump >/dev/null 2>&1; then
 		echo "Error: pg_dump not found, and SETOUT_DATABASE_URL points at Postgres."
-		echo "Install the Postgres client tools, or take the copy from the app's"
-		echo "settings page instead."
+		echo "Install the Postgres client tools, or download a backup from the app's"
+		echo "Settings page."
 		exit 1
 	fi
 	pg_dump --format=custom --file="$STAGE/database.dump" "$DB_URL"
@@ -70,8 +70,8 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 printf 'format=2\nengine=%s\ncreated=%s\n' "$ENGINE" "$STAMP" >"$STAGE/manifest.txt"
 
 mkdir -p "$OUT_DIR"
-ARCHIVE="$OUT_DIR/setout-backup-$ENGINE-$STAMP.tar.gz"
-tar -czf "$ARCHIVE" -C "$STAGE" .
+BACKUP_FILE="$OUT_DIR/setout-backup-$ENGINE-$STAMP.tar.gz"
+tar -czf "$BACKUP_FILE" -C "$STAGE" .
 
-echo "Backup written: $ARCHIVE"
+echo "Server backup written: $BACKUP_FILE"
 echo "Engine: $ENGINE"

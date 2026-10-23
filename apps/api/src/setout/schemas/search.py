@@ -28,7 +28,7 @@ class Hit(BaseModel):
 
 class HitGroup(BaseModel):
     kind: SearchKind
-    total: int = Field(..., description="Everything that matched, not only what is listed")
+    total: int = Field(..., description="Total matches, including those not listed")
     hits: list[Hit]
 
 

@@ -38,7 +38,7 @@ describe('ButtonComponent', () => {
     expect(pressed).toBe(0);
   });
 
-  it('emits when pressed', async () => {
+  it('emits on click', async () => {
     const { fixture, button } = await render();
     let pressed = 0;
     fixture.componentInstance.pressed.subscribe(() => (pressed += 1));

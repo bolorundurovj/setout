@@ -2,12 +2,12 @@
   <a class="link t-mono back" routerLink="/lands">&#8592; Land</a>
 
   @if (loading()) {
-    <div class="card"><p class="t-body">Loading land…</p></div>
+    <div class="card"><p class="t-body">Loading land record…</p></div>
   } @else if (land(); as l) {
-    @if (l.deleted_at) {
+    @if (l.archived_at) {
       <p class="banner warn t-small">
-        Archived. Its documents are archived with it and return if you restore it. Projects that
-        reference it are unaffected.
+        This land record is archived. Its documents are archived with it and are restored with it.
+        Projects that reference it are not affected.
       </p>
     }
 
@@ -20,8 +20,8 @@
         }
       </div>
       <div class="head-actions">
-        @if (!l.deleted_at) {
-          <app-button variant="secondary" (pressed)="edit()">Edit Land</app-button>
+        @if (!l.archived_at) {
+          <app-button variant="secondary" (pressed)="edit()">Edit Land Record</app-button>
           <app-button variant="danger" (pressed)="archive()">Archive</app-button>
         } @else {
           <app-button (pressed)="restore()">Restore</app-button>
@@ -44,12 +44,12 @@
       </div>
       <div class="fact">
         <span class="t-micro">Stated Area</span>
-        <span class="t-body t-mono">{{ size(l) }}</span>
+        <span class="t-body t-mono">{{ statedArea(l) }}</span>
       </div>
       @if (l.boundary) {
         <div class="fact">
           <span class="t-micro">Measured Area</span>
-          <span class="t-body t-mono">{{ area(l) }}</span>
+          <span class="t-body t-mono">{{ measuredArea(l) }}</span>
         </div>
       }
       <div class="fact">
@@ -58,7 +58,7 @@
       </div>
       <div class="fact">
         <span class="t-micro">Valuation</span>
-        <span class="t-body t-mono">{{ worth(l) }}</span>
+        <span class="t-body t-mono">{{ valuation(l) }}</span>
       </div>
       <div class="fact">
         <span class="t-micro">Documents</span>
@@ -75,15 +75,15 @@
         <h2 class="t-heading">Location</h2>
         @if (pinIsOutside(l)) {
           <div class="banner warn pin-warning">
-            <span class="t-small">The location pin is outside the mapped survey.</span>
-            @if (!l.deleted_at) {
-              <app-button variant="secondary" (pressed)="edit()">Edit Land</app-button>
+            <span class="t-small">The location pin is outside the boundary.</span>
+            @if (!l.archived_at) {
+              <app-button variant="secondary" (pressed)="edit()">Edit Land Record</app-button>
             }
           </div>
         }
         @if (mapTabs(l).length) {
           <app-tabs
-            label="Location Pin or Mapped Survey"
+            label="Location Pin or Boundary"
             [tabs]="mapTabs(l)"
             [value]="mapTab()"
             (valueChange)="mapTab.set($any($event))"
@@ -96,20 +96,20 @@
             [attr.aria-labelledby]="mapTabs(l).length ? shownMap(l) + '-tab' : null"
           >
             @if (shownMap(l) === 'pin') {
-              <app-land-map mode="pin" [point]="place(l)" />
+              <app-land-map mode="pin" [point]="pinPoint(l)" />
             } @else {
               <app-land-map mode="boundary" [boundary]="l.boundary" />
             }
           </div>
         } @placeholder {
-          <div class="map-waiting"></div>
+          <div class="map-placeholder"></div>
         }
-        @if (areaGap(l); as gap) {
-          @if (gap >= 5) {
+        @if (areaDifferencePercent(l); as difference) {
+          @if (difference >= 5) {
             <p class="t-small muted">
-              The measured area differs from the stated area by {{ gap }}%.
-              @if (!l.deleted_at) {
-                <button type="button" class="link t-mono" (click)="useDrawnSize(l)">
+              The measured area differs from the stated area by {{ difference }}%.
+              @if (!l.archived_at) {
+                <button type="button" class="link t-mono" (click)="useMeasuredArea(l)">
                   Use Measured Area
                 </button>
               }
@@ -121,9 +121,9 @@
 
     <section class="block">
       <h2 class="t-heading">Documents</h2>
-      <p class="t-small" [class.muted]="missing().length === 0">{{ missingLine() }}</p>
+      <p class="t-small" [class.muted]="missing().length === 0">{{ missingDocumentsLabel() }}</p>
 
-      @if (!l.deleted_at) {
+      @if (!l.archived_at) {
         <div class="card upload">
           <div class="field">
             <span class="t-micro">Document Type</span>
@@ -135,25 +135,25 @@
             />
           </div>
           <label class="field">
-            <span class="t-micro">Note</span>
+            <span class="t-micro">Notes</span>
             <input
               class="input-field"
               type="text"
               autocomplete="off"
               placeholder="Describe this document"
-              [value]="note()"
-              (input)="note.set(value($event))"
+              [value]="notes()"
+              (input)="notes.set(value($event))"
             />
           </label>
-          <app-button [loading]="lands.saving()" (pressed)="pick()">Choose File</app-button>
-          <span class="t-small muted"> A photograph or PDF. Stored on your own server. </span>
+          <app-button [loading]="lands.saving()" (pressed)="chooseFile()">Choose File</app-button>
+          <span class="t-small muted"> Image or PDF. Stored on this server. </span>
         </div>
       }
 
-      @if (justRemoved(); as gone) {
+      @if (lastArchived(); as archived) {
         <p class="t-small muted">
-          {{ gone.filename }} was archived.
-          <button type="button" class="link t-mono" (click)="putBack()">Undo</button>
+          {{ archived.filename }} was archived.
+          <button type="button" class="link t-mono" (click)="restoreLastArchived()">Undo</button>
         </p>
       }
 
@@ -165,11 +165,11 @@
           </p>
         </div>
       } @else {
-        <div class="papers">
+        <div class="documents">
           @for (document of documents(); track document.id) {
-            <div class="paper">
+            <div class="document">
               @if (editing() === document.id) {
-                <span class="paper-edit">
+                <span class="document-edit">
                   <app-chip-group
                     label="Document Type"
                     [chips]="kindChips"
@@ -180,35 +180,35 @@
                     class="input-field"
                     type="text"
                     autocomplete="off"
-                    placeholder="What this paper actually is"
-                    [value]="editNote()"
-                    (input)="editNote.set(value($event))"
+                    placeholder="Describe this document"
+                    [value]="editNotes()"
+                    (input)="editNotes.set(value($event))"
                   />
                 </span>
-                <span class="paper-actions">
+                <span class="document-actions">
                   <button type="button" class="link t-mono" (click)="saveEdit(document)">
                     Save
                   </button>
                   <button type="button" class="link t-mono" (click)="cancelEdit()">Cancel</button>
                 </span>
               } @else {
-                <span class="paper-what">
+                <span class="document-info">
                   <span class="t-body">{{ kindLabel(document) }}</span>
-                  @if (document.note) {
-                    <span class="t-small">{{ document.note }}</span>
+                  @if (document.notes) {
+                    <span class="t-small">{{ document.notes }}</span>
                   }
                   <span class="t-small muted">{{ document.filename }}</span>
-                  <span class="t-micro">{{ fileNote(document) }}</span>
+                  <span class="t-micro">{{ fileDetails(document) }}</span>
                 </span>
-                <span class="paper-actions">
+                <span class="document-actions">
                   <a class="link t-mono" [href]="href(document)" target="_blank" rel="noopener">
                     Open
                   </a>
-                  @if (!l.deleted_at) {
+                  @if (!l.archived_at) {
                     <button type="button" class="link t-mono" (click)="startEdit(document)">
                       Edit
                     </button>
-                    <button type="button" class="link t-mono" (click)="remove(document)">
+                    <button type="button" class="link t-mono" (click)="archiveDocument(document)">
                       Archive
                     </button>
                   }
@@ -233,10 +233,10 @@
     </section>
 
     <section class="block">
-      <h2 class="t-heading">Projects on This Land</h2>
+      <h2 class="t-heading">Projects on This Land Record</h2>
       @if (l.projects.length === 0) {
         <div class="card">
-          <p class="t-body">No projects reference this land yet.</p>
+          <p class="t-body">No projects reference this land record yet.</p>
           <p class="t-small">Select it on the New Project form or in a project's settings.</p>
         </div>
       } @else {
@@ -246,8 +246,8 @@
               <span class="t-body">{{ project.name }}</span>
               <span class="t-micro">
                 {{ project.status }}
-                @if (project.deleted_at) {
-                  &middot; deleted
+                @if (project.archived_at) {
+                  &middot; archived
                 }
               </span>
             </a>
@@ -257,7 +257,7 @@
     </section>
   } @else {
     <div class="card">
-      <p class="t-body">Land not found.</p>
+      <p class="t-body">Land record not found.</p>
       <p class="t-small"><a class="link" routerLink="/lands">Back to Land</a></p>
     </div>
   }

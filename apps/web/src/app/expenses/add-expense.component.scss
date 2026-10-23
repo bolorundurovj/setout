@@ -38,7 +38,7 @@
   }
 }
 
-.amount.derived {
+.amount.calculated {
   border-style: dashed;
 }
 
@@ -169,7 +169,7 @@
   justify-content: space-between;
 }
 
-.receipt-held {
+.receipt-attached {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -219,7 +219,7 @@
   border-radius: 999px;
 }
 
-.receipt-drop,
+.receipt-action,
 .receipt-add {
   padding: 0;
   font-size: 11px;
@@ -230,7 +230,7 @@
   cursor: pointer;
 }
 
-.owed {
+.delivery {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -238,12 +238,12 @@
   border: 1px solid var(--rule);
   border-radius: 12px;
 
-  &.on {
+  &.selected {
     background: var(--field);
   }
 }
 
-.owed-toggle {
+.delivery-toggle {
   display: flex;
   align-items: center;
   gap: 11px;
@@ -263,7 +263,7 @@
   }
 }
 
-.owed-box {
+.delivery-box {
   width: 18px;
   height: 18px;
   border-radius: 5px;
@@ -271,24 +271,24 @@
   background: var(--field);
   border: 1px solid var(--rule);
 
-  &.ticked {
+  &.checked {
     background: var(--accent);
     border-color: var(--accent);
   }
 }
 
-.owed-label {
+.delivery-label {
   font-size: 13px;
 }
 
-.owed-fields {
+.delivery-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
 
 @media (max-width: bp.$phone) {
-  .owed-fields {
+  .delivery-fields {
     grid-template-columns: 1fr;
   }
 }

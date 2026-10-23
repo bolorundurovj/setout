@@ -7,13 +7,13 @@ import {
   CategoryCreate,
   CategoryPresetRead,
   CategoryRead,
-  addBudgetItem,
+  archiveBudgetItem,
+  archiveCategory,
+  createBudgetItem,
+  createCategory,
   restoreBudgetItem,
   restoreCategory,
   updateBudgetItem,
-  createCategory,
-  deleteBudgetItem,
-  deleteCategory,
   getProjectBudget,
   listBudgetItems,
   listCategoryPresets,
@@ -40,14 +40,14 @@ export class BudgetService {
   readonly categories = computed<CategoryRead[]>(() => this.budgetState()?.categories ?? []);
   readonly budgetedTotal = computed(() => this.budgetState()?.budgeted_amount ?? 0);
 
-  async load(projectId: string, includeDeleted = false): Promise<void> {
+  async load(projectId: string, includeArchived = false): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
     try {
       this.budgetState.set(
         await this.api.invoke(getProjectBudget, {
           project_id: projectId,
-          include_deleted: includeDeleted,
+          include_archived: includeArchived,
         }),
       );
     } catch {
@@ -68,11 +68,11 @@ export class BudgetService {
     }
   }
 
-  async loadItems(categoryId: string, includeDeleted = false): Promise<void> {
+  async loadItems(categoryId: string, includeArchived = false): Promise<void> {
     try {
       const page = await this.api.invoke(listBudgetItems, {
         category_id: categoryId,
-        include_deleted: includeDeleted,
+        include_archived: includeArchived,
         limit: 100,
       });
       this.itemState.update((all) => ({ ...all, [categoryId]: page.items }));
@@ -98,23 +98,23 @@ export class BudgetService {
     }
   }
 
-  async removeCategory(
+  async archiveCategory(
     projectId: string,
     categoryId: string,
-    includeDeleted = false,
+    includeArchived = false,
   ): Promise<boolean> {
     this.error.set(null);
     try {
-      await this.api.invoke(deleteCategory, { category_id: categoryId });
-      await this.load(projectId, includeDeleted);
+      await this.api.invoke(archiveCategory, { category_id: categoryId });
+      await this.load(projectId, includeArchived);
       return true;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not remove the category.');
+      this.error.set(detailOf(e) ?? 'Could not archive the category.');
       return false;
     }
   }
 
-  async putCategoryBack(projectId: string, categoryId: string): Promise<boolean> {
+  async restoreCategory(projectId: string, categoryId: string): Promise<boolean> {
     try {
       await this.api.invoke(restoreCategory, { category_id: categoryId });
       await this.load(projectId);
@@ -132,7 +132,7 @@ export class BudgetService {
     budgetedAmount: number,
     costType: CostType | null = null,
   ): Promise<void> {
-    await this.api.invoke(addBudgetItem, {
+    await this.api.invoke(createBudgetItem, {
       category_id: categoryId,
       body: { description, budgeted_amount: budgetedAmount, cost_type: costType },
     });
@@ -154,18 +154,18 @@ export class BudgetService {
     await this.load(projectId);
   }
 
-  async removeItem(
+  async archiveItem(
     projectId: string,
     categoryId: string,
     itemId: string,
-    includeDeleted = false,
+    includeArchived = false,
   ): Promise<void> {
-    await this.api.invoke(deleteBudgetItem, { item_id: itemId });
-    await this.loadItems(categoryId, includeDeleted);
+    await this.api.invoke(archiveBudgetItem, { item_id: itemId });
+    await this.loadItems(categoryId, includeArchived);
     await this.load(projectId);
   }
 
-  async putItemBack(projectId: string, categoryId: string, itemId: string): Promise<boolean> {
+  async restoreItem(projectId: string, categoryId: string, itemId: string): Promise<boolean> {
     this.error.set(null);
     try {
       await this.api.invoke(restoreBudgetItem, { item_id: itemId });

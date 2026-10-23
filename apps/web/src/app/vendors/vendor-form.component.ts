@@ -14,7 +14,7 @@ import { VendorService } from './vendor.service';
   styleUrl: './vendor-form.component.scss',
 })
 export class VendorFormComponent {
-  readonly vendors = inject(VendorService);
+  readonly vendorService = inject(VendorService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly pageTitle = inject(Title);
@@ -47,7 +47,7 @@ export class VendorFormComponent {
       return;
     }
     this.loading.set(true);
-    const vendor = await this.vendors.get(this.id());
+    const vendor = await this.vendorService.get(this.id());
     if (vendor) {
       this.name.set(vendor.name);
       this.trade.set(vendor.trade ?? '');
@@ -69,11 +69,11 @@ export class VendorFormComponent {
 
   subtitle(): string {
     return this.isEdit()
-      ? 'Changing a vendor here changes them on every project.'
-      : 'A name is enough. Everything else can be filled in later.';
+      ? 'Changes apply to every project this vendor appears in.'
+      : 'Only the name is required. Other details can be added later.';
   }
 
-  value(event: Event): string {
+  inputValue(event: Event): string {
     return (event.target as HTMLInputElement).value;
   }
 
@@ -98,14 +98,14 @@ export class VendorFormComponent {
       notes: this.notes().trim() || null,
     };
     const saved = this.isEdit()
-      ? await this.vendors.edit(this.id(), body)
-      : await this.vendors.add(body);
+      ? await this.vendorService.edit(this.id(), body)
+      : await this.vendorService.add(body);
 
     if (saved) {
       this.toast.show(this.isEdit() ? 'Vendor saved.' : `${saved.name} added.`);
       void this.router.navigate(['/vendors', saved.id]);
     } else {
-      this.toast.show(this.vendors.error() ?? 'Could not save that vendor.', 'error');
+      this.toast.show(this.vendorService.error() ?? 'Could not save the vendor.', 'error');
     }
   }
 }

@@ -5,9 +5,9 @@ from datetime import date, datetime
 import pytest
 
 from setout.services.sheets.values import (
+    as_bool,
     as_code,
     as_date,
-    as_flag,
     as_minor,
     as_phone,
     as_text,
@@ -101,10 +101,10 @@ class TestCostCodes:
 
 class TestPaidFlag:
     def test_the_ways_a_sheet_says_paid(self) -> None:
-        assert as_flag(1) is True
-        assert as_flag("yes") is True
-        assert as_flag(0) is False
-        assert as_flag("") is False
+        assert as_bool(1) is True
+        assert as_bool("yes") is True
+        assert as_bool(0) is False
+        assert as_bool("") is False
 
 
 class TestCostCodesInACell:
@@ -128,11 +128,11 @@ class TestCostCodesInACell:
 class TestReadingAFlag:
     @pytest.mark.parametrize("cell", [True, 1, "1", "yes", "Y", "true", "paid"])
     def test_a_sheet_says_yes_in_many_ways(self, cell: object) -> None:
-        assert as_flag(cell) is True
+        assert as_bool(cell) is True
 
     @pytest.mark.parametrize("cell", [False, 0, "", None, "no", "n", "false", "x"])
     def test_and_no_in_as_many(self, cell: object) -> None:
-        assert as_flag(cell) is False
+        assert as_bool(cell) is False
 
 
 class TestSerialDatesAtTheEdges:

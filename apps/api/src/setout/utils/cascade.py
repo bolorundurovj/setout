@@ -1,9 +1,7 @@
-"""Carry a soft delete down to the rows the deleted thing owns.
+"""Cascade an archive to owned rows, using the owner's archived_at timestamp.
 
-Nothing here hard deletes. Each function stamps the same timestamp the owner
-was stamped with, and the matching restore clears only the rows carrying that
-exact timestamp. Anything deleted on its own beforehand holds a different one,
-so it stays deleted when the owner comes back.
+Restore clears only rows with that exact timestamp, so rows archived separately
+beforehand stay archived.
 """
 
 from __future__ import annotations
@@ -27,61 +25,63 @@ EXPENSE_OWNED = (Delivery, Attachment)
 LAND_OWNED = (LandDocument, LandValuation)
 
 
-async def delete_under_project(project_id: str, deleted_at: datetime) -> None:
+async def archive_under_project(project_id: str, archived_at: datetime) -> None:
     category_ids = await _category_ids_of_project(project_id)
-    await _mark_deleted(BudgetItem, deleted_at, category_id__in=category_ids)
+    await _mark_archived(BudgetItem, archived_at, category_id__in=category_ids)
     for owned_model in PROJECT_OWNED:
-        await _mark_deleted(owned_model, deleted_at, project_id=project_id)
+        await _mark_archived(owned_model, archived_at, project_id=project_id)
 
 
-async def restore_under_project(project_id: str, deleted_at: datetime) -> None:
+async def restore_under_project(project_id: str, archived_at: datetime) -> None:
     category_ids = await _category_ids_of_project(project_id)
-    await _clear_deleted(BudgetItem, deleted_at, category_id__in=category_ids)
+    await _clear_archived(BudgetItem, archived_at, category_id__in=category_ids)
     for owned_model in PROJECT_OWNED:
-        await _clear_deleted(owned_model, deleted_at, project_id=project_id)
+        await _clear_archived(owned_model, archived_at, project_id=project_id)
 
 
-async def delete_under_expense(expense_id: str, deleted_at: datetime) -> None:
+async def archive_under_expense(expense_id: str, archived_at: datetime) -> None:
     for owned_model in EXPENSE_OWNED:
-        await _mark_deleted(owned_model, deleted_at, expense_id=expense_id)
+        await _mark_archived(owned_model, archived_at, expense_id=expense_id)
 
 
-async def restore_under_expense(expense_id: str, deleted_at: datetime) -> None:
+async def restore_under_expense(expense_id: str, archived_at: datetime) -> None:
     for owned_model in EXPENSE_OWNED:
-        await _clear_deleted(owned_model, deleted_at, expense_id=expense_id)
+        await _clear_archived(owned_model, archived_at, expense_id=expense_id)
 
 
-async def delete_under_land(land_id: str, deleted_at: datetime) -> None:
+async def archive_under_land(land_id: str, archived_at: datetime) -> None:
     for owned_model in LAND_OWNED:
-        await _mark_deleted(owned_model, deleted_at, land_id=land_id)
+        await _mark_archived(owned_model, archived_at, land_id=land_id)
 
 
-async def restore_under_land(land_id: str, deleted_at: datetime) -> None:
+async def restore_under_land(land_id: str, archived_at: datetime) -> None:
     for owned_model in LAND_OWNED:
-        await _clear_deleted(owned_model, deleted_at, land_id=land_id)
+        await _clear_archived(owned_model, archived_at, land_id=land_id)
 
 
-async def delete_under_category(category_id: str, deleted_at: datetime) -> None:
-    await _mark_deleted(BudgetItem, deleted_at, category_id=category_id)
+async def archive_under_category(category_id: str, archived_at: datetime) -> None:
+    await _mark_archived(BudgetItem, archived_at, category_id=category_id)
 
 
-async def restore_under_category(category_id: str, deleted_at: datetime) -> None:
-    await _clear_deleted(BudgetItem, deleted_at, category_id=category_id)
+async def restore_under_category(category_id: str, archived_at: datetime) -> None:
+    await _clear_archived(BudgetItem, archived_at, category_id=category_id)
 
 
-async def _mark_deleted(
-    owned_model: type[Model], deleted_at: datetime, **owner_filters: object
+async def _mark_archived(
+    owned_model: type[Model], archived_at: datetime, **owner_filters: object
 ) -> None:
-    await owned_model.filter(deleted_at__isnull=True, **owner_filters).update(deleted_at=deleted_at)
+    await owned_model.filter(archived_at__isnull=True, **owner_filters).update(
+        archived_at=archived_at
+    )
 
 
-async def _clear_deleted(
-    owned_model: type[Model], deleted_at: datetime, **owner_filters: object
+async def _clear_archived(
+    owned_model: type[Model], archived_at: datetime, **owner_filters: object
 ) -> None:
-    await owned_model.filter(deleted_at=deleted_at, **owner_filters).update(deleted_at=None)
+    await owned_model.filter(archived_at=archived_at, **owner_filters).update(archived_at=None)
 
 
 async def _category_ids_of_project(project_id: str) -> list[str]:
-    """Every category of the project, deleted or not, so their items follow either way."""
+    """All of the project's categories, archived or not, so their budget items are included."""
     category_ids = await Category.filter(project_id=project_id).values_list("id", flat=True)
     return [str(category_id) for category_id in category_ids]

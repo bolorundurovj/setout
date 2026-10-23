@@ -130,7 +130,7 @@
   color: var(--ink-3);
 }
 
-.sidebar-foot {
+.sidebar-footer {
   margin-top: auto;
   display: flex;
   flex-direction: column;
@@ -140,14 +140,14 @@
   padding: 12px 12px 0;
 }
 
-.foot-note {
+.footer-note {
   font:
     400 13px/1.45 'DM Sans',
     sans-serif;
   color: var(--ink-3);
 }
 
-.foot-action {
+.footer-action {
   background: none;
   border: none;
   padding: 0;
@@ -241,7 +241,7 @@
   flex-direction: column;
 }
 
-.global-banner {
+.toast {
   position: fixed;
   top: 16px;
   right: 16px;
@@ -263,7 +263,7 @@
   gap: 12px;
 }
 
-.banner-close {
+.toast-close {
   flex: none;
   padding: 0;
   background: none;
@@ -287,20 +287,20 @@
   }
 }
 
-.global-banner.error {
-  background: var(--over-surface);
-  color: var(--over-ink);
-  border-color: var(--over-edge);
+.toast.error {
+  background: var(--danger-surface);
+  color: var(--danger-ink);
+  border-color: var(--danger-edge);
 }
 
-.global-banner.info {
-  background: var(--warn-surface);
-  color: var(--warn-ink);
-  border-color: var(--warn-edge);
+.toast.info {
+  background: var(--field);
+  color: var(--ink);
+  border-color: var(--rule);
 }
 
-// Side by side, the shell is exactly the window and each column scrolls on its
-// own, so the navigation cannot run off the bottom of a long page.
+// On wide screens the shell fills the viewport and each column scrolls independently,
+// so the navigation stays visible on long pages.
 @media (min-width: 900px) {
   :host {
     height: 100vh;
@@ -316,7 +316,7 @@
   }
 }
 
-@media (max-width: bp.$lap) {
+@media (max-width: bp.$tablet) {
   .shell {
     flex-direction: column;
   }

@@ -180,6 +180,24 @@
   }
 }
 
+.confirm-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+
+  .delete-input {
+    width: 75px;
+    padding: 2px 6px;
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+}
+
+.danger-link {
+  color: var(--danger) !important;
+}
+
 .row.total {
   background: var(--field);
   padding: 15px 18px;
@@ -226,7 +244,7 @@
   }
 }
 
-.split {
+.tag {
   margin-left: 8px;
   padding: 2px 7px;
   font-size: 10px;
@@ -236,7 +254,7 @@
   border-radius: 999px;
 }
 
-.split-choice {
+.cost-type-choice {
   grid-column: 1 / -1;
 }
 

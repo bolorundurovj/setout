@@ -11,12 +11,12 @@ from setout.models.project import Project
 from setout.schemas.home import (
     CurrencyChoice,
     HomeAlert,
+    HomeExpenseSummary,
     HomeLatest,
     HomeMonth,
     HomeMonths,
     HomeProject,
     HomeProjects,
-    HomeSpend,
     HomeSummary,
 )
 from setout.utils.budgets import budgeted_by_project, spent_by_project
@@ -31,13 +31,13 @@ MONTH_OF = {
 
 
 class HomeController:
-    async def summary(self, wanted: str | None, base: str | None) -> HomeSummary:
+    async def summary(self, requested: str | None, base_currency: str | None) -> HomeSummary:
         projects = await self._projects()
         choices = self._choices(projects)
-        code = self._code(choices, wanted, base)
+        code = self._code(choices, requested, base_currency)
         if code is None:
             return HomeSummary(
-                projects=len(projects),
+                project_count=len(projects),
                 currencies=choices,
                 currency_code=None,
                 currency_exponent=None,
@@ -46,43 +46,45 @@ class HomeController:
                 alerts=[],
             )
 
-        here = [project for project in projects if project.currency_id == code]
-        ids = [project.id for project in here]
+        in_currency = [project for project in projects if project.currency_id == code]
+        ids = [project.id for project in in_currency]
         budgeted = await budgeted_by_project(ids)
         spent = await spent_by_project(ids)
         return HomeSummary(
-            projects=len(projects),
+            project_count=len(projects),
             currencies=choices,
             currency_code=code,
-            currency_exponent=here[0].currency.exponent,
-            currency_projects=len(here),
+            currency_exponent=in_currency[0].currency.exponent,
+            currency_project_count=len(in_currency),
             budgeted_amount=sum(budgeted.values()),
             spent_amount=sum(spent.values()),
             alerts=await self._alerts(ids),
         )
 
-    async def months(self, wanted: str | None, base: str | None) -> HomeMonths:
+    async def months(self, requested: str | None, base_currency: str | None) -> HomeMonths:
         projects = await self._projects()
-        code = self._code(self._choices(projects), wanted, base)
+        code = self._code(self._choices(projects), requested, base_currency)
         if code is None:
             return HomeMonths(
-                currency_code=None, currency_exponent=None, months=[], busiest_month=None
+                currency_code=None, currency_exponent=None, months=[], highest_month=None
             )
 
-        here = [project for project in projects if project.currency_id == code]
-        months = await self._months([project.id for project in here])
+        in_currency = [project for project in projects if project.currency_id == code]
+        months = await self._months([project.id for project in in_currency])
         return HomeMonths(
             currency_code=code,
-            currency_exponent=here[0].currency.exponent,
+            currency_exponent=in_currency[0].currency.exponent,
             months=months,
-            busiest_month=max(months, key=lambda month: month.amount).month if months else None,
+            highest_month=max(months, key=lambda month: month.amount).month if months else None,
         )
 
-    async def projects(self, wanted: str | None, base: str | None) -> HomeProjects:
+    async def projects(self, requested: str | None, base_currency: str | None) -> HomeProjects:
         projects = await self._projects()
-        code = self._code(self._choices(projects), wanted, base)
-        here = [project for project in projects if code is None or project.currency_id == code]
-        ids = [project.id for project in here]
+        code = self._code(self._choices(projects), requested, base_currency)
+        in_currency = [
+            project for project in projects if code is None or project.currency_id == code
+        ]
+        ids = [project.id for project in in_currency]
         budgeted = await budgeted_by_project(ids)
         spent = await spent_by_project(ids)
         counts = await self._counts(ids)
@@ -97,23 +99,23 @@ class HomeController:
                     spent_amount=spent.get(project.id, 0),
                     expense_count=counts.get(project.id, 0),
                 )
-                for project in here
+                for project in in_currency
             ]
         )
 
-    async def latest(self, wanted: str | None, base: str | None) -> HomeLatest:
+    async def latest(self, requested: str | None, base_currency: str | None) -> HomeLatest:
         projects = await self._projects()
-        code = self._code(self._choices(projects), wanted, base)
+        code = self._code(self._choices(projects), requested, base_currency)
         ids = [project.id for project in projects if code is None or project.currency_id == code]
         rows = (
-            await Expense.filter(project_id__in=ids, deleted_at__isnull=True)
+            await Expense.filter(project_id__in=ids, archived_at__isnull=True)
             .order_by("-spent_on", "-created_at")
             .limit(LATEST)
             .prefetch_related("project__currency", "category")
         )
         return HomeLatest(
             rows=[
-                HomeSpend(
+                HomeExpenseSummary(
                     id=row.id,
                     project_id=row.project_id,
                     project_name=row.project.name,
@@ -130,7 +132,7 @@ class HomeController:
 
     async def _projects(self) -> list[Project]:
         return (
-            await Project.filter(deleted_at__isnull=True)
+            await Project.filter(archived_at__isnull=True)
             .order_by("-created_at")
             .prefetch_related("currency")
         )
@@ -143,17 +145,17 @@ class HomeController:
             exponents[project.currency_id] = project.currency.exponent
         return [
             CurrencyChoice(
-                currency_code=code, currency_exponent=exponents[code], projects=counts[code]
+                currency_code=code, currency_exponent=exponents[code], project_count=counts[code]
             )
             for code in sorted(counts)
         ]
 
     def _code(
-        self, choices: list[CurrencyChoice], wanted: str | None, base: str | None
+        self, choices: list[CurrencyChoice], requested: str | None, base_currency: str | None
     ) -> str | None:
-        """What the screen opens on: what was asked for, else the account's, else the first."""
+        """The requested currency, else the account currency, else the first in use."""
         in_use = [choice.currency_code for choice in choices]
-        for candidate in (wanted, base):
+        for candidate in (requested, base_currency):
             if candidate and candidate.upper() in in_use:
                 return candidate.upper()
         return in_use[0] if in_use else None
@@ -162,7 +164,7 @@ class HomeController:
         if not project_ids:
             return {}
         rows = (
-            await Expense.filter(project_id__in=project_ids, deleted_at__isnull=True)
+            await Expense.filter(project_id__in=project_ids, archived_at__isnull=True)
             .annotate(total=Count("id"))
             .group_by("project_id")
             .values("project_id", "total")
@@ -170,16 +172,16 @@ class HomeController:
         return {str(row["project_id"]): int(row["total"]) for row in rows}
 
     async def _months(self, project_ids: list[str]) -> list[HomeMonth]:
-        """Grouped by the database so only the months drawn come back."""
+        """Grouped in SQL so only the displayed months are returned."""
         if not project_ids:
             return []
         db = connections.get("default")
         month = MONTH_OF.get(db.capabilities.dialect, MONTH_OF["postgres"])
-        holes = ",".join("?" * len(project_ids))
+        placeholders = ",".join("?" * len(project_ids))
         rows = await db.execute_query_dict(
             bound(
                 f"SELECT {month} AS month, SUM(amount) AS total FROM expense"
-                f" WHERE deleted_at IS NULL AND project_id IN ({holes})"
+                f" WHERE archived_at IS NULL AND project_id IN ({placeholders})"
                 f" GROUP BY month ORDER BY month DESC LIMIT {MONTHS}",
                 db,
             ),
@@ -192,41 +194,41 @@ class HomeController:
     async def _alerts(self, project_ids: list[str]) -> list[HomeAlert]:
         alerts: list[HomeAlert] = []
 
-        uncategorized = await Expense.filter(
-            project_id__in=project_ids, deleted_at__isnull=True, category_id__isnull=True
+        uncategorised = await Expense.filter(
+            project_id__in=project_ids, archived_at__isnull=True, category_id__isnull=True
         ).values_list("project_id", "amount")
-        if uncategorized:
-            projects = len({project_id for project_id, _ in uncategorized})
+        if uncategorised:
+            projects = len({project_id for project_id, _ in uncategorised})
             alerts.append(
                 HomeAlert(
-                    kind="uncategorized",
-                    title="Spend with no category",
+                    kind="uncategorised",
+                    title="Uncategorised Expenses",
                     detail=(
-                        f"{len(uncategorized)} "
-                        f"{'receipt' if len(uncategorized) == 1 else 'receipts'} "
+                        f"{len(uncategorised)} "
+                        f"{'expense' if len(uncategorised) == 1 else 'expenses'} "
                         f"across {projects} {'project' if projects == 1 else 'projects'}"
                     ),
-                    amount=sum(amount for _, amount in uncategorized),
+                    amount=sum(amount for _, amount in uncategorised),
                     urgent=True,
                 )
             )
 
-        owed = await Delivery.filter(
+        outstanding = await Delivery.filter(
             project_id__in=project_ids,
-            deleted_at__isnull=True,
+            archived_at__isnull=True,
             received_at__isnull=True,
-            expense__deleted_at__isnull=True,
+            expense__archived_at__isnull=True,
         ).prefetch_related("expense")
-        if owed:
+        if outstanding:
             alerts.append(
                 HomeAlert(
                     kind="deliveries",
-                    title="Paid for, not delivered",
+                    title="Outstanding Deliveries",
                     detail=(
-                        f"{len(owed)} {'thing' if len(owed) == 1 else 'things'}"
-                        f" outstanding from a vendor"
+                        f"{len(outstanding)} paid "
+                        f"{'expense' if len(outstanding) == 1 else 'expenses'} outstanding"
                     ),
-                    amount=sum(row.expense.amount for row in owed),
+                    amount=sum(row.expense.amount for row in outstanding),
                     urgent=False,
                 )
             )

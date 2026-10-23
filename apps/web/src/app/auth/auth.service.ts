@@ -4,9 +4,9 @@ import {
   AuthStatus,
   changePassphrase,
   getAuthStatus,
-  login,
-  logout,
   setupAdmin,
+  signIn,
+  signOut,
   updateAccount,
 } from '@setout/api-client';
 import { detailOf } from '../api-error';
@@ -30,7 +30,7 @@ export class AuthService {
   loading = signal(false);
   error = signal<string | null>(null);
 
-  readonly isSetup = computed(() => this.state().status?.is_setup ?? false);
+  readonly isSetUp = computed(() => this.state().status?.is_setup ?? false);
   readonly isAuthenticated = computed(() => this.state().status?.is_authenticated ?? false);
   readonly user = computed(() => this.state().status?.user ?? null);
   readonly isStatusLoading = computed(() => this.state().loading);
@@ -42,7 +42,7 @@ export class AuthService {
       await this.checkStatus();
       return true;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not save the name.');
+      this.error.set(detailOf(e) ?? 'Could not save the account name.');
       return false;
     }
   }
@@ -54,7 +54,7 @@ export class AuthService {
       await this.checkStatus();
       return true;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not save the currency.');
+      this.error.set(detailOf(e) ?? 'Could not save the base currency.');
       return false;
     }
   }
@@ -63,7 +63,7 @@ export class AuthService {
     this.error.set(null);
     try {
       await this.api.invoke(changePassphrase, {
-        body: { current_password: current, new_password: next },
+        body: { current_passphrase: current, new_passphrase: next },
       });
       return true;
     } catch (e: unknown) {
@@ -81,12 +81,12 @@ export class AuthService {
     }
   }
 
-  async login(password: string): Promise<boolean> {
+  async signIn(passphrase: string): Promise<boolean> {
     this.loading.set(true);
     this.error.set(null);
     try {
-      await this.api.invoke(login, {
-        body: { password },
+      await this.api.invoke(signIn, {
+        body: { passphrase },
       });
       await this.checkStatus();
       this.loading.set(false);
@@ -98,7 +98,7 @@ export class AuthService {
       if (status === 401) {
         this.error.set('Incorrect passphrase.');
       } else if (status === 429) {
-        this.error.set('Too many wrong passphrases. Wait a moment and try again.');
+        this.error.set('Too many failed attempts. Try again later.');
       } else {
         this.error.set('Could not sign in.');
       }
@@ -106,12 +106,12 @@ export class AuthService {
     }
   }
 
-  async setup(name: string, email: string | undefined, password: string): Promise<boolean> {
+  async setup(name: string, email: string | undefined, passphrase: string): Promise<boolean> {
     this.loading.set(true);
     this.error.set(null);
     try {
       await this.api.invoke(setupAdmin, {
-        body: { name, email, password },
+        body: { name, email, passphrase },
       });
       await this.checkStatus();
       this.loading.set(false);
@@ -126,7 +126,7 @@ export class AuthService {
       ) {
         this.error.set('This server is already set up.');
       } else {
-        this.error.set('An error occurred during setup.');
+        this.error.set('Could not set up the server.');
       }
       return false;
     }
@@ -134,7 +134,7 @@ export class AuthService {
 
   async logout(): Promise<boolean> {
     try {
-      await this.api.invoke(logout);
+      await this.api.invoke(signOut);
       await this.checkStatus();
       return true;
     } catch {

@@ -17,7 +17,7 @@ const project: ProjectRead = {
   notes: null,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
-  deleted_at: null,
+  archived_at: null,
 };
 
 function category(over: Partial<CategoryRead> = {}): CategoryRead {
@@ -37,7 +37,7 @@ function category(over: Partial<CategoryRead> = {}): CategoryRead {
     own_expense_count: 0,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
     ...over,
   };
 }
@@ -52,7 +52,7 @@ function item(over: Partial<BudgetItemRead> = {}): BudgetItemRead {
     set_at: '2026-01-01T00:00:00Z',
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
     ...over,
   };
 }
@@ -79,7 +79,7 @@ describe('BudgetComponent', () => {
       addCategory: async () => undefined,
       addItem: async (...args: unknown[]) => void added.push(args),
       updateItem: async (...args: unknown[]) => void updated.push(args),
-      removeItem: async () => undefined,
+      archiveItem: async () => undefined,
     };
     const toast = { show: (message: string, type = 'success') => toasts.push({ message, type }) };
 
@@ -117,7 +117,7 @@ describe('BudgetComponent', () => {
     expect(added.length).toBe(0);
   });
 
-  it('refuses to guess when a category has several items', async () => {
+  it('does not write when a category has several items', async () => {
     const categories = [category({ own_budgeted_amount: 300_00 })];
     const component = render(categories, [item(), item({ id: 'i2', budgeted_amount: 200_00 })]);
     component.onAmountInput('s1', { target: { value: '999' } } as unknown as Event);
@@ -128,7 +128,7 @@ describe('BudgetComponent', () => {
     expect(toasts[0].message).toContain('several budget items');
   });
 
-  it('rejects something that is not an amount', async () => {
+  it('rejects a non-numeric amount', async () => {
     const component = render([category()], []);
     component.onAmountInput('s1', { target: { value: 'abc' } } as unknown as Event);
     await component.commit(category());
@@ -137,7 +137,7 @@ describe('BudgetComponent', () => {
     expect(toasts[0].type).toBe('error');
   });
 
-  it('writes nothing when the number has not changed', async () => {
+  it('does not write an unchanged amount', async () => {
     const categories = [category({ own_budgeted_amount: 100_00 })];
     const component = render(categories, [item()]);
     component.onAmountInput('s1', { target: { value: '100.00' } } as unknown as Event);
@@ -147,55 +147,54 @@ describe('BudgetComponent', () => {
     expect(updated.length).toBe(0);
   });
 
-  it('writes nothing for an empty box', async () => {
+  it('does not write a blank amount', async () => {
     const component = render([category()], []);
     component.onAmountInput('s1', { target: { value: '  ' } } as unknown as Event);
     await component.commit(category());
     expect(added.length).toBe(0);
   });
 
-  it('adds a line item under the category', async () => {
+  it('adds a budget item to the category', async () => {
     const component = render([category()], []);
     component.itemDescription.set('600 nine inch blocks');
     component.itemAmount.set('150000');
     expect(component.canAddItem()).toBe(true);
 
-    await component.addLineItem(category());
+    await component.addItem(category());
     expect(added[0]).toEqual(['p1', 's1', '600 nine inch blocks', 15_000_000, null]);
     expect(component.itemDescription()).toBe('');
   });
 
-  it('files a budgeted line under labour, material or fixed when told which', async () => {
+  it('sets the cost type on a budget item and resets it afterwards', async () => {
     const component = render([category()], []);
     component.itemDescription.set('Block work');
     component.itemAmount.set('150000');
     component.itemCostType.set('labour');
 
-    await component.addLineItem(category());
+    await component.addItem(category());
 
     expect(added[0]).toEqual(['p1', 's1', 'Block work', 15_000_000, 'labour']);
-    // The next line starts unsplit rather than inheriting the last choice.
     expect(component.itemCostType()).toBe('');
   });
 
-  it('will not add a line item without a description', () => {
+  it('does not add a budget item without a description', () => {
     const component = render([category()], []);
     component.itemAmount.set('1000');
     expect(component.canAddItem()).toBe(false);
   });
 
-  it('will not add a line item without an amount', () => {
+  it('does not add a budget item without an amount', () => {
     const component = render([category()], []);
     component.itemDescription.set('Blocks');
     component.itemAmount.set('abc');
     expect(component.canAddItem()).toBe(false);
   });
 
-  it('adds a second item rather than replacing the first', async () => {
+  it('adds a second budget item without replacing the first', async () => {
     const component = render([category({ own_budgeted_amount: 100_00 })], [item()]);
     component.itemDescription.set('Cement');
     component.itemAmount.set('50');
-    await component.addLineItem(category({ own_budgeted_amount: 100_00 }));
+    await component.addItem(category({ own_budgeted_amount: 100_00 }));
 
     expect(added.length).toBe(1);
     expect(updated.length).toBe(0);

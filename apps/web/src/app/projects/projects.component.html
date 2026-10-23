@@ -1,8 +1,8 @@
-<app-topbar title="All Projects" [subtitle]="subtitle()">
+<app-topbar title="Projects" [subtitle]="subtitle()">
   <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
-    Show Archived
+    {{ archivedLabel() }}
   </app-toggle>
-  <app-button variant="secondary" (pressed)="importSheet()">Import a Sheet</app-button>
+  <app-button variant="secondary" (pressed)="importWorkbook()">Import Workbook</app-button>
   @if (!showForm()) {
     <app-button (pressed)="openForm()">New Project</app-button>
   }
@@ -12,8 +12,8 @@
   <div class="intro">
     <h1 class="t-heading">Choose a Project</h1>
     <p class="prose">
-      An expense can only be added from inside an open project. A new project needs a name, a
-      currency and its categories, then a budget.
+      Expenses are added from within a project. A new project needs a name and a currency.
+      Categories and a budget are added afterwards.
     </p>
   </div>
 
@@ -34,7 +34,7 @@
           class="input-field"
           type="text"
           [(ngModel)]="name"
-          placeholder="Location"
+          placeholder="Project name"
         />
       </div>
       <div class="field">
@@ -80,7 +80,7 @@
     </div>
   } @else {
     @for (project of projects.projects(); track project.id) {
-      <article class="project-card" [class.archived]="project.deleted_at">
+      <article class="project-card" [class.archived]="project.archived_at">
         <div class="project-body">
           <div class="initials t-mono">{{ initials(project.name) }}</div>
           <div class="project-main">
@@ -91,16 +91,16 @@
 
             <div class="figures">
               <div class="figure">
-                <span class="t-micro">Budget</span>
-                <span class="figure-value t-mono">{{ budget(project) }}</span>
+                <span class="t-micro">Budgeted</span>
+                <span class="figure-value t-mono">{{ budgetedLabel(project) }}</span>
               </div>
               <div class="figure">
                 <span class="t-micro">Spent</span>
-                <span class="figure-value t-mono">{{ spent(project) }}</span>
+                <span class="figure-value t-mono">{{ spentLabel(project) }}</span>
               </div>
               <div class="figure">
                 <span class="t-micro">{{ varianceLabel(project) }}</span>
-                <span class="figure-value t-mono" [class.over]="isOver(project)">
+                <span class="figure-value t-mono" [class.over-budget]="isOverBudget(project)">
                   {{ variance(project) }}
                 </span>
               </div>
@@ -108,7 +108,7 @@
 
             <div class="meter">
               <span class="meter-used" [style.width.%]="usedPercent(project)"></span>
-              <span class="meter-over" [style.width.%]="overPercent(project)"></span>
+              <span class="meter-over" [style.width.%]="overBudgetPercent(project)"></span>
             </div>
 
             <p class="project-status t-small">{{ statusLine(project) }}</p>
@@ -122,20 +122,22 @@
             <app-button variant="secondary" (pressed)="cancelPending()">Cancel</app-button>
           } @else if (isPending(project.id, 'archive')) {
             <span class="confirm t-small">Archive this project? It can be restored.</span>
-            <app-button variant="danger" (pressed)="remove(project.id)">Yes, Archive</app-button>
+            <app-button variant="danger" (pressed)="archive(project.id)">Yes, Archive</app-button>
             <app-button variant="secondary" (pressed)="cancelPending()">Cancel</app-button>
-          } @else if (project.deleted_at) {
+          } @else if (project.archived_at) {
             <app-button variant="secondary" (pressed)="restore(project.id)">Restore</app-button>
-          } @else if (project.status === 'archived') {
+          } @else if (project.status === 'closed') {
             <app-button (pressed)="open(project.id)">Open</app-button>
             <app-button variant="secondary" (pressed)="reopen(project.id)">Reopen</app-button>
-            <app-button variant="danger" (pressed)="ask(project.id, 'archive')">Archive</app-button>
+            <app-button variant="danger" (pressed)="requestConfirmation(project.id, 'archive')"
+              >Archive</app-button
+            >
           } @else {
             <app-button (pressed)="open(project.id)">Open</app-button>
             <app-button variant="secondary" (pressed)="addExpense(project.id)">
-              Add Expense
+              New Expense
             </app-button>
-            <app-button variant="secondary" (pressed)="ask(project.id, 'close')">
+            <app-button variant="secondary" (pressed)="requestConfirmation(project.id, 'close')">
               Close
             </app-button>
           }

@@ -19,7 +19,7 @@ function category(id: string, over: Record<string, unknown> = {}) {
     own_expense_count: 0,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
     ...over,
   };
 }
@@ -56,7 +56,7 @@ describe('BudgetService', () => {
     expect(service.budgetedTotal()).toBe(215000000);
   });
 
-  it('reports a failure instead of throwing', async () => {
+  it('sets an error when loading the budget fails', async () => {
     const service = configure(() => {
       throw new Error('offline');
     });
@@ -65,7 +65,7 @@ describe('BudgetService', () => {
     expect(service.loading()).toBe(false);
   });
 
-  it('leaves deleted categories and items out unless the caller includes them', async () => {
+  it('excludes archived categories and items unless include_archived is set', async () => {
     const service = configure((name) =>
       name === 'getProjectBudget'
         ? {
@@ -80,16 +80,16 @@ describe('BudgetService', () => {
 
     await service.load('p1');
     await service.loadItems('s1');
-    expect(calls[0]['include_deleted']).toBe(false);
-    expect(calls[1]['include_deleted']).toBe(false);
+    expect(calls[0]['include_archived']).toBe(false);
+    expect(calls[1]['include_archived']).toBe(false);
 
     await service.load('p1', true);
     await service.loadItems('s1', true);
-    expect(calls[2]['include_deleted']).toBe(true);
-    expect(calls[3]['include_deleted']).toBe(true);
+    expect(calls[2]['include_archived']).toBe(true);
+    expect(calls[3]['include_archived']).toBe(true);
   });
 
-  it('reads the items and the budget again once one is restored', async () => {
+  it('reloads the items and the budget after restoring an item', async () => {
     const service = configure((name) =>
       name === 'getProjectBudget'
         ? {
@@ -102,7 +102,7 @@ describe('BudgetService', () => {
         : { items: [], total: 0, limit: 100, offset: 0 },
     );
 
-    expect(await service.putItemBack('p1', 's1', 'i1')).toBe(true);
+    expect(await service.restoreItem('p1', 's1', 'i1')).toBe(true);
 
     expect(names).toContain('restoreBudgetItem');
     expect(names).toContain('listBudgetItems');
@@ -120,7 +120,7 @@ describe('BudgetService', () => {
     expect(service.items()['s1'].length).toBe(1);
   });
 
-  it('only fetches the presets once', async () => {
+  it('fetches the presets once', async () => {
     const service = configure(() => [{ id: 'sp1', name: 'Roofing', sort_order: 0 }]);
     await service.loadPresets();
     await service.loadPresets();
@@ -128,7 +128,7 @@ describe('BudgetService', () => {
     expect(service.presetNames()).toEqual(['Roofing']);
   });
 
-  it('reloads the budget after adding an item', async () => {
+  it('reloads the budget after creating an item', async () => {
     const service = configure((name) =>
       name === 'getProjectBudget'
         ? {
@@ -141,7 +141,7 @@ describe('BudgetService', () => {
         : { items: [], total: 0, limit: 100, offset: 0 },
     );
     await service.addItem('p1', 's1', 'Blocks', 500);
-    expect(names).toContain('addBudgetItem');
+    expect(names).toContain('createBudgetItem');
     expect(names).toContain('getProjectBudget');
   });
 });

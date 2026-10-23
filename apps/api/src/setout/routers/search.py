@@ -22,8 +22,8 @@ controller = SearchController()
 @router.get("/search", operation_id="search")
 async def search(
     user: CurrentUser,
-    q: Annotated[str, Query(max_length=120, description="What to look for")] = "",
-    limit: Annotated[int, Query(ge=1, le=50, description="Rows per kind")] = 12,
+    q: Annotated[str, Query(max_length=120, description="Search text")] = "",
+    limit: Annotated[int, Query(ge=1, le=50, description="Results per kind")] = 12,
 ) -> SearchResults:
-    """Everything the record holds that matches, one group per kind."""
-    return await controller.look(q, limit)
+    """All matching records, grouped by kind."""
+    return await controller.search(q, limit)

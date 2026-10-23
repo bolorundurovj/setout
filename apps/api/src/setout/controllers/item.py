@@ -28,7 +28,7 @@ class ItemController:
     async def list_items(
         self, *, search: str | None, include_archived: bool, limit: int, offset: int
     ) -> ItemPage:
-        query = Item.all() if include_archived else Item.filter(deleted_at__isnull=True)
+        query = Item.all() if include_archived else Item.filter(archived_at__isnull=True)
         if search:
             query = query.filter(name__icontains=search)
         total = await query.count()
@@ -63,15 +63,15 @@ class ItemController:
         prices = await self._price_summaries([item.id])
         return self._read(item, prices.get(item.id, []))
 
-    async def delete(self, item_id: str) -> None:
+    async def archive(self, item_id: str) -> None:
         item = await self._item_or_404(item_id)
-        item.deleted_at = datetime.now(UTC)
+        item.archived_at = datetime.now(UTC)
         await item.save()
 
     async def restore(self, item_id: str) -> ItemRead:
-        item = await self._item_or_404(item_id, include_deleted=True)
-        if item.deleted_at is not None:
-            item.deleted_at = None
+        item = await self._item_or_404(item_id, include_archived=True)
+        if item.archived_at is not None:
+            item.archived_at = None
             await item.save()
         prices = await self._price_summaries([item.id])
         return self._read(item, prices.get(item.id, []))
@@ -95,7 +95,7 @@ class ItemController:
     async def last_price(self, item_id: str, project_id: str) -> ItemLastPriceResponse:
         await self._item_or_404(item_id)
         project = await Project.get_or_none(
-            id=project_id, deleted_at__isnull=True
+            id=project_id, archived_at__isnull=True
         ).prefetch_related("currency")
         if project is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
@@ -127,7 +127,7 @@ class ItemController:
         return await Expense.filter(
             item_id=item_id,
             unit_rate__isnull=False,
-            deleted_at__isnull=True,
+            archived_at__isnull=True,
         ).prefetch_related("project__currency", "vendor")
 
     def _point(self, expense: Expense) -> ItemPricePoint:
@@ -149,7 +149,7 @@ class ItemController:
         for expense in await Expense.filter(
             item_id__in=item_ids,
             unit_rate__isnull=False,
-            deleted_at__isnull=True,
+            archived_at__isnull=True,
         ).prefetch_related("project__currency", "vendor"):
             if expense.item_id is None:
                 continue
@@ -173,16 +173,16 @@ class ItemController:
             prices=prices,
             created_at=item.created_at,
             updated_at=item.updated_at,
-            deleted_at=item.deleted_at,
+            archived_at=item.archived_at,
         )
 
     async def _reject_duplicate(self, name: str) -> None:
-        existing = await Item.filter(name__iexact=name, deleted_at__isnull=True).exists()
+        existing = await Item.filter(name__iexact=name, archived_at__isnull=True).exists()
         if existing:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=DUPLICATE_NAME)
 
-    async def _item_or_404(self, item_id: str, *, include_deleted: bool = False) -> Item:
+    async def _item_or_404(self, item_id: str, *, include_archived: bool = False) -> Item:
         item = await Item.get_or_none(id=item_id)
-        if item is None or (item.deleted_at is not None and not include_deleted):
+        if item is None or (item.archived_at is not None and not include_archived):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND_ITEM)
         return item

@@ -3,7 +3,7 @@ import type { ProjectRead, CategoryRead } from '@setout/api-client';
 import { AgreementService } from '../agreements/agreement.service';
 import { BudgetService } from '../budget/budget.service';
 import { DeliveryService } from '../deliveries/delivery.service';
-import { formatMoney, formatNumber } from '../budget/money';
+import { formatAmount, formatMoney, formatNumber } from '../budget/money';
 import { ExpenseService } from '../expenses/expense.service';
 import { currencySymbol } from '../ui/currency-pill.component';
 import { tintFor } from '../ui/tints';
@@ -36,12 +36,12 @@ export class ProjectDashboardComponent {
 
   readonly symbol = computed(() => currencySymbol(this.project().currency_code));
 
-  readonly budgeted = computed(() => this.expenses.spend()?.budgeted_amount ?? 0);
-  readonly spent = computed(() => this.expenses.spend()?.spent_amount ?? 0);
-  readonly uncategorized = computed(() => this.expenses.spend()?.uncategorized_amount ?? 0);
+  readonly budgeted = computed(() => this.expenses.summary()?.budgeted_amount ?? 0);
+  readonly spent = computed(() => this.expenses.summary()?.spent_amount ?? 0);
+  readonly uncategorised = computed(() => this.expenses.summary()?.uncategorised_amount ?? 0);
 
-  readonly isOver = computed(() => this.budgeted() > 0 && this.spent() > this.budgeted());
-  readonly varianceLabel = computed(() => (this.isOver() ? 'Over by' : 'Remaining'));
+  readonly isOverBudget = computed(() => this.budgeted() > 0 && this.spent() > this.budgeted());
+  readonly varianceLabel = computed(() => (this.isOverBudget() ? 'Over budget by' : 'Remaining'));
 
   readonly varianceAmount = computed(() => {
     if (!this.budgeted()) {
@@ -54,12 +54,12 @@ export class ProjectDashboardComponent {
     if (!this.budgeted()) {
       return 'No budget set.';
     }
-    const percent = this.expenses.spend()?.variance_percent;
+    const percent = this.expenses.summary()?.variance_percent;
     if (percent === null || percent === undefined) {
       return '';
     }
-    const shown = formatNumber(Math.abs(percent), 1);
-    return this.isOver() ? `${shown}% over budget.` : `${shown}% under budget.`;
+    const percentLabel = formatNumber(Math.abs(percent), 1);
+    return this.isOverBudget() ? `${percentLabel}% over budget.` : `${percentLabel}% under budget.`;
   });
 
   readonly budgetNote = computed(() =>
@@ -68,9 +68,11 @@ export class ProjectDashboardComponent {
 
   readonly spentNote = computed(() => {
     const count = this.expenses.total();
-    const uncategorized = this.uncategorized();
-    const filed = `${count} ${count === 1 ? 'expense' : 'expenses'}`;
-    return uncategorized ? `${filed}, ${this.bare(uncategorized)} uncategorized.` : `${filed}.`;
+    const uncategorised = this.uncategorised();
+    const countLabel = `${count} ${count === 1 ? 'expense' : 'expenses'}`;
+    return uncategorised
+      ? `${countLabel}, ${this.formatAmount(uncategorised)} uncategorised.`
+      : `${countLabel}.`;
   });
 
   readonly usedLabel = computed(() =>
@@ -81,7 +83,7 @@ export class ProjectDashboardComponent {
     this.budget
       .categories()
       .filter((category) => category.budgeted_amount > 0 || category.spent_amount > 0)
-      .sort((a, b) => this.overBy(b) - this.overBy(a)),
+      .sort((a, b) => this.overspend(b) - this.overspend(a)),
   );
 
   constructor() {
@@ -90,19 +92,19 @@ export class ProjectDashboardComponent {
       void this.expenses.load(this.project().id);
       void this.agreements.load(this.project().id);
       void this.agreements.loadBalances(this.project().id);
-      void this.deliveries.loadWaiting(this.project().id);
+      void this.deliveries.loadOutstanding(this.project().id);
     });
   }
 
   readonly alerts = computed<Alert[]>(() => {
     const alerts: Alert[] = [];
 
-    if (this.uncategorized() > 0) {
+    if (this.uncategorised() > 0) {
       alerts.push({
-        key: 'uncategorized',
-        title: 'Uncategorized expenses',
-        detail: 'Uncategorized, so not included in the bars above',
-        amount: this.bare(this.uncategorized()),
+        key: 'uncategorised',
+        title: 'Uncategorised expenses',
+        detail: 'Not included in the category bars',
+        amount: this.formatAmount(this.uncategorised()),
         urgent: true,
         tab: 'table',
       });
@@ -112,26 +114,26 @@ export class ProjectDashboardComponent {
       if (agreement.balance_amount > 0) {
         alerts.push({
           key: `agreement-${agreement.id}`,
-          title: 'Remaining on an agreement',
+          title: 'Agreement balance',
           detail: `${agreement.vendor_name} · ${agreement.description.toLowerCase()}`,
-          amount: this.bare(agreement.balance_amount),
+          amount: this.formatAmount(agreement.balance_amount),
           urgent: false,
           tab: 'agreements',
         });
       }
     }
 
-    const owed = this.deliveries.waiting(this.project().id);
-    if (owed.total > 0) {
-      const first = owed.rows[0];
+    const outstanding = this.deliveries.outstanding(this.project().id);
+    if (outstanding.total > 0) {
+      const first = outstanding.rows[0];
       alerts.push({
         key: 'deliveries',
-        title: 'Paid for, not delivered',
+        title: 'Outstanding deliveries',
         detail:
-          owed.total === 1 && first
+          outstanding.total === 1 && first
             ? `${first.description} · ${first.vendor_name ?? 'vendor not recorded'}`
-            : `${owed.total} items owed by vendors`,
-        amount: this.bare(owed.owed),
+            : `${outstanding.total} paid items outstanding`,
+        amount: this.formatAmount(outstanding.outstandingAmount),
         urgent: false,
         tab: 'deliveries',
       });
@@ -140,10 +142,10 @@ export class ProjectDashboardComponent {
     for (const balance of this.agreements.balances()) {
       if (balance.balance_amount < 0) {
         alerts.push({
-          key: `owed-${balance.person_id}`,
+          key: `reimbursement-${balance.person_id}`,
           title: `Owed to ${balance.person_name}`,
-          detail: 'Purchased on your behalf, not yet reimbursed',
-          amount: this.bare(-balance.balance_amount),
+          detail: 'Spent on your behalf, not yet reimbursed',
+          amount: this.formatAmount(-balance.balance_amount),
           urgent: false,
           tab: 'agreements',
         });
@@ -158,9 +160,8 @@ export class ProjectDashboardComponent {
     return formatMoney(minor, project.currency_code, project.currency_exponent);
   }
 
-  bare(minor: number): string {
-    const exponent = this.project().currency_exponent;
-    return new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(minor / 10 ** exponent);
+  formatAmount(minor: number): string {
+    return formatAmount(minor, this.project().currency_exponent);
   }
 
   usedPercent(): number {
@@ -170,12 +171,12 @@ export class ProjectDashboardComponent {
     return Math.min(100, (this.spent() / this.budgeted()) * 100);
   }
 
-  overPercent(): number {
+  overBudgetPercent(): number {
     if (!this.budgeted() || this.spent() <= this.budgeted()) {
       return 0;
     }
-    const over = this.spent() - this.budgeted();
-    return Math.min(100 - this.usedPercent(), (over / this.budgeted()) * 100);
+    const overspend = this.spent() - this.budgeted();
+    return Math.min(100 - this.usedPercent(), (overspend / this.budgeted()) * 100);
   }
 
   readonly scale = computed(() =>
@@ -185,11 +186,11 @@ export class ProjectDashboardComponent {
     ),
   );
 
-  overBy(category: CategoryRead): number {
+  overspend(category: CategoryRead): number {
     return category.spent_amount - category.budgeted_amount;
   }
 
-  categoryOver(category: CategoryRead): boolean {
+  categoryIsOverBudget(category: CategoryRead): boolean {
     return category.budgeted_amount > 0 && category.spent_amount > category.budgeted_amount;
   }
 
@@ -202,14 +203,14 @@ export class ProjectDashboardComponent {
   }
 
   fillPercent(category: CategoryRead): number {
-    const within = category.budgeted_amount
+    const inBudgetAmount = category.budgeted_amount
       ? Math.min(category.spent_amount, category.budgeted_amount)
       : category.spent_amount;
-    return (within / this.scale()) * 100;
+    return (inBudgetAmount / this.scale()) * 100;
   }
 
   categoryOverPercent(category: CategoryRead): number {
-    if (!this.categoryOver(category)) {
+    if (!this.categoryIsOverBudget(category)) {
       return 0;
     }
     return ((category.spent_amount - category.budgeted_amount) / this.scale()) * 100;
@@ -226,6 +227,6 @@ export class ProjectDashboardComponent {
     if (!category.budgeted_amount) {
       return category.spent_amount > 0 ? 'No budget set' : '';
     }
-    return `${this.bare(category.spent_amount)} / ${this.bare(category.budgeted_amount)}`;
+    return `${this.formatAmount(category.spent_amount)} / ${this.formatAmount(category.budgeted_amount)}`;
   }
 }

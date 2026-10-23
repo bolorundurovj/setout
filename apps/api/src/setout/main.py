@@ -1,8 +1,4 @@
-"""FastAPI application factory and lifespan.
-
-API routes live under /api. The built web app, when present, is served as
-static files at /, so one container serves both with no configuration.
-"""
+"""API routes are under /api. The built web app, when present, is served as static files at /."""
 
 from __future__ import annotations
 
@@ -53,11 +49,8 @@ SERVER_PREFIXES = ("api", "docs", "redoc", "openapi.json", "healthz")
 
 
 class SPAStaticFiles(StaticFiles):
-    """Static files that answer unknown paths with the web app's index.
-
-    Client-side routes such as /people/new are not files, so refreshing or deep
-    linking one has to reach index.html and let the router take it from there.
-    Anything the server owns keeps its own 404.
+    """Serves index.html for unknown paths, so client-side routes such as /people/new
+    load on refresh or direct link. Server paths keep their 404.
     """
 
     async def get_response(self, path: str, scope: Scope) -> Response:
@@ -75,12 +68,9 @@ class SPAStaticFiles(StaticFiles):
 
 
 def _install_openapi(app: FastAPI) -> Callable[[], dict[str, Any]]:
-    """Return a custom OpenAPI builder.
-
-    FastAPI answers 400 when a request body is not valid JSON, and 422 when a
-    valid body fails validation. The generated schema documents only 422, so we
-    add 400 to every operation that accepts a body. This keeps the published
-    schema honest, which the contract tests enforce.
+    """FastAPI returns 400 for an unparseable body and 422 for a failed validation, but
+    the generated schema lists only 422. Adds 400 to every operation with a body, as
+    the contract tests require.
     """
 
     def openapi() -> dict[str, Any]:
@@ -106,10 +96,8 @@ def _install_openapi(app: FastAPI) -> Callable[[], dict[str, Any]]:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     logging.basicConfig(level=settings.log_level.upper())
-    # Apply migrations first; the migration API manages its own connection.
     status = await apply_migrations()
     logger.info("Database status on start: %s", status)
-    # Open the connection the app serves requests with.
     await init_db(enable_global_fallback=True)
     await consume_recovery_file()
 
@@ -141,7 +129,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Health lives at the root so orchestrators can reach it plainly.
+    # Health is at the root, outside /api, for orchestrator probes.
     app.include_router(health.router)
 
     api = APIRouter(prefix="/api")
@@ -169,7 +157,6 @@ def create_app() -> FastAPI:
 
     app.openapi = _install_openapi(app)  # type: ignore[method-assign]
 
-    # Serve the built web app when it is present in the image.
     if settings.static_dir and settings.static_dir.is_dir():
         app.mount(
             "/",

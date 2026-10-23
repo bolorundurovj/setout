@@ -10,14 +10,14 @@ class User(Model):
     id = fields.CharField(max_length=12, primary_key=True, default=short_id)
     name = fields.CharField(max_length=255, unique=True)
     email = fields.CharField(max_length=255, null=True, default=None)
-    password_hash = fields.CharField(max_length=255)
+    passphrase_hash = fields.CharField(max_length=255)
     base_currency = fields.CharField(
         max_length=3,
         null=True,
         default=None,
-        description="Which currency the home screen opens on",
+        description="The currency Home opens in",
     )
-    failed_logins = fields.IntField(default=0, db_default=0)
+    failed_sign_ins = fields.IntField(default=0, db_default=0)
     last_failed_at = fields.DatetimeField(null=True, default=None)
     created_at = fields.DatetimeField(auto_now_add=True)
 

@@ -41,13 +41,13 @@ describe('the page title through a real navigation', () => {
     return fixture;
   }
 
-  it('shows the route placeholder before the record has loaded', async () => {
+  it('shows the route title before the record loads', async () => {
     record.set(null);
     await go('/vendors/v1');
     expect(TestBed.inject(Title).getTitle()).toBe('Vendor · Setout');
   });
 
-  it('keeps a name a page set after the strategy has run', async () => {
+  it('keeps a title the page sets after the strategy runs', async () => {
     record.set(null);
     const fixture = await go('/vendors/v1');
 
@@ -57,7 +57,7 @@ describe('the page title through a real navigation', () => {
     expect(TestBed.inject(Title).getTitle()).toBe('Corner Depot Cement · Setout');
   });
 
-  it('puts the placeholder back when the next navigation starts', async () => {
+  it('restores the route title on the next navigation', async () => {
     record.set(null);
     const fixture = await go('/vendors/v1');
     TestBed.inject(Title).setTitle('Corner Depot Cement · Setout');

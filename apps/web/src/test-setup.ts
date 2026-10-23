@@ -37,11 +37,10 @@ Object.defineProperty(globalThis, 'localStorage', {
   value: new TestStorage(),
 });
 
-// jsdom has no IntersectionObserver, which is what @defer (on viewport) waits on.
-// Never intersecting is the right default: a deferred block stays at its
-// placeholder unless a test asks for it.
-// Deliberately not `implements IntersectionObserver`: the DOM interface keeps
-// growing, and a stub that has to list every member breaks on each lib bump.
+// jsdom has no IntersectionObserver, which @defer (on viewport) requires. The stub never
+// intersects, so deferred blocks show their placeholder unless a test triggers them.
+// Not declared as `implements IntersectionObserver`, because the DOM interface gains
+// members with each lib update.
 const ignore = (): void => undefined;
 
 class TestIntersectionObserver {
@@ -55,7 +54,7 @@ class TestIntersectionObserver {
   readonly takeRecords = (): IntersectionObserverEntry[] => [];
 }
 
-// Writable, because a spec that wants to watch the callback replaces it outright.
+// Writable so specs can replace the callback.
 Object.defineProperty(globalThis, 'IntersectionObserver', {
   configurable: true,
   writable: true,

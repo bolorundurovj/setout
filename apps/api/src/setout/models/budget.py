@@ -22,16 +22,15 @@ class BudgetItem(Model):
         max_length=16,
         null=True,
         default=None,
-        description="Optional. Which of labour, material or fixed the plan puts this under",
+        description="Optional. Labour, material or fixed",
     )
     # Minor units of the project's currency. Never a float.
     budgeted_amount = fields.BigIntField()
-    # When the number was last set on purpose, which is the whole point of
-    # keeping the budget apart from the spend.
+    # When the budgeted amount was last set explicitly, unlike updated_at.
     set_at = fields.DatetimeField()
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    deleted_at = fields.DatetimeField(null=True, default=None)
+    archived_at = fields.DatetimeField(null=True, default=None)
 
     class Meta:
         table = "budget_item"

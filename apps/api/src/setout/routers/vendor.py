@@ -10,9 +10,9 @@ from setout.routers.auth import get_current_user
 from setout.schemas.vendor import (
     VendorAgreements,
     VendorCreate,
+    VendorExpenseSummary,
     VendorPage,
     VendorRead,
-    VendorSpend,
     VendorUpdate,
 )
 
@@ -70,14 +70,14 @@ async def update_vendor(vendor_id: str, req: VendorUpdate, user: CurrentUser) ->
     return await controller.update(vendor_id, req)
 
 
-@router.delete(
-    "/vendors/{vendor_id}",
-    operation_id="deleteVendor",
+@router.post(
+    "/vendors/{vendor_id}/archive",
+    operation_id="archiveVendor",
     status_code=status.HTTP_204_NO_CONTENT,
     responses=NOT_FOUND,
 )
-async def delete_vendor(vendor_id: str, user: CurrentUser) -> None:
-    await controller.delete(vendor_id)
+async def archive_vendor(vendor_id: str, user: CurrentUser) -> None:
+    await controller.archive(vendor_id)
 
 
 @router.post("/vendors/{vendor_id}/restore", operation_id="restoreVendor", responses=NOT_FOUND)
@@ -85,9 +85,13 @@ async def restore_vendor(vendor_id: str, user: CurrentUser) -> VendorRead:
     return await controller.restore(vendor_id)
 
 
-@router.get("/vendors/{vendor_id}/spend", operation_id="getVendorSpend", responses=NOT_FOUND)
-async def get_vendor_spend(vendor_id: str, user: CurrentUser) -> VendorSpend:
-    return await controller.spend(vendor_id)
+@router.get(
+    "/vendors/{vendor_id}/expense-summary",
+    operation_id="getVendorExpenseSummary",
+    responses=NOT_FOUND,
+)
+async def get_vendor_expense_summary(vendor_id: str, user: CurrentUser) -> VendorExpenseSummary:
+    return await controller.expense_summary(vendor_id)
 
 
 @router.get(

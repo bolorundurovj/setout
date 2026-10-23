@@ -14,7 +14,7 @@ class ProjectStatus(StrEnum):
     ACTIVE = "active"
     ON_HOLD = "on_hold"
     COMPLETED = "completed"
-    ARCHIVED = "archived"
+    CLOSED = "closed"
 
 
 class Project(Model):
@@ -38,7 +38,7 @@ class Project(Model):
     notes = fields.TextField(null=True, default=None)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    deleted_at = fields.DatetimeField(null=True, default=None)
+    archived_at = fields.DatetimeField(null=True, default=None)
 
     class Meta:
         table = "project"

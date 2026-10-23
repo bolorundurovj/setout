@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Api } from '@setout/api-client';
 import { AttachmentService } from './attachment.service';
 
-function file(id: string, over: Record<string, unknown> = {}) {
+function attachment(id: string, over: Record<string, unknown> = {}) {
   return {
     id,
     project_id: 'p1',
@@ -13,21 +13,21 @@ function file(id: string, over: Record<string, unknown> = {}) {
     checksum: 'a'.repeat(64),
     created_at: '2026-08-16T00:00:00Z',
     updated_at: '2026-08-16T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
     ...over,
   };
 }
 
 describe('AttachmentService', () => {
-  let asked: Record<string, unknown>[];
+  let invocations: Record<string, unknown>[];
 
   function configure(reply: (name: string, params: Record<string, unknown>) => unknown) {
-    asked = [];
+    invocations = [];
     TestBed.resetTestingModule();
     const api = {
       rootUrl: '',
       invoke: async (fn: { name?: string }, params: Record<string, unknown>) => {
-        asked.push({ call: fn?.name ?? '', ...params });
+        invocations.push({ call: fn?.name ?? '', ...params });
         return reply(fn?.name ?? '', params ?? {});
       },
     };
@@ -35,11 +35,11 @@ describe('AttachmentService', () => {
     return TestBed.inject(AttachmentService);
   }
 
-  it('keeps each expense to its own files', async () => {
+  it('caches attachments per expense', async () => {
     const service = configure((_name, params) =>
       params['expense_id'] === 'e1'
-        ? { items: [file('a')], total: 1 }
-        : { items: [file('b'), file('c')], total: 2 },
+        ? { items: [attachment('a')], total: 1 }
+        : { items: [attachment('b'), attachment('c')], total: 2 },
     );
 
     await service.load('e1');
@@ -47,20 +47,20 @@ describe('AttachmentService', () => {
 
     expect(service.forExpense('e1').map((row) => row.id)).toEqual(['a']);
     expect(service.forExpense('e2').map((row) => row.id)).toEqual(['b', 'c']);
-    expect(service.forExpense('never asked')).toEqual([]);
+    expect(service.forExpense('unknown')).toEqual([]);
   });
 
-  it('sends the file itself rather than its name', async () => {
-    const service = configure(() => file('a'));
-    const photo = new File(['a receipt'], 'receipt.jpg', { type: 'image/jpeg' });
+  it('uploads the File object in the request body', async () => {
+    const service = configure(() => attachment('a'));
+    const upload = new File(['a receipt'], 'receipt.jpg', { type: 'image/jpeg' });
 
-    await service.add('p1', 'e1', photo);
+    await service.add('p1', 'e1', upload);
 
-    expect((asked[0]['body'] as { file: unknown }).file).toBe(photo);
+    expect((invocations[0]['body'] as { file: unknown }).file).toBe(upload);
     expect(service.forExpense('e1').map((row) => row.id)).toEqual(['a']);
   });
 
-  it('repeats what the server said when a file is refused', async () => {
+  it('surfaces the server error detail when an upload is rejected', async () => {
     const service = configure(() => {
       throw { error: { detail: 'That file is larger than the 25 MB limit' } };
     });
@@ -71,9 +71,11 @@ describe('AttachmentService', () => {
     expect(service.error()).toBe('That file is larger than the 25 MB limit');
   });
 
-  it('takes an archived file out of the list it was in', async () => {
+  it('removes an archived attachment from the expense list', async () => {
     const service = configure((name) =>
-      name === 'listAttachments' ? { items: [file('a'), file('b')], total: 2 } : undefined,
+      name === 'listAttachments'
+        ? { items: [attachment('a'), attachment('b')], total: 2 }
+        : undefined,
     );
     await service.load('e1');
 
@@ -82,26 +84,26 @@ describe('AttachmentService', () => {
     expect(service.forExpense('e1').map((row) => row.id)).toEqual(['b']);
   });
 
-  it('says so when the list cannot be read', async () => {
+  it('sets an error and clears the list when listing fails', async () => {
     const service = configure(() => {
       throw new Error('offline');
     });
 
     await service.load('e1');
 
-    expect(service.error()).toBe('Could not read what is attached.');
+    expect(service.error()).toBe('Could not load the attachments.');
     expect(service.forExpense('e1')).toEqual([]);
   });
 
-  it('points at a link the browser can fetch with the session it already has', () => {
+  it('builds the download URL', () => {
     const service = configure(() => undefined);
     expect(service.fileUrl('a1')).toBe('/api/attachments/a1/file');
   });
 
-  it('says sizes the way a person would', () => {
+  it('formats byte sizes as B, KiB and MiB', () => {
     const service = configure(() => undefined);
     expect(service.size(900)).toBe('900 B');
-    expect(service.size(2048)).toBe('2 KB');
-    expect(service.size(1_258_291)).toBe('1.2 MB');
+    expect(service.size(2048)).toBe('2 KiB');
+    expect(service.size(1_258_291)).toBe('1.2 MiB');
   });
 });

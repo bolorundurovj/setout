@@ -20,8 +20,8 @@ import { LandService } from './land.service';
 import { LandValuationsComponent } from './land-valuations.component';
 import { LandMapComponent, type LandPoint } from './land-map.component';
 import { TabsComponent, type Tab } from '../ui/tabs.component';
-import { asSize, pointInRing, ringOf } from './land-geo';
-import { DOCUMENT_KINDS, kindName, sizeLabel, worthLabel } from './land-labels';
+import { formatAreaIn, pointInRing, ringOf } from './land-geo';
+import { DOCUMENT_KINDS, kindName, statedAreaLabel, unitName, valuationLabel } from './land-labels';
 
 @Component({
   selector: 'app-land-detail',
@@ -51,10 +51,10 @@ export class LandDetailComponent {
   readonly documents = signal<LandDocumentRead[]>([]);
   readonly loading = signal(true);
   readonly kind = signal<LandDocumentKind>('certificate_of_occupancy');
-  readonly note = signal('');
-  readonly justRemoved = signal<LandDocumentRead | null>(null);
+  readonly notes = signal('');
+  readonly lastArchived = signal<LandDocumentRead | null>(null);
   readonly editing = signal<string | null>(null);
-  readonly editNote = signal('');
+  readonly editNotes = signal('');
   readonly editKind = signal<LandDocumentKind>('other');
 
   readonly notSet = '—';
@@ -88,42 +88,40 @@ export class LandDetailComponent {
     this.loading.set(false);
   }
 
-  /** Only worth saying when it is not just the address said back. */
+  /** Empty when the geocoded address matches the entered address. */
   mapAddress(land: LandRead): string {
-    const said = (land.geocoded_address ?? '').trim();
-    return said && said !== (land.address ?? '').trim() ? said : '';
+    const geocoded = (land.geocoded_address ?? '').trim();
+    return geocoded && geocoded !== (land.address ?? '').trim() ? geocoded : '';
   }
 
-  place(land: LandRead): LandPoint | null {
+  pinPoint(land: LandRead): LandPoint | null {
     return land.latitude !== null && land.longitude !== null
       ? { lat: Number(land.latitude), lon: Number(land.longitude) }
       : null;
   }
 
   hasMap(land: LandRead): boolean {
-    return this.place(land) !== null || land.boundary !== null;
+    return this.pinPoint(land) !== null || land.boundary !== null;
   }
 
-  /** Both halves have to be there before one can disagree with the other. */
   pinIsOutside(land: LandRead): boolean {
-    const pin = this.place(land);
+    const pin = this.pinPoint(land);
     const ring = ringOf(land.boundary);
     return pin !== null && ring.length >= 3 && !pointInRing([pin.lon, pin.lat], ring);
   }
 
-  /** Only worth a switch when there is something to switch between. */
   mapTabs(land: LandRead): Tab[] {
-    if (this.place(land) === null || land.boundary === null) {
+    if (this.pinPoint(land) === null || land.boundary === null) {
       return [];
     }
     return [
       { value: 'pin', label: 'Location Pin' },
-      { value: 'boundary', label: 'Mapped Survey' },
+      { value: 'boundary', label: 'Boundary' },
     ];
   }
 
   shownMap(land: LandRead): 'pin' | 'boundary' {
-    if (this.place(land) === null) {
+    if (this.pinPoint(land) === null) {
       return 'boundary';
     }
     if (land.boundary === null) {
@@ -132,49 +130,50 @@ export class LandDetailComponent {
     return this.mapTab();
   }
 
-  area(land: LandRead): string {
+  measuredArea(land: LandRead): string {
     const sqm = land.boundary_area_sqm;
     if (sqm === null || sqm === undefined) {
       return this.notSet;
     }
     const unit = land.size_unit && land.size_unit !== 'plot' ? land.size_unit : 'sqm';
-    return `${formatNumber(asSize(sqm, unit) ?? 0)} ${unit === 'sqm' ? 'sqm' : unit + 's'}`;
+    const value = formatAreaIn(sqm, unit) ?? '0';
+    return `${formatNumber(value)} ${unitName(unit, value)}`;
   }
 
-  /** How far the drawn edge is from what the survey said, when both exist. */
-  areaGap(land: LandRead): number | null {
+  /** Percentage difference between the measured and stated areas. */
+  areaDifferencePercent(land: LandRead): number | null {
     const sqm = land.boundary_area_sqm;
     if (!sqm || !land.size_value || !land.size_unit || land.size_unit === 'plot') {
       return null;
     }
-    const drawn = Number(asSize(sqm, land.size_unit));
+    const measured = Number(formatAreaIn(sqm, land.size_unit));
     const stated = Number(land.size_value);
-    if (!stated || Number.isNaN(drawn)) {
+    if (!stated || Number.isNaN(measured)) {
       return null;
     }
-    return Math.round(Math.abs((drawn - stated) / stated) * 100);
+    return Math.round(Math.abs((measured - stated) / stated) * 100);
   }
 
-  async useDrawnSize(land: LandRead): Promise<void> {
+  async useMeasuredArea(land: LandRead): Promise<void> {
     const sqm = land.boundary_area_sqm;
     if (!sqm) {
       return;
     }
     const unit = land.size_unit && land.size_unit !== 'plot' ? land.size_unit : 'sqm';
     const saved = await this.lands.edit(land.id, {
-      size_value: asSize(sqm, unit),
+      size_value: formatAreaIn(sqm, unit),
       size_unit: unit,
     });
     if (!saved) {
       this.toast.show(this.lands.error() ?? 'Could not save the area.', 'error');
       return;
     }
-    this.toast.show('Stated area taken from the survey.');
+    this.toast.show('Stated area updated from the boundary.');
     await this.load();
   }
 
-  size(land: LandRead): string {
-    return sizeLabel(land) || this.notSet;
+  statedArea(land: LandRead): string {
+    return statedAreaLabel(land) || this.notSet;
   }
 
   kindLabel(document: LandDocumentRead): string {
@@ -185,13 +184,13 @@ export class LandDetailComponent {
     return (event.target as HTMLInputElement).value;
   }
 
-  worth(land: LandRead): string {
-    return worthLabel(land) || this.notSet;
+  valuation(land: LandRead): string {
+    return valuationLabel(land) || this.notSet;
   }
 
   startEdit(document: LandDocumentRead): void {
     this.editing.set(document.id);
-    this.editNote.set(document.note ?? '');
+    this.editNotes.set(document.notes ?? '');
     this.editKind.set(document.kind);
   }
 
@@ -202,7 +201,7 @@ export class LandDetailComponent {
   async saveEdit(document: LandDocumentRead): Promise<void> {
     const saved = await this.lands.editDocument(document.id, {
       kind: this.editKind(),
-      note: this.editNote().trim() || null,
+      notes: this.editNotes().trim() || null,
     });
     if (!saved) {
       this.toast.show(this.lands.error() ?? 'Could not save the document.', 'error');
@@ -212,21 +211,21 @@ export class LandDetailComponent {
     await this.load();
   }
 
-  fileNote(document: LandDocumentRead): string {
-    return `${this.bytes(document.byte_size)} · stored on your own server`;
+  fileDetails(document: LandDocumentRead): string {
+    return `${this.formatFileSize(document.byte_size)} · stored on this server`;
   }
 
-  bytes(size: number): string {
+  formatFileSize(size: number): string {
     if (size < 1024) {
       return `${size} B`;
     }
     if (size < 1024 * 1024) {
-      return `${Math.round(size / 1024)} KB`;
+      return `${Math.round(size / 1024)} KiB`;
     }
-    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MiB`;
   }
 
-  missingLine(): string {
+  missingDocumentsLabel(): string {
     const missing = this.missing();
     if (missing.length === 0) {
       return 'All required documents are present.';
@@ -234,7 +233,7 @@ export class LandDetailComponent {
     return `Missing: ${missing.join(', ')}.`;
   }
 
-  pick(): void {
+  chooseFile(): void {
     this.filePicker()?.nativeElement.click();
   }
 
@@ -245,29 +244,34 @@ export class LandDetailComponent {
     if (!file) {
       return;
     }
-    const saved = await this.lands.addDocument(this.id(), this.kind(), file, this.note().trim());
+    const saved = await this.lands.createDocument(
+      this.id(),
+      this.kind(),
+      file,
+      this.notes().trim(),
+    );
     if (!saved) {
-      this.toast.show(this.lands.error() ?? 'Could not upload the file.', 'error');
+      this.toast.show(this.lands.error() ?? 'Could not upload the document.', 'error');
       return;
     }
-    this.note.set('');
+    this.notes.set('');
     this.toast.show(`${kindName(saved.kind)} uploaded.`);
     await this.load();
   }
 
-  async remove(document: LandDocumentRead): Promise<void> {
-    await this.lands.removeDocument(document.id);
-    this.justRemoved.set(document);
+  async archiveDocument(document: LandDocumentRead): Promise<void> {
+    await this.lands.archiveDocument(document.id);
+    this.lastArchived.set(document);
     await this.load();
   }
 
-  async putBack(): Promise<void> {
-    const gone = this.justRemoved();
-    if (!gone) {
+  async restoreLastArchived(): Promise<void> {
+    const archived = this.lastArchived();
+    if (!archived) {
       return;
     }
-    await this.lands.restoreDocument(gone.id);
-    this.justRemoved.set(null);
+    await this.lands.restoreDocument(archived.id);
+    this.lastArchived.set(null);
     await this.load();
   }
 
@@ -282,12 +286,12 @@ export class LandDetailComponent {
   async archive(): Promise<void> {
     await this.lands.archive(this.id());
     await this.load();
-    this.toast.show('Land archived. Its documents are archived with it.');
+    this.toast.show('Land record archived. Its documents are archived with it.');
   }
 
   async restore(): Promise<void> {
     await this.lands.restore(this.id());
     await this.load();
-    this.toast.show('Land restored.');
+    this.toast.show('Land record restored.');
   }
 }

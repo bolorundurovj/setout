@@ -6,11 +6,11 @@ import { ToastService } from '../toast.service';
 import { ImportComponent } from './import.component';
 import { ImportService } from './import.service';
 
-function decision(kind: Decision['kind'], over: Partial<Decision> = {}): Decision {
-  return { kind, count: 1, detail: '', amount: 0, ...over };
+function decision(kind: Decision['kind'], overrides: Partial<Decision> = {}): Decision {
+  return { kind, count: 1, detail: '', amount: 0, ...overrides };
 }
 
-function report(over: Partial<ImportReport> = {}): ImportReport {
+function report(overrides: Partial<ImportReport> = {}): ImportReport {
   return {
     project_id: 'p1',
     project_name: 'Jacaranda Close',
@@ -21,28 +21,28 @@ function report(over: Partial<ImportReport> = {}): ImportReport {
     categories: [],
     budgeted_amount: 0,
     budgeted_lines: 0,
-    spend_rows: 0,
-    spend_amount: 0,
+    expense_rows: 0,
+    spent_amount: 0,
     vendors_new: 0,
     vendors_known: 0,
-    owed_rows: 0,
+    outstanding_rows: 0,
     decisions: [],
     sample: [],
     left_behind: [],
-    ...over,
+    ...overrides,
   };
 }
 
 describe('ImportComponent', () => {
-  let looked: unknown[][];
-  let ran: unknown[][];
+  let previewCalls: unknown[][];
+  let importCalls: unknown[][];
   let navigations: unknown[][];
   let failure: string | null;
   let available: { id: string; name: string }[];
 
   function render(project = '', found: ImportReport | null = report()) {
-    looked = [];
-    ran = [];
+    previewCalls = [];
+    importCalls = [];
     navigations = [];
     failure = null;
     available = [{ id: 'p1', name: 'Jacaranda Close' }];
@@ -55,25 +55,25 @@ describe('ImportComponent', () => {
         {
           provide: ImportService,
           useValue: {
-            working: () => false,
+            busy: () => false,
             error: () => failure,
-            sampleUrl: (kind: string) => `/api/import/sample?kind=${kind}`,
-            look: async (...args: unknown[]) => {
-              looked.push(args);
+            templateUrl: (kind: string) => `/api/import/sample?kind=${kind}`,
+            preview: async (...args: unknown[]) => {
+              previewCalls.push(args);
               return found;
             },
-            bringIn: async (...args: unknown[]) => {
-              ran.push(args);
+            runImport: async (...args: unknown[]) => {
+              importCalls.push(args);
               return {
                 project_id: 'p1',
                 project_name: 'Jacaranda Close',
-                categories: 6,
-                budget_items: 65,
+                category_count: 6,
+                budget_item_count: 65,
                 budgeted_amount: 382_830_000,
-                expenses: 2,
-                spend_amount: 75_000_000,
-                vendors: 14,
-                people: 1,
+                expense_count: 2,
+                spent_amount: 75_000_000,
+                vendor_count: 14,
+                person_count: 1,
                 skipped_duplicates: 0,
               };
             },
@@ -108,7 +108,7 @@ describe('ImportComponent', () => {
 
   const sheet = new File(['a sheet'], 'budget.xlsx', { type: 'application/vnd.ms-excel' });
 
-  it('marks the project it was opened from, once the list it belongs to arrives', () => {
+  it('selects the project from the route once the project list loads', () => {
     available = [];
     const fixture = render('p1');
 
@@ -126,64 +126,64 @@ describe('ImportComponent', () => {
     expect(marked).toEqual(['p1']);
   });
 
-  it('starts on the file step with nothing readable yet', () => {
+  it('starts on the file step with preview disabled', () => {
     const component = componentOf();
-    expect(component.at('file')).toBe(true);
-    expect(component.canRead()).toBe(false);
+    expect(component.isStep('file')).toBe(true);
+    expect(component.canPreview()).toBe(false);
   });
 
-  it('opens on the project it was sent from, so the target is already right', () => {
+  it('targets the project passed in the route', () => {
     const component = componentOf('p1');
     expect(component.projectId()).toBe('p1');
-    expect(component.intoNew()).toBe(false);
+    expect(component.isNewProject()).toBe(false);
     expect(component.targetName()).toBe('Jacaranda Close');
   });
 
-  it('wants a name before it will read a file into a project that does not exist', () => {
+  it('requires a project name for a new project', () => {
     const component = componentOf();
     component.file.set(sheet);
-    expect(component.intoNew()).toBe(true);
-    expect(component.canRead()).toBe(false);
+    expect(component.isNewProject()).toBe(true);
+    expect(component.canPreview()).toBe(false);
 
     component.name.set('Jacaranda Close');
-    expect(component.canRead()).toBe(true);
+    expect(component.canPreview()).toBe(true);
   });
 
-  it('moves to review once the sheet has been read', async () => {
+  it('moves to review after a successful preview', async () => {
     const component = componentOf('p1');
     component.file.set(sheet);
 
-    await component.read();
+    await component.preview();
 
-    expect(looked.length).toBe(1);
-    expect(component.at('review')).toBe(true);
+    expect(previewCalls.length).toBe(1);
+    expect(component.isStep('review')).toBe(true);
     expect(component.report()?.project_name).toBe('Jacaranda Close');
   });
 
-  it('stays where it is when the file cannot be read', async () => {
+  it('stays on the file step when the preview fails', async () => {
     const component = componentOf('p1', null);
     component.file.set(sheet);
     failure = 'No sheet in that file looks like a budget';
 
-    await component.read();
+    await component.preview();
 
-    expect(component.at('file')).toBe(true);
+    expect(component.isStep('file')).toBe(true);
     expect(component.report()).toBeNull();
   });
 
-  it('offers both answers to a decision and marks the one that holds', () => {
+  it('offers two choices for a decision and marks the current one', () => {
     const component = componentOf('p1');
     const answer = decision('duplicates', { count: 3, detail: 'already here' });
 
     expect(component.choicesFor(answer).map((choice) => choice.label)).toEqual([
       'Skip them',
-      'Bring them in again',
+      'Import them again',
     ]);
     expect(component.answerFor(answer)).toBe('yes');
     expect(component.consequenceFor(answer)).toContain('not duplicated');
   });
 
-  it('changes an answer only to the one that was chosen', () => {
+  it('sets the option to the selected choice', () => {
     const component = componentOf('p1');
     const answer = decision('new_categories', { count: 6, detail: 'six categories' });
 
@@ -192,13 +192,13 @@ describe('ImportComponent', () => {
 
     component.answer(answer, 'no');
     expect(component.createMissingCategories()).toBe(false);
-    expect(component.consequenceFor(answer)).toContain('No budget is written');
+    expect(component.consequenceFor(answer)).toContain('No budget is imported');
 
     component.answer(answer, 'no');
     expect(component.createMissingCategories()).toBe(false);
   });
 
-  it('keeps every category by default, so a plan is never silently dropped', () => {
+  it('creates missing categories by default', () => {
     const component = componentOf('p1');
     expect(component.createMissingCategories()).toBe(true);
     expect(component.answerFor({ kind: 'new_categories', count: 6, detail: '', amount: 0 })).toBe(
@@ -206,12 +206,12 @@ describe('ImportComponent', () => {
     );
   });
 
-  it('has nothing to offer on a decision that is only a statement', () => {
+  it('shows no choices for informational decisions', () => {
     const component = componentOf('p1');
-    expect(component.hasAnswer(decision('owed_not_importable', { count: 2 }))).toBe(false);
+    expect(component.hasAnswer(decision('outstanding_not_importable', { count: 2 }))).toBe(false);
   });
 
-  it('will not write while a decision blocks it', async () => {
+  it('blocks the import while a blocking decision is present', async () => {
     const component = componentOf(
       'p1',
       report({
@@ -225,45 +225,45 @@ describe('ImportComponent', () => {
       }),
     );
     component.file.set(sheet);
-    await component.read();
+    await component.preview();
 
     expect(component.blocking()).toBe(true);
   });
 
-  it('sends the answers as they stand and lands on done', async () => {
+  it('sends every import option and moves to done', async () => {
     const component = componentOf('p1');
     component.file.set(sheet);
-    await component.read();
-    component.takeUnpaid.set(false);
-    component.severalCodes.set('uncategorized');
+    await component.preview();
+    component.includeUnpaid.set(false);
+    component.multipleCodes.set('uncategorised');
 
-    await component.bringIn();
+    await component.runImport();
 
-    expect(ran[0][2]).toEqual({
+    expect(importCalls[0][2]).toEqual({
       createMissingCategories: true,
       skipDuplicates: true,
-      takeUnpaid: false,
-      severalCodes: 'uncategorized',
+      includeUnpaid: false,
+      multipleCodes: 'uncategorised',
     });
-    expect(component.at('done')).toBe(true);
-    expect(component.result()?.categories).toBe(6);
+    expect(component.isStep('done')).toBe(true);
+    expect(component.result()?.category_count).toBe(6);
   });
 
-  it('opens the project it just filled', async () => {
+  it('opens the imported project', async () => {
     const component = componentOf('p1');
     component.file.set(sheet);
-    await component.read();
-    await component.bringIn();
+    await component.preview();
+    await component.runImport();
 
     component.openProject();
 
     expect(navigations[0][0]).toEqual(['/projects', 'p1']);
   });
 
-  it('forgets the report when another file is chosen', async () => {
+  it('clears the report when the file is cleared', async () => {
     const component = componentOf('p1');
     component.file.set(sheet);
-    await component.read();
+    await component.preview();
 
     component.clearFile();
 
@@ -271,19 +271,19 @@ describe('ImportComponent', () => {
     expect(component.report()).toBeNull();
   });
 
-  it('offers a sheet to start from for somebody with nothing to import yet', () => {
+  it('lists the import templates', () => {
     const component = componentOf();
 
-    expect(component.samples.map((choice) => choice.kind)).toEqual([
+    expect(component.templates.map((template) => template.kind)).toEqual([
       'blank',
       'example',
       'budget-csv',
       'spending-csv',
     ]);
-    expect(component.sampleUrl('example')).toBe('/api/import/sample?kind=example');
+    expect(component.templateUrl('example')).toBe('/api/import/sample?kind=example');
   });
 
-  it('offers an answer to every decision the report can raise', () => {
+  it('offers choices for every decision that takes an option', () => {
     const component = componentOf('p1');
     const kinds = ['new_categories', 'duplicates', 'unpaid', 'several_codes'] as Decision['kind'][];
 
@@ -295,12 +295,12 @@ describe('ImportComponent', () => {
     }
   });
 
-  it('lets the unpaid rows be left out', () => {
+  it('excludes unpaid rows when No is selected', () => {
     const component = componentOf('p1');
     const answer = decision('unpaid', { count: 2 });
 
     expect(component.answerFor(answer)).toBe('yes');
     component.answer(answer, 'no');
-    expect(component.takeUnpaid()).toBe(false);
+    expect(component.includeUnpaid()).toBe(false);
   });
 });

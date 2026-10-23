@@ -33,9 +33,11 @@ async def list_deliveries(
     project_id: str,
     user: CurrentUser,
     vendor_id: Annotated[str | None, Query(description="Only this vendor")] = None,
-    outstanding_only: Annotated[bool, Query(description="Only what has not arrived")] = False,
-    received_only: Annotated[bool, Query(description="Only what has arrived")] = False,
-    include_deleted: Annotated[bool, Query(description="Include archived deliveries")] = False,
+    outstanding_only: Annotated[
+        bool, Query(description="Only deliveries not yet received")
+    ] = False,
+    received_only: Annotated[bool, Query(description="Only received deliveries")] = False,
+    include_archived: Annotated[bool, Query(description="Include archived deliveries")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> DeliveryPage:
@@ -44,7 +46,7 @@ async def list_deliveries(
         vendor_id=vendor_id,
         outstanding_only=outstanding_only,
         received_only=received_only,
-        include_deleted=include_deleted,
+        include_archived=include_archived,
         limit=limit,
         offset=offset,
     )
@@ -54,9 +56,11 @@ async def list_deliveries(
 async def list_all_deliveries(
     user: CurrentUser,
     vendor_id: Annotated[str | None, Query(description="Only this vendor")] = None,
-    outstanding_only: Annotated[bool, Query(description="Only what has not arrived")] = False,
-    received_only: Annotated[bool, Query(description="Only what has arrived")] = False,
-    include_deleted: Annotated[bool, Query(description="Include archived deliveries")] = False,
+    outstanding_only: Annotated[
+        bool, Query(description="Only deliveries not yet received")
+    ] = False,
+    received_only: Annotated[bool, Query(description="Only received deliveries")] = False,
+    include_archived: Annotated[bool, Query(description="Include archived deliveries")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> DeliveryPage:
@@ -65,7 +69,7 @@ async def list_all_deliveries(
         vendor_id=vendor_id,
         outstanding_only=outstanding_only,
         received_only=received_only,
-        include_deleted=include_deleted,
+        include_archived=include_archived,
         limit=limit,
         offset=offset,
     )
@@ -73,14 +77,14 @@ async def list_all_deliveries(
 
 @router.post(
     "/projects/{project_id}/deliveries",
-    operation_id="addDelivery",
+    operation_id="createDelivery",
     status_code=status.HTTP_201_CREATED,
     responses={
         **NOT_FOUND,
         status.HTTP_409_CONFLICT: {"description": "That expense already has a delivery"},
     },
 )
-async def add_delivery(project_id: str, req: DeliveryCreate, user: CurrentUser) -> DeliveryRead:
+async def create_delivery(project_id: str, req: DeliveryCreate, user: CurrentUser) -> DeliveryRead:
     return await controller.create(project_id, req)
 
 
@@ -98,24 +102,24 @@ async def update_delivery(delivery_id: str, req: DeliveryUpdate, user: CurrentUs
     "/deliveries/{delivery_id}/received", operation_id="receiveDelivery", responses=NOT_FOUND
 )
 async def receive_delivery(delivery_id: str, user: CurrentUser) -> DeliveryRead:
-    return await controller.receive(delivery_id)
+    return await controller.mark_received(delivery_id)
 
 
 @router.delete(
     "/deliveries/{delivery_id}/received", operation_id="unreceiveDelivery", responses=NOT_FOUND
 )
 async def unreceive_delivery(delivery_id: str, user: CurrentUser) -> DeliveryRead:
-    return await controller.unreceive(delivery_id)
+    return await controller.mark_not_received(delivery_id)
 
 
-@router.delete(
-    "/deliveries/{delivery_id}",
-    operation_id="deleteDelivery",
+@router.post(
+    "/deliveries/{delivery_id}/archive",
+    operation_id="archiveDelivery",
     status_code=status.HTTP_204_NO_CONTENT,
     responses=NOT_FOUND,
 )
-async def delete_delivery(delivery_id: str, user: CurrentUser) -> None:
-    await controller.delete(delivery_id)
+async def archive_delivery(delivery_id: str, user: CurrentUser) -> None:
+    await controller.archive(delivery_id)
 
 
 @router.post(

@@ -9,26 +9,25 @@ from setout.utils.category_presets import CATEGORY_PRESETS
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
-# The six categories a build starts with.
+# The six default category presets.
 DEFAULT_CATEGORIES = [
     "Administrative expenses",
     "Equipment rentals",
     "Concrete foundation",
     "Structure and exterior",
     "Interior work",
-    "Finalization and inspections",
+    "Finalisation and inspections",
 ]
 
 
 async def _project(client: AsyncClient) -> str:
-    wanted = {"NGN"}
     await Currency.bulk_create(
-        [Currency(code=c[0], name=c[1], exponent=c[2]) for c in CURRENCIES if c[0] in wanted]
+        [Currency(code=c[0], name=c[1], exponent=c[2]) for c in CURRENCIES if c[0] == "NGN"]
     )
     await CategoryPreset.bulk_create(
         [CategoryPreset(name=name, sort_order=order) for order, name in enumerate(CATEGORY_PRESETS)]
     )
-    await client.post("/api/auth/setup", json={"name": "Admin", "password": "password123"})
+    await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": "password123"})
     resp = await client.post(
         "/api/projects",
         json={"name": "Jacaranda Close, Ewuru", "currency_code": "NGN"},
@@ -46,7 +45,7 @@ async def test_categories_require_authentication(client: AsyncClient) -> None:
     assert (await client.get("/api/projects/nope/categories")).status_code == 401
 
 
-async def test_the_six_starting_categories_can_be_created(client: AsyncClient) -> None:
+async def test_default_categories_can_be_created_in_order(client: AsyncClient) -> None:
     project_id = await _project(client)
     for order, name in enumerate(DEFAULT_CATEGORIES):
         await _category(client, project_id, name, sort_order=order)
@@ -56,7 +55,7 @@ async def test_the_six_starting_categories_can_be_created(client: AsyncClient) -
     assert all(s["budgeted_amount"] == 0 for s in listed)
 
 
-async def test_a_budget_item_adds_to_its_category(client: AsyncClient) -> None:
+async def test_budget_item_adds_to_its_category_total(client: AsyncClient) -> None:
     project_id = await _project(client)
     category = await _category(client, project_id, "Concrete foundation")
 
@@ -72,7 +71,7 @@ async def test_a_budget_item_adds_to_its_category(client: AsyncClient) -> None:
     assert listed[0]["own_budgeted_amount"] == 150_000_00
 
 
-async def test_a_total_rolls_up_to_the_group(client: AsyncClient) -> None:
+async def test_child_total_rolls_up_to_the_parent(client: AsyncClient) -> None:
     project_id = await _project(client)
     group = await _category(client, project_id, "Structure and exterior")
     child = await _category(client, project_id, "Blockwork", parent_id=group["id"])
@@ -91,7 +90,7 @@ async def test_a_total_rolls_up_to_the_group(client: AsyncClient) -> None:
     assert categories[child["id"]]["budgeted_amount"] == 200_000
 
 
-async def test_a_group_category_holds_no_budget_of_its_own(client: AsyncClient) -> None:
+async def test_parent_category_rejects_its_own_budget_items(client: AsyncClient) -> None:
     project_id = await _project(client)
     group = await _category(client, project_id, "Structure and exterior")
     await _category(client, project_id, "Blockwork", parent_id=group["id"])
@@ -103,7 +102,7 @@ async def test_a_group_category_holds_no_budget_of_its_own(client: AsyncClient) 
     assert resp.status_code == 409
 
 
-async def test_the_project_budget_totals_every_category(client: AsyncClient) -> None:
+async def test_project_budget_totals_every_category(client: AsyncClient) -> None:
     project_id = await _project(client)
     admin = await _category(client, project_id, "Administrative expenses")
     concrete = await _category(client, project_id, "Concrete foundation")
@@ -120,7 +119,7 @@ async def test_the_project_budget_totals_every_category(client: AsyncClient) -> 
     assert len(budget["categories"]) == 2
 
 
-async def test_changing_the_amount_moves_set_at(client: AsyncClient) -> None:
+async def test_changing_the_amount_updates_set_at(client: AsyncClient) -> None:
     project_id = await _project(client)
     category = await _category(client, project_id, "Interior work")
     created = (
@@ -143,47 +142,47 @@ async def test_changing_the_amount_moves_set_at(client: AsyncClient) -> None:
     assert changed["set_at"] != created["set_at"]
 
 
-async def test_a_deleted_category_is_hidden_and_restorable(client: AsyncClient) -> None:
+async def test_archived_category_is_hidden_and_restorable(client: AsyncClient) -> None:
     project_id = await _project(client)
     category = await _category(client, project_id, "Equipment rentals")
 
-    assert (await client.delete(f"/api/categories/{category['id']}")).status_code == 204
+    assert (await client.post(f"/api/categories/{category['id']}/archive")).status_code == 204
     assert (await client.get(f"/api/projects/{project_id}/categories")).json() == []
 
     restored = await client.post(f"/api/categories/{category['id']}/restore")
     assert restored.status_code == 200
-    assert restored.json()["deleted_at"] is None
+    assert restored.json()["archived_at"] is None
 
 
-async def test_an_archived_category_is_listed_when_asked_for_without_its_budget(
+async def test_archived_category_is_listed_with_include_archived_and_excluded_from_budget(
     client: AsyncClient,
 ) -> None:
     project_id = await _project(client)
-    kept = await _category(client, project_id, "Interior work")
-    gone = await _category(client, project_id, "Equipment rentals")
-    for category_id in (kept["id"], gone["id"]):
+    active = await _category(client, project_id, "Interior work")
+    archived_category = await _category(client, project_id, "Equipment rentals")
+    for category_id in (active["id"], archived_category["id"]):
         await client.post(
             f"/api/categories/{category_id}/budget-items",
             json={"description": "Hire", "budgeted_amount": 50_000_00},
         )
-    await client.delete(f"/api/categories/{gone['id']}")
+    await client.post(f"/api/categories/{archived_category['id']}/archive")
 
     listed = await client.get(
-        f"/api/projects/{project_id}/categories", params={"include_deleted": True}
+        f"/api/projects/{project_id}/categories", params={"include_archived": True}
     )
     rows = listed.json()
-    assert {row["id"] for row in rows} == {kept["id"], gone["id"]}
-    archived = next(row for row in rows if row["id"] == gone["id"])
-    assert archived["deleted_at"]
-    assert archived["own_budgeted_amount"] == 50_000_00
+    assert {row["id"] for row in rows} == {active["id"], archived_category["id"]}
+    archived_row = next(row for row in rows if row["id"] == archived_category["id"])
+    assert archived_row["archived_at"]
+    assert archived_row["own_budgeted_amount"] == 50_000_00
 
     budget = (
-        await client.get(f"/api/projects/{project_id}/budget", params={"include_deleted": True})
+        await client.get(f"/api/projects/{project_id}/budget", params={"include_archived": True})
     ).json()
     assert budget["budgeted_amount"] == 50_000_00
 
 
-async def test_a_category_cannot_be_its_own_parent(client: AsyncClient) -> None:
+async def test_category_cannot_be_its_own_parent(client: AsyncClient) -> None:
     project_id = await _project(client)
     category = await _category(client, project_id, "Interior work")
     resp = await client.patch(
@@ -218,23 +217,23 @@ async def test_category_presets_are_seeded(client: AsyncClient) -> None:
     assert len(names) >= len(DEFAULT_CATEGORIES)
 
 
-async def test_a_category_can_be_named_anything(client: AsyncClient) -> None:
+async def test_category_accepts_any_name(client: AsyncClient) -> None:
     project_id = await _project(client)
-    made_up = await _category(client, project_id, "Borehole and water tank")
-    assert made_up["name"] == "Borehole and water tank"
+    custom = await _category(client, project_id, "Borehole and water tank")
+    assert custom["name"] == "Borehole and water tank"
 
 
-async def test_missing_things_answer_404(client: AsyncClient) -> None:
+async def test_unknown_categories_and_budget_items_return_404(client: AsyncClient) -> None:
     project_id = await _project(client)
     category = await _category(client, project_id, "Interior work")
 
     assert (await client.get("/api/projects/nope/categories")).status_code == 404
     assert (await client.get("/api/projects/nope/budget")).status_code == 404
     assert (await client.patch("/api/categories/nope", json={"name": "x"})).status_code == 404
-    assert (await client.delete("/api/categories/nope")).status_code == 404
+    assert (await client.post("/api/categories/nope/archive")).status_code == 404
     assert (await client.post("/api/categories/nope/restore")).status_code == 404
     assert (await client.get("/api/categories/nope/budget-items")).status_code == 404
-    assert (await client.delete("/api/budget-items/nope")).status_code == 404
+    assert (await client.post("/api/budget-items/nope/archive")).status_code == 404
     assert (await client.post("/api/budget-items/nope/restore")).status_code == 404
     assert (
         await client.patch("/api/budget-items/nope", json={"budgeted_amount": 1})
@@ -254,33 +253,7 @@ async def test_missing_things_answer_404(client: AsyncClient) -> None:
     assert category["id"] != "nope"
 
 
-async def test_a_budget_item_is_soft_deleted(client: AsyncClient) -> None:
-    project_id = await _project(client)
-    category = await _category(client, project_id, "Roofing")
-    item = (
-        await client.post(
-            f"/api/categories/{category['id']}/budget-items",
-            json={"description": "Roofing sheets", "budgeted_amount": 750_000_00},
-        )
-    ).json()
-
-    assert (await client.delete(f"/api/budget-items/{item['id']}")).status_code == 204
-
-    page = (await client.get(f"/api/categories/{category['id']}/budget-items")).json()
-    assert page["items"] == []
-    assert page["total"] == 0
-
-    # The row is hidden, not gone, and the category total drops with it.
-    from setout.models.budget import BudgetItem
-
-    row = await BudgetItem.get(id=item["id"])
-    assert row.deleted_at is not None
-
-    categories = (await client.get(f"/api/projects/{project_id}/categories")).json()
-    assert categories[0]["budgeted_amount"] == 0
-
-
-async def test_an_archived_budget_item_is_listed_when_asked_for_and_restorable(
+async def test_archived_budget_item_is_hidden_and_excluded_from_category_total(
     client: AsyncClient,
 ) -> None:
     project_id = await _project(client)
@@ -291,25 +264,53 @@ async def test_an_archived_budget_item_is_listed_when_asked_for_and_restorable(
             json={"description": "Roofing sheets", "budgeted_amount": 750_000_00},
         )
     ).json()
-    await client.delete(f"/api/budget-items/{item['id']}")
+
+    assert (await client.post(f"/api/budget-items/{item['id']}/archive")).status_code == 204
+
+    page = (await client.get(f"/api/categories/{category['id']}/budget-items")).json()
+    assert page["items"] == []
+    assert page["total"] == 0
+
+    # Archived, not deleted; excluded from the category total.
+    from setout.models.budget import BudgetItem
+
+    row = await BudgetItem.get(id=item["id"])
+    assert row.archived_at is not None
+
+    categories = (await client.get(f"/api/projects/{project_id}/categories")).json()
+    assert categories[0]["budgeted_amount"] == 0
+
+
+async def test_archived_budget_item_is_listed_with_include_archived_and_restorable(
+    client: AsyncClient,
+) -> None:
+    project_id = await _project(client)
+    category = await _category(client, project_id, "Roofing")
+    item = (
+        await client.post(
+            f"/api/categories/{category['id']}/budget-items",
+            json={"description": "Roofing sheets", "budgeted_amount": 750_000_00},
+        )
+    ).json()
+    await client.post(f"/api/budget-items/{item['id']}/archive")
 
     page = (
         await client.get(
-            f"/api/categories/{category['id']}/budget-items", params={"include_deleted": True}
+            f"/api/categories/{category['id']}/budget-items", params={"include_archived": True}
         )
     ).json()
     assert [row["id"] for row in page["items"]] == [item["id"]]
-    assert page["items"][0]["deleted_at"]
+    assert page["items"][0]["archived_at"]
 
     restored = await client.post(f"/api/budget-items/{item['id']}/restore")
     assert restored.status_code == 200
-    assert restored.json()["deleted_at"] is None
+    assert restored.json()["archived_at"] is None
 
     categories = (await client.get(f"/api/projects/{project_id}/categories")).json()
     assert categories[0]["budgeted_amount"] == 750_000_00
 
 
-async def test_a_category_can_be_moved_under_another(client: AsyncClient) -> None:
+async def test_category_can_be_moved_under_another(client: AsyncClient) -> None:
     project_id = await _project(client)
     parent = await _category(client, project_id, "Structure and exterior")
     child = await _category(client, project_id, "Blockwork")
@@ -324,7 +325,7 @@ async def test_a_category_can_be_moved_under_another(client: AsyncClient) -> Non
     assert categories[parent["id"]]["is_group"] is True
 
 
-async def test_a_category_cannot_be_reparented_across_projects(client: AsyncClient) -> None:
+async def test_category_cannot_be_moved_to_another_project(client: AsyncClient) -> None:
     project_id = await _project(client)
     category = await _category(client, project_id, "Interior work")
 
@@ -334,15 +335,15 @@ async def test_a_category_cannot_be_reparented_across_projects(client: AsyncClie
             json={"name": "Owode Bungalow", "currency_code": "NGN"},
         )
     ).json()
-    stranger = await _category(client, other["id"], "Interior work")
+    other_category = await _category(client, other["id"], "Interior work")
 
     resp = await client.patch(
-        f"/api/categories/{category['id']}", json={"parent_id": stranger["id"]}
+        f"/api/categories/{category['id']}", json={"parent_id": other_category["id"]}
     )
     assert resp.status_code == 404
 
 
-async def test_the_project_carries_its_budgeted_total(client: AsyncClient) -> None:
+async def test_project_reports_its_budgeted_total(client: AsyncClient) -> None:
     project_id = await _project(client)
     category = await _category(client, project_id, "Concrete foundation")
 
@@ -361,7 +362,7 @@ async def test_the_project_carries_its_budgeted_total(client: AsyncClient) -> No
     ] == 382_830_000
 
 
-async def test_a_budgeted_total_stays_with_its_own_project(client: AsyncClient) -> None:
+async def test_budgeted_total_is_per_project(client: AsyncClient) -> None:
     project_id = await _project(client)
     category = await _category(client, project_id, "Concrete foundation")
     await client.post(
@@ -378,7 +379,7 @@ async def test_a_budgeted_total_stays_with_its_own_project(client: AsyncClient) 
     assert by_id[other["id"]]["budgeted_amount"] == 0
 
 
-async def test_a_deleted_budget_item_leaves_the_project_total(client: AsyncClient) -> None:
+async def test_archived_budget_item_is_excluded_from_project_total(client: AsyncClient) -> None:
     project_id = await _project(client)
     category = await _category(client, project_id, "Roofing")
     item = (
@@ -388,12 +389,12 @@ async def test_a_deleted_budget_item_leaves_the_project_total(client: AsyncClien
         )
     ).json()
 
-    await client.delete(f"/api/budget-items/{item['id']}")
+    await client.post(f"/api/budget-items/{item['id']}/archive")
     listed = (await client.get("/api/projects")).json()["items"]
     assert listed[0]["budgeted_amount"] == 0
 
 
-async def test_a_category_with_expenses_cannot_be_deleted(client: AsyncClient) -> None:
+async def test_category_with_expenses_cannot_be_archived(client: AsyncClient) -> None:
     project_id = await _project(client)
     category = await _category(client, project_id, "Interior work")
     await client.post(
@@ -401,20 +402,20 @@ async def test_a_category_with_expenses_cannot_be_deleted(client: AsyncClient) -
         json={"description": "Tiles", "amount": 340_000_00, "category_id": category["id"]},
     )
 
-    resp = await client.delete(f"/api/categories/{category['id']}")
+    resp = await client.post(f"/api/categories/{category['id']}/archive")
 
     assert resp.status_code == 409
     assert resp.json()["detail"] == "A category with expenses cannot be archived, only renamed"
 
 
-async def test_a_category_with_nothing_spent_on_it_can_be_deleted(client: AsyncClient) -> None:
+async def test_category_without_expenses_can_be_archived(client: AsyncClient) -> None:
     project_id = await _project(client)
     category = await _category(client, project_id, "Landscaping")
 
-    assert (await client.delete(f"/api/categories/{category['id']}")).status_code == 204
+    assert (await client.post(f"/api/categories/{category['id']}/archive")).status_code == 204
 
 
-async def test_a_group_cannot_be_deleted_over_spend_beneath_it(client: AsyncClient) -> None:
+async def test_parent_category_with_child_expenses_cannot_be_archived(client: AsyncClient) -> None:
     project_id = await _project(client)
     parent = await _category(client, project_id, "Structure")
     child = await _category(client, project_id, "Roof", parent_id=parent["id"])
@@ -423,25 +424,25 @@ async def test_a_group_cannot_be_deleted_over_spend_beneath_it(client: AsyncClie
         json={"description": "Sheets", "amount": 820_000_00, "category_id": child["id"]},
     )
 
-    assert (await client.delete(f"/api/categories/{parent['id']}")).status_code == 409
+    assert (await client.post(f"/api/categories/{parent['id']}/archive")).status_code == 409
 
 
-async def test_a_deleted_expense_no_longer_holds_its_category(client: AsyncClient) -> None:
+async def test_archived_expense_does_not_block_archiving_its_category(client: AsyncClient) -> None:
     project_id = await _project(client)
     category = await _category(client, project_id, "Interior work")
-    spend = (
+    expense = (
         await client.post(
             f"/api/projects/{project_id}/expenses",
             json={"description": "Tiles", "amount": 340_000_00, "category_id": category["id"]},
         )
     ).json()
 
-    await client.delete(f"/api/expenses/{spend['id']}")
+    await client.post(f"/api/expenses/{expense['id']}/archive")
 
-    assert (await client.delete(f"/api/categories/{category['id']}")).status_code == 204
+    assert (await client.post(f"/api/categories/{category['id']}/archive")).status_code == 204
 
 
-async def test_a_category_can_be_renamed_whatever_was_spent_on_it(client: AsyncClient) -> None:
+async def test_category_with_expenses_can_be_renamed(client: AsyncClient) -> None:
     project_id = await _project(client)
     category = await _category(client, project_id, "Interior work")
     await client.post(
@@ -455,7 +456,7 @@ async def test_a_category_can_be_renamed_whatever_was_spent_on_it(client: AsyncC
     assert resp.json()["name"] == "Inside work"
 
 
-async def test_deleting_a_category_takes_its_budget_items_and_restore_brings_them_back(
+async def test_archiving_a_category_archives_its_budget_items_and_restore_restores_them(
     client: AsyncClient,
 ) -> None:
     project_id = await _project(client)
@@ -465,9 +466,11 @@ async def test_deleting_a_category_takes_its_budget_items_and_restore_brings_the
         json={"description": "Sand", "budgeted_amount": 100_000_00},
     )
 
-    assert (await client.delete(f"/api/categories/{category['id']}")).status_code == 204
-    assert await BudgetItem.filter(category_id=category["id"], deleted_at__isnull=True).count() == 0
+    assert (await client.post(f"/api/categories/{category['id']}/archive")).status_code == 204
+    assert (
+        await BudgetItem.filter(category_id=category["id"], archived_at__isnull=True).count() == 0
+    )
 
     assert (await client.post(f"/api/categories/{category['id']}/restore")).status_code == 200
-    back = (await client.get(f"/api/categories/{category['id']}/budget-items")).json()
-    assert [row["description"] for row in back["items"]] == ["Sand"]
+    restored_items = (await client.get(f"/api/categories/{category['id']}/budget-items")).json()
+    assert [row["description"] for row in restored_items["items"]] == ["Sand"]

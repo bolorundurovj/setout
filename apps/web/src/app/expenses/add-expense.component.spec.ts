@@ -23,38 +23,38 @@ const project: ProjectRead = {
   spent_amount: 0,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
-  deleted_at: null,
+  archived_at: null,
 };
 
 describe('AddExpenseComponent', () => {
   let saves: unknown[][];
   let updates: unknown[][];
   let saving: boolean;
-  let owedCalls: unknown[][];
+  let deliveryCalls: unknown[][];
   let uploads: { expenseId: string; file: File }[];
-  let dropped: string[];
-  let putBack: string[];
-  let held: unknown[];
+  let archived: string[];
+  let restored: string[];
+  let attachments: unknown[];
 
-  function render(editing: unknown = null, attached: unknown[] = []) {
+  function render(expenseToEdit: unknown = null, existingAttachments: unknown[] = []) {
     saves = [];
     updates = [];
-    owedCalls = [];
+    deliveryCalls = [];
     uploads = [];
-    dropped = [];
-    putBack = [];
-    held = attached;
+    archived = [];
+    restored = [];
+    attachments = existingAttachments;
     saving = false;
     const expenses = {
       expenses: () => [],
-      spend: () => null,
+      summary: () => null,
       total: () => 0,
       page: () => 1,
       saving: () => saving,
       error: () => null,
       load: async () => undefined,
-      loadSpend: async () => undefined,
-      suggestCategory: async () => ({ category_id: 's1', reason: 'Past purchases of this item' }),
+      loadSummary: async () => undefined,
+      suggestCategory: async () => ({ category_id: 's1', reason: 'Past expenses for this item' }),
       add: async (...args: unknown[]) => {
         saves.push(args);
         return { id: 'e1', description: 'Cement' };
@@ -90,11 +90,8 @@ describe('AddExpenseComponent', () => {
           provide: DeliveryService,
           useValue: {
             error: () => null,
-            forProject: () => [],
-            outstanding: () => [],
-            loadForProject: async () => undefined,
             add: async (...args: unknown[]) => {
-              owedCalls.push(args);
+              deliveryCalls.push(args);
               return { id: 'd1' };
             },
           },
@@ -104,17 +101,17 @@ describe('AddExpenseComponent', () => {
           useValue: {
             error: () => null,
             saving: () => false,
-            forExpense: () => held,
+            forExpense: () => attachments,
             load: async () => undefined,
-            size: (bytes: number) => `${bytes} B`,
+            formatSize: (bytes: number) => `${bytes} B`,
             fileUrl: (id: string) => `/api/attachments/${id}/file`,
             add: async (_projectId: string, expenseId: string, file: File) => {
               uploads.push({ expenseId, file });
               return { id: 'a1', filename: file.name };
             },
-            remove: async (_expenseId: string, id: string) => void dropped.push(id),
+            archive: async (_expenseId: string, id: string) => void archived.push(id),
             restore: async (_expenseId: string, id: string) => {
-              putBack.push(id);
+              restored.push(id);
               return { id, filename: 'receipt.jpg' };
             },
           },
@@ -128,12 +125,12 @@ describe('AddExpenseComponent', () => {
     });
     const fixture = TestBed.createComponent(AddExpenseComponent);
     fixture.componentRef.setInput('project', project);
-    fixture.componentRef.setInput('editing', editing);
+    fixture.componentRef.setInput('expenseToEdit', expenseToEdit);
     fixture.detectChanges();
     return fixture;
   }
 
-  it('records one expense per press of save', async () => {
+  it('creates one expense per click of save', async () => {
     const fixture = render();
     const component = fixture.componentInstance;
     component.description.set('10 bags of cement');
@@ -142,15 +139,14 @@ describe('AddExpenseComponent', () => {
 
     const element = fixture.nativeElement as HTMLElement;
     const button = element.querySelector('button[type="submit"]') as HTMLButtonElement;
-    // Clicking a submit button also submits the form it sits in. Binding save
-    // to the button as well as the form filed every purchase twice.
+    // A submit button also fires the form submit event; binding save to both duplicates the expense.
     button.click();
     await fixture.whenStable();
 
     expect(saves.length).toBe(1);
   });
 
-  it('ignores a second press while the first is still saving', async () => {
+  it('ignores a second save while the first is in progress', async () => {
     const fixture = render();
     const component = fixture.componentInstance;
     component.description.set('10 bags of cement');
@@ -161,7 +157,7 @@ describe('AddExpenseComponent', () => {
     expect(saves.length).toBe(0);
   });
 
-  it('will not save without a description or an amount', async () => {
+  it('does not save without a description and an amount', async () => {
     const fixture = render();
     const component = fixture.componentInstance;
 
@@ -190,10 +186,10 @@ describe('AddExpenseComponent', () => {
     notes: null,
     created_at: '2026-02-01T00:00:00Z',
     updated_at: '2026-02-01T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
   };
 
-  it('fills the form from the expense being changed', () => {
+  it('fills the form from the expense being edited', () => {
     const component = render(existing).componentInstance;
     expect(component.isEditing()).toBe(true);
     expect(component.description()).toBe('10 bags of cement');
@@ -201,7 +197,7 @@ describe('AddExpenseComponent', () => {
     expect(component.spentOn()).toBe('2026-02-01');
   });
 
-  it('changes the expense rather than recording another', async () => {
+  it('updates the edited expense instead of creating one', async () => {
     const component = render(existing).componentInstance;
     component.amount.set('12000');
     await component.save(false);
@@ -211,7 +207,7 @@ describe('AddExpenseComponent', () => {
     expect(updates[0][1]).toBe('e1');
   });
 
-  it('records a new expense when nothing is being changed', async () => {
+  it('creates an expense when none is being edited', async () => {
     const component = render().componentInstance;
     component.description.set('1 truck of sand');
     component.amount.set('50000');
@@ -221,129 +217,127 @@ describe('AddExpenseComponent', () => {
     expect(saves.length).toBe(1);
   });
 
-  it('records what is owed only when the box is ticked', async () => {
+  it('creates a delivery only when Outstanding Delivery is checked', async () => {
     const component = render().componentInstance;
     component.description.set('17 bags of cement');
     component.amount.set('76500');
 
     await component.save(false);
-    expect(owedCalls.length).toBe(0);
+    expect(deliveryCalls.length).toBe(0);
 
     component.description.set('17 bags of cement');
     component.amount.set('76500');
-    component.toggleOwed();
+    component.toggleOutstandingDelivery();
     await component.save(false);
 
-    expect(owedCalls.length).toBe(1);
-    expect(owedCalls[0][1]).toEqual({
+    expect(deliveryCalls.length).toBe(1);
+    expect(deliveryCalls[0][1]).toEqual({
       expense_id: 'e1',
       description: null,
-      promised: null,
+      expected: null,
     });
   });
 
-  it('lets what is owed be named apart from the expense', async () => {
+  it('sends the delivery description and expected date', async () => {
     const component = render().componentInstance;
     component.description.set('Cement plus delivery');
     component.amount.set('76500');
-    component.toggleOwed();
-    component.owedWhat.set('17 bags of cement');
-    component.owedWhen.set('this week');
+    component.toggleOutstandingDelivery();
+    component.deliveryDescription.set('17 bags of cement');
+    component.deliveryExpected.set('this week');
 
     await component.save(false);
 
-    expect(owedCalls[0][1]).toEqual({
+    expect(deliveryCalls[0][1]).toEqual({
       expense_id: 'e1',
       description: '17 bags of cement',
-      promised: 'this week',
+      expected: 'this week',
     });
   });
 
-  it('clears the delivery fields once the expense is filed', async () => {
+  it('clears the delivery fields after saving', async () => {
     const component = render().componentInstance;
     component.description.set('Cement');
     component.amount.set('76500');
-    component.toggleOwed();
-    component.owedWhat.set('17 bags');
+    component.toggleOutstandingDelivery();
+    component.deliveryDescription.set('17 bags');
 
     await component.save(true);
 
-    expect(component.owed()).toBe(false);
-    expect(component.owedWhat()).toBe('');
+    expect(component.outstandingDelivery()).toBe(false);
+    expect(component.deliveryDescription()).toBe('');
   });
 
-  it('holds the photo until the expense exists, then sends it up', async () => {
+  it('uploads the selected file after the expense is created', async () => {
     const fixture = render();
     const component = fixture.componentInstance;
     const file = new File(['a receipt'], 'receipt_16aug.jpg', { type: 'image/jpeg' });
 
-    component.chosen.set(file);
-    expect(component.photoLabel()).toContain('receipt_16aug.jpg');
-    expect(component.photoLabel()).toContain('on your own server');
+    component.selectedFile.set(file);
+    expect(component.fileLabel()).toContain('receipt_16aug.jpg');
+    expect(component.fileLabel()).toContain('stored on your server');
 
     component.description.set('10 bags of cement');
     component.amount.set('11000');
     await component.save(false);
 
-    // Nothing to hang a file on until the expense has been recorded.
     expect(uploads).toEqual([{ expenseId: 'e1', file }]);
   });
 
-  it('asks for the photograph before one is chosen', () => {
+  it('shows a prompt when no file is selected', () => {
     const component = render().componentInstance;
-    expect(component.photoLabel()).toContain('Attach a receipt photo now');
+    expect(component.fileLabel()).toContain('No file selected');
   });
 
-  it('forgets the held photo once the expense is filed', async () => {
+  it('clears the selected file after Save and Add Another', async () => {
     const fixture = render();
     const component = fixture.componentInstance;
-    component.chosen.set(new File(['x'], 'r.jpg', { type: 'image/jpeg' }));
+    component.selectedFile.set(new File(['x'], 'r.jpg', { type: 'image/jpeg' }));
     component.description.set('Cement');
     component.amount.set('11000');
 
     await component.save(true);
 
-    // Save and add another starts clean, or the next expense inherits a receipt
-    // that is not its own.
-    expect(component.chosen()).toBeNull();
+    // Save and Add Another clears the selected file so it is not attached to the next expense.
+    expect(component.selectedFile()).toBeNull();
   });
 
-  it('sends the photo up at once on an expense that already exists', async () => {
+  it('uploads a file immediately when editing an expense', async () => {
     const existing = { id: 'e9', description: 'Cement', amount: 1100000, spent_on: '2026-08-14' };
     const component = render(existing).componentInstance;
     const file = new File(['a receipt'], 'receipt.jpg', { type: 'image/jpeg' });
 
-    await component.onPicked({ target: { files: [file], value: 'x' } } as unknown as Event);
+    await component.onFileSelected({ target: { files: [file], value: 'x' } } as unknown as Event);
 
     expect(uploads).toEqual([{ expenseId: 'e9', file }]);
   });
 
-  it('takes a photo off without touching the expense', async () => {
+  it('archives an attachment without updating the expense', async () => {
     const existing = { id: 'e9', description: 'Cement', amount: 1100000, spent_on: '2026-08-14' };
     const file = { id: 'a1', filename: 'receipt.jpg', byte_size: 2048, content_type: 'image/jpeg' };
     const component = render(existing, [file]).componentInstance;
 
-    expect(component.attached().length).toBe(1);
+    expect(component.expenseAttachments().length).toBe(1);
     expect(component.isImage(file as never)).toBe(true);
-    expect(component.fileNote(file as never)).toContain('on your own server');
+    expect(component.fileNote(file as never)).toContain('stored on your server');
 
-    await component.removeFile(file as never);
+    await component.archiveAttachment(file as never);
 
-    expect(dropped).toEqual(['a1']);
+    expect(archived).toEqual(['a1']);
     expect(updates).toEqual([]);
 
-    expect(component.justRemoved()?.id).toBe('a1');
-    await component.putPhotoBack();
-    expect(putBack).toEqual(['a1']);
-    expect(component.justRemoved()).toBeNull();
+    expect(component.lastArchived()?.id).toBe('a1');
+    await component.restoreLastArchived();
+    expect(restored).toEqual(['a1']);
+    expect(component.lastArchived()).toBeNull();
   });
 
-  it('does nothing when the picker is closed with nothing chosen', async () => {
+  it('does nothing when the file picker closes without a file', async () => {
     const component = render().componentInstance;
 
-    await component.onPicked({ target: { files: [], value: '' } } as unknown as Event);
+    await component.onFileSelected({ target: { files: [], value: '' } } as unknown as Event);
 
-    expect(component.chosen()).toBeNull();
+    expect(component.selectedFile()).toBeNull();
     expect(uploads).toEqual([]);
   });
 
@@ -358,7 +352,7 @@ describe('AddExpenseComponent', () => {
     expect(component.categoryId()).toBe('s1');
     expect(component.suggestedCategoryId()).toBe('s1');
     expect(component.categoryExplicitlyCleared()).toBe(false);
-    expect(component.categoryNote()).toContain('Suggested from past purchases');
+    expect(component.categoryNote()).toContain('Suggested from past expenses');
   });
 
   it('does not override a category the user already chose', async () => {
@@ -376,7 +370,7 @@ describe('AddExpenseComponent', () => {
     expect(component.categoryNote()).not.toContain('Suggested');
   });
 
-  it('remembers when the user explicitly leaves a category uncategorized', () => {
+  it('records when the user explicitly clears the category', () => {
     const component = render().componentInstance;
     component.pickCategory('');
 

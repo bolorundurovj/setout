@@ -7,7 +7,7 @@ from setout.utils.ids import short_id
 
 
 class Vendor(Model):
-    """Someone you buy from. Shared across every project."""
+    """A vendor you buy from. Shared across every project."""
 
     id = fields.CharField(max_length=12, primary_key=True, default=short_id)
     name = fields.CharField(max_length=255)
@@ -15,20 +15,20 @@ class Vendor(Model):
         max_length=255,
         null=True,
         default=None,
-        description="What they sell or do: block supplier, bricklayer, consultant",
+        description="What the vendor supplies, such as blocks, bricklaying or consulting",
     )
     contact_name = fields.CharField(
         max_length=255,
         null=True,
         default=None,
-        description="The person you ask for",
+        description="The contact person at the vendor",
     )
     phone = fields.CharField(max_length=64, null=True, default=None)
     email = fields.CharField(max_length=254, null=True, default=None)
     notes = fields.TextField(null=True, default=None)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    deleted_at = fields.DatetimeField(null=True, default=None)
+    archived_at = fields.DatetimeField(null=True, default=None)
 
     class Meta:
         table = "vendor"

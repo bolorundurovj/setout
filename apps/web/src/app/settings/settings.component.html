@@ -1,10 +1,10 @@
-<app-topbar title="Settings" subtitle="This installation" />
+<app-topbar title="Settings" subtitle="This server" />
 
 <div class="page">
   <div class="intro">
     <p class="prose">
-      Settings for this installation. Anything belonging to a single project, such as its currency
-      and categories, is in Project Settings.
+      Settings for this server. Settings for a single project, such as its currency and categories,
+      are in Project Settings.
     </p>
   </div>
 
@@ -14,7 +14,7 @@
       [chips]="appearanceChips"
       [value]="theme.choice()"
       label="Appearance"
-      (valueChange)="pickAppearance($event)"
+      (valueChange)="selectAppearance($event)"
     />
     <p class="t-small note">{{ appearanceNote() }}</p>
   </section>
@@ -24,9 +24,9 @@
       <span class="t-micro">Default Currency</span>
       <app-chip-group
         [chips]="currencyChips()"
-        [value]="baseCurrency()"
+        [value]="defaultCurrency()"
         label="Default currency"
-        (valueChange)="pickBaseCurrency($event)"
+        (valueChange)="selectDefaultCurrency($event)"
       />
       <p class="t-small note">{{ currencyNote() }}</p>
     </section>
@@ -45,9 +45,9 @@
           class="input-field"
           type="text"
           autocomplete="off"
-          placeholder="Your name or this device"
+          placeholder="Your name or device name"
           [value]="name()"
-          (input)="name.set(value($event))"
+          (input)="name.set(inputValue($event))"
           (keyup.enter)="saveName()"
         />
       </label>
@@ -62,7 +62,7 @@
             </button>
           </div>
         } @else {
-          <span class="t-small note">Below.</span>
+          <span class="t-small note">Enter the new passphrase below.</span>
         }
       </div>
     </div>
@@ -82,8 +82,8 @@
               class="input-field"
               type="password"
               autocomplete="current-password"
-              [value]="current()"
-              (input)="current.set(value($event))"
+              [value]="currentPassphrase()"
+              (input)="currentPassphrase.set(inputValue($event))"
             />
           </label>
           <label class="field">
@@ -92,8 +92,8 @@
               class="input-field"
               type="password"
               autocomplete="new-password"
-              [value]="next()"
-              (input)="next.set(value($event))"
+              [value]="newPassphrase()"
+              (input)="newPassphrase.set(inputValue($event))"
             />
           </label>
           <label class="field">
@@ -102,35 +102,35 @@
               class="input-field"
               type="password"
               autocomplete="new-password"
-              [value]="again()"
-              (input)="again.set(value($event))"
+              [value]="confirmPassphrase()"
+              (input)="confirmPassphrase.set(inputValue($event))"
               (keyup.enter)="savePassphrase()"
             />
           </label>
         </div>
 
         <p class="t-small note">
-          Changing it signs out every other device. This one stays signed in.
+          Changing the passphrase signs out all other devices. This device stays signed in.
         </p>
 
         <div class="actions">
           <app-button
-            [disabled]="!!passphraseProblem()"
+            [disabled]="!!passphraseError()"
             [loading]="savingPassphrase()"
             (pressed)="savePassphrase()"
           >
             Change Passphrase
           </app-button>
           <app-button variant="secondary" (pressed)="cancelPassphrase()">Cancel</app-button>
-          @if (passphraseProblem()) {
-            <span class="t-small note">{{ passphraseProblem() }}</span>
+          @if (passphraseError()) {
+            <span class="t-small note">{{ passphraseError() }}</span>
           }
         </div>
       </div>
     }
 
     <p class="t-small note">
-      One passphrase signs in to this server. Setout stores no accounts elsewhere and uses no
+      This server uses one passphrase for sign-in. Setout does not store accounts elsewhere or use
       third-party sign-in.
     </p>
   </section>
@@ -138,26 +138,27 @@
   <section class="card block">
     <div class="block-head">
       <span class="t-micro">Server and Backup</span>
-      <span class="t-mono aside">{{ server.install()?.version ?? notSet }}</span>
+      <span class="t-mono aside">{{ installService.install()?.version ?? notSet }}</span>
     </div>
 
     <p class="prose">
-      One file holds everything: every project, expense, vendor and photo. A copy on the same
-      machine is not a backup.
+      A backup is one file that contains your data: every project, expense, person, vendor and land
+      record. Attachments and land documents are not included. Store backups on a different machine
+      from this server.
     </p>
 
     <div class="strip">
-      <span class="t-small">The data, and when it last changed</span>
-      <span class="t-small aside">{{ recordSize() }} &middot; {{ lastChanged() }}</span>
+      <span class="t-small">Your data, and when it last changed</span>
+      <span class="t-small aside">{{ dataSize() }} &middot; {{ lastChanged() }}</span>
     </div>
 
-    @if (!picked()) {
+    @if (!selectedBackup()) {
       <div class="actions">
-        <app-button [loading]="server.writing()" (pressed)="writeCopy()">
+        <app-button [loading]="installService.exporting()" (pressed)="downloadBackup()">
           Download Backup
         </app-button>
         <app-button variant="secondary" [loading]="readingFile()" (pressed)="chooseFile()">
-          Restore from File
+          Restore from Backup
         </app-button>
         <input
           #file
@@ -166,17 +167,17 @@
           accept="application/json,.json"
           aria-hidden="true"
           tabindex="-1"
-          (change)="pickFile($event)"
+          (change)="readSelectedFile($event)"
         />
       </div>
     } @else {
       <div class="danger">
-        <span class="t-mono danger-file">{{ pickedLine() }}</span>
-        <span class="t-small danger-file">{{ pickedRows() }}</span>
+        <span class="t-mono danger-file">{{ selectedBackupSummary() }}</span>
+        <span class="t-small danger-file">{{ selectedBackupRowCount() }}</span>
 
         <p class="danger-body">
-          Restoring replaces everything on this server with the contents of that file. Anything
-          recorded since it was written is lost, including changes made in this session.
+          Restoring replaces all data on this server with the data in this backup. Changes made
+          since the backup was created are lost, including changes made in this session.
         </p>
 
         @if (versionWarning()) {
@@ -184,8 +185,12 @@
         }
 
         <div class="actions">
-          <app-button variant="danger" [loading]="server.restoring()" (pressed)="doRestore()">
-            Replace Everything
+          <app-button
+            variant="danger"
+            [loading]="installService.restoring()"
+            (pressed)="restoreBackup()"
+          >
+            Restore Backup
           </app-button>
           <app-button variant="secondary" (pressed)="cancelRestore()"> Cancel </app-button>
         </div>
@@ -193,8 +198,8 @@
     }
 
     <p class="t-small note">
-      A backup is one JSON file recording the Setout version and schema that wrote it. Restoring
-      signs out every device, because accounts are restored from the file too.
+      A backup is a JSON file that includes the Setout version and schema version that created it.
+      Restoring signs out all devices, because accounts are also restored from the backup.
     </p>
   </section>
 </div>

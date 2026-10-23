@@ -11,9 +11,9 @@
 
     @if (series().length === 0) {
       <div class="card">
-        <p class="t-body">No purchases yet.</p>
+        <p class="t-body">No expenses yet.</p>
         <p class="t-small">
-          Assign an expense with a rate to this item and its price history starts here.
+          Assign an expense with a unit rate to this item to start its price history.
         </p>
       </div>
     }
@@ -27,7 +27,7 @@
 
         <div class="tiles">
           <div class="tile">
-            <span class="t-micro">Last Paid</span>
+            <span class="t-micro">Last Price Paid</span>
             <span class="tile-figure t-mono">{{ money(s.last_price, s) }}</span>
             <span class="t-small muted">{{ s.last_paid_on }}</span>
           </div>
@@ -41,7 +41,9 @@
           </div>
           <div class="tile">
             <span class="t-micro">Change</span>
-            <span class="tile-figure t-mono" [class.over]="hasRisen(s)">{{ changeLabel(s) }}</span>
+            <span class="tile-figure t-mono" [class.over]="hasIncreased(s)">{{
+              changeLabel(s)
+            }}</span>
             <span class="t-small muted">{{ changeSince(s) }}</span>
           </div>
         </div>
@@ -52,10 +54,10 @@
             <span class="t-micro">Vendor</span>
             <span class="t-micro">Project</span>
             <span class="t-micro right">Quantity</span>
-            <span class="t-micro right">Price {{ s.currency_code }}</span>
+            <span class="t-micro right">Unit Rate {{ s.currency_code }}</span>
           </div>
 
-          @for (point of newestFirst(s); track point.expense_id) {
+          @for (point of pageNewestFirst(s); track point.expense_id) {
             <div class="row">
               <span class="t-mono muted">{{ point.spent_on }}</span>
               <span class="t-small">{{ point.vendor_name ?? notSet }}</span>
@@ -83,7 +85,7 @@
   } @else {
     <div class="card">
       <p class="t-body">Item not found.</p>
-      <p class="t-small"><a class="link" routerLink="/items">Back to Items</a></p>
+      <p class="t-small"><a class="link" routerLink="/items">&#8592; Items</a></p>
     </div>
   }
 </div>

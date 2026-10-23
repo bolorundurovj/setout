@@ -53,10 +53,10 @@ let nextId = 0;
           <li
             role="option"
             class="option"
-            [class.active]="i === active()"
+            [class.active]="i === activeIndex()"
             [attr.aria-selected]="option === value()"
             (mousedown)="choose(option)"
-            (mouseenter)="active.set(i)"
+            (mouseenter)="activeIndex.set(i)"
           >
             {{ option }}
           </li>
@@ -139,11 +139,11 @@ export class ComboboxComponent {
   readonly submitted = output<void>();
 
   protected readonly open = signal(false);
-  protected readonly active = signal(0);
+  protected readonly activeIndex = signal(0);
   protected readonly inputId = `combobox-input-${nextId}`;
   protected readonly listId = `combobox-list-${nextId++}`;
 
-  // Typing narrows the list, but never limits what can be entered.
+  // Typed text filters the suggestions; free text is still accepted.
   protected readonly filtered = computed(() => {
     const typed = this.value().trim().toLowerCase();
     const options = this.options();
@@ -163,7 +163,7 @@ export class ComboboxComponent {
 
   onInput(event: Event): void {
     this.open.set(true);
-    this.active.set(0);
+    this.activeIndex.set(0);
     this.valueChange.emit((event.target as HTMLInputElement).value);
   }
 
@@ -182,7 +182,7 @@ export class ComboboxComponent {
       event.preventDefault();
       this.open.set(true);
       const step = event.key === 'ArrowDown' ? 1 : -1;
-      this.active.update((i) =>
+      this.activeIndex.update((i) =>
         options.length ? (i + step + options.length) % options.length : 0,
       );
       return;
@@ -190,7 +190,7 @@ export class ComboboxComponent {
     if (event.key === 'Enter') {
       if (this.open() && options.length > 0) {
         event.preventDefault();
-        this.choose(options[this.active()]);
+        this.choose(options[this.activeIndex()]);
         return;
       }
       this.submitted.emit();

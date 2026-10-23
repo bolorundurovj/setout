@@ -25,7 +25,7 @@
     border-right: none;
   }
 
-  &.over {
+  &.over-budget {
     background: var(--over-surface);
   }
 }
@@ -39,11 +39,11 @@
   color: var(--ink);
 }
 
-.stat-value.over-ink {
+.stat-value.over-budget-text {
   color: var(--over-ink);
 }
 
-.note {
+.caption {
   color: var(--ink-3);
 }
 
@@ -60,7 +60,7 @@
   background: var(--ink-2);
 }
 
-.meter-over {
+.meter-over-budget {
   background: var(--over);
 }
 
@@ -152,7 +152,7 @@
   border-radius: 4px;
 }
 
-.bar-over {
+.bar-over-budget {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -174,7 +174,7 @@
   color: var(--ink-2);
 }
 
-.category-figures.over-ink {
+.category-figures.over-budget-text {
   color: var(--over-ink);
 }
 

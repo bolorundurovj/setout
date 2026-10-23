@@ -1,23 +1,23 @@
 <div class="dashboard">
   <div class="stats">
     <div class="stat">
-      <span class="t-micro">Budget {{ symbol() }}</span>
-      <span class="stat-value t-mono">{{ bare(budgeted()) }}</span>
-      <span class="t-small note">{{ budgetNote() }}</span>
+      <span class="t-micro">Budgeted {{ symbol() }}</span>
+      <span class="stat-value t-mono">{{ formatAmount(budgeted()) }}</span>
+      <span class="t-small caption">{{ budgetNote() }}</span>
     </div>
 
     <div class="stat">
       <span class="t-micro">Spent {{ symbol() }}</span>
-      <span class="stat-value t-mono">{{ bare(spent()) }}</span>
-      <span class="t-small note">{{ spentNote() }}</span>
+      <span class="stat-value t-mono">{{ formatAmount(spent()) }}</span>
+      <span class="t-small caption">{{ spentNote() }}</span>
     </div>
 
-    <div class="stat" [class.over]="isOver()">
+    <div class="stat" [class.over-budget]="isOverBudget()">
       <span class="t-micro">{{ varianceLabel() }} {{ symbol() }}</span>
-      <span class="stat-value t-mono" [class.over-ink]="isOver()">
-        {{ varianceAmount() === null ? '—' : bare(varianceAmount()!) }}
+      <span class="stat-value t-mono" [class.over-budget-text]="isOverBudget()">
+        {{ varianceAmount() === null ? '—' : formatAmount(varianceAmount()!) }}
       </span>
-      <span class="t-small note">{{ varianceNote() }}</span>
+      <span class="t-small caption">{{ varianceNote() }}</span>
     </div>
 
     <div class="stat">
@@ -25,7 +25,7 @@
       <span class="stat-value t-mono">{{ usedLabel() }}</span>
       <span class="meter">
         <span class="meter-used" [style.width.%]="usedPercent()"></span>
-        <span class="meter-over" [style.width.%]="overPercent()"></span>
+        <span class="meter-over-budget" [style.width.%]="overBudgetPercent()"></span>
       </span>
     </div>
   </div>
@@ -33,12 +33,12 @@
   <div class="by-category">
     <div class="by-category-head">
       <h2 class="category-title">Expenses by Category</h2>
-      <span class="t-micro">Spent {{ symbol() }} / Budget {{ symbol() }}</span>
+      <span class="t-micro">Spent {{ symbol() }} / Budgeted {{ symbol() }}</span>
     </div>
 
     @if (rows().length === 0) {
       <div class="card">
-        <p class="t-body">Nothing to compare yet.</p>
+        <p class="t-body">No data to compare yet.</p>
         <p class="t-small">Set a budget for a category, or add an expense.</p>
       </div>
     } @else {
@@ -47,10 +47,10 @@
           <button
             type="button"
             class="category-row"
-            [attr.aria-label]="'Open ' + category.name + ' in the budget versus spend table'"
+            [attr.aria-label]="'Open ' + category.name + ' in the Budget vs Spent table'"
             (click)="openCategory.emit(category.id)"
           >
-            <span class="category-name" [class.over-ink]="categoryOver(category)">
+            <span class="category-name" [class.over-budget-text]="categoryIsOverBudget(category)">
               <span
                 class="swatch"
                 [style.background]="tint(category)"
@@ -64,9 +64,9 @@
                 [style.background]="tint(category)"
                 [style.width.%]="fillPercent(category)"
               ></span>
-              @if (categoryOver(category)) {
+              @if (categoryIsOverBudget(category)) {
                 <span
-                  class="bar-over"
+                  class="bar-over-budget"
                   [style.left.%]="fillPercent(category)"
                   [style.width.%]="categoryOverPercent(category)"
                 ></span>
@@ -75,17 +75,20 @@
                 <span class="bar-mark" [style.left.%]="budgetMarkPercent(category)"></span>
               }
             </span>
-            <span class="category-figures t-mono" [class.over-ink]="categoryOver(category)">
+            <span
+              class="category-figures t-mono"
+              [class.over-budget-text]="categoryIsOverBudget(category)"
+            >
               {{ categoryNote(category) }}
             </span>
           </button>
         }
       </div>
 
-      @if (uncategorized() > 0) {
-        <p class="t-small note">
-          {{ bare(uncategorized()) }} of expenses are uncategorized and not included in the bars
-          above.
+      @if (uncategorised() > 0) {
+        <p class="t-small caption">
+          {{ formatAmount(uncategorised()) }} of expenses are uncategorised and not included in the
+          bars above.
         </p>
       }
     }

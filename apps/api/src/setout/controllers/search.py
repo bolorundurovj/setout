@@ -12,29 +12,29 @@ from setout.schemas.search import Hit, HitGroup, SearchKind, SearchResults
 
 
 class SearchController:
-    async def look(self, query: str, limit: int) -> SearchResults:
-        wanted = query.strip()
-        if not wanted:
-            return SearchResults(query=wanted, total=0, groups=[])
+    async def search(self, query: str, limit: int) -> SearchResults:
+        term = query.strip()
+        if not term:
+            return SearchResults(query=term, total=0, groups=[])
 
         groups = [
-            await self._projects(wanted, limit),
-            await self._expenses(wanted, limit),
-            await self._vendors(wanted, limit),
-            await self._people(wanted, limit),
-            await self._items(wanted, limit),
-            await self._lands(wanted, limit),
+            await self._projects(term, limit),
+            await self._expenses(term, limit),
+            await self._vendors(term, limit),
+            await self._people(term, limit),
+            await self._items(term, limit),
+            await self._lands(term, limit),
         ]
-        found = [group for group in groups if group.total]
+        matched = [group for group in groups if group.total]
         return SearchResults(
-            query=wanted,
-            total=sum(group.total for group in found),
-            groups=found,
+            query=term,
+            total=sum(group.total for group in matched),
+            groups=matched,
         )
 
-    async def _projects(self, wanted: str, limit: int) -> HitGroup:
-        rows = Project.filter(deleted_at__isnull=True).filter(
-            Q(name__icontains=wanted) | Q(notes__icontains=wanted)
+    async def _projects(self, term: str, limit: int) -> HitGroup:
+        rows = Project.filter(archived_at__isnull=True).filter(
+            Q(name__icontains=term) | Q(notes__icontains=term)
         )
         return HitGroup(
             kind=SearchKind.PROJECTS,
@@ -45,11 +45,11 @@ class SearchController:
             ],
         )
 
-    async def _expenses(self, wanted: str, limit: int) -> HitGroup:
-        rows = Expense.filter(deleted_at__isnull=True).filter(
-            Q(description__icontains=wanted) | Q(notes__icontains=wanted)
+    async def _expenses(self, term: str, limit: int) -> HitGroup:
+        rows = Expense.filter(archived_at__isnull=True).filter(
+            Q(description__icontains=term) | Q(notes__icontains=term)
         )
-        found = await rows.limit(limit).prefetch_related("project__currency", "vendor")
+        matched = await rows.limit(limit).prefetch_related("project__currency", "vendor")
         return HitGroup(
             kind=SearchKind.EXPENSES,
             total=await rows.count(),
@@ -64,17 +64,17 @@ class SearchController:
                     currency_exponent=row.project.currency.exponent,
                     spent_on=row.spent_on,
                 )
-                for row in found
+                for row in matched
             ],
         )
 
-    async def _vendors(self, wanted: str, limit: int) -> HitGroup:
-        rows = Vendor.filter(deleted_at__isnull=True).filter(
-            Q(name__icontains=wanted)
-            | Q(trade__icontains=wanted)
-            | Q(contact_name__icontains=wanted)
-            | Q(phone__icontains=wanted)
-            | Q(email__icontains=wanted)
+    async def _vendors(self, term: str, limit: int) -> HitGroup:
+        rows = Vendor.filter(archived_at__isnull=True).filter(
+            Q(name__icontains=term)
+            | Q(trade__icontains=term)
+            | Q(contact_name__icontains=term)
+            | Q(phone__icontains=term)
+            | Q(email__icontains=term)
         )
         return HitGroup(
             kind=SearchKind.VENDORS,
@@ -85,9 +85,9 @@ class SearchController:
             ],
         )
 
-    async def _people(self, wanted: str, limit: int) -> HitGroup:
-        rows = Person.filter(deleted_at__isnull=True).filter(
-            Q(name__icontains=wanted) | Q(role__icontains=wanted) | Q(phone__icontains=wanted)
+    async def _people(self, term: str, limit: int) -> HitGroup:
+        rows = Person.filter(archived_at__isnull=True).filter(
+            Q(name__icontains=term) | Q(role__icontains=term) | Q(phone__icontains=term)
         )
         return HitGroup(
             kind=SearchKind.PEOPLE,
@@ -98,9 +98,9 @@ class SearchController:
             ],
         )
 
-    async def _items(self, wanted: str, limit: int) -> HitGroup:
-        rows = Item.filter(deleted_at__isnull=True).filter(
-            Q(name__icontains=wanted) | Q(unit__icontains=wanted)
+    async def _items(self, term: str, limit: int) -> HitGroup:
+        rows = Item.filter(archived_at__isnull=True).filter(
+            Q(name__icontains=term) | Q(unit__icontains=term)
         )
         return HitGroup(
             kind=SearchKind.ITEMS,
@@ -111,12 +111,12 @@ class SearchController:
             ],
         )
 
-    async def _lands(self, wanted: str, limit: int) -> HitGroup:
-        rows = Land.filter(deleted_at__isnull=True).filter(
-            Q(name__icontains=wanted)
-            | Q(address__icontains=wanted)
-            | Q(city__icontains=wanted)
-            | Q(state__icontains=wanted)
+    async def _lands(self, term: str, limit: int) -> HitGroup:
+        rows = Land.filter(archived_at__isnull=True).filter(
+            Q(name__icontains=term)
+            | Q(address__icontains=term)
+            | Q(city__icontains=term)
+            | Q(state__icontains=term)
         )
         return HitGroup(
             kind=SearchKind.LANDS,

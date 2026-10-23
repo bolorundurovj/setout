@@ -2,9 +2,8 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Api, Counts, getCounts } from '@setout/api-client';
 
 /**
- * How many of each thing the install holds. The navigation badges read from
- * here rather than from the list pages, which only know what they have paged in
- * and know nothing at all until they are opened.
+ * Record totals for the navigation badges. List pages only hold the rows they
+ * have paged in, so the totals come from the server.
  */
 @Injectable({
   providedIn: 'root',

@@ -26,8 +26,8 @@ describe('LoginComponent', () => {
           useValue: {
             loading: () => false,
             error: () => null,
-            login: async (password: string) => {
-              attempts.push(password);
+            signIn: async (passphrase: string) => {
+              attempts.push(passphrase);
               return succeeds;
             },
           },
@@ -45,7 +45,7 @@ describe('LoginComponent', () => {
     return fixture.componentInstance;
   }
 
-  it('does not try an empty passphrase', async () => {
+  it('does not submit an empty passphrase', async () => {
     const component = render();
 
     await component.onSubmit();
@@ -54,9 +54,9 @@ describe('LoginComponent', () => {
     expect(navigations).toEqual([]);
   });
 
-  it('signs in and goes to the dashboard', async () => {
+  it('signs in and navigates to Home', async () => {
     const component = render();
-    component.password.set('a passphrase');
+    component.passphrase.set('a passphrase');
 
     await component.onSubmit();
 
@@ -65,10 +65,10 @@ describe('LoginComponent', () => {
     expect(toasts[0]).toContain('Signed in');
   });
 
-  it('stays where it is when the passphrase is wrong', async () => {
+  it('does not navigate when sign-in fails', async () => {
     const component = render();
     succeeds = false;
-    component.password.set('wrong');
+    component.passphrase.set('wrong');
 
     await component.onSubmit();
 

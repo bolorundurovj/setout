@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Api } from '@setout/api-client';
 import { PersonService } from './person.service';
 
-function person(id: string, over: Record<string, unknown> = {}) {
+function person(id: string, overrides: Record<string, unknown> = {}) {
   return {
     id,
     name: 'Mum',
@@ -12,8 +12,8 @@ function person(id: string, over: Record<string, unknown> = {}) {
     expense_count: 0,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
@@ -48,7 +48,7 @@ describe('PersonService', () => {
     expect(service.total()).toBe(1);
   });
 
-  it('leaves archived rows out unless the page includes them', async () => {
+  it('excludes archived people unless include_archived is set', async () => {
     const service = configure(() => page([]));
     await service.load();
     expect((calls[0] as { include_archived?: boolean }).include_archived).toBe(false);
@@ -57,7 +57,7 @@ describe('PersonService', () => {
     expect((calls[1] as { include_archived?: boolean }).include_archived).toBe(true);
   });
 
-  it('reports a failure instead of throwing', async () => {
+  it('sets an error when the list fails to load', async () => {
     const service = configure(() => {
       throw new Error('offline');
     });
@@ -66,7 +66,7 @@ describe('PersonService', () => {
     expect(service.error()).toBe('Could not load the people.');
   });
 
-  it('asks for ten rows at the offset of the page wanted', async () => {
+  it('requests ten rows at the offset of the requested page', async () => {
     const service = configure(() => page([person('pe1')], 24));
     await service.load();
     expect((calls[0] as { limit?: number }).limit).toBe(10);
@@ -76,14 +76,14 @@ describe('PersonService', () => {
     expect(service.page()).toBe(3);
   });
 
-  it('holds every choice apart from the page, for the pickers', async () => {
+  it('loads picker choices separately from the paged list', async () => {
     const service = configure(() => page([person('pe1'), person('pe2')], 2));
     await service.loadChoices();
     expect(service.choices().length).toBe(2);
     expect((calls[0] as { limit?: number }).limit).toBe(100);
   });
 
-  it('reads the page back after adding, and offers the new choice', async () => {
+  it('reloads the page after creating a person and adds it to the choices', async () => {
     const service = configure((name) =>
       name === 'createPerson' ? person('pe2', { name: 'Mr Idris' }) : page([person('pe1')]),
     );
@@ -95,19 +95,19 @@ describe('PersonService', () => {
     expect(service.choices()[0].name).toBe('Mr Idris');
   });
 
-  it('surfaces the reason a duplicate name was refused', async () => {
+  it('shows the API error when a duplicate name is rejected', async () => {
     const service = configure((name) => {
       if (name === 'createPerson') {
-        throw { error: { detail: 'Somebody with that name already exists' } };
+        throw { error: { detail: 'A person with that name already exists' } };
       }
       return page([]);
     });
 
     expect(await service.add({ name: 'Mum' })).toBeNull();
-    expect(service.error()).toBe('Somebody with that name already exists');
+    expect(service.error()).toBe('A person with that name already exists');
   });
 
-  it('replaces the row it edited', async () => {
+  it('replaces the edited row in the list', async () => {
     const service = configure((name) =>
       name === 'updatePerson' ? person('pe1', { role: 'foreman' }) : page([person('pe1')]),
     );
@@ -117,17 +117,17 @@ describe('PersonService', () => {
     expect(service.people()[0].role).toBe('foreman');
   });
 
-  it('reads the page back after archiving somebody', async () => {
+  it('reloads the page after archiving a person', async () => {
     const service = configure(() => page([person('pe1')]));
     await service.load();
 
     await service.archive('pe1');
 
-    expect(names).toContain('deletePerson');
+    expect(names).toContain('archivePerson');
     expect(names.filter((n) => n === 'listPeople').length).toBe(2);
   });
 
-  it('reloads after taking somebody out of the archive', async () => {
+  it('reloads the page after restoring a person', async () => {
     const service = configure(() => page([person('pe1')]));
     await service.restore('pe1');
 
@@ -135,20 +135,20 @@ describe('PersonService', () => {
     expect(names).toContain('listPeople');
   });
 
-  it('reads what somebody spent per project', async () => {
+  it('loads the expense summary per project', async () => {
     const service = configure(() => ({
       person_id: 'pe1',
       name: 'Mum',
       projects: [{ project_id: 'p1', currency_code: 'NGN', spent_amount: 37_500_00 }],
     }));
 
-    expect((await service.spend('pe1'))?.projects.length).toBe(1);
+    expect((await service.expenseSummary('pe1'))?.projects.length).toBe(1);
   });
 
-  it('returns null rather than throwing when spend cannot be read', async () => {
+  it('returns null when the expense summary fails to load', async () => {
     const service = configure(() => {
       throw new Error('offline');
     });
-    expect(await service.spend('pe1')).toBeNull();
+    expect(await service.expenseSummary('pe1')).toBeNull();
   });
 });

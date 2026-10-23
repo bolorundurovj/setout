@@ -9,23 +9,24 @@ import pytest
 from openpyxl import load_workbook
 
 from setout.services.sheets import read_budget, read_expenses, read_outstanding, write
-from setout.services.sheets.detect import Found, Shape, find
+from setout.services.sheets.detect import DetectedSheet, SheetKind, detect_sheets
+from setout.services.sheets.gather import parse_workbook
 from setout.services.sheets.workbook import read
 
 pytestmark = pytest.mark.unit
 
 
-def a_book() -> write.Book:
-    return write.Book(
+def a_book() -> write.ExportWorkbook:
+    return write.ExportWorkbook(
         project_name="Jacaranda Close, Ewuru",
         exponent=2,
         categories=[
-            write.PlanCategory(
+            write.BudgetCategory(
                 code="1000",
                 name="Administrative Expenses",
                 lines=[
-                    write.PlanLine("1001", "Beacons", 1_000_00, "fixed"),
-                    write.PlanLine("1002", "Drawings", 20_000_00, "material"),
+                    write.BudgetLine("1001", "Beacons", 1_000_00, "fixed"),
+                    write.BudgetLine("1002", "Drawings", 20_000_00, "material"),
                 ],
             )
         ],
@@ -39,23 +40,23 @@ def a_book() -> write.Book:
                 notes="",
             )
         ],
-        spend=[
-            write.SpendRow(
+        expenses=[
+            write.ExpenseRow(
                 vendor="Bright Star Aluminium",
                 code="1001",
                 description="Roofing sheets",
                 spent_on=date(2026, 8, 14),
                 amount=500_000_00,
-                document="receipt.png",
+                attachment="receipt.png",
                 paid_by="Ayo",
                 notes="@ rate of 4200",
             )
         ],
-        owed=[
-            write.OwedRow(
+        outstanding=[
+            write.OutstandingRow(
                 description="17 bags of cement",
                 vendor="Corner Depot",
-                promised="this week",
+                expected="this week",
                 received_on=None,
             )
         ],
@@ -77,9 +78,12 @@ def a_book() -> write.Book:
                 spent_on=date(2026, 8, 14),
             )
         ],
-        files=[
-            write.FileRow(
-                filename="receipt.png", against="Roofing sheets", byte_size=2048, checksum="ab" * 32
+        attachments=[
+            write.AttachmentRow(
+                filename="receipt.png",
+                expense_description="Roofing sheets",
+                byte_size=2048,
+                checksum="ab" * 32,
             )
         ],
     )
@@ -94,13 +98,13 @@ def sheets_of(data: bytes) -> dict[str, list[list[object]]]:
 
 
 def test_the_reader_recognises_every_sheet_the_writer_names() -> None:
-    found = find(read(write.build(a_book()), "book.xlsx"))
+    found = detect_sheets(read(write.build(a_book()), "book.xlsx"))
 
-    assert {hit.shape for hit in found.found} == {
-        Shape.BUDGET,
-        Shape.VENDORS,
-        Shape.EXPENSES,
-        Shape.OUTSTANDING,
+    assert {hit.kind for hit in found.detected} == {
+        SheetKind.BUDGET,
+        SheetKind.VENDORS,
+        SheetKind.EXPENSES,
+        SheetKind.OUTSTANDING,
     }
 
 
@@ -115,7 +119,7 @@ def test_a_category_heading_carries_the_total_of_its_lines() -> None:
 
 
 def test_figures_are_written_as_the_money_they_are() -> None:
-    rows = sheets_of(write.build(a_book()))["Invoices and Purchases"]
+    rows = sheets_of(write.build(a_book()))["Expenses"]
     row = rows[-1]
 
     assert row[5] == 500_000
@@ -132,15 +136,15 @@ def test_the_sheets_setout_alone_keeps_are_there_too() -> None:
 
 
 def test_an_export_of_nothing_is_still_a_workbook_the_reader_takes() -> None:
-    empty = write.Book(project_name="Nothing yet", exponent=2)
+    empty = write.ExportWorkbook(project_name="Nothing yet", exponent=2)
 
-    found = find(read(write.build(empty), "book.xlsx"))
+    found = detect_sheets(read(write.build(empty), "book.xlsx"))
 
-    assert {hit.shape for hit in found.found} == {
-        Shape.BUDGET,
-        Shape.VENDORS,
-        Shape.EXPENSES,
-        Shape.OUTSTANDING,
+    assert {hit.kind for hit in found.detected} == {
+        SheetKind.BUDGET,
+        SheetKind.VENDORS,
+        SheetKind.EXPENSES,
+        SheetKind.OUTSTANDING,
     }
 
 
@@ -165,52 +169,79 @@ class TestTheSamplesMatchAnExport:
 
         for filled in (False, True):
             sample = self.sheets_in(write.template(filled=filled))
-            assert sample[0] == "How to fill this in"
+            assert sample[0] == "Instructions"
             assert sample[1:] == export
 
     def test_the_filled_sample_shows_every_sheet_with_something_in_it(self) -> None:
         written = sheets_of(write.template(filled=True))
 
-        for name in ["Budget", "Invoices and Purchases", "People", "Agreements", "Item prices"]:
+        for name in ["Budget", "Expenses", "People", "Agreements", "Item prices"]:
             assert len(written[name]) > 3, name
 
     def test_the_blank_sample_carries_headings_and_no_rows(self) -> None:
         written = sheets_of(write.template())
 
-        for name in ["Budget", "Invoices and Purchases", "Outstanding"]:
+        for name in ["Budget", "Expenses", "Outstanding deliveries"]:
             assert len(written[name]) == 3, name
 
 
 class TestWhatSetoutWroteReadsBack:
-    def read_back(self, book: write.Book) -> dict[Shape, Found]:
-        found = find(read(write.build(book), "book.xlsx"))
-        return {hit.shape: hit for hit in found.found}
+    def read_back(self, book: write.ExportWorkbook) -> dict[SheetKind, DetectedSheet]:
+        found = detect_sheets(read(write.build(book), "book.xlsx"))
+        return {hit.kind: hit for hit in found.detected}
 
     def test_something_delivered_does_not_come_back_as_still_waiting(self) -> None:
-        book = write.Book(
+        book = write.ExportWorkbook(
             project_name="P",
             exponent=2,
-            owed=[
-                write.OwedRow("20 rods", "A vendor", "this week", date(2026, 8, 14)),
-                write.OwedRow("17 bags", "A vendor", "next week", None),
+            outstanding=[
+                write.OutstandingRow("20 rods", "A vendor", "this week", date(2026, 8, 14)),
+                write.OutstandingRow("17 bags", "A vendor", "next week", None),
             ],
         )
 
-        rows = read_outstanding.read(self.read_back(book)[Shape.OUTSTANDING]).owed
+        rows = read_outstanding.read(self.read_back(book)[SheetKind.OUTSTANDING]).outstanding
 
-        assert [(row.description, row.resolved) for row in rows] == [
+        assert [(row.description, row.received) for row in rows] == [
             ("20 rods", True),
             ("17 bags", False),
         ]
+
+    def test_the_expected_delivery_comes_back_under_its_own_header(self) -> None:
+        book = write.ExportWorkbook(
+            project_name="P",
+            exponent=2,
+            outstanding=[write.OutstandingRow("17 bags", "A vendor", "next week", None)],
+        )
+
+        hit = self.read_back(book)[SheetKind.OUTSTANDING]
+        rows = read_outstanding.read(hit).outstanding
+
+        assert "expected" in hit.columns
+        assert "location" not in hit.columns
+        assert [(row.description, row.expected, row.received) for row in rows] == [
+            ("17 bags", "next week", False)
+        ]
+
+    def test_the_import_report_names_the_expected_column_it_does_not_store(self) -> None:
+        found = parse_workbook(read(write.build(a_book()), "book.xlsx"), 2)
+
+        assert "Expected" in found.unimported_columns
+        assert "Location" not in found.unimported_columns
+
+    def test_the_samples_head_the_expected_delivery_column_expected(self) -> None:
+        for filled in (False, True):
+            head = sheets_of(write.template(filled=filled))["Outstanding deliveries"][2]
+            assert head[3] == "Expected"
 
     def test_the_figures_come_back_as_the_figures_that_went_in(self) -> None:
         book = a_book()
         sheets = self.read_back(book)
 
-        budgeted = read_budget.read(sheets[Shape.BUDGET], 2)
-        spend = read_expenses.read(sheets[Shape.EXPENSES], 2)
+        budgeted = read_budget.read(sheets[SheetKind.BUDGET], 2)
+        spend = read_expenses.read(sheets[SheetKind.EXPENSES], 2)
 
         assert budgeted.budgeted_amount == book.categories[0].budgeted_amount
         assert [line.cost_type for line in budgeted.categories[0].lines] == ["fixed", "material"]
-        assert [row.amount for row in spend.spend] == [book.spend[0].amount]
-        assert spend.spend[0].description == "Roofing sheets"
+        assert [row.amount for row in spend.expenses] == [book.expenses[0].amount]
+        assert spend.expenses[0].description == "Roofing sheets"

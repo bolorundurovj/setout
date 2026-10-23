@@ -32,11 +32,12 @@ export class LandValuationsComponent {
   readonly changed = output<void>();
 
   readonly rows = signal<LandValuationRead[]>([]);
+  readonly lastArchived = signal<LandValuationRead | null>(null);
   readonly adding = signal(false);
   readonly amount = signal('');
   readonly currency = signal('');
   readonly valuedOn = signal('');
-  readonly note = signal('');
+  readonly notes = signal('');
   readonly kind = signal<LandValuationKind>('valuation');
 
   readonly currencyChips = computed<Chip[]>(() =>
@@ -46,15 +47,15 @@ export class LandValuationsComponent {
     })),
   );
 
-  readonly pinned = computed(() => this.land().currency_code ?? '');
+  readonly landCurrency = computed(() => this.land().currency_code ?? '');
 
-  readonly symbol = computed(() => currencySymbol(this.pinned() || this.currency()));
+  readonly symbol = computed(() => currencySymbol(this.landCurrency() || this.currency()));
 
-  readonly bought = computed(() => this.rows().some((row) => row.kind === 'purchase'));
+  readonly hasPurchasePrice = computed(() => this.rows().some((row) => row.kind === 'purchase'));
 
   readonly kindChips = computed<Chip[]>(() => {
     const chips: Chip[] = [{ value: 'valuation', label: 'Valuation' }];
-    if (!this.bought()) {
+    if (!this.hasPurchasePrice()) {
       chips.unshift({ value: 'purchase', label: 'Purchase Price' });
     }
     return chips;
@@ -73,23 +74,23 @@ export class LandValuationsComponent {
   }
 
   exponent(): number {
-    const code = this.pinned() || this.currency();
+    const code = this.landCurrency() || this.currency();
     return this.projects.currencies().find((c) => c.code === code)?.exponent ?? 2;
   }
 
-  money(row: LandValuationRead): string {
+  amountLabel(row: LandValuationRead): string {
     return formatMoney(row.amount, row.currency_code, row.currency_exponent);
   }
 
-  /** What it moved by since the entry before it, which only reads because the currency is fixed. */
-  change(index: number): string {
+  /** Percentage change from the previous entry; valid because all entries share one currency. */
+  percentChange(index: number): string {
     const rows = this.rows();
-    const older = rows[index + 1];
-    if (!older || older.amount === 0) {
+    const previous = rows[index + 1];
+    if (!previous || previous.amount === 0) {
       return '';
     }
-    const shift = ((rows[index].amount - older.amount) / older.amount) * 100;
-    const rounded = Math.round(shift * 10) / 10;
+    const percent = ((rows[index].amount - previous.amount) / previous.amount) * 100;
+    const rounded = Math.round(percent * 10) / 10;
     return `${rounded > 0 ? '+' : ''}${rounded}%`;
   }
 
@@ -103,10 +104,10 @@ export class LandValuationsComponent {
 
   open(): void {
     this.adding.set(true);
-    this.kind.set(this.bought() ? 'valuation' : 'purchase');
-    this.currency.set(this.pinned());
+    this.kind.set(this.hasPurchasePrice() ? 'valuation' : 'purchase');
+    this.currency.set(this.landCurrency());
     this.amount.set('');
-    this.note.set('');
+    this.notes.set('');
     this.valuedOn.set('');
   }
 
@@ -115,7 +116,7 @@ export class LandValuationsComponent {
   }
 
   isValid(): boolean {
-    const code = this.pinned() || this.currency();
+    const code = this.landCurrency() || this.currency();
     return (
       code.length > 0 &&
       this.valuedOn().length > 0 &&
@@ -127,17 +128,17 @@ export class LandValuationsComponent {
     if (!this.isValid()) {
       return;
     }
-    // Read the exponent now: it belongs to the currency picked at this moment.
+    // The exponent depends on the currency selected at save time.
     const minor = parseMoney(this.amount(), this.exponent());
     if (minor === null) {
       return;
     }
-    const saved = await this.lands.addValuation(this.land().id, {
+    const saved = await this.lands.createValuation(this.land().id, {
       kind: this.kind(),
       amount: minor,
-      currency_code: this.pinned() || this.currency(),
+      currency_code: this.landCurrency() || this.currency(),
       valued_on: this.valuedOn(),
-      note: this.note().trim() || null,
+      notes: this.notes().trim() || null,
     });
     if (saved) {
       this.adding.set(false);
@@ -146,8 +147,20 @@ export class LandValuationsComponent {
     }
   }
 
-  async remove(row: LandValuationRead): Promise<void> {
-    await this.lands.removeValuation(row.id);
+  async archive(row: LandValuationRead): Promise<void> {
+    await this.lands.archiveValuation(row.id);
+    this.lastArchived.set(row);
+    await this.load();
+    this.changed.emit();
+  }
+
+  async restoreLastArchived(): Promise<void> {
+    const archived = this.lastArchived();
+    if (!archived) {
+      return;
+    }
+    await this.lands.restoreValuation(archived.id);
+    this.lastArchived.set(null);
     await this.load();
     this.changed.emit();
   }

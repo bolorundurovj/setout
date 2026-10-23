@@ -25,5 +25,5 @@ async def reverse_geocode(
     latitude: Annotated[float, Query(ge=-90, le=90)],
     longitude: Annotated[float, Query(ge=-180, le=180)],
 ) -> GeocodedPlace | None:
-    """What the map calls this spot, or nothing when the geocoder is off or out of reach."""
-    return await controller.at(latitude, longitude)
+    """The address at these coordinates, or null when geocoding is disabled or unavailable."""
+    return await controller.reverse_geocode(latitude, longitude)

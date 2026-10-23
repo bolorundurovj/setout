@@ -27,23 +27,23 @@ controller = ImportController()
 exporter = ExportController()
 
 
-REFUSALS: dict[int | str, dict[str, Any]] = {
+IMPORT_ERRORS: dict[int | str, dict[str, Any]] = {
     status.HTTP_404_NOT_FOUND: {"description": "Not found"},
     status.HTTP_422_UNPROCESSABLE_CONTENT: {"description": "The file could not be read"},
 }
 
 
-@router.post("/import/preview", operation_id="previewImport", responses=REFUSALS)
+@router.post("/import/preview", operation_id="previewImport", responses=IMPORT_ERRORS)
 async def preview_import(
     user: CurrentUser,
     file: Annotated[UploadFile, File(description="The .xlsx or .csv to read")],
-    project_id: Annotated[str | None, Form(description="Leave out to start a project")] = None,
+    project_id: Annotated[str | None, Form(description="Omit to create a new project")] = None,
     name: Annotated[str, Form(description="Name for a new project")] = "",
     currency_code: Annotated[str, Form(description="Currency for a new project")] = "",
 ) -> ImportReport:
-    """Say what the file holds and what would happen. Writes nothing."""
+    """Preview what the file contains and what an import would change. Writes nothing."""
     try:
-        return await controller.look(
+        return await controller.preview(
             await read_capped(file, get_settings().max_import_bytes),
             file.filename or "",
             project_id=project_id or None,
@@ -60,7 +60,7 @@ async def preview_import(
     "/import",
     operation_id="runImport",
     status_code=status.HTTP_201_CREATED,
-    responses=REFUSALS,
+    responses=IMPORT_ERRORS,
 )
 async def run_import(
     user: CurrentUser,
@@ -71,10 +71,10 @@ async def run_import(
     create_missing_categories: Annotated[bool, Form()] = True,
     skip_duplicates: Annotated[bool, Form()] = True,
     take_unpaid: Annotated[bool, Form()] = True,
-    several_codes: Annotated[str, Form(pattern="^(first|uncategorized)$")] = "first",
+    several_codes: Annotated[str, Form(pattern="^(first|uncategorised)$")] = "first",
 ) -> ImportResult:
     try:
-        return await controller.bring_in(
+        return await controller.run_import(
             await read_capped(file, get_settings().max_import_bytes),
             file.filename or "",
             project_id=project_id or None,
@@ -97,7 +97,7 @@ async def run_import(
     "/projects/{project_id}/export",
     operation_id="exportProject",
     responses={
-        **REFUSALS,
+        **IMPORT_ERRORS,
         status.HTTP_200_OK: {
             "description": "The workbook",
             "content": {XLSX_TYPE: {"schema": {"type": "string", "format": "binary"}}},
@@ -106,7 +106,7 @@ async def run_import(
     response_class=Response,
 )
 async def export_project(project_id: str, user: CurrentUser) -> Response:
-    """The project as a workbook shaped like the one it came from."""
+    """Export the project as a workbook in the import format."""
     name, data = await exporter.workbook(project_id)
     filename = filename_for(name, datetime.now(UTC))
     return Response(
@@ -121,23 +121,23 @@ async def export_project(project_id: str, user: CurrentUser) -> Response:
     operation_id="importSample",
     responses={
         status.HTTP_200_OK: {
-            "description": "A sheet to start from",
+            "description": "The import template",
             "content": {XLSX_TYPE: {"schema": {"type": "string", "format": "binary"}}},
         }
     },
     response_class=Response,
 )
-async def import_sample(
+async def download_import_template(
     user: CurrentUser,
     kind: Annotated[
         str,
         Query(
             pattern="^(blank|example|budget-csv|spending-csv)$",
-            description="An empty workbook, one with rows to copy, or either sheet as a CSV",
+            description="An empty workbook, a workbook with example rows, or either sheet as a CSV",
         ),
     ] = "blank",
 ) -> Response:
-    """Something to fill in, for somebody with nothing to import yet."""
+    """Download an import template."""
     filename, media_type = SAMPLES[kind]
     return Response(
         content=sample(kind),

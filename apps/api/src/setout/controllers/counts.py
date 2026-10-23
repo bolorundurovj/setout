@@ -11,9 +11,9 @@ from setout.schemas.counts import Counts
 class CountsController:
     async def counts(self) -> Counts:
         return Counts(
-            projects=await Project.filter(deleted_at__isnull=True).count(),
-            vendors=await Vendor.filter(deleted_at__isnull=True).count(),
-            items=await Item.filter(deleted_at__isnull=True).count(),
-            people=await Person.filter(deleted_at__isnull=True).count(),
-            lands=await Land.filter(deleted_at__isnull=True).count(),
+            projects=await Project.filter(archived_at__isnull=True).count(),
+            vendors=await Vendor.filter(archived_at__isnull=True).count(),
+            items=await Item.filter(archived_at__isnull=True).count(),
+            people=await Person.filter(archived_at__isnull=True).count(),
+            lands=await Land.filter(archived_at__isnull=True).count(),
         )

@@ -6,10 +6,10 @@ import { ToastService } from '../toast.service';
 import { ItemService } from '../items/item.service';
 import { PersonService } from '../people/person.service';
 import { VendorService } from '../vendors/vendor.service';
-import { ExpenseService, UNFILED, type ExpenseFilters } from './expense.service';
+import { ExpenseService, UNCATEGORISED, type ExpenseFilters } from './expense.service';
 import { ExpensesComponent } from './expenses.component';
 
-function expense(id: string, over: Partial<ExpenseRead> = {}): ExpenseRead {
+function expense(id: string, overrides: Partial<ExpenseRead> = {}): ExpenseRead {
   return {
     id,
     project_id: 'p1',
@@ -28,8 +28,8 @@ function expense(id: string, over: Partial<ExpenseRead> = {}): ExpenseRead {
     notes: null,
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
@@ -50,7 +50,7 @@ function category(id: string, name: string, isGroup = false): CategoryRead {
     own_expense_count: 0,
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
   };
 }
 
@@ -68,68 +68,71 @@ describe('ExpensesComponent', () => {
     status: 'active',
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
   };
 
   let expenses: ExpenseRead[];
-  let uncategorized: ExpenseRead[];
+  let uncategorised: ExpenseRead[];
   let categories: CategoryRead[];
-  let filed: { projectId: string; body: { expense_ids: string[]; category_id: string } } | null;
+  let assigned: { projectId: string; body: { expense_ids: string[]; category_id: string } } | null;
   let loaded: string[];
-  let uncategorizedPages: number[];
+  let uncategorisedPages: number[];
   let toasts: { message: string; type: string }[];
-  let fileResult: number | null;
-  let asked: boolean[];
+  let assignResult: number | null;
+  let includeArchivedRequests: boolean[];
 
   function renderFixture(filters: ExpenseFilters = {}) {
     expenses = [expense('e1'), expense('e2', { description: 'Sand' })];
-    uncategorized = [...expenses];
+    uncategorised = [...expenses];
     categories = [category('s1', 'Concrete foundation')];
-    filed = null;
+    assigned = null;
     loaded = [];
-    uncategorizedPages = [];
+    uncategorisedPages = [];
     toasts = [];
-    fileResult = 2;
-    asked = [];
+    assignResult = 2;
+    includeArchivedRequests = [];
 
     const expenseService = {
       expenses: () => expenses,
       total: () => expenses.length,
       page: () => 1,
       byCategory: () => ({
-        [UNFILED]: {
-          rows: uncategorized,
-          total: uncategorized.length,
-          page: uncategorizedPages.at(-1) ?? 1,
+        [UNCATEGORISED]: {
+          rows: uncategorised,
+          total: uncategorised.length,
+          page: uncategorisedPages.at(-1) ?? 1,
         },
       }),
-      spend: () => ({
+      summary: () => ({
         project_id: 'p1',
         currency_code: 'NGN',
         currency_exponent: 2,
         budgeted_amount: 0,
         spent_amount: 15_000_00,
-        uncategorized_amount: 15_000_00,
-        uncategorized_count: 2,
-        removed_count: 0,
+        uncategorised_amount: 15_000_00,
+        uncategorised_count: 2,
+        archived_count: 0,
         variance_percent: null,
       }),
       saving: () => false,
       error: () => null,
       load: async (projectId: string, filters: { includeArchived?: boolean } = {}) => {
         loaded.push(projectId);
-        asked.push(filters.includeArchived ?? false);
+        includeArchivedRequests.push(filters.includeArchived ?? false);
       },
       goTo: async (projectId: string) => void loaded.push(projectId),
       loadForCategory: async (projectId: string, categoryId: string, page = 1) => {
         loaded.push(projectId);
-        uncategorizedPages.push(page);
+        uncategorisedPages.push(page);
       },
-      file: async (projectId: string, body: { expense_ids: string[]; category_id: string }) => {
-        filed = { projectId, body };
-        return fileResult;
+      categorise: async (
+        projectId: string,
+        body: { expense_ids: string[]; category_id: string },
+      ) => {
+        assigned = { projectId, body };
+        return assignResult;
       },
-      remove: async () => undefined,
+      archive: async () => undefined,
       restore: async () => undefined,
     };
 
@@ -173,31 +176,31 @@ describe('ExpensesComponent', () => {
     expect(loaded).toContain('p1');
   });
 
-  it('reads the list again with the deleted included when the toggle goes on', async () => {
+  it('reloads with archived expenses when Show archived is on', async () => {
     const component = render();
-    component.startFiling();
+    component.startAssigning();
 
     await component.setIncludeArchived(true);
 
     expect(component.includeArchived()).toBe(true);
     expect(component.archivedLabel()).toBe('Hide archived');
-    expect(asked).toContain(true);
-    // Filing works on live rows, so it closes rather than showing deleted ones.
-    expect(component.filing()).toBe(false);
+    expect(includeArchivedRequests).toContain(true);
+    // Bulk assignment applies only to active rows, so it closes when archived rows are shown.
+    expect(component.assigning()).toBe(false);
   });
 
-  it('starts bulk filing and loads the uncategorized list', async () => {
+  it('starts bulk assignment and loads the uncategorised list', async () => {
     const component = render();
-    component.startFiling();
+    component.startAssigning();
 
-    expect(component.filing()).toBe(true);
+    expect(component.assigning()).toBe(true);
     expect(loaded).toContain('p1');
-    expect(uncategorizedPages).toContain(1);
+    expect(uncategorisedPages).toContain(1);
   });
 
   it('selects and deselects individual expenses', () => {
     const component = render();
-    component.startFiling();
+    component.startAssigning();
 
     component.toggleOne('e1');
     expect(component.selected().has('e1')).toBe(true);
@@ -207,9 +210,9 @@ describe('ExpensesComponent', () => {
     expect(component.selected().has('e1')).toBe(false);
   });
 
-  it('selects all visible uncategorized expenses at once', () => {
+  it('selects all visible uncategorised expenses', () => {
     const component = render();
-    component.startFiling();
+    component.startAssigning();
 
     component.toggleAll();
     expect(component.allSelected()).toBe(true);
@@ -220,57 +223,57 @@ describe('ExpensesComponent', () => {
     expect(component.selectedCount()).toBe(0);
   });
 
-  it('files selected expenses to the chosen category', async () => {
+  it('assigns selected expenses to the chosen category', async () => {
     const component = render();
-    component.startFiling();
+    component.startAssigning();
     component.toggleOne('e1');
     component.bulkCategoryId.set('s1');
 
-    await component.fileSelected();
+    await component.assignSelected();
 
-    expect(filed?.body).toEqual({ expense_ids: ['e1'], category_id: 's1' });
+    expect(assigned?.body).toEqual({ expense_ids: ['e1'], category_id: 's1' });
     expect(toasts[0].type).toBe('success');
   });
 
-  it('does not file when no category is chosen', async () => {
+  it('does not assign when no category is chosen', async () => {
     const component = render();
-    component.startFiling();
+    component.startAssigning();
     component.toggleOne('e1');
 
-    await component.fileSelected();
+    await component.assignSelected();
 
-    expect(filed).toBeNull();
+    expect(assigned).toBeNull();
   });
 
-  it('shows an error when bulk filing fails', async () => {
+  it('shows an error when bulk assignment fails', async () => {
     const component = render();
-    fileResult = null;
-    component.startFiling();
+    assignResult = null;
+    component.startAssigning();
     component.toggleOne('e1');
     component.bulkCategoryId.set('s1');
 
-    await component.fileSelected();
+    await component.assignSelected();
 
-    expect(filed?.body).toEqual({ expense_ids: ['e1'], category_id: 's1' });
+    expect(assigned?.body).toEqual({ expense_ids: ['e1'], category_id: 's1' });
     expect(toasts[0].type).toBe('error');
   });
 
-  it('stops filing when the last uncategorized expense is gone', async () => {
+  it('stops assigning when no uncategorised expenses remain', async () => {
     const component = render();
-    uncategorized = [];
-    component.startFiling();
+    uncategorised = [];
+    component.startAssigning();
     component.toggleOne('e1');
     component.bulkCategoryId.set('s1');
 
-    await component.fileSelected();
+    await component.assignSelected();
 
-    expect(component.filing()).toBe(false);
+    expect(component.assigning()).toBe(false);
   });
 
-  it('only offers leaf categories in the bulk filing picker', () => {
+  it('offers only leaf categories in the bulk assignment picker', () => {
     const component = render();
     categories = [category('s1', 'Structure', true), category('s2', 'Blockwork')];
 
-    expect(component.fileableCategories().map((s) => s.id)).toEqual(['s2']);
+    expect(component.assignableCategories().map((s) => s.id)).toEqual(['s2']);
   });
 });

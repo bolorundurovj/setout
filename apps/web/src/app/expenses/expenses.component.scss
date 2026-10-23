@@ -138,7 +138,7 @@
   max-width: 100%;
 }
 
-.chip.photo {
+.chip.attachment {
   margin-left: 8px;
   padding: 3px 8px;
   font-size: 10px;
@@ -147,7 +147,7 @@
   color: var(--ink-3);
 }
 
-.chip.uncategorized {
+.chip.uncategorised {
   background: var(--warn-surface);
   border-color: var(--warn-edge);
   color: var(--warn-ink);
@@ -174,8 +174,7 @@
   gap: 4px;
 }
 
-// Same treatment as the sidebar nav items, so a row action reads as part of
-// the same system rather than as bare text.
+// Matches the sidebar nav item styles so row actions do not render as bare text.
 .link-action {
   background: none;
   border: 1px solid transparent;
@@ -202,7 +201,7 @@
       0 0 0 4px var(--accent);
   }
 
-  &.destructive:hover {
+  &.archive:hover {
     background: var(--over-surface);
     border-color: var(--over-edge);
     color: var(--over-ink);
@@ -302,6 +301,19 @@
 @media (max-width: bp.$phone) {
   .filters {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.confirm-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  .delete-input {
+    width: 80px;
+    padding: 2px 6px;
+    font-size: 12px;
+    text-transform: uppercase;
   }
 }
 

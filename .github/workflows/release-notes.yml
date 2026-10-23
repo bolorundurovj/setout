@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Credit everyone who landed a commit in this release
+      - name: List the authors of every commit in this release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.event.release.tag_name }}
@@ -31,7 +31,7 @@ jobs:
 
           authors=$(git log --format='%an' "$range" | sort -u)
           if [ -z "$authors" ]; then
-            echo "No commits in $range, leaving the notes alone."
+            echo "No commits in $range, release notes unchanged."
             exit 0
           fi
 

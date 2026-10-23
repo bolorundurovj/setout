@@ -50,17 +50,16 @@ function isoDay(offsetDays = 0): string {
 })
 export class AddExpenseComponent {
   readonly project = input.required<ProjectRead>();
-  // Given an expense, the form edits it instead of recording a new one.
-  readonly editing = input<ExpenseRead | null>(null);
+  readonly expenseToEdit = input<ExpenseRead | null>(null);
 
   readonly saved = output<void>();
-  readonly isEditing = computed(() => this.editing() !== null);
-  readonly done = output<void>();
+  readonly isEditing = computed(() => this.expenseToEdit() !== null);
+  readonly closed = output<void>();
 
   readonly expenses = inject(ExpenseService);
-  readonly itemsCatalogue = inject(ItemService);
-  readonly vendorList = inject(VendorService);
-  readonly peopleList = inject(PersonService);
+  readonly items = inject(ItemService);
+  readonly vendors = inject(VendorService);
+  readonly people = inject(PersonService);
   private readonly budget = inject(BudgetService);
   private readonly agreements = inject(AgreementService);
   private readonly toast = inject(ToastService);
@@ -84,22 +83,22 @@ export class AddExpenseComponent {
   readonly addingItem = signal(false);
   readonly newItemName = signal('');
   readonly newItemUnit = signal('');
-  readonly owed = signal(false);
-  readonly owedWhat = signal('');
-  readonly owedWhen = signal('');
+  readonly outstandingDelivery = signal(false);
+  readonly deliveryDescription = signal('');
+  readonly deliveryExpected = signal('');
   readonly addingVendor = signal(false);
   readonly newVendorName = signal('');
   readonly suggestedCategoryId = signal<string | null>(null);
   readonly categoryExplicitlyCleared = signal(false);
 
-  private readonly photo = viewChild.required<ElementRef<HTMLInputElement>>('photo');
-  readonly chosen = signal<File | null>(null);
-  readonly justRemoved = signal<AttachmentRead | null>(null);
+  private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
+  readonly selectedFile = signal<File | null>(null);
+  readonly lastArchived = signal<AttachmentRead | null>(null);
 
   readonly symbol = computed(() => currencySymbol(this.project().currency_code));
 
   readonly categoryChips = computed<Chip[]>(() => [
-    { value: '', label: 'Not sure yet' },
+    { value: '', label: 'Uncategorised' },
     ...this.budget
       .categories()
       .filter((category) => !category.is_group)
@@ -118,22 +117,22 @@ export class AddExpenseComponent {
   ];
 
   readonly itemChips = computed<Chip[]>(() => [
-    { value: '', label: 'Not tracked' },
-    ...this.itemsCatalogue
+    { value: '', label: 'No item' },
+    ...this.items
       .choices()
       .map((item) => ({ value: item.id, label: item.name, detail: item.unit })),
   ]);
 
   readonly vendorChips = computed<Chip[]>(() => [
     { value: '', label: 'No vendor' },
-    ...this.vendorList
+    ...this.vendors
       .choices()
       .map((vendor) => ({ value: vendor.id, label: vendor.name, detail: vendor.trade })),
   ]);
 
   readonly payerChips = computed<Chip[]>(() => [
     { value: '', label: 'Me' },
-    ...this.peopleList
+    ...this.people
       .choices()
       .map((person) => ({ value: person.id, label: person.name, detail: person.role })),
   ]);
@@ -151,28 +150,28 @@ export class AddExpenseComponent {
     parseMoney(this.unitRate(), this.project().currency_exponent),
   );
 
-  readonly derived = computed(() => {
+  readonly calculatedAmount = computed(() => {
     const quantity = this.quantityValue();
     const rate = this.unitRateMinor();
     return quantity === null || rate === null ? null : Math.round(quantity * rate);
   });
 
-  readonly attached = computed(() => {
-    const expense = this.editing();
+  readonly expenseAttachments = computed(() => {
+    const expense = this.expenseToEdit();
     return expense ? this.attachments.forExpense(expense.id) : [];
   });
 
-  readonly photoLabel = computed(() => {
-    const file = this.chosen();
+  readonly fileLabel = computed(() => {
+    const file = this.selectedFile();
     if (!file) {
-      return 'Attach a receipt photo now.';
+      return 'No file selected.';
     }
-    return `${file.name} � ${this.attachments.size(file.size)} � kept beside the record on your own server`;
+    return `${file.name} · ${this.attachments.formatSize(file.size)} · stored on your server`;
   });
 
   constructor() {
     effect(() => {
-      const expense = this.editing();
+      const expense = this.expenseToEdit();
       if (expense) {
         this.prefill(expense);
         void this.attachments.load(expense.id);
@@ -193,9 +192,9 @@ export class AddExpenseComponent {
     queueMicrotask(() => {
       void this.budget.load(this.project().id);
       void this.agreements.load(this.project().id);
-      void this.itemsCatalogue.loadChoices();
-      void this.vendorList.loadChoices();
-      void this.peopleList.loadChoices();
+      void this.items.loadChoices();
+      void this.vendors.loadChoices();
+      void this.people.loadChoices();
     });
   }
 
@@ -206,19 +205,20 @@ export class AddExpenseComponent {
       .map((a) => ({ value: a.id, label: `${a.vendor_name}: ${a.description}` })),
   ]);
 
-  // Say what is left on the agreement, so a part payment is entered knowing it.
   readonly agreementNote = computed(() => {
-    const chosen = this.agreements.agreements().find((a) => a.id === this.agreementId());
-    if (!chosen) {
+    const agreement = this.agreements.agreements().find((a) => a.id === this.agreementId());
+    if (!agreement) {
       return '';
     }
     const project = this.project();
-    const left = formatMoney(
-      chosen.balance_amount,
+    const balance = formatMoney(
+      agreement.balance_amount,
       project.currency_code,
       project.currency_exponent,
     );
-    return chosen.balance_amount === 0 ? 'This agreement is settled.' : `${left} still owed.`;
+    return agreement.balance_amount === 0
+      ? 'This agreement is fully paid.'
+      : `Balance: ${balance}.`;
   });
 
   value(event: Event): string {
@@ -233,35 +233,35 @@ export class AddExpenseComponent {
   categoryNote(): string {
     const category = this.budget.categories().find((s) => s.id === this.categoryId());
     if (!category) {
-      return 'Saved as Uncategorized. You can assign a category later.';
+      return 'Saved as Uncategorised. You can assign a category later.';
     }
     if (this.categoryId() === this.suggestedCategoryId()) {
-      return `Suggested from past purchases. Counts against the budget for ${category.name}.`;
+      return `Suggested from past expenses. Counts against the budget for ${category.name}.`;
     }
     return `Counts against the budget for ${category.name}.`;
   }
 
   dateNote(): string {
     return this.spentOn() === isoDay()
-      ? 'Today. Change it when you are working through a pile of receipts.'
-      : `Recorded on ${this.spentOn()}, not today. It counts in that month.`;
+      ? 'Today. Change the date when entering older receipts.'
+      : `Dated ${this.spentOn()}. The expense is counted in that month.`;
   }
 
   costTypeNote(): string {
     return this.costType()
-      ? 'Splits the project total three ways on the dashboard. Tap again to clear.'
-      : 'Optional. Leave it off and the expense still counts in every total.';
+      ? 'Splits the project total by cost type on the dashboard. Select again to clear.'
+      : 'Optional. The expense is included in all totals either way.';
   }
 
-  calcLine(): string {
-    const derived = this.derived();
-    if (derived === null) {
-      return 'Fill in quantity and rate and the total works itself out.';
+  calculationNote(): string {
+    const calculated = this.calculatedAmount();
+    if (calculated === null) {
+      return 'Enter a quantity and unit rate and the total is calculated.';
     }
-    return `${this.quantity()} × ${this.money(this.unitRateMinor() ?? 0)} = ${this.money(derived)}`;
+    return `${this.quantity()} × ${this.money(this.unitRateMinor() ?? 0)} = ${this.money(calculated)}`;
   }
 
-  warnLine(): string {
+  priceIncreaseWarning(): string {
     const last = this.lastPrice();
     const rate = this.unitRateMinor();
     if (last === null || rate === null || last.unit_rate === 0 || rate <= last.unit_rate) {
@@ -272,8 +272,8 @@ export class AddExpenseComponent {
   }
 
   payerNote(): string {
-    const person = this.peopleList.choices().find((p) => p.id === this.paidById());
-    return person ? `Adds to what you owe ${person.name}.` : 'Nothing owed to anyone.';
+    const person = this.people.choices().find((p) => p.id === this.paidById());
+    return person ? `Deducted from the balance of ${person.name}.` : 'Paid by you.';
   }
 
   lastPriceWhere(): string {
@@ -281,13 +281,15 @@ export class AddExpenseComponent {
     if (last === null) {
       return '';
     }
-    const where = last.vendor_name ? `from ${last.vendor_name}` : 'no vendor recorded';
-    return `${where} on ${last.spent_on}`;
+    const source = last.vendor_name ? `from ${last.vendor_name}` : 'vendor not recorded';
+    return `${source} on ${last.spent_on}`;
   }
 
   amountMinor(): number | null {
-    const derived = this.derived();
-    return derived !== null ? derived : parseMoney(this.amount(), this.project().currency_exponent);
+    const calculated = this.calculatedAmount();
+    return calculated !== null
+      ? calculated
+      : parseMoney(this.amount(), this.project().currency_exponent);
   }
 
   canSave(): boolean {
@@ -298,7 +300,7 @@ export class AddExpenseComponent {
   saveHint(): string {
     return this.canSave()
       ? `Saves to ${this.project().name}`
-      : 'Description and amount are all that is required.';
+      : 'Description and amount are required.';
   }
 
   async pickItem(itemId: string): Promise<void> {
@@ -307,7 +309,7 @@ export class AddExpenseComponent {
     if (!itemId) {
       return;
     }
-    const last = await this.itemsCatalogue.lastPrice(this.project().id, itemId);
+    const last = await this.items.lastPrice(this.project().id, itemId);
     this.lastPrice.set(last);
     if (last && !this.unitRate().trim()) {
       const exponent = this.project().currency_exponent;
@@ -339,7 +341,7 @@ export class AddExpenseComponent {
     if (!name) {
       return;
     }
-    const created = await this.itemsCatalogue.add({
+    const created = await this.items.add({
       name,
       unit: this.newItemUnit().trim() || null,
     });
@@ -349,7 +351,7 @@ export class AddExpenseComponent {
       this.addingItem.set(false);
       await this.pickItem(created.id);
     } else {
-      this.toast.show(this.itemsCatalogue.error() ?? 'Could not add that item.', 'error');
+      this.toast.show(this.items.error() ?? 'Could not add the item.', 'error');
     }
   }
 
@@ -358,13 +360,13 @@ export class AddExpenseComponent {
     if (!name) {
       return;
     }
-    const created = await this.vendorList.add({ name });
+    const created = await this.vendors.add({ name });
     if (created) {
       this.vendorId.set(created.id);
       this.newVendorName.set('');
       this.addingVendor.set(false);
     } else {
-      this.toast.show(this.vendorList.error() ?? 'Could not add that vendor.', 'error');
+      this.toast.show(this.vendors.error() ?? 'Could not add the vendor.', 'error');
     }
   }
 
@@ -393,8 +395,8 @@ export class AddExpenseComponent {
     this.notes.set(expense.notes ?? '');
   }
 
-  toggleOwed(): void {
-    this.owed.update((on) => !on);
+  toggleOutstandingDelivery(): void {
+    this.outstandingDelivery.update((on) => !on);
   }
 
   fileUrl(file: AttachmentRead): string {
@@ -406,23 +408,23 @@ export class AddExpenseComponent {
   }
 
   fileNote(file: AttachmentRead): string {
-    return `${this.attachments.size(file.byte_size)} � kept beside the record on your own server`;
+    return `${this.attachments.formatSize(file.byte_size)} · stored on your server`;
   }
 
-  pick(): void {
-    this.photo().nativeElement.click();
+  openFilePicker(): void {
+    this.fileInput().nativeElement.click();
   }
 
-  async onPicked(event: Event): Promise<void> {
+  async onFileSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
     if (!file) {
       return;
     }
     input.value = '';
-    const existing = this.editing();
+    const existing = this.expenseToEdit();
     if (!existing) {
-      this.chosen.set(file);
+      this.selectedFile.set(file);
       return;
     }
     const added = await this.attachments.add(this.project().id, existing.id, file);
@@ -433,42 +435,42 @@ export class AddExpenseComponent {
     this.toast.show(`${added.filename} attached.`);
   }
 
-  async removeFile(file: AttachmentRead): Promise<void> {
-    const existing = this.editing();
+  async archiveAttachment(file: AttachmentRead): Promise<void> {
+    const existing = this.expenseToEdit();
     if (!existing) {
       return;
     }
-    await this.attachments.remove(existing.id, file.id);
-    this.justRemoved.set(file);
-    this.toast.show('Photo archived. The expense is unchanged.');
+    await this.attachments.archive(existing.id, file.id);
+    this.lastArchived.set(file);
+    this.toast.show('Attachment archived. The expense is unchanged.');
   }
 
-  async putPhotoBack(): Promise<void> {
-    const existing = this.editing();
-    const gone = this.justRemoved();
-    if (!existing || !gone) {
+  async restoreLastArchived(): Promise<void> {
+    const existing = this.expenseToEdit();
+    const archived = this.lastArchived();
+    if (!existing || !archived) {
       return;
     }
-    const back = await this.attachments.restore(existing.id, gone.id);
-    this.justRemoved.set(null);
+    const restored = await this.attachments.restore(existing.id, archived.id);
+    this.lastArchived.set(null);
     this.toast.show(
-      back
-        ? `${back.filename} restored.`
-        : (this.attachments.error() ?? 'Could not restore that file.'),
-      back ? 'success' : 'error',
+      restored
+        ? `${restored.filename} restored.`
+        : (this.attachments.error() ?? 'Could not restore the attachment.'),
+      restored ? 'success' : 'error',
     );
   }
 
   async save(another: boolean): Promise<void> {
     const amount = this.amountMinor();
-    // A double tap on a phone is one purchase, not two.
+    // Ignores repeat submits, such as a double tap, while a save is in progress.
     if (this.expenses.saving() || !this.canSave() || amount === null) {
       return;
     }
-    const derived = this.derived();
+    const calculated = this.calculatedAmount();
     const body = {
       description: this.description().trim(),
-      amount: derived === null ? amount : null,
+      amount: calculated === null ? amount : null,
       spent_on: this.spentOn() || null,
       category_id: this.categoryId() || null,
       item_id: this.itemId() || null,
@@ -481,7 +483,7 @@ export class AddExpenseComponent {
       notes: this.notes().trim() || null,
     };
 
-    const existing = this.editing();
+    const existing = this.expenseToEdit();
     const saved = existing
       ? await this.expenses.update(this.project().id, existing.id, body)
       : await this.expenses.add(this.project().id, {
@@ -494,7 +496,7 @@ export class AddExpenseComponent {
       return;
     }
 
-    const file = this.chosen();
+    const file = this.selectedFile();
     if (!existing && file) {
       const added = await this.attachments.add(this.project().id, saved.id, file);
       if (!added) {
@@ -502,27 +504,24 @@ export class AddExpenseComponent {
       }
     }
 
-    if (!existing && this.owed()) {
-      const waiting = await this.deliveries.add(this.project().id, {
+    if (!existing && this.outstandingDelivery()) {
+      const delivery = await this.deliveries.add(this.project().id, {
         expense_id: saved.id,
-        description: this.owedWhat().trim() || null,
-        promised: this.owedWhen().trim() || null,
+        description: this.deliveryDescription().trim() || null,
+        expected: this.deliveryExpected().trim() || null,
       });
-      if (!waiting) {
-        this.toast.show(
-          this.deliveries.error() ?? 'Could not record what is outstanding.',
-          'error',
-        );
+      if (!delivery) {
+        this.toast.show(this.deliveries.error() ?? 'Could not save the delivery.', 'error');
       }
     }
 
-    this.toast.show(existing ? `${saved.description} changed.` : `${saved.description} recorded.`);
+    this.toast.show(existing ? `${saved.description} updated.` : `${saved.description} recorded.`);
     if (!existing) {
       this.reset();
     }
     this.saved.emit();
     if (!another || existing) {
-      this.done.emit();
+      this.closed.emit();
     }
   }
 
@@ -536,9 +535,9 @@ export class AddExpenseComponent {
     this.lastPrice.set(null);
     this.suggestedCategoryId.set(null);
     this.categoryExplicitlyCleared.set(false);
-    this.owed.set(false);
-    this.owedWhat.set('');
-    this.owedWhen.set('');
-    this.chosen.set(null);
+    this.outstandingDelivery.set(false);
+    this.deliveryDescription.set('');
+    this.deliveryExpected.set('');
+    this.selectedFile.set(null);
   }
 }

@@ -11,7 +11,7 @@ async def _setup(client: AsyncClient) -> str:
     await Currency.bulk_create(
         [Currency(code=c[0], name=c[1], exponent=c[2]) for c in CURRENCIES if c[0] == "NGN"]
     )
-    await client.post("/api/auth/setup", json={"name": "Admin", "password": "password123"})
+    await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": "password123"})
     resp = await client.post(
         "/api/projects", json={"name": "Jacaranda Close, Ewuru", "currency_code": "NGN"}
     )
@@ -124,7 +124,7 @@ async def test_case_does_not_matter(client: AsyncClient) -> None:
 async def test_what_was_taken_off_the_record_is_not_found(client: AsyncClient) -> None:
     await _setup(client)
     vendor = (await client.post("/api/vendors", json={"name": "Corner Depot Cement"})).json()
-    await client.delete(f"/api/vendors/{vendor['id']}")
+    await client.post(f"/api/vendors/{vendor['id']}/archive")
 
     assert (await _search(client, "cement"))["total"] == 0
 

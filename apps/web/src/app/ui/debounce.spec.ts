@@ -1,35 +1,35 @@
 import { afterEach, beforeEach, vi } from 'vitest';
-import { SEARCH_WAIT, debounce } from './debounce';
+import { SEARCH_DEBOUNCE_MS, debounce } from './debounce';
 
 describe('debounce', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it('runs once for a burst of typing, with the last thing typed', () => {
+  it('runs once with the last value after rapid calls', () => {
     const seen: string[] = [];
     const typing = debounce<string>((text) => seen.push(text));
 
     typing.call('c');
     typing.call('ce');
     typing.call('cem');
-    vi.advanceTimersByTime(SEARCH_WAIT);
+    vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
 
     expect(seen).toEqual(['cem']);
   });
 
-  it('runs again once the typing stops and starts', () => {
+  it('runs again for calls after the wait has passed', () => {
     const seen: string[] = [];
     const typing = debounce<string>((text) => seen.push(text));
 
     typing.call('nails');
-    vi.advanceTimersByTime(SEARCH_WAIT);
+    vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
     typing.call('sand');
-    vi.advanceTimersByTime(SEARCH_WAIT);
+    vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
 
     expect(seen).toEqual(['nails', 'sand']);
   });
 
-  it('holds off until the wait has passed', () => {
+  it('does not run before the wait has passed', () => {
     const seen: string[] = [];
     const typing = debounce<string>((text) => seen.push(text), 300);
 
@@ -41,13 +41,13 @@ describe('debounce', () => {
     expect(seen).toEqual(['sand']);
   });
 
-  it('drops what is pending when it is cancelled', () => {
+  it('does not run a pending call after cancel', () => {
     const seen: string[] = [];
     const typing = debounce<string>((text) => seen.push(text));
 
     typing.call('sand');
     typing.cancel();
-    vi.advanceTimersByTime(SEARCH_WAIT * 4);
+    vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS * 4);
 
     expect(seen).toEqual([]);
   });

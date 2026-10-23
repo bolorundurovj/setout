@@ -4,7 +4,7 @@ import type { PersonRead } from '@setout/api-client';
 import { PeopleComponent } from './people.component';
 import { PersonService } from './person.service';
 
-function person(over: Partial<PersonRead> = {}): PersonRead {
+function person(overrides: Partial<PersonRead> = {}): PersonRead {
   return {
     id: 'pe1',
     name: 'A Person',
@@ -17,8 +17,8 @@ function person(over: Partial<PersonRead> = {}): PersonRead {
     ],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
@@ -49,7 +49,7 @@ describe('PeopleComponent', () => {
       archive: async () => undefined,
       restore: async () => undefined,
       get: async () => null,
-      spend: async () => null,
+      expenseSummary: async () => null,
     };
 
     TestBed.resetTestingModule();
@@ -65,14 +65,14 @@ describe('PeopleComponent', () => {
     return fixture.componentInstance;
   }
 
-  it('asks for the archived only when the toggle is on', async () => {
+  it('requests archived people only when the toggle is on', async () => {
     const component = render();
     await component.setIncludeArchived(true);
 
     expect(loads[1]).toEqual({ search: '', archived: true });
   });
 
-  it('opens somebody', () => {
+  it('opens a person', () => {
     render().open('pe1');
     expect(navigations[0][0]).toEqual(['/people', 'pe1']);
   });
@@ -82,27 +82,27 @@ describe('PeopleComponent', () => {
     expect(render([person(), person({ id: 'pe2' })]).peopleCountLabel()).toBe('2 people');
   });
 
-  it('flips the archive toggle label', async () => {
+  it('switches the archive toggle label', async () => {
     const component = render();
     expect(component.archivedLabel()).toBe('Show archived');
     await component.setIncludeArchived(true);
     expect(component.archivedLabel()).toBe('Hide archived');
   });
 
-  it('goes to the form screen to add somebody', () => {
-    render().addSomeone();
+  it('opens the new person form', () => {
+    render().newPerson();
     expect(navigations[0][0]).toEqual(['/people/new']);
   });
 
-  it('counts purchases in words', () => {
+  it('describes the expense count in words', () => {
     const component = render();
-    expect(component.countLabel(person({ expense_count: 0 }))).toBe('nothing bought yet');
-    expect(component.countLabel(person({ expense_count: 1 }))).toBe('1 purchase');
-    expect(component.countLabel(person({ expense_count: 2 }))).toBe('2 purchases');
+    expect(component.countLabel(person({ expense_count: 0 }))).toBe('no expenses yet');
+    expect(component.countLabel(person({ expense_count: 1 }))).toBe('1 expense');
+    expect(component.countLabel(person({ expense_count: 2 }))).toBe('2 expenses');
   });
 
   it('formats a total in its own currency', () => {
     const component = render();
-    expect(component.money(person().totals[0])).toContain('37,500');
+    expect(component.formatSpent(person().totals[0])).toContain('37,500');
   });
 });

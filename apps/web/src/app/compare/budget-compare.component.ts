@@ -9,20 +9,20 @@ import {
 } from '@angular/core';
 import type { ExpenseRead, ProjectRead } from '@setout/api-client';
 import { BudgetService } from '../budget/budget.service';
-import { formatMoney, formatNumber } from '../budget/money';
-import { ExpenseService, UNFILED, type Nested } from '../expenses/expense.service';
+import { formatAmount, formatMoney, formatNumber } from '../budget/money';
+import { ExpenseService, UNCATEGORISED, type ExpensePage } from '../expenses/expense.service';
 import { currencySymbol } from '../ui/currency-pill.component';
 import { PaginationComponent } from '../ui/pagination.component';
 import { tintFor } from '../ui/tints';
 
-/** A category line, or the standing line for spend that reached no category. */
+/** A category row, or the row for expenses without a category. */
 export interface CompareRow {
   id: string;
   name: string;
   budgeted: number;
   spent: number;
   count: number;
-  isUncategorized: boolean;
+  isUncategorised: boolean;
 }
 
 @Component({
@@ -51,30 +51,30 @@ export class BudgetCompareComponent {
       budgeted: category.budgeted_amount,
       spent: category.spent_amount,
       count: category.expense_count,
-      isUncategorized: false,
+      isUncategorised: false,
     }));
 
-    const uncategorized = this.expenses.spend()?.uncategorized_amount ?? 0;
-    if (uncategorized > 0) {
+    const uncategorised = this.expenses.summary()?.uncategorised_amount ?? 0;
+    if (uncategorised > 0) {
       rows.push({
-        id: UNFILED,
-        name: 'Uncategorized',
+        id: UNCATEGORISED,
+        name: 'Uncategorised',
         budgeted: 0,
-        spent: uncategorized,
-        count: this.expenses.spend()?.uncategorized_count ?? 0,
-        isUncategorized: true,
+        spent: uncategorised,
+        count: this.expenses.summary()?.uncategorised_count ?? 0,
+        isUncategorised: true,
       });
     }
     return rows;
   });
 
-  readonly budgetedTotal = computed(() => this.expenses.spend()?.budgeted_amount ?? 0);
-  readonly spentTotal = computed(() => this.expenses.spend()?.spent_amount ?? 0);
+  readonly budgetedTotal = computed(() => this.expenses.summary()?.budgeted_amount ?? 0);
+  readonly spentTotal = computed(() => this.expenses.summary()?.spent_amount ?? 0);
 
-  readonly totalOver = computed(
+  readonly totalOverBudget = computed(
     () => this.budgetedTotal() > 0 && this.spentTotal() > this.budgetedTotal(),
   );
-  readonly totalLeft = computed(() => this.budgetedTotal() - this.spentTotal());
+  readonly totalRemaining = computed(() => this.budgetedTotal() - this.spentTotal());
 
   readonly totalUsed = computed(() =>
     this.budgetedTotal() ? `${Math.round((this.spentTotal() / this.budgetedTotal()) * 100)}%` : '—',
@@ -85,13 +85,13 @@ export class BudgetCompareComponent {
     return `${count} ${count === 1 ? 'expense' : 'expenses'}`;
   });
 
-  readonly removedNote = computed(() => {
-    const removed = this.expenses.spend()?.removed_count ?? 0;
-    if (!removed) {
+  readonly archivedNote = computed(() => {
+    const archived = this.expenses.summary()?.archived_count ?? 0;
+    if (!archived) {
       return '';
     }
-    const rows = removed === 1 ? 'expense' : 'expenses';
-    return `${removed} ${rows} archived and not counted.`;
+    const rows = archived === 1 ? 'archived expense is' : 'archived expenses are';
+    return `${archived} ${rows} excluded from the totals.`;
   });
 
   constructor() {
@@ -100,9 +100,9 @@ export class BudgetCompareComponent {
       void this.expenses.load(this.project().id);
     });
     effect(() => {
-      const asked = this.openCategory();
-      if (asked) {
-        this.expand(asked);
+      const categoryId = this.openCategory();
+      if (categoryId) {
+        this.expand(categoryId);
       }
     });
   }
@@ -112,9 +112,8 @@ export class BudgetCompareComponent {
     return formatMoney(minor, project.currency_code, project.currency_exponent);
   }
 
-  bare(minor: number): string {
-    const exponent = this.project().currency_exponent;
-    return new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(minor / 10 ** exponent);
+  formatAmount(minor: number): string {
+    return formatAmount(minor, this.project().currency_exponent);
   }
 
   toggle(row: CompareRow): void {
@@ -137,14 +136,14 @@ export class BudgetCompareComponent {
   }
 
   tint(row: CompareRow): string {
-    return row.isUncategorized ? 'var(--warn-surface)' : tintFor(row.id).fill;
+    return row.isUncategorised ? 'var(--warn-surface)' : tintFor(row.id).fill;
   }
 
   tintEdge(row: CompareRow): string {
-    return row.isUncategorized ? 'var(--warn-edge)' : tintFor(row.id).ink;
+    return row.isUncategorised ? 'var(--warn-edge)' : tintFor(row.id).ink;
   }
 
-  rowExpenses(row: CompareRow): Nested | undefined {
+  rowExpenses(row: CompareRow): ExpensePage | undefined {
     return this.expenses.byCategory()[row.id];
   }
 
@@ -152,20 +151,20 @@ export class BudgetCompareComponent {
     await this.expenses.loadForCategory(this.project().id, row.id, page);
   }
 
-  over(row: CompareRow): boolean {
+  isOverBudget(row: CompareRow): boolean {
     return row.budgeted > 0 && row.spent > row.budgeted;
   }
 
-  left(row: CompareRow): string {
-    return row.budgeted ? this.bare(row.budgeted - row.spent) : '—';
+  remaining(row: CompareRow): string {
+    return row.budgeted ? this.formatAmount(row.budgeted - row.spent) : '—';
   }
 
   used(row: CompareRow): string {
     return row.budgeted ? `${Math.round((row.spent / row.budgeted) * 100)}%` : '—';
   }
 
-  budgetCell(row: CompareRow): string {
-    return row.budgeted ? this.bare(row.budgeted) : '—';
+  budgetedCell(row: CompareRow): string {
+    return row.budgeted ? this.formatAmount(row.budgeted) : '—';
   }
 
   rowCount(row: CompareRow): string {
@@ -175,7 +174,7 @@ export class BudgetCompareComponent {
     return `${row.count} ${row.count === 1 ? 'expense' : 'expenses'}`;
   }
 
-  meta(expense: ExpenseRead): string {
+  expenseDetail(expense: ExpenseRead): string {
     const parts: string[] = [];
     if (expense.cost_type) {
       parts.push(expense.cost_type);
@@ -186,7 +185,7 @@ export class BudgetCompareComponent {
     return parts.join(' · ');
   }
 
-  when(expense: ExpenseRead): string {
+  formatDate(expense: ExpenseRead): string {
     return new Date(expense.spent_on).toLocaleDateString(undefined, {
       day: 'numeric',
       month: 'short',

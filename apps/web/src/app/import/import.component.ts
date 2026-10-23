@@ -17,7 +17,7 @@ import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
 import { Chip, ChipGroupComponent } from '../ui/chip-group.component';
 import { TopbarComponent } from '../ui/topbar.component';
-import { ImportService } from './import.service';
+import { ImportService, type ImportTarget } from './import.service';
 
 interface Step {
   key: string;
@@ -36,14 +36,14 @@ export class ImportComponent {
   readonly project = input('');
 
   readonly projects = inject(ProjectService);
-  readonly sheets = inject(ImportService);
+  readonly importer = inject(ImportService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
-  private readonly picker = viewChild.required<ElementRef<HTMLInputElement>>('sheet');
+  private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
 
   readonly steps: Step[] = [
-    { key: 'file', label: 'The file' },
+    { key: 'file', label: 'File' },
     { key: 'review', label: 'Review' },
     { key: 'done', label: 'Done' },
   ];
@@ -58,25 +58,25 @@ export class ImportComponent {
 
   readonly createMissingCategories = signal(true);
   readonly skipDuplicates = signal(true);
-  readonly takeUnpaid = signal(true);
-  readonly severalCodes = signal('first');
+  readonly includeUnpaid = signal(true);
+  readonly multipleCodes = signal('first');
 
-  readonly intoNew = computed(() => this.projectId() === '');
+  readonly isNewProject = computed(() => this.projectId() === '');
 
   readonly targetName = computed(() => {
-    const chosen = this.projects.projects().find((p) => p.id === this.projectId());
-    return chosen ? chosen.name : this.name();
+    const selected = this.projects.projects().find((p) => p.id === this.projectId());
+    return selected ? selected.name : this.name();
   });
 
   readonly blocking = computed(
     () => this.report()?.decisions.some((decision) => decision.blocking) ?? false,
   );
 
-  readonly canRead = computed(() => {
+  readonly canPreview = computed(() => {
     if (!this.file()) {
       return false;
     }
-    return this.intoNew() ? this.name().trim().length > 0 : true;
+    return this.isNewProject() ? this.name().trim().length > 0 : true;
   });
 
   constructor() {
@@ -85,9 +85,9 @@ export class ImportComponent {
       void this.projects.loadCurrencies();
     });
     effect(() => {
-      const asked = this.project();
-      if (asked) {
-        this.projectId.set(asked);
+      const projectId = this.project();
+      if (projectId) {
+        this.projectId.set(projectId);
       }
     });
   }
@@ -96,7 +96,7 @@ export class ImportComponent {
     return (event.target as HTMLInputElement | HTMLSelectElement).value;
   }
 
-  at(key: string): boolean {
+  isStep(key: string): boolean {
     return this.step() === key;
   }
 
@@ -105,33 +105,33 @@ export class ImportComponent {
     return order <= this.steps.findIndex((step) => step.key === this.step());
   }
 
-  readonly samples = [
-    { kind: 'blank', name: 'Blank workbook', detail: 'Every sheet, headings only, ready to fill' },
-    { kind: 'example', name: 'Filled example', detail: 'The same shape with rows to copy' },
-    { kind: 'budget-csv', name: 'Budget as a CSV', detail: 'One sheet, for a budget on its own' },
+  readonly templates = [
+    { kind: 'blank', name: 'Blank workbook', detail: 'All sheets, with headings only' },
+    { kind: 'example', name: 'Filled example', detail: 'The same layout with example rows' },
+    { kind: 'budget-csv', name: 'Budget as a CSV', detail: 'A single sheet for a budget only' },
     {
       kind: 'spending-csv',
       name: 'Expenses as a CSV',
-      detail: 'One sheet, for invoices on their own',
+      detail: 'A single sheet for expenses only',
     },
   ];
 
-  sampleUrl(kind: string): string {
-    return this.sheets.sampleUrl(kind);
+  templateUrl(kind: string): string {
+    return this.importer.templateUrl(kind);
   }
 
-  pick(): void {
-    this.picker().nativeElement.click();
+  openFilePicker(): void {
+    this.fileInput().nativeElement.click();
   }
 
-  onPicked(event: Event): void {
+  onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const chosen = input.files?.[0] ?? null;
-    if (!chosen) {
+    const selected = input.files?.[0] ?? null;
+    if (!selected) {
       return;
     }
     input.value = '';
-    this.file.set(chosen);
+    this.file.set(selected);
     this.report.set(null);
   }
 
@@ -141,15 +141,15 @@ export class ImportComponent {
   }
 
   fileNote(): string {
-    const chosen = this.file();
-    if (!chosen) {
+    const file = this.file();
+    if (!file) {
       return '';
     }
     const size =
-      chosen.size < 1024 * 1024
-        ? `${Math.round(chosen.size / 1024)} KB`
-        : `${(chosen.size / (1024 * 1024)).toFixed(1)} MB`;
-    return `${size} · read where Setout runs, never sent anywhere else`;
+      file.size < 1024 * 1024
+        ? `${Math.round(file.size / 1024)} KiB`
+        : `${(file.size / (1024 * 1024)).toFixed(1)} MiB`;
+    return `${size} · read by your Setout server only`;
   }
 
   money(minor: number): string {
@@ -160,13 +160,13 @@ export class ImportComponent {
     return formatMoney(minor, report.currency_code, report.currency_exponent);
   }
 
-  sheetNote(holds: string, rows: number): string {
-    const what = rows === 1 ? 'row' : 'rows';
-    return `${rows} ${what} of ${holds}`;
+  sheetNote(content: string, rows: number): string {
+    const noun = rows === 1 ? 'row' : 'rows';
+    return `${rows} ${noun} of ${content}`;
   }
 
   categoryMatch(matchedTo: string | null | undefined): string {
-    return matchedTo ? `into ${matchedTo}` : 'new category';
+    return matchedTo ? `matches ${matchedTo}` : 'new category';
   }
 
   sampleDay(row: SampleRow): string {
@@ -185,22 +185,22 @@ export class ImportComponent {
       case 'new_categories':
         return [
           { value: 'yes', label: 'Create them' },
-          { value: 'no', label: 'Leave them out' },
+          { value: 'no', label: 'Exclude them' },
         ];
       case 'duplicates':
         return [
           { value: 'yes', label: 'Skip them' },
-          { value: 'no', label: 'Bring them in again' },
+          { value: 'no', label: 'Import them again' },
         ];
       case 'unpaid':
         return [
-          { value: 'yes', label: 'Bring them in' },
-          { value: 'no', label: 'Leave them out' },
+          { value: 'yes', label: 'Import them' },
+          { value: 'no', label: 'Exclude them' },
         ];
       case 'several_codes':
         return [
-          { value: 'first', label: 'Assign to the first' },
-          { value: 'uncategorized', label: 'Leave uncategorized' },
+          { value: 'first', label: 'Assign to the first code' },
+          { value: 'uncategorised', label: 'Leave uncategorised' },
         ];
       default:
         return [];
@@ -214,27 +214,27 @@ export class ImportComponent {
       case 'duplicates':
         return this.skipDuplicates() ? 'yes' : 'no';
       case 'unpaid':
-        return this.takeUnpaid() ? 'yes' : 'no';
+        return this.includeUnpaid() ? 'yes' : 'no';
       case 'several_codes':
-        return this.severalCodes();
+        return this.multipleCodes();
       default:
         return '';
     }
   }
 
-  answer(decision: Decision, chosen: string): void {
+  answer(decision: Decision, selected: string): void {
     switch (decision.kind) {
       case 'new_categories':
-        this.createMissingCategories.set(chosen === 'yes');
+        this.createMissingCategories.set(selected === 'yes');
         break;
       case 'duplicates':
-        this.skipDuplicates.set(chosen === 'yes');
+        this.skipDuplicates.set(selected === 'yes');
         break;
       case 'unpaid':
-        this.takeUnpaid.set(chosen === 'yes');
+        this.includeUnpaid.set(selected === 'yes');
         break;
       case 'several_codes':
-        this.severalCodes.set(chosen);
+        this.multipleCodes.set(selected);
         break;
     }
   }
@@ -248,75 +248,75 @@ export class ImportComponent {
       case 'new_categories':
         return this.createMissingCategories()
           ? 'The budget is imported against these categories.'
-          : 'No budget is written, and expenses arrive uncategorized.';
+          : 'No budget is imported, and the expenses are uncategorised.';
       case 'duplicates':
         return this.skipDuplicates()
           ? 'Skipped, so expenses are not duplicated.'
           : 'Imported a second time, duplicating expenses.';
       case 'unpaid':
-        return this.takeUnpaid()
-          ? 'Counted as spent, since the invoice exists.'
+        return this.includeUnpaid()
+          ? 'Counted as spent although not yet paid.'
           : 'Excluded until they are paid.';
       case 'several_codes':
-        return this.severalCodes() === 'first'
-          ? 'One amount cannot be split, so it lands under the first code named.'
-          : 'Left uncategorized, to be assigned by hand.';
+        return this.multipleCodes() === 'first'
+          ? 'An amount cannot be split, so it is assigned to the first code listed.'
+          : 'Left uncategorised for manual assignment.';
       default:
         return '';
     }
   }
 
-  async read(): Promise<void> {
-    const chosen = this.file();
-    if (!chosen || !this.canRead()) {
+  async preview(): Promise<void> {
+    const file = this.file();
+    if (!file || !this.canPreview()) {
       return;
     }
-    const found = await this.sheets.look(chosen, this.target());
-    if (!found) {
-      this.toast.show(this.sheets.error() ?? 'The file could not be read.', 'error');
+    const report = await this.importer.preview(file, this.target());
+    if (!report) {
+      this.toast.show(this.importer.error() ?? 'Could not read the file.', 'error');
       return;
     }
-    this.report.set(found);
+    this.report.set(report);
     this.step.set('review');
   }
 
-  back(): void {
+  backToFile(): void {
     this.step.set('file');
   }
 
-  async bringIn(): Promise<void> {
-    const chosen = this.file();
-    if (!chosen) {
+  async runImport(): Promise<void> {
+    const file = this.file();
+    if (!file) {
       return;
     }
-    const done = await this.sheets.bringIn(chosen, this.target(), {
+    const result = await this.importer.runImport(file, this.target(), {
       createMissingCategories: this.createMissingCategories(),
       skipDuplicates: this.skipDuplicates(),
-      takeUnpaid: this.takeUnpaid(),
-      severalCodes: this.severalCodes(),
+      includeUnpaid: this.includeUnpaid(),
+      multipleCodes: this.multipleCodes(),
     });
-    if (!done) {
-      this.toast.show(this.sheets.error() ?? 'Nothing was brought in.', 'error');
+    if (!result) {
+      this.toast.show(this.importer.error() ?? 'Nothing was imported.', 'error');
       return;
     }
-    this.result.set(done);
+    this.result.set(result);
     this.step.set('done');
     await this.projects.load();
-    this.toast.show(`Imported into ${done.project_name}.`);
+    this.toast.show(`Imported into ${result.project_name}.`);
   }
 
   openProject(): void {
-    const done = this.result();
-    if (done) {
-      void this.router.navigate(['/projects', done.project_id]);
+    const result = this.result();
+    if (result) {
+      void this.router.navigate(['/projects', result.project_id]);
     }
   }
 
-  leave(): void {
+  goToProjects(): void {
     void this.router.navigate(['/projects']);
   }
 
-  private target(): { projectId: string | null; name: string; currencyCode: string } {
+  private target(): ImportTarget {
     return {
       projectId: this.projectId() || null,
       name: this.name().trim(),

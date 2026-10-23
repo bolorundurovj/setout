@@ -6,7 +6,7 @@ import { AuthService } from './auth/auth.service';
 import { CountsService } from './counts.service';
 
 describe('App', () => {
-  it('creates the application wrapper', async () => {
+  it('renders the router outlet', async () => {
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [provideRouter([])],
@@ -52,12 +52,12 @@ describe('App', () => {
       return fixture.componentInstance;
     }
 
-    it('asks for the counts once signed in', () => {
+    it('loads the counts once signed in', () => {
       render({ projects: 1, vendors: 0, items: 0, people: 0, lands: 0 });
       expect(loads).toBe(1);
     });
 
-    it('badges every list from the one count', () => {
+    it('shows each nav badge from the counts response', () => {
       const app = render({ projects: 2, vendors: 6, items: 4, people: 3, lands: 5 });
       const badges = new Map(app.appNav.map((item) => [item.key, item.badge()]));
       expect(badges.get('projects')).toBe('2');
@@ -67,26 +67,26 @@ describe('App', () => {
       expect(badges.get('lands')).toBe('5');
     });
 
-    it('leaves a badge blank rather than showing a nought', () => {
+    it('shows no badge for a zero count', () => {
       const app = render(null);
       expect(app.appNav.map((item) => item.badge())).toEqual(['', '', '', '', '', '', '']);
     });
 
-    it('draws an icon beside every name in the nav', () => {
+    it('shows a distinct icon beside every nav item', () => {
       const app = render(null);
 
       expect(element.querySelectorAll('.nav-item app-icon svg').length).toBe(app.appNav.length);
       expect(new Set(app.appNav.map((item) => item.icon)).size).toBe(app.appNav.length);
     });
 
-    it('does not head the nav with a label naming itself', () => {
+    it('has no nav heading', () => {
       render(null);
 
       expect(element.querySelector('.nav-label')).toBeNull();
       expect(element.querySelector('.nav-items')).toBeTruthy();
     });
 
-    it('marks home active only on home, not on every route beneath it', () => {
+    it('marks Home active only on the exact / route', () => {
       const app = render(null);
       const home = app.appNav.find((item) => item.key === 'home');
       expect(home?.path).toBe('/');
@@ -125,7 +125,7 @@ describe('App', () => {
       document.body.classList.remove('nav-locked');
     });
 
-    it('names the toggle for a reader rather than spelling it on screen', () => {
+    it('gives the menu toggle an aria-label and no visible text', () => {
       const element = render().nativeElement as HTMLElement;
       const toggle = element.querySelector('.sidebar-toggle');
 
@@ -134,7 +134,7 @@ describe('App', () => {
       expect(toggle?.textContent?.trim()).toBe('');
     });
 
-    it('seats the toggle in a bar with the brand rather than floating it alone', () => {
+    it('places the toggle in the mobile bar beside the brand', () => {
       const element = render().nativeElement as HTMLElement;
       const bar = element.querySelector('.mobile-bar');
 
@@ -146,7 +146,7 @@ describe('App', () => {
       expect(inBar).toEqual(['mobile-brand', 'sidebar-toggle']);
     });
 
-    it('lays nothing over the page until the menu is opened', () => {
+    it('shows the backdrop and locks scrolling only while the menu is open', () => {
       const fixture = render();
       const element = fixture.nativeElement as HTMLElement;
 
@@ -160,7 +160,7 @@ describe('App', () => {
       expect(document.body.classList.contains('nav-locked')).toBe(true);
     });
 
-    it('closes when the page behind it is pressed', () => {
+    it('closes when the backdrop is clicked', () => {
       const fixture = render();
       const element = fixture.nativeElement as HTMLElement;
       fixture.componentInstance.toggleNav();
@@ -184,7 +184,7 @@ describe('App', () => {
       expect(fixture.componentInstance.navOpen()).toBe(false);
     });
 
-    it('closes itself once a destination is reached', async () => {
+    it('closes after a navigation ends', async () => {
       const fixture = render();
       fixture.componentInstance.toggleNav();
       fixture.detectChanges();

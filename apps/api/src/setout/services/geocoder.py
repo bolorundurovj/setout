@@ -1,8 +1,7 @@
-"""What the map calls the spot a pin is on.
+"""Reverse geocoding through Nominatim.
 
-Nominatim asks that an application identify itself, keep to a request a second,
-and not ask twice for the same thing. All three are this module's job, because
-nothing else in the app makes an outbound call on a person's behalf.
+The Nominatim usage policy requires an identifying User-Agent, at most one request
+per second, and caching of repeated requests. This module is the only outbound caller.
 """
 
 from __future__ import annotations
@@ -16,36 +15,35 @@ from setout import __version__
 from setout.config import get_settings
 from setout.schemas.geocode import GeocodedPlace
 
-# Seven decimal places is a centimetre. Five is about a metre, which is finer
-# than any pin is dropped, so nudging one does not ask again.
-PLACES = 5
+# Five decimal places is about one metre, so a small pin move reuses the cached result.
+COORDINATE_DECIMALS = 5
 
-# What the tile policy asks of anyone using the public servers.
+# Rate limit from the Nominatim usage policy for the public servers.
 MIN_SECONDS_BETWEEN = 1.0
 TIMEOUT_SECONDS = 5.0
 
 _lock = asyncio.Lock()
-_seen: dict[tuple[float, float], GeocodedPlace | None] = {}
+_cache: dict[tuple[float, float], GeocodedPlace | None] = {}
 _last_call = 0.0
 
 
 async def reverse(latitude: float, longitude: float) -> GeocodedPlace | None:
-    """None whenever the geocoder is off, unreachable, or has nothing to say."""
+    """Returns None when the geocoder is disabled, unreachable, or returns no address."""
     settings = get_settings()
     if not settings.geocoder_url:
         return None
 
-    at = (round(latitude, PLACES), round(longitude, PLACES))
+    key = (round(latitude, COORDINATE_DECIMALS), round(longitude, COORDINATE_DECIMALS))
     async with _lock:
-        if at in _seen:
-            return _seen[at]
-        await _wait_our_turn()
-        found = await _ask(settings.geocoder_url, settings.geocoder_email, at)
-        _seen[at] = found
-        return found
+        if key in _cache:
+            return _cache[key]
+        await _throttle()
+        place = await _request_reverse(settings.geocoder_url, settings.geocoder_email, key)
+        _cache[key] = place
+        return place
 
 
-async def _wait_our_turn() -> None:
+async def _throttle() -> None:
     global _last_call
     since = time.monotonic() - _last_call
     if since < MIN_SECONDS_BETWEEN:
@@ -53,17 +51,19 @@ async def _wait_our_turn() -> None:
     _last_call = time.monotonic()
 
 
-async def _ask(url: str, email: str, at: tuple[float, float]) -> GeocodedPlace | None:
+async def _request_reverse(
+    url: str, email: str, coordinates: tuple[float, float]
+) -> GeocodedPlace | None:
     params = {
-        "lat": str(at[0]),
-        "lon": str(at[1]),
+        "lat": str(coordinates[0]),
+        "lon": str(coordinates[1]),
         "format": "jsonv2",
         "addressdetails": "1",
         "zoom": "18",
     }
     if email:
         params["email"] = email
-    headers = {"User-Agent": f"Setout/{__version__} (self-hosted construction spend tracker)"}
+    headers = {"User-Agent": f"Setout/{__version__} (self-hosted construction expense tracker)"}
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
             response = await client.get(
@@ -72,7 +72,7 @@ async def _ask(url: str, email: str, at: tuple[float, float]) -> GeocodedPlace |
             response.raise_for_status()
             return _read(response.json())
     except (httpx.HTTPError, ValueError):
-        # A building site is where the signal is not. Saying nothing is correct.
+        # Geocoding is optional, so network and parse failures return no address.
         return None
 
 
@@ -82,7 +82,7 @@ def _read(body: object) -> GeocodedPlace | None:
     address = body.get("address")
     if not isinstance(address, dict):
         return None
-    # Nominatim names the settlement differently by how big it is.
+    # Nominatim uses a different key for a settlement depending on its size.
     town = _first(address, "city", "town", "village", "hamlet", "suburb")
     country = address.get("country_code")
     return GeocodedPlace(
@@ -101,6 +101,6 @@ def _first(address: dict[str, object], *keys: str) -> str | None:
     return None
 
 
-def forget() -> None:
-    """Drop what has been looked up. For tests, which must never call out."""
-    _seen.clear()
+def clear_cache() -> None:
+    """Clears the lookup cache between tests."""
+    _cache.clear()

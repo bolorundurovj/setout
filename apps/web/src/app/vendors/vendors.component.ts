@@ -18,39 +18,39 @@ import { VendorService } from './vendor.service';
   styleUrl: './vendors.component.scss',
 })
 export class VendorsComponent {
-  readonly vendors = inject(VendorService);
+  readonly vendorService = inject(VendorService);
   private readonly router = inject(Router);
 
   readonly notSet = '—';
 
   readonly search = signal('');
   readonly includeArchived = signal(false);
-  private readonly typing = debounce<string>(
-    (text) => void this.vendors.load(text, this.includeArchived()),
+  private readonly debouncedSearch = debounce<string>(
+    (text) => void this.vendorService.load(text, this.includeArchived()),
   );
 
   constructor() {
-    void this.vendors.load();
-    inject(DestroyRef).onDestroy(() => this.typing.cancel());
+    void this.vendorService.load();
+    inject(DestroyRef).onDestroy(() => this.debouncedSearch.cancel());
   }
 
-  value(event: Event): string {
+  inputValue(event: Event): string {
     return (event.target as HTMLInputElement).value;
   }
 
   onSearch(event: Event): void {
-    this.search.set(this.value(event));
-    this.typing.call(this.search());
+    this.search.set(this.inputValue(event));
+    this.debouncedSearch.call(this.search());
   }
 
   async setIncludeArchived(on: boolean): Promise<void> {
-    this.typing.cancel();
+    this.debouncedSearch.cancel();
     this.includeArchived.set(on);
-    await this.vendors.load(this.search(), on);
+    await this.vendorService.load(this.search(), on);
   }
 
   async goTo(page: number): Promise<void> {
-    await this.vendors.goTo(page);
+    await this.vendorService.goTo(page);
   }
 
   open(vendorId: string): void {
@@ -62,9 +62,9 @@ export class VendorsComponent {
   }
 
   countLabel(): string {
-    const total = this.vendors.total();
+    const total = this.vendorService.total();
     const label = `${total} ${total === 1 ? 'vendor' : 'vendors'}`;
-    return `${label} · shared across every project`;
+    return `${label} · shared across all projects`;
   }
 
   archivedLabel(): string {
@@ -76,10 +76,10 @@ export class VendorsComponent {
   }
 
   phoneLabel(vendor: VendorRead): string {
-    return vendor.phone ?? 'no phone';
+    return vendor.phone ?? this.notSet;
   }
 
-  money(total: VendorCurrencyTotal): string {
+  formatSpent(total: VendorCurrencyTotal): string {
     return formatMoney(total.spent_amount, total.currency_code, total.currency_exponent);
   }
 }

@@ -39,37 +39,37 @@ export class App {
     {
       key: 'projects',
       icon: 'projects',
-      name: 'All Projects',
+      name: 'Projects',
       path: '/projects',
-      badge: () => this.count(this.counts.projects()),
+      badge: () => this.badgeLabel(this.counts.projects()),
     },
     {
       key: 'lands',
       icon: 'land',
       name: 'Land',
       path: '/lands',
-      badge: () => this.count(this.counts.lands()),
+      badge: () => this.badgeLabel(this.counts.lands()),
     },
     {
       key: 'vendors',
       icon: 'vendors',
       name: 'Vendors',
       path: '/vendors',
-      badge: () => this.count(this.counts.vendors()),
+      badge: () => this.badgeLabel(this.counts.vendors()),
     },
     {
       key: 'items',
       icon: 'items',
       name: 'Items',
       path: '/items',
-      badge: () => this.count(this.counts.items()),
+      badge: () => this.badgeLabel(this.counts.items()),
     },
     {
       key: 'people',
       icon: 'people',
       name: 'People',
       path: '/people',
-      badge: () => this.count(this.counts.people()),
+      badge: () => this.badgeLabel(this.counts.people()),
     },
     { key: 'settings', name: 'Settings', icon: 'settings', path: '/settings', badge: () => '' },
   ];
@@ -81,7 +81,7 @@ export class App {
       }
     });
 
-    // The drawer sits over the page, so the page behind it must not scroll.
+    // Locks body scroll while the navigation drawer overlays the page.
     effect(() => {
       document.body.classList.toggle('nav-locked', this.navOpen());
     });
@@ -99,7 +99,7 @@ export class App {
     this.closeNav();
   }
 
-  private count(total: number): string {
+  private badgeLabel(total: number): string {
     return total > 0 ? String(total) : '';
   }
 
@@ -108,9 +108,9 @@ export class App {
   }
 
   onSearch(): void {
-    const wanted = this.query().trim();
-    void this.router.navigate(wanted ? ['/search'] : ['/'], {
-      queryParams: wanted ? { q: wanted } : {},
+    const term = this.query().trim();
+    void this.router.navigate(term ? ['/search'] : ['/'], {
+      queryParams: term ? { q: term } : {},
     });
   }
 
@@ -122,7 +122,7 @@ export class App {
     this.navOpen.set(false);
   }
 
-  logout(): void {
+  signOut(): void {
     void this.auth.logout();
   }
 }

@@ -13,9 +13,9 @@ import type {
   DeliveryRead,
   VendorAgreement,
   VendorCurrencyTotal,
-  VendorProjectSpend,
+  VendorExpenseSummary,
+  VendorProjectExpenseSummary,
   VendorRead,
-  VendorSpend,
 } from '@setout/api-client';
 import { formatMoney } from '../budget/money';
 import { DeliveryService } from '../deliveries/delivery.service';
@@ -32,7 +32,7 @@ import { VendorService } from './vendor.service';
   styleUrl: './vendor-detail.component.scss',
 })
 export class VendorDetailComponent {
-  private readonly vendors = inject(VendorService);
+  private readonly vendorService = inject(VendorService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   readonly deliveries = inject(DeliveryService);
@@ -42,9 +42,9 @@ export class VendorDetailComponent {
   readonly id = input.required<string>();
 
   readonly vendor = signal<VendorRead | null>(null);
-  readonly spend = signal<VendorSpend | null>(null);
+  readonly expenseSummary = signal<VendorExpenseSummary | null>(null);
   readonly agreements = signal<VendorAgreement[]>([]);
-  readonly owedHere = computed(() => this.deliveries.forVendor(this.id()).rows);
+  readonly outstandingDeliveries = computed(() => this.deliveries.forVendor(this.id()).rows);
   readonly loading = signal(true);
 
   readonly notSet = '—';
@@ -64,13 +64,13 @@ export class VendorDetailComponent {
   }
 
   async load(): Promise<void> {
-    const [vendor, spend, agreements] = await Promise.all([
-      this.vendors.get(this.id()),
-      this.vendors.spend(this.id()),
-      this.vendors.agreements(this.id()),
+    const [vendor, expenseSummary, agreements] = await Promise.all([
+      this.vendorService.get(this.id()),
+      this.vendorService.expenseSummary(this.id()),
+      this.vendorService.agreements(this.id()),
     ]);
     this.vendor.set(vendor);
-    this.spend.set(spend);
+    this.expenseSummary.set(expenseSummary);
     this.agreements.set(agreements);
     this.loading.set(false);
   }
@@ -79,34 +79,30 @@ export class VendorDetailComponent {
     return formatMoney(minor, row.currency_code, row.currency_exponent);
   }
 
-  owedMoney(owed: DeliveryRead): string {
-    return formatMoney(owed.amount, owed.currency_code, owed.currency_exponent);
+  deliveryAmount(delivery: DeliveryRead): string {
+    return formatMoney(delivery.amount, delivery.currency_code, delivery.currency_exponent);
   }
 
-  owedWhen(owed: DeliveryRead): string {
-    const paid = new Date(owed.spent_on).toLocaleDateString(undefined, {
+  deliveryDates(delivery: DeliveryRead): string {
+    const paid = new Date(delivery.spent_on).toLocaleDateString(undefined, {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
     });
-    return owed.promised ? `Paid ${paid} · promised ${owed.promised}` : `Paid ${paid}`;
+    return delivery.expected ? `Paid ${paid} · expected ${delivery.expected}` : `Paid ${paid}`;
   }
 
-  async markDelivered(owed: DeliveryRead): Promise<void> {
-    await this.deliveries.receive(owed.id);
+  async markReceived(delivery: DeliveryRead): Promise<void> {
+    await this.deliveries.markReceived(delivery.id);
     await this.deliveries.loadForVendor(this.id());
-    this.toast.show(`${owed.description} marked delivered.`);
+    this.toast.show(`${delivery.description} marked received.`);
   }
 
-  value(event: Event): string {
-    return (event.target as HTMLInputElement).value;
-  }
-
-  money(row: VendorProjectSpend): string {
+  formatSpent(row: VendorProjectExpenseSummary): string {
     return formatMoney(row.spent_amount, row.currency_code, row.currency_exponent);
   }
 
-  needsFillingIn(vendor: VendorRead): boolean {
+  isIncomplete(vendor: VendorRead): boolean {
     return !vendor.trade && !vendor.contact_name && !vendor.phone;
   }
 
@@ -114,13 +110,13 @@ export class VendorDetailComponent {
     void this.router.navigate(['/vendors', this.id(), 'edit']);
   }
 
-  totalsByCurrency(spend: VendorSpend): VendorCurrencyTotal[] {
+  totalsByCurrency(summary: VendorExpenseSummary): VendorCurrencyTotal[] {
     const rows = new Map<string, VendorCurrencyTotal>();
-    for (const project of spend.projects) {
-      const held = rows.get(project.currency_code);
-      if (held) {
-        held.expense_count += project.expense_count;
-        held.spent_amount += project.spent_amount;
+    for (const project of summary.projects) {
+      const existing = rows.get(project.currency_code);
+      if (existing) {
+        existing.expense_count += project.expense_count;
+        existing.spent_amount += project.spent_amount;
       } else {
         rows.set(project.currency_code, {
           currency_code: project.currency_code,
@@ -133,18 +129,18 @@ export class VendorDetailComponent {
     return [...rows.values()];
   }
 
-  total(total: VendorCurrencyTotal): string {
+  formatTotal(total: VendorCurrencyTotal): string {
     return formatMoney(total.spent_amount, total.currency_code, total.currency_exponent);
   }
 
   async archive(): Promise<void> {
-    await this.vendors.archive(this.id());
+    await this.vendorService.archive(this.id());
     await this.load();
-    this.toast.show('Vendor archived. Their expenses still count.');
+    this.toast.show('Vendor archived. Their expenses are still included in totals.');
   }
 
   async restore(): Promise<void> {
-    await this.vendors.restore(this.id());
+    await this.vendorService.restore(this.id());
     await this.load();
     this.toast.show('Vendor restored.');
   }

@@ -101,16 +101,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  &.over {
+  &.over-budget {
     color: var(--over-ink);
   }
 }
 
-.body.over {
+.body.over-budget {
   background: var(--over-surface);
 }
 
-.photo {
+.attachment-tag {
   margin-left: 8px;
   padding: 3px 8px;
   font-size: 10px;
@@ -127,7 +127,7 @@
   flex: none;
 }
 
-.body.uncategorized .category-name {
+.body.uncategorised .category-name {
   color: var(--ink-2);
 }
 
@@ -139,7 +139,7 @@
   color: var(--ink);
 }
 
-.figure.over {
+.figure.over-budget {
   color: var(--over-ink);
 }
 
@@ -174,7 +174,7 @@
   color: var(--ink-2);
 }
 
-.when {
+.date {
   font-family: 'DM Mono', monospace;
   font-size: 13px;
   color: var(--ink-2);

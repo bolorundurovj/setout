@@ -51,7 +51,7 @@ DUPLICATE: dict[int | str, dict[str, Any]] = {
 async def list_lands(
     user: CurrentUser,
     search: Annotated[str | None, Query(description="Match part of the name")] = None,
-    include_archived: Annotated[bool, Query(description="Include archived land")] = False,
+    include_archived: Annotated[bool, Query(description="Include archived land records")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> LandPage:
@@ -84,14 +84,14 @@ async def update_land(land_id: str, req: LandUpdate, user: CurrentUser) -> LandR
     return await controller.update(land_id, req)
 
 
-@router.delete(
-    "/lands/{land_id}",
-    operation_id="deleteLand",
+@router.post(
+    "/lands/{land_id}/archive",
+    operation_id="archiveLand",
     status_code=status.HTTP_204_NO_CONTENT,
     responses=NOT_FOUND,
 )
-async def delete_land(land_id: str, user: CurrentUser) -> None:
-    await controller.delete(land_id)
+async def archive_land(land_id: str, user: CurrentUser) -> None:
+    await controller.archive(land_id)
 
 
 @router.post("/lands/{land_id}/restore", operation_id="restoreLand", responses=NOT_FOUND)
@@ -103,42 +103,42 @@ async def restore_land(land_id: str, user: CurrentUser) -> LandRead:
 async def list_land_documents(
     land_id: str,
     user: CurrentUser,
-    include_deleted: Annotated[bool, Query(description="Include archived files")] = False,
+    include_archived: Annotated[bool, Query(description="Include archived documents")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> LandDocumentPage:
     return await documents.list(
-        land_id, limit=limit, offset=offset, include_deleted=include_deleted
+        land_id, limit=limit, offset=offset, include_archived=include_archived
     )
 
 
 @router.post(
     "/lands/{land_id}/documents",
-    operation_id="addLandDocument",
+    operation_id="createLandDocument",
     status_code=status.HTTP_201_CREATED,
     responses={
         **NOT_FOUND,
         status.HTTP_413_CONTENT_TOO_LARGE: {"description": "File too large"},
-        status.HTTP_415_UNSUPPORTED_MEDIA_TYPE: {"description": "Not a photograph or a PDF"},
+        status.HTTP_415_UNSUPPORTED_MEDIA_TYPE: {"description": "Not an image or a PDF"},
     },
 )
-async def add_land_document(
+async def create_land_document(
     land_id: str,
     user: CurrentUser,
     storage: Store,
-    file: Annotated[UploadFile, File(description="The scan or PDF")],
+    file: Annotated[UploadFile, File(description="An image or a PDF")],
     kind: Annotated[LandDocumentKind, Form(description="The document type")] = (
         LandDocumentKind.OTHER
     ),
-    note: Annotated[
+    notes: Annotated[
         str | None,
-        Form(max_length=255, description="What it actually is, when the kind will not say"),
+        Form(max_length=255, description="Describe this document, when the type is Other"),
     ] = None,
 ) -> LandDocumentRead:
     return await documents.create(
         land_id,
         kind=kind,
-        note=note,
+        notes=notes,
         filename=file.filename or "",
         content_type=file.content_type or "",
         data=await read_capped(file, get_settings().max_attachment_bytes),
@@ -157,7 +157,7 @@ async def get_land_document(document_id: str, user: CurrentUser) -> LandDocument
 async def update_land_document(
     document_id: str, req: LandDocumentUpdate, user: CurrentUser
 ) -> LandDocumentRead:
-    """Correct what a paper is called, or say what an Other one actually is."""
+    """Change a document's type, or describe a document of type Other."""
     return await documents.update(document_id, req)
 
 
@@ -167,7 +167,7 @@ async def update_land_document(
     responses={
         **NOT_FOUND,
         status.HTTP_200_OK: {
-            "description": "The file itself",
+            "description": "The file contents",
             "content": {
                 "application/octet-stream": {"schema": {"type": "string", "format": "binary"}}
             },
@@ -176,27 +176,28 @@ async def update_land_document(
     response_class=Response,
 )
 async def download_land_document(document_id: str, user: CurrentUser, storage: Store) -> Response:
-    """The file. Where the store can hand out a link of its own, this redirects
-    to it and the bytes never pass through Setout."""
+    """Serve the file inline, for the browser to display. Redirects to the storage URL when the
+    store provides one.
+    """
     link = await documents.link(document_id, storage)
     if link is not None:
         return RedirectResponse(link, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
-    found = await documents.read_file(document_id, storage)
+    stored_file = await documents.read_file(document_id, storage)
     return Response(
-        content=found.data,
-        media_type=found.content_type,
-        headers={"Content-Disposition": f'inline; filename="{found.filename}"'},
+        content=stored_file.data,
+        media_type=stored_file.content_type,
+        headers={"Content-Disposition": f'inline; filename="{stored_file.filename}"'},
     )
 
 
-@router.delete(
-    "/land-documents/{document_id}",
-    operation_id="deleteLandDocument",
+@router.post(
+    "/land-documents/{document_id}/archive",
+    operation_id="archiveLandDocument",
     status_code=status.HTTP_204_NO_CONTENT,
     responses=NOT_FOUND,
 )
-async def delete_land_document(document_id: str, user: CurrentUser) -> None:
-    await documents.delete(document_id)
+async def archive_land_document(document_id: str, user: CurrentUser) -> None:
+    await documents.archive(document_id)
 
 
 @router.post(
@@ -212,29 +213,29 @@ async def restore_land_document(document_id: str, user: CurrentUser) -> LandDocu
 async def list_land_valuations(
     land_id: str,
     user: CurrentUser,
-    include_deleted: Annotated[bool, Query(description="Include archived entries")] = False,
+    include_archived: Annotated[bool, Query(description="Include archived valuations")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> LandValuationPage:
-    """What the plot has been worth, newest first."""
+    """Purchase price and valuations for the land record, newest first."""
     return await valuations.list(
-        land_id, limit=limit, offset=offset, include_deleted=include_deleted
+        land_id, limit=limit, offset=offset, include_archived=include_archived
     )
 
 
 @router.post(
     "/lands/{land_id}/valuations",
-    operation_id="addLandValuation",
+    operation_id="createLandValuation",
     status_code=status.HTTP_201_CREATED,
     responses={
         **NOT_FOUND,
-        status.HTTP_409_CONFLICT: {"description": "It already records what it was bought for"},
+        status.HTTP_409_CONFLICT: {"description": "The land record already has a purchase price"},
     },
 )
-async def add_land_valuation(
+async def create_land_valuation(
     land_id: str, req: LandValuationCreate, user: CurrentUser
 ) -> LandValuationRead:
-    """The first entry fixes the currency every later one has to use."""
+    """The first valuation sets the currency. Later valuations must use the same currency."""
     return await valuations.create(land_id, req)
 
 
@@ -243,7 +244,7 @@ async def add_land_valuation(
     operation_id="updateLandValuation",
     responses={
         **NOT_FOUND,
-        status.HTTP_409_CONFLICT: {"description": "It already records what it was bought for"},
+        status.HTTP_409_CONFLICT: {"description": "The land record already has a purchase price"},
     },
 )
 async def update_land_valuation(
@@ -252,14 +253,14 @@ async def update_land_valuation(
     return await valuations.update(valuation_id, req)
 
 
-@router.delete(
-    "/land-valuations/{valuation_id}",
-    operation_id="deleteLandValuation",
+@router.post(
+    "/land-valuations/{valuation_id}/archive",
+    operation_id="archiveLandValuation",
     status_code=status.HTTP_204_NO_CONTENT,
     responses=NOT_FOUND,
 )
-async def delete_land_valuation(valuation_id: str, user: CurrentUser) -> None:
-    await valuations.delete(valuation_id)
+async def archive_land_valuation(valuation_id: str, user: CurrentUser) -> None:
+    await valuations.archive(valuation_id)
 
 
 @router.post(

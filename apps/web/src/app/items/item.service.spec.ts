@@ -3,7 +3,7 @@ import { Api } from '@setout/api-client';
 import { detailOf } from '../api-error';
 import { ItemService } from './item.service';
 
-function item(id: string, over: Record<string, unknown> = {}) {
+function item(id: string, overrides: Record<string, unknown> = {}) {
   return {
     id,
     name: 'Cement',
@@ -12,8 +12,8 @@ function item(id: string, over: Record<string, unknown> = {}) {
     purchase_count: 0,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
@@ -40,7 +40,7 @@ describe('ItemService', () => {
     return TestBed.inject(ItemService);
   }
 
-  it('loads the catalogue', async () => {
+  it('loads the first page of items', async () => {
     const service = configure(() => page([item('i1')]));
     await service.load();
 
@@ -49,7 +49,7 @@ describe('ItemService', () => {
     expect(service.loading()).toBe(false);
   });
 
-  it('reports a failure instead of throwing', async () => {
+  it('sets an error instead of throwing when loading fails', async () => {
     const service = configure(() => {
       throw new Error('offline');
     });
@@ -59,7 +59,7 @@ describe('ItemService', () => {
     expect(service.loading()).toBe(false);
   });
 
-  it('leaves archived rows out unless the page includes them, and keeps that choice when paging', async () => {
+  it('excludes archived rows unless requested and keeps the choice when paging', async () => {
     const service = configure(() => page([item('i1')], 24));
     await service.load();
     expect((calls[0] as { include_archived?: boolean }).include_archived).toBe(false);
@@ -71,7 +71,7 @@ describe('ItemService', () => {
     expect((calls[2] as { include_archived?: boolean }).include_archived).toBe(true);
   });
 
-  it('passes a search term through and drops an empty one', async () => {
+  it('sends a search term and omits an empty one', async () => {
     const service = configure(() => page([]));
     await service.load('inch');
     expect((calls[0] as { search?: string }).search).toBe('inch');
@@ -80,7 +80,7 @@ describe('ItemService', () => {
     expect((calls[1] as { search?: string }).search).toBeUndefined();
   });
 
-  it('asks for ten rows at the offset of the page wanted', async () => {
+  it('requests ten rows at the offset of the requested page', async () => {
     const service = configure(() => page([item('i1')], 24));
     await service.load();
     expect((calls[0] as { limit?: number; offset?: number }).limit).toBe(10);
@@ -91,28 +91,28 @@ describe('ItemService', () => {
     expect(service.page()).toBe(3);
   });
 
-  it('goes back to the first page when the search changes', async () => {
+  it('returns to the first page when the search changes', async () => {
     const service = configure(() => page([item('i1')], 24));
     await service.goTo(3);
     await service.load('inch');
     expect(service.page()).toBe(1);
   });
 
-  it('keeps the search term when turning a page', async () => {
+  it('keeps the search term when paging', async () => {
     const service = configure(() => page([item('i1')], 24));
     await service.load('inch');
     await service.goTo(2);
     expect((calls[1] as { search?: string }).search).toBe('inch');
   });
 
-  it('holds every choice apart from the page, for the pickers', async () => {
+  it('loads picker choices separately from the page', async () => {
     const service = configure(() => page([item('i1'), item('i2')], 2));
     await service.loadChoices();
     expect(service.choices().length).toBe(2);
     expect((calls[0] as { limit?: number }).limit).toBe(100);
   });
 
-  it('reads the page back from the server after adding, and offers the new choice', async () => {
+  it('reloads the page after adding and adds the item to the choices', async () => {
     const service = configure((name) =>
       name === 'createItem' ? item('i2', { name: 'Blocks' }) : page([item('i1')]),
     );
@@ -126,7 +126,7 @@ describe('ItemService', () => {
     expect(service.saving()).toBe(false);
   });
 
-  it('surfaces the reason a duplicate name was refused', async () => {
+  it('shows the server error for a duplicate name', async () => {
     const service = configure((name) => {
       if (name === 'createItem') {
         throw { error: { detail: 'An item with that name already exists' } };
@@ -140,27 +140,27 @@ describe('ItemService', () => {
     expect(service.error()).toBe('An item with that name already exists');
   });
 
-  it('replaces the row it edited', async () => {
+  it('replaces the updated row in place', async () => {
     const service = configure((name) =>
       name === 'updateItem' ? item('i1', { unit: 'truck' }) : page([item('i1')]),
     );
     await service.load();
 
-    await service.edit('i1', { unit: 'truck' });
+    await service.update('i1', { unit: 'truck' });
     expect(service.items()[0].unit).toBe('truck');
   });
 
-  it('reads the page back after archiving, and steps back off an emptied one', async () => {
+  it('reloads after archiving and moves to the previous page when the current one empties', async () => {
     const service = configure((name) => (name === 'listItems' ? page([], 10) : undefined));
     await service.goTo(2);
 
-    await service.remove('i1');
+    await service.archive('i1');
 
-    expect(names).toContain('deleteItem');
+    expect(names).toContain('archiveItem');
     expect(service.page()).toBe(1);
   });
 
-  it('reloads after a restore', async () => {
+  it('reloads after restoring', async () => {
     const service = configure(() => page([item('i1')]));
     await service.restore('i1');
 
@@ -168,7 +168,7 @@ describe('ItemService', () => {
     expect(names).toContain('listItems');
   });
 
-  it('returns null rather than throwing when prices cannot be read', async () => {
+  it('returns null when prices cannot be loaded', async () => {
     const service = configure(() => {
       throw new Error('offline');
     });
@@ -176,7 +176,7 @@ describe('ItemService', () => {
     expect(await service.lastPrice('p1', 'i1')).toBeNull();
   });
 
-  it('unwraps the last price for a project', async () => {
+  it('returns the last price for a project', async () => {
     const service = configure(() => ({
       item_id: 'i1',
       project_id: 'p1',
@@ -188,12 +188,12 @@ describe('ItemService', () => {
     expect(calls[0]).toEqual({ project_id: 'p1', item_id: 'i1' });
   });
 
-  it('reads no last price when nothing has been bought yet', async () => {
+  it('returns null when the item has no expenses', async () => {
     const service = configure(() => ({ item_id: 'i1', project_id: 'p1', last_price: null }));
     expect(await service.lastPrice('p1', 'i1')).toBeNull();
   });
 
-  it('reads a detail off a failure, or nothing', () => {
+  it('detailOf returns the first error detail or null', () => {
     expect(detailOf({ error: { detail: 'nope' } })).toBe('nope');
     expect(detailOf({ error: { detail: [{ msg: 'field required' }] } })).toBe('field required');
     expect(detailOf({ error: { detail: [] } })).toBeNull();

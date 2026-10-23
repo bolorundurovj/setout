@@ -8,7 +8,7 @@ import { LandService } from './land.service';
 function land(over: Partial<LandRead> = {}): LandRead {
   return {
     id: 'l1',
-    name: 'Ewuru plot',
+    name: 'Ewuru',
     address: '14 Jacaranda Close',
     geocoded_address: null,
     city: 'Ewuru',
@@ -33,40 +33,40 @@ function land(over: Partial<LandRead> = {}): LandRead {
     projects: [],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
     ...over,
   };
 }
 
-function paper(over: Partial<LandDocumentRead> = {}): LandDocumentRead {
+function landDocument(over: Partial<LandDocumentRead> = {}): LandDocumentRead {
   return {
     id: 'd1',
     land_id: 'l1',
     kind: 'certificate_of_occupancy',
-    note: null,
+    notes: null,
     filename: 'c-of-o.pdf',
     content_type: 'application/pdf',
     byte_size: 2048,
     checksum: 'abc',
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
     ...over,
   };
 }
 
 describe('LandDetailComponent', () => {
-  let uploads: { kind: string; file: File; note: string | null }[];
+  let uploads: { kind: string; file: File; notes: string | null }[];
   let edited: { id: string; body: LandDocumentUpdate }[];
-  let removed: string[];
+  let archived: string[];
   let restored: string[];
   let toasts: { message: string; type: string }[];
   let navigations: unknown[][];
 
-  async function render(row: LandRead | null = land(), papers: LandDocumentRead[] = []) {
+  async function render(row: LandRead | null = land(), documents: LandDocumentRead[] = []) {
     uploads = [];
     edited = [];
-    removed = [];
+    archived = [];
     restored = [];
     toasts = [];
     navigations = [];
@@ -75,21 +75,22 @@ describe('LandDetailComponent', () => {
       saving: () => false,
       error: () => null,
       get: async () => row,
-      documents: async () => papers,
+      documents: async () => documents,
       documentUrl: (id: string) => `http://api/api/land-documents/${id}/file`,
-      addDocument: async (_landId: string, kind: string, file: File, note?: string | null) => {
-        uploads.push({ kind, file, note: note ?? null });
-        return paper({ kind: kind as LandDocumentRead['kind'] });
+      createDocument: async (_landId: string, kind: string, file: File, notes?: string | null) => {
+        uploads.push({ kind, file, notes: notes ?? null });
+        return landDocument({ kind: kind as LandDocumentRead['kind'] });
       },
       editDocument: async (id: string, body: LandDocumentUpdate) => {
         edited.push({ id, body });
-        return paper({ kind: body.kind ?? undefined, note: body.note });
+        return landDocument({ kind: body.kind ?? undefined, notes: body.notes });
       },
       valuations: async () => [],
-      addValuation: async () => null,
-      removeValuation: async () => undefined,
-      removeDocument: async (id: string) => {
-        removed.push(id);
+      createValuation: async () => null,
+      archiveValuation: async () => undefined,
+      restoreValuation: async () => undefined,
+      archiveDocument: async (id: string) => {
+        archived.push(id);
       },
       restoreDocument: async (id: string) => {
         restored.push(id);
@@ -125,27 +126,29 @@ describe('LandDetailComponent', () => {
     return { component, fixture, element: fixture.nativeElement as HTMLElement };
   }
 
-  it('names the papers that have not arrived yet', async () => {
+  it('lists missing document types', async () => {
     const { component } = await render();
-    expect(component.missingLine()).toBe('Missing: Certificate of Occupancy, Survey Plan, Deed.');
+    expect(component.missingDocumentsLabel()).toBe(
+      'Missing: Certificate of Occupancy, Survey Plan, Deed.',
+    );
   });
 
-  it('says so plainly once every paper is in', async () => {
+  it('reports all required documents present', async () => {
     const { component } = await render(land({ missing_kinds: [] }));
-    expect(component.missingLine()).toBe('All required documents are present.');
+    expect(component.missingDocumentsLabel()).toBe('All required documents are present.');
   });
 
-  it('shows the size the way it was recorded', async () => {
+  it('formats the stated area', async () => {
     const { component } = await render();
-    expect(component.size(land())).toBe('648.5 sqm');
+    expect(component.statedArea(land())).toBe('648.5 sqm');
   });
 
-  it('says a dash when the size was never taken', async () => {
+  it('shows a dash without a stated area', async () => {
     const { component } = await render();
-    expect(component.size(land({ size_value: null, size_unit: null }))).toBe('—');
+    expect(component.statedArea(land({ size_value: null, size_unit: null }))).toBe('—');
   });
 
-  it('sends the chosen kind along with the file', async () => {
+  it('uploads the file with the selected document type', async () => {
     const { component } = await render();
     component.kind.set('survey_plan');
     const file = new File(['a plan'], 'survey.pdf', { type: 'application/pdf' });
@@ -154,11 +157,11 @@ describe('LandDetailComponent', () => {
       target: { files: [file], value: '' },
     } as unknown as Event);
 
-    expect(uploads).toEqual([{ kind: 'survey_plan', file, note: '' }]);
+    expect(uploads).toEqual([{ kind: 'survey_plan', file, notes: '' }]);
     expect(toasts[0].message).toBe('Survey Plan uploaded.');
   });
 
-  it('does nothing when the picker is dismissed', async () => {
+  it('uploads nothing when the file picker is dismissed', async () => {
     const { component } = await render();
 
     await component.onPicked({ target: { files: [], value: '' } } as unknown as Event);
@@ -166,86 +169,94 @@ describe('LandDetailComponent', () => {
     expect(uploads).toEqual([]);
   });
 
-  it('offers to put back the paper it just removed', async () => {
-    const { component } = await render(land(), [paper()]);
+  it('restores the last archived document', async () => {
+    const { component } = await render(land(), [landDocument()]);
 
-    await component.remove(paper());
-    expect(removed).toEqual(['d1']);
-    expect(component.justRemoved()?.filename).toBe('c-of-o.pdf');
+    await component.archiveDocument(landDocument());
+    expect(archived).toEqual(['d1']);
+    expect(component.lastArchived()?.filename).toBe('c-of-o.pdf');
 
-    await component.putBack();
+    await component.restoreLastArchived();
     expect(restored).toEqual(['d1']);
-    expect(component.justRemoved()).toBeNull();
+    expect(component.lastArchived()).toBeNull();
   });
 
-  it('points at the file through the api root, not a bare path', async () => {
-    const { component } = await render(land(), [paper()]);
-    expect(component.href(paper())).toBe('http://api/api/land-documents/d1/file');
+  it('builds the download URL from the API root', async () => {
+    const { component } = await render(land(), [landDocument()]);
+    expect(component.href(landDocument())).toBe('http://api/api/land-documents/d1/file');
   });
 
-  it('says how big a file is in a way a person reads', async () => {
+  it('formats file sizes in B, KiB and MiB', async () => {
     const { component } = await render();
-    expect(component.bytes(512)).toBe('512 B');
-    expect(component.bytes(2048)).toBe('2 KB');
-    expect(component.bytes(3 * 1024 * 1024)).toBe('3.0 MB');
+    expect(component.formatFileSize(512)).toBe('512 B');
+    expect(component.formatFileSize(2048)).toBe('2 KiB');
+    expect(component.formatFileSize(3 * 1024 * 1024)).toBe('3.0 MiB');
   });
 
-  it('lists what is being built on the plot', async () => {
+  it('lists the projects that reference the land record', async () => {
     const { element } = await render(
       land({
-        projects: [{ id: 'p1', name: 'The house', status: 'active', deleted_at: null }],
+        projects: [{ id: 'p1', name: 'The house', status: 'active', archived_at: null }],
       }),
     );
     expect(element.textContent).toContain('The house');
   });
 
-  it('shows no map for a plot with neither a pin nor an edge', async () => {
+  it('hides the map without a pin or boundary', async () => {
     const { component } = await render();
     expect(component.hasMap(land())).toBe(false);
   });
 
-  it('shows a map once there is a pin', async () => {
+  it('shows the map with a pin', async () => {
     const { component } = await render();
     expect(component.hasMap(land({ latitude: '6.52', longitude: '3.37' }))).toBe(true);
   });
 
-  it('reads the boundary area in the unit the size uses', async () => {
+  it('shows the measured area in the stated area unit, singular for one', async () => {
     const { component } = await render();
-    expect(component.area(land({ boundary_area_sqm: 10000, size_unit: 'hectare' }))).toBe(
-      '1 hectares',
+    expect(component.measuredArea(land({ boundary_area_sqm: 10000, size_unit: 'hectare' }))).toBe(
+      '1 hectare',
     );
-    expect(component.area(land({ boundary_area_sqm: 648.5, size_unit: null }))).toBe('648.5 sqm');
+    expect(component.measuredArea(land({ boundary_area_sqm: 648.5, size_unit: null }))).toBe(
+      '648.5 sqm',
+    );
   });
 
-  it('says a dash when nothing has been drawn', async () => {
+  it('shows a dash without a boundary', async () => {
     const { component } = await render();
-    expect(component.area(land())).toBe('—');
+    expect(component.measuredArea(land())).toBe('—');
   });
 
-  it('works out how far the drawn edge is from the recorded size', async () => {
+  it('computes the percentage difference between measured and stated area', async () => {
     const { component } = await render();
-    const gap = component.areaGap(
+    const difference = component.areaDifferencePercent(
       land({ boundary_area_sqm: 648.5, size_value: '600', size_unit: 'sqm' }),
     );
-    expect(gap).toBe(8);
+    expect(difference).toBe(8);
   });
 
-  it('compares nothing when the size is in plots', async () => {
+  it('returns null when the stated area is in plots', async () => {
     const { component } = await render();
     expect(
-      component.areaGap(land({ boundary_area_sqm: 648.5, size_value: '1', size_unit: 'plot' })),
+      component.areaDifferencePercent(
+        land({ boundary_area_sqm: 648.5, size_value: '1', size_unit: 'plot' }),
+      ),
     ).toBeNull();
   });
 
-  it('compares nothing when only one of the two figures exists', async () => {
+  it('returns null without both areas', async () => {
     const { component } = await render();
     expect(
-      component.areaGap(land({ boundary_area_sqm: 648.5, size_value: null, size_unit: null })),
+      component.areaDifferencePercent(
+        land({ boundary_area_sqm: 648.5, size_value: null, size_unit: null }),
+      ),
     ).toBeNull();
-    expect(component.areaGap(land({ size_value: '600', size_unit: 'sqm' }))).toBeNull();
+    expect(
+      component.areaDifferencePercent(land({ size_value: '600', size_unit: 'sqm' })),
+    ).toBeNull();
   });
 
-  it('offers no switch when the plot has only a boundary', async () => {
+  it('shows no tabs with only a boundary', async () => {
     const { component } = await render();
     const boundaryOnly = land({ boundary: { type: 'Polygon', coordinates: [[]] } });
 
@@ -253,7 +264,7 @@ describe('LandDetailComponent', () => {
     expect(component.shownMap(boundaryOnly)).toBe('boundary');
   });
 
-  it('offers no switch when the plot has only a pin', async () => {
+  it('shows no tabs with only a pin', async () => {
     const { component } = await render();
     const pinOnly = land({ latitude: '6.52', longitude: '3.37' });
 
@@ -261,7 +272,7 @@ describe('LandDetailComponent', () => {
     expect(component.shownMap(pinOnly)).toBe('pin');
   });
 
-  it('offers both once the plot has a pin and an edge', async () => {
+  it('shows both tabs with a pin and a boundary', async () => {
     const { component } = await render();
     const both = land({
       latitude: '6.52',
@@ -277,7 +288,7 @@ describe('LandDetailComponent', () => {
     expect(component.shownMap(both)).toBe('boundary');
   });
 
-  it('ignores the chosen tab when that half is missing', async () => {
+  it('ignores the selected tab when its map is missing', async () => {
     const { component } = await render();
     component.mapTab.set('pin');
 
@@ -286,29 +297,29 @@ describe('LandDetailComponent', () => {
     );
   });
 
-  it('says what the map calls the spot when it differs from the address', async () => {
+  it('shows the map address when it differs from the address', async () => {
     const { component } = await render();
-    const plot = land({
+    const row = land({
       address: 'The farm past the church',
       geocoded_address: '14 Jacaranda Close, Ewuru',
     });
 
-    expect(component.mapAddress(plot)).toBe('14 Jacaranda Close, Ewuru');
+    expect(component.mapAddress(row)).toBe('14 Jacaranda Close, Ewuru');
   });
 
-  it('stays quiet when the map only says the address back', async () => {
+  it('hides the map address when it matches the address', async () => {
     const { component } = await render();
-    const plot = land({ address: '14 Jacaranda', geocoded_address: '  14 Jacaranda  ' });
+    const row = land({ address: '14 Jacaranda', geocoded_address: '  14 Jacaranda  ' });
 
-    expect(component.mapAddress(plot)).toBe('');
+    expect(component.mapAddress(row)).toBe('');
   });
 
-  it('stays quiet when the map was never asked', async () => {
+  it('hides the map address when none is stored', async () => {
     const { component } = await render();
     expect(component.mapAddress(land())).toBe('');
   });
 
-  describe('a pin outside the edge', () => {
+  describe('pin outside the boundary', () => {
     const SQUARE = {
       type: 'Polygon' as const,
       coordinates: [
@@ -322,54 +333,54 @@ describe('LandDetailComponent', () => {
       ],
     };
 
-    it('says nothing without both a pin and an edge', async () => {
+    it('returns false without both a pin and a boundary', async () => {
       const { component } = await render();
 
       expect(component.pinIsOutside(land({ boundary: SQUARE }))).toBe(false);
       expect(component.pinIsOutside(land({ latitude: '6.505', longitude: '3.305' }))).toBe(false);
     });
 
-    it('says nothing when the pin is inside', async () => {
+    it('returns false when the pin is inside', async () => {
       const { component } = await render();
-      const plot = land({ latitude: '6.505', longitude: '3.305', boundary: SQUARE });
+      const row = land({ latitude: '6.505', longitude: '3.305', boundary: SQUARE });
 
-      expect(component.pinIsOutside(plot)).toBe(false);
+      expect(component.pinIsOutside(row)).toBe(false);
     });
 
-    it('catches a pin outside the edge', async () => {
+    it('returns true when the pin is outside the boundary', async () => {
       const { component } = await render();
-      const plot = land({ latitude: '6.6', longitude: '3.4', boundary: SQUARE });
+      const row = land({ latitude: '6.6', longitude: '3.4', boundary: SQUARE });
 
-      expect(component.pinIsOutside(plot)).toBe(true);
+      expect(component.pinIsOutside(row)).toBe(true);
     });
 
-    it('shows it as a banner with a button to fix it', async () => {
+    it('shows a banner with an Edit Land Record button', async () => {
       const { element } = await render(
         land({ latitude: '6.6', longitude: '3.4', boundary: SQUARE }),
       );
 
       const banner = element.querySelector('.banner.warn.pin-warning');
       expect(banner).not.toBeNull();
-      expect(banner?.textContent).toContain('outside the mapped survey');
+      expect(banner?.textContent).toContain('outside the boundary');
       expect(banner?.querySelector('button')?.textContent).toContain('Edit Land');
     });
 
-    it('offers nothing to press on an archived plot', async () => {
+    it('shows no button on an archived land record', async () => {
       const { element } = await render(
         land({
           latitude: '6.6',
           longitude: '3.4',
           boundary: SQUARE,
-          deleted_at: '2026-01-02T00:00:00Z',
+          archived_at: '2026-01-02T00:00:00Z',
         }),
       );
 
       const banner = element.querySelector('.banner.warn.pin-warning');
-      expect(banner?.textContent).toContain('outside the mapped survey');
+      expect(banner?.textContent).toContain('outside the boundary');
       expect(banner?.querySelector('button')).toBeNull();
     });
 
-    it('takes you to the form to fix it', async () => {
+    it('navigates to the edit form', async () => {
       const { component } = await render(
         land({ latitude: '6.6', longitude: '3.4', boundary: SQUARE }),
       );

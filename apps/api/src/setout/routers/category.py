@@ -31,7 +31,7 @@ controller = CategoryController()
 NOT_FOUND: dict[int | str, dict[str, Any]] = {
     status.HTTP_404_NOT_FOUND: {"description": "Not found"}
 }
-IS_GROUP: dict[int | str, dict[str, Any]] = {
+HAS_SUBCATEGORIES: dict[int | str, dict[str, Any]] = {
     status.HTTP_409_CONFLICT: {
         "description": "A category with subcategories has no budget of its own"
     }
@@ -47,9 +47,9 @@ async def list_category_presets(user: CurrentUser) -> list[CategoryPresetRead]:
 async def list_categories(
     project_id: str,
     user: CurrentUser,
-    include_deleted: Annotated[bool, Query(description="Include archived categories")] = False,
+    include_archived: Annotated[bool, Query(description="Include archived categories")] = False,
 ) -> list[CategoryRead]:
-    return await controller.list_categories(project_id, include_deleted=include_deleted)
+    return await controller.list_categories(project_id, include_archived=include_archived)
 
 
 @router.post(
@@ -66,9 +66,9 @@ async def create_category(project_id: str, req: CategoryCreate, user: CurrentUse
 async def get_project_budget(
     project_id: str,
     user: CurrentUser,
-    include_deleted: Annotated[bool, Query(description="Include archived categories")] = False,
+    include_archived: Annotated[bool, Query(description="Include archived categories")] = False,
 ) -> ProjectBudget:
-    return await controller.budget(project_id, include_deleted=include_deleted)
+    return await controller.budget(project_id, include_archived=include_archived)
 
 
 @router.patch("/categories/{category_id}", operation_id="updateCategory", responses=NOT_FOUND)
@@ -76,9 +76,9 @@ async def update_category(category_id: str, req: CategoryUpdate, user: CurrentUs
     return await controller.update(category_id, req)
 
 
-@router.delete(
-    "/categories/{category_id}",
-    operation_id="deleteCategory",
+@router.post(
+    "/categories/{category_id}/archive",
+    operation_id="archiveCategory",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         **NOT_FOUND,
@@ -87,8 +87,8 @@ async def update_category(category_id: str, req: CategoryUpdate, user: CurrentUs
         },
     },
 )
-async def delete_category(category_id: str, user: CurrentUser) -> None:
-    await controller.delete(category_id)
+async def archive_category(category_id: str, user: CurrentUser) -> None:
+    await controller.archive(category_id)
 
 
 @router.post(
@@ -106,25 +106,25 @@ async def restore_category(category_id: str, user: CurrentUser) -> CategoryRead:
 async def list_budget_items(
     category_id: str,
     user: CurrentUser,
-    include_deleted: Annotated[bool, Query(description="Include archived budget items")] = False,
+    include_archived: Annotated[bool, Query(description="Include archived budget items")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> BudgetItemPage:
     return await controller.list_items(
-        category_id, include_deleted=include_deleted, limit=limit, offset=offset
+        category_id, include_archived=include_archived, limit=limit, offset=offset
     )
 
 
 @router.post(
     "/categories/{category_id}/budget-items",
-    operation_id="addBudgetItem",
+    operation_id="createBudgetItem",
     status_code=status.HTTP_201_CREATED,
-    responses={**NOT_FOUND, **IS_GROUP},
+    responses={**NOT_FOUND, **HAS_SUBCATEGORIES},
 )
-async def add_budget_item(
+async def create_budget_item(
     category_id: str, req: BudgetItemCreate, user: CurrentUser
 ) -> BudgetItemRead:
-    return await controller.add_item(category_id, req)
+    return await controller.create_item(category_id, req)
 
 
 @router.patch("/budget-items/{item_id}", operation_id="updateBudgetItem", responses=NOT_FOUND)
@@ -134,14 +134,14 @@ async def update_budget_item(
     return await controller.update_item(item_id, req)
 
 
-@router.delete(
-    "/budget-items/{item_id}",
-    operation_id="deleteBudgetItem",
+@router.post(
+    "/budget-items/{item_id}/archive",
+    operation_id="archiveBudgetItem",
     status_code=status.HTTP_204_NO_CONTENT,
     responses=NOT_FOUND,
 )
-async def delete_budget_item(item_id: str, user: CurrentUser) -> None:
-    await controller.delete_item(item_id)
+async def archive_budget_item(item_id: str, user: CurrentUser) -> None:
+    await controller.archive_item(item_id)
 
 
 @router.post(

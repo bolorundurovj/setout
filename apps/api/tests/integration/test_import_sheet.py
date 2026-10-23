@@ -12,8 +12,35 @@ from setout.services.sheets.write import XLSX_TYPE as XLSX
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
-BUDGET_HEAD = ["Cost Codes", "Activities", "Labor Costs", "Material Costs", "Fixed Costs", "Budget"]
-SPEND_HEAD = [
+BUDGET_HEADERS = [
+    "Cost Code",
+    "Description",
+    "Labour Costs",
+    "Material Costs",
+    "Fixed Costs",
+    "Budget",
+]
+OLD_BUDGET_HEADERS = [
+    "Cost Codes",
+    "Activities",
+    "Labor Costs",
+    "Material Costs",
+    "Fixed Costs",
+    "Budget",
+]
+EXPENSE_HEADERS = [
+    "Invoice No.",
+    "Subcontractors & Vendors",
+    "Cost Code",
+    "Date Invoiced",
+    "Amount",
+    "Attachment",
+    "Paid By",
+    "Paid",
+    "Date Paid",
+    "Notes",
+]
+OLD_EXPENSE_HEADERS = [
     "Invoice No.",
     "Subcontractors & Vendors",
     "Cost Code",
@@ -25,10 +52,10 @@ SPEND_HEAD = [
     "Date Paid",
     "Notes",
 ]
-VENDOR_HEAD = ["Company Name", "Photo", "Trade", "Point of Contact", "Phone", "Email", "Notes"]
+VENDOR_HEADERS = ["Company Name", "Photo", "Trade", "Point of Contact", "Phone", "Email", "Notes"]
 
 
-def book(**sheets: list[list[object]]) -> bytes:
+def workbook(**sheets: list[list[object]]) -> bytes:
     wb = Workbook()
     wb.remove(wb.active)
     for name, rows in sheets.items():
@@ -41,10 +68,10 @@ def book(**sheets: list[list[object]]) -> bytes:
     return out.getvalue()
 
 
-def sample() -> bytes:
-    return book(
+def sample_workbook() -> bytes:
+    return workbook(
         Budget=[
-            BUDGET_HEAD,
+            BUDGET_HEADERS,
             ["1000", "Administrative Expenses", "", "", "", 68500],
             ["1001", "Beacons", "", 1000, "", 1000],
             ["1002", "Drawings", "", "", 20000, 20000],
@@ -52,24 +79,24 @@ def sample() -> bytes:
             ["3001", "Pegging", 37500, "", "", 37500],
         ],
         Vendors=[
-            VENDOR_HEAD,
+            VENDOR_HEADERS,
             ["Bright Star Aluminium", "", "Roofing", "Mr Sola", "0800 000 0001", "a@b.com", ""],
         ],
         Invoices=[
-            SPEND_HEAD,
+            EXPENSE_HEADERS,
             [3835, "Bright Star Aluminium", 3001, 44691, 500000, "", "Ayo", 1, 44691, "@4200"],
         ],
     )
 
 
-async def setup(client: AsyncClient) -> None:
+async def set_up_admin(client: AsyncClient) -> None:
     await Currency.bulk_create(
         [Currency(code=c[0], name=c[1], exponent=c[2]) for c in CURRENCIES if c[0] == "NGN"]
     )
-    await client.post("/api/auth/setup", json={"name": "Admin", "password": "password123"})
+    await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": "password123"})
 
 
-async def preview(client: AsyncClient, data: bytes, **form: object) -> dict:
+async def preview_import(client: AsyncClient, data: bytes, **form: object) -> dict:
     name = "sheet.csv" if data[:2] != b"PK" else "sheet.xlsx"
     resp = await client.post(
         "/api/import/preview",
@@ -80,7 +107,7 @@ async def preview(client: AsyncClient, data: bytes, **form: object) -> dict:
     return resp.json()
 
 
-async def run(client: AsyncClient, data: bytes, **form: object) -> dict:
+async def run_import(client: AsyncClient, data: bytes, **form: object) -> dict:
     name = "sheet.csv" if data[:2] != b"PK" else "sheet.xlsx"
     resp = await client.post(
         "/api/import",
@@ -96,48 +123,48 @@ async def test_import_requires_authentication(client: AsyncClient) -> None:
     assert resp.status_code == 401
 
 
-async def test_the_report_says_what_the_file_holds(client: AsyncClient) -> None:
-    await setup(client)
+async def test_preview_reports_sheet_contents_and_totals(client: AsyncClient) -> None:
+    await set_up_admin(client)
 
-    body = await preview(client, sample())
+    body = await preview_import(client, sample_workbook())
 
     assert {s["holds"] for s in body["read"]} == {"budget", "vendors", "expenses"}
     assert body["budgeted_amount"] == 58_500_00
     assert body["budgeted_lines"] == 3
-    assert body["spend_rows"] == 1
-    assert body["spend_amount"] == 500_000_00
+    assert body["expense_rows"] == 1
+    assert body["spent_amount"] == 500_000_00
     assert body["vendors_new"] == 1
 
 
-async def test_looking_at_a_file_writes_nothing(client: AsyncClient) -> None:
-    await setup(client)
+async def test_preview_writes_nothing(client: AsyncClient) -> None:
+    await set_up_admin(client)
 
-    await preview(client, sample())
+    await preview_import(client, sample_workbook())
 
     assert (await client.get("/api/projects")).json()["total"] == 0
     assert (await client.get("/api/vendors")).json()["total"] == 0
 
 
-async def test_the_category_heading_total_is_not_counted_twice(client: AsyncClient) -> None:
-    await setup(client)
+async def test_category_subtotal_row_is_not_counted_twice(client: AsyncClient) -> None:
+    await set_up_admin(client)
 
-    body = await run(client, sample())
+    body = await run_import(client, sample_workbook())
 
-    # 68,500 heads the admin category and 58,500 is the sum of the three lines.
+    # 68,500 is the category subtotal row; the three items sum to 58,500.
     assert body["budgeted_amount"] == 58_500_00
-    assert body["categories"] == 2
-    assert body["budget_items"] == 3
+    assert body["category_count"] == 2
+    assert body["budget_item_count"] == 3
 
 
-async def test_it_brings_in_the_plan_the_spend_and_the_vendors(client: AsyncClient) -> None:
-    await setup(client)
+async def test_import_creates_budget_expenses_and_vendors(client: AsyncClient) -> None:
+    await set_up_admin(client)
 
-    body = await run(client, sample())
+    body = await run_import(client, sample_workbook())
     project_id = body["project_id"]
 
-    spend = (await client.get(f"/api/projects/{project_id}/spend")).json()
-    assert spend["budgeted_amount"] == 58_500_00
-    assert spend["spent_amount"] == 500_000_00
+    summary = (await client.get(f"/api/projects/{project_id}/expense-summary")).json()
+    assert summary["budgeted_amount"] == 58_500_00
+    assert summary["spent_amount"] == 500_000_00
 
     categories = (await client.get(f"/api/projects/{project_id}/categories")).json()
     assert {s["code"] for s in categories} == {"1000", "3000"}
@@ -147,78 +174,82 @@ async def test_it_brings_in_the_plan_the_spend_and_the_vendors(client: AsyncClie
     assert vendor["email"] == "a@b.com"
 
 
-async def test_the_spend_lands_against_the_category_its_cost_code_names(
+async def test_expense_category_follows_its_cost_code(
     client: AsyncClient,
 ) -> None:
-    await setup(client)
+    await set_up_admin(client)
 
-    project_id = (await run(client, sample()))["project_id"]
+    project_id = (await run_import(client, sample_workbook()))["project_id"]
 
     categories = (await client.get(f"/api/projects/{project_id}/categories")).json()
     foundation = next(s for s in categories if s["code"] == "3000")
     assert foundation["spent_amount"] == 500_000_00
 
 
-async def test_a_second_run_does_not_double_the_spend(client: AsyncClient) -> None:
-    await setup(client)
-    project_id = (await run(client, sample()))["project_id"]
+async def test_reimport_skips_duplicate_expenses(client: AsyncClient) -> None:
+    await set_up_admin(client)
+    project_id = (await run_import(client, sample_workbook()))["project_id"]
 
-    again = await run(client, sample(), project_id=project_id)
+    again = await run_import(client, sample_workbook(), project_id=project_id)
 
     assert again["skipped_duplicates"] == 1
-    assert again["expenses"] == 0
-    spend = (await client.get(f"/api/projects/{project_id}/spend")).json()
-    assert spend["spent_amount"] == 500_000_00
+    assert again["expense_count"] == 0
+    summary = (await client.get(f"/api/projects/{project_id}/expense-summary")).json()
+    assert summary["spent_amount"] == 500_000_00
 
 
-async def test_a_sheet_of_spending_can_never_write_a_budget(client: AsyncClient) -> None:
-    await setup(client)
-    only_spend = book(
+async def test_expense_sheet_creates_no_budget(client: AsyncClient) -> None:
+    await set_up_admin(client)
+    expenses_only = workbook(
         Invoices=[
-            SPEND_HEAD,
-            [1, "Someone", 1001, 44691, 900000, "", "Me", 1, 44691, "should not become a plan"],
+            EXPENSE_HEADERS,
+            [1, "Someone", 1001, 44691, 900000, "", "Me", 1, 44691, "should not become a budget"],
         ]
     )
 
-    body = await run(client, only_spend)
+    body = await run_import(client, expenses_only)
 
-    assert body["spend_amount"] == 900_000_00
+    assert body["spent_amount"] == 900_000_00
     assert body["budgeted_amount"] == 0
-    assert body["budget_items"] == 0
+    assert body["budget_item_count"] == 0
 
 
-async def test_a_plan_sheet_records_no_spending(client: AsyncClient) -> None:
-    await setup(client)
-    only_plan = book(
-        Budget=[BUDGET_HEAD, ["1000", "Admin", "", "", "", 0], ["1001", "Rent", "", "", "", 500]]
+async def test_budget_sheet_creates_no_expenses(client: AsyncClient) -> None:
+    await set_up_admin(client)
+    budget_only_workbook = workbook(
+        Budget=[BUDGET_HEADERS, ["1000", "Admin", "", "", "", 0], ["1001", "Rent", "", "", "", 500]]
     )
 
-    body = await run(client, only_plan)
+    body = await run_import(client, budget_only_workbook)
 
     assert body["budgeted_amount"] == 500_00
-    assert body["expenses"] == 0
-    assert body["spend_amount"] == 0
+    assert body["expense_count"] == 0
+    assert body["spent_amount"] == 0
 
 
-async def test_the_template_sheet_a_workbook_carries_is_left_out(client: AsyncClient) -> None:
-    await setup(client)
-    with_template = book(
-        Budget=[BUDGET_HEAD, ["1000", "Admin", "", "", "", 0], ["1001", "Real", "", "", "", 500]],
+async def test_template_sheet_is_skipped(client: AsyncClient) -> None:
+    await set_up_admin(client)
+    with_template = workbook(
+        Budget=[
+            BUDGET_HEADERS,
+            ["1000", "Admin", "", "", "", 0],
+            ["1001", "Real", "", "", "", 500],
+        ],
         Budget___Base=[
-            BUDGET_HEAD,
+            BUDGET_HEADERS,
             ["1000", "Example", "", "", "", 0],
             ["1001", "Fake", "", "", "", 99999],
         ],
     )
 
-    body = await preview(client, with_template)
+    body = await preview_import(client, with_template)
 
     assert body["budgeted_amount"] == 500_00
     assert any("Base" in s["name"] for s in body["skipped"])
 
 
-async def test_a_file_that_is_not_a_spreadsheet_is_refused(client: AsyncClient) -> None:
-    await setup(client)
+async def test_non_spreadsheet_file_is_rejected(client: AsyncClient) -> None:
+    await set_up_admin(client)
 
     resp = await client.post(
         "/api/import/preview",
@@ -229,51 +260,51 @@ async def test_a_file_that_is_not_a_spreadsheet_is_refused(client: AsyncClient) 
     assert resp.status_code == 422
 
 
-async def test_a_new_project_needs_a_name_and_a_currency(client: AsyncClient) -> None:
-    await setup(client)
+async def test_new_project_requires_name_and_known_currency(client: AsyncClient) -> None:
+    await set_up_admin(client)
 
     nameless = await client.post(
         "/api/import/preview",
-        files={"file": ("s.xlsx", sample(), "application/vnd.ms-excel")},
+        files={"file": ("s.xlsx", sample_workbook(), "application/vnd.ms-excel")},
         data={"currency_code": "NGN"},
     )
     assert nameless.status_code == 422
 
     unknown = await client.post(
         "/api/import/preview",
-        files={"file": ("s.xlsx", sample(), "application/vnd.ms-excel")},
+        files={"file": ("s.xlsx", sample_workbook(), "application/vnd.ms-excel")},
         data={"name": "X", "currency_code": "ZZZ"},
     )
     assert unknown.status_code == 422
 
 
-async def test_the_vendor_count_is_vendors_not_lookup_names(client: AsyncClient) -> None:
-    await setup(client)
+async def test_vendor_count_excludes_contact_aliases(client: AsyncClient) -> None:
+    await set_up_admin(client)
 
-    body = await run(client, sample())
+    body = await run_import(client, sample_workbook())
 
-    # One vendor, whose contact also answers to their name when spend is matched.
-    assert body["vendors"] == 1
+    # The contact name is an alias for vendor matching, not a second vendor.
+    assert body["vendor_count"] == 1
     assert (await client.get("/api/vendors")).json()["total"] == 1
 
 
-async def test_a_person_comes_from_who_bought_it(client: AsyncClient) -> None:
-    await setup(client)
+async def test_person_is_created_from_paid_by(client: AsyncClient) -> None:
+    await set_up_admin(client)
 
-    body = await run(client, sample())
+    body = await run_import(client, sample_workbook())
 
-    assert body["people"] == 1
+    assert body["person_count"] == 1
     assert (await client.get("/api/people")).json()["items"][0]["name"] == "Ayo"
 
 
-async def test_a_csv_of_one_sheet_is_read_too(client: AsyncClient) -> None:
-    await setup(client)
+async def test_single_sheet_csv_is_imported(client: AsyncClient) -> None:
+    await set_up_admin(client)
     csv = b"Cost Codes,Activities,Labor Costs,Material Costs,Fixed Costs,Budget\n"
     csv += b"1000,Admin,,,,0\n1001,Beacons,,1000,,1000\n"
 
     resp = await client.post(
         "/api/import",
-        files={"file": ("plan.csv", csv, "text/csv")},
+        files={"file": ("budget.csv", csv, "text/csv")},
         data={"name": "From a csv", "currency_code": "NGN"},
     )
 
@@ -281,12 +312,12 @@ async def test_a_csv_of_one_sheet_is_read_too(client: AsyncClient) -> None:
     assert resp.json()["budgeted_amount"] == 1_000_00
 
 
-async def test_the_report_shows_the_first_rows_as_they_would_be_filed(
+async def test_preview_shows_first_rows_with_categories(
     client: AsyncClient,
 ) -> None:
-    await setup(client)
+    await set_up_admin(client)
 
-    body = await preview(client, sample())
+    body = await preview_import(client, sample_workbook())
 
     assert len(body["sample"]) == 1
     row = body["sample"][0]
@@ -296,16 +327,16 @@ async def test_the_report_shows_the_first_rows_as_they_would_be_filed(
     assert row["spent_on"] == "2022-05-10"
 
 
-async def _project_with(client: AsyncClient) -> dict:
-    """A project imported from the sample, so there is something to export."""
-    await setup(client)
-    return await run(client, sample())
+async def _imported_project(client: AsyncClient) -> dict:
+    """A project imported from the sample workbook, so there is something to export."""
+    await set_up_admin(client)
+    return await run_import(client, sample_workbook())
 
 
-async def test_a_project_comes_back_out_as_a_workbook(client: AsyncClient) -> None:
-    made = await _project_with(client)
+async def test_project_exports_as_xlsx(client: AsyncClient) -> None:
+    imported = await _imported_project(client)
 
-    resp = await client.get(f"/api/projects/{made['project_id']}/export")
+    resp = await client.get(f"/api/projects/{imported['project_id']}/export")
 
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith(XLSX)
@@ -313,30 +344,30 @@ async def test_a_project_comes_back_out_as_a_workbook(client: AsyncClient) -> No
     assert resp.content[:2] == b"PK"
 
 
-async def test_exporting_a_project_that_is_not_there_says_so(client: AsyncClient) -> None:
-    await setup(client)
+async def test_export_of_unknown_project_returns_404(client: AsyncClient) -> None:
+    await set_up_admin(client)
     assert (await client.get("/api/projects/nope/export")).status_code == 404
 
 
-async def test_what_comes_out_goes_back_in_with_the_same_totals(client: AsyncClient) -> None:
-    made = await _project_with(client)
-    before = (await client.get(f"/api/projects/{made['project_id']}/spend")).json()
+async def test_export_import_round_trip_keeps_totals(client: AsyncClient) -> None:
+    imported = await _imported_project(client)
+    before = (await client.get(f"/api/projects/{imported['project_id']}/expense-summary")).json()
 
-    book = (await client.get(f"/api/projects/{made['project_id']}/export")).content
-    again = await run(client, book, name="Round trip")
+    exported = (await client.get(f"/api/projects/{imported['project_id']}/export")).content
+    again = await run_import(client, exported, name="Round trip")
 
-    after = (await client.get(f"/api/projects/{again['project_id']}/spend")).json()
+    after = (await client.get(f"/api/projects/{again['project_id']}/expense-summary")).json()
     assert after["budgeted_amount"] == before["budgeted_amount"]
     assert after["spent_amount"] == before["spent_amount"]
-    assert again["categories"] == made["categories"]
-    assert again["budget_items"] == made["budget_items"]
+    assert again["category_count"] == imported["category_count"]
+    assert again["budget_item_count"] == imported["budget_item_count"]
 
 
-async def test_the_workbook_says_what_each_expense_was_for(client: AsyncClient) -> None:
-    made = await _project_with(client)
+async def test_export_round_trip_keeps_expense_descriptions(client: AsyncClient) -> None:
+    imported = await _imported_project(client)
 
-    book = (await client.get(f"/api/projects/{made['project_id']}/export")).content
-    again = await run(client, book, name="Round trip")
+    exported = (await client.get(f"/api/projects/{imported['project_id']}/export")).content
+    again = await run_import(client, exported, name="Round trip")
 
     listing = (await client.get(f"/api/projects/{again['project_id']}/expenses")).json()
     # Without a description column the reader would name rows after the vendor.
@@ -345,37 +376,39 @@ async def test_the_workbook_says_what_each_expense_was_for(client: AsyncClient) 
     ]
 
 
-async def test_the_spending_lands_under_the_same_category_it_came_from(client: AsyncClient) -> None:
-    await setup(client)
-    made = await run(
+async def test_export_round_trip_keeps_expense_categories(client: AsyncClient) -> None:
+    await set_up_admin(client)
+    imported = await run_import(
         client,
-        book(
+        workbook(
             Budget=[
-                BUDGET_HEAD,
+                BUDGET_HEADERS,
                 ["3000", "Concrete Foundation", "", "", "", 0],
                 ["3001", "Pegging", "", "", 37500, 37500],
             ],
             Invoices=[
-                SPEND_HEAD,
+                EXPENSE_HEADERS,
                 [11, "Bright Star Aluminium", 3001, 44691, 500000, "", "Ayo", 1, 44691, ""],
             ],
         ),
     )
 
-    filed = (await client.get(f"/api/projects/{made['project_id']}/expenses")).json()["items"][0]
-    assert filed["category_id"] is not None
+    categorised = (await client.get(f"/api/projects/{imported['project_id']}/expenses")).json()[
+        "items"
+    ][0]
+    assert categorised["category_id"] is not None
 
-    round_trip = await run(
+    round_trip = await run_import(
         client,
-        (await client.get(f"/api/projects/{made['project_id']}/export")).content,
+        (await client.get(f"/api/projects/{imported['project_id']}/export")).content,
         name="Round trip",
     )
-    landed = (await client.get(f"/api/projects/{round_trip['project_id']}/expenses")).json()
-    assert landed["items"][0]["category_id"] is not None
+    reimported = (await client.get(f"/api/projects/{round_trip['project_id']}/expenses")).json()
+    assert reimported["items"][0]["category_id"] is not None
 
 
-async def test_a_blank_sheet_can_be_had_to_start_from(client: AsyncClient) -> None:
-    await setup(client)
+async def test_blank_template_download(client: AsyncClient) -> None:
+    await set_up_admin(client)
 
     resp = await client.get("/api/import/sample")
 
@@ -384,13 +417,13 @@ async def test_a_blank_sheet_can_be_had_to_start_from(client: AsyncClient) -> No
     assert "setout-blank-sheet.xlsx" in resp.headers["content-disposition"]
 
 
-async def test_the_blank_sheet_reads_back_as_nothing_rather_than_as_junk(
+async def test_blank_template_previews_empty(
     client: AsyncClient,
 ) -> None:
-    await setup(client)
+    await set_up_admin(client)
     blank = (await client.get("/api/import/sample?kind=blank")).content
 
-    report = await preview(client, blank)
+    report = await preview_import(client, blank)
 
     assert {s["holds"] for s in report["read"]} == {
         "budget",
@@ -399,17 +432,17 @@ async def test_the_blank_sheet_reads_back_as_nothing_rather_than_as_junk(
         "outstanding",
     }
     assert report["budgeted_amount"] == 0
-    assert report["spend_rows"] == 0
+    assert report["expense_rows"] == 0
     assert report["decisions"] == []
 
 
-async def test_the_plan_keeps_which_of_the_three_a_figure_was_under(client: AsyncClient) -> None:
-    await setup(client)
-    made = await run(
+async def test_budget_items_keep_their_cost_type(client: AsyncClient) -> None:
+    await set_up_admin(client)
+    imported = await run_import(
         client,
-        book(
+        workbook(
             Budget=[
-                BUDGET_HEAD,
+                BUDGET_HEADERS,
                 ["3000", "Concrete Foundation", "", "", "", 0],
                 ["3001", "Pegging", 37500, "", "", 37500],
                 ["3002", "Cement", "", 12000, "", 12000],
@@ -418,7 +451,7 @@ async def test_the_plan_keeps_which_of_the_three_a_figure_was_under(client: Asyn
         ),
     )
 
-    categories = (await client.get(f"/api/projects/{made['project_id']}/categories")).json()
+    categories = (await client.get(f"/api/projects/{imported['project_id']}/categories")).json()
     lines = (await client.get(f"/api/categories/{categories[0]['id']}/budget-items")).json()[
         "items"
     ]
@@ -430,13 +463,13 @@ async def test_the_plan_keeps_which_of_the_three_a_figure_was_under(client: Asyn
     }
 
 
-async def test_the_three_columns_survive_the_round_trip(client: AsyncClient) -> None:
-    await setup(client)
-    made = await run(
+async def test_export_round_trip_keeps_cost_types(client: AsyncClient) -> None:
+    await set_up_admin(client)
+    imported = await run_import(
         client,
-        book(
+        workbook(
             Budget=[
-                BUDGET_HEAD,
+                BUDGET_HEADERS,
                 ["3000", "Concrete Foundation", "", "", "", 0],
                 ["3001", "Pegging", 37500, "", "", 37500],
                 ["3002", "Cement", "", 12000, "", 12000],
@@ -444,9 +477,9 @@ async def test_the_three_columns_survive_the_round_trip(client: AsyncClient) -> 
         ),
     )
 
-    again = await run(
+    again = await run_import(
         client,
-        (await client.get(f"/api/projects/{made['project_id']}/export")).content,
+        (await client.get(f"/api/projects/{imported['project_id']}/export")).content,
         name="Round trip",
     )
 
@@ -469,10 +502,10 @@ async def test_the_three_columns_survive_the_round_trip(client: AsyncClient) -> 
         ("spending-csv", "setout-spending-example.csv"),
     ],
 )
-async def test_every_sample_can_be_had_and_names_itself(
+async def test_each_template_download_filename(
     client: AsyncClient, kind: str, filename: str
 ) -> None:
-    await setup(client)
+    await set_up_admin(client)
 
     resp = await client.get(f"/api/import/sample?kind={kind}")
 
@@ -480,54 +513,54 @@ async def test_every_sample_can_be_had_and_names_itself(
     assert filename in resp.headers["content-disposition"]
 
 
-async def test_a_sample_nobody_asked_for_is_refused(client: AsyncClient) -> None:
-    await setup(client)
+async def test_unknown_template_kind_is_rejected(client: AsyncClient) -> None:
+    await set_up_admin(client)
     assert (await client.get("/api/import/sample?kind=whatever")).status_code == 422
 
 
-async def test_the_filled_example_brings_in_what_it_shows(client: AsyncClient) -> None:
-    await setup(client)
+async def test_example_template_imports_its_rows(client: AsyncClient) -> None:
+    await set_up_admin(client)
     filled = (await client.get("/api/import/sample?kind=example")).content
 
-    # It names its own currency, so nothing has to be chosen for it.
-    made = await run(client, filled, name="From the example", currency_code="")
+    # The example workbook specifies its currency.
+    imported = await run_import(client, filled, name="From the example", currency_code="")
 
-    assert made["categories"] == 2
-    assert made["budget_items"] == 4
-    assert made["budgeted_amount"] == 780_000_00
-    assert made["expenses"] == 3
-    assert made["spend_amount"] == 144_900_00
-    assert made["vendors"] == 2
+    assert imported["category_count"] == 2
+    assert imported["budget_item_count"] == 4
+    assert imported["budgeted_amount"] == 780_000_00
+    assert imported["expense_count"] == 3
+    assert imported["spent_amount"] == 144_900_00
+    assert imported["vendor_count"] == 2
 
 
-async def test_a_csv_sample_holds_the_one_sheet_a_csv_can(client: AsyncClient) -> None:
-    await setup(client)
+async def test_csv_template_contains_only_the_budget_sheet(client: AsyncClient) -> None:
+    await set_up_admin(client)
     budget_only = (await client.get("/api/import/sample?kind=budget-csv")).content
 
-    report = await preview(client, budget_only)
+    report = await preview_import(client, budget_only)
 
     assert [s["holds"] for s in report["read"]] == ["budget"]
     assert report["budgeted_amount"] == 780_000_00
-    assert report["spend_rows"] == 0
+    assert report["expense_rows"] == 0
 
 
-async def test_the_workbook_says_what_currency_its_figures_are(client: AsyncClient) -> None:
-    made = await _project_with(client)
+async def test_export_records_its_currency(client: AsyncClient) -> None:
+    imported = await _imported_project(client)
 
-    book = (await client.get(f"/api/projects/{made['project_id']}/export")).content
-    again = await run(client, book, name="No currency chosen", currency_code="")
+    exported = (await client.get(f"/api/projects/{imported['project_id']}/export")).content
+    again = await run_import(client, exported, name="No currency chosen", currency_code="")
 
     assert (await client.get(f"/api/projects/{again['project_id']}")).json()[
         "currency_code"
     ] == "NGN"
 
 
-async def test_a_sheet_that_names_no_currency_asks_for_one(client: AsyncClient) -> None:
-    await setup(client)
+async def test_workbook_without_currency_requires_one(client: AsyncClient) -> None:
+    await set_up_admin(client)
 
     resp = await client.post(
         "/api/import/preview",
-        files={"file": ("sheet.xlsx", sample(), "application/vnd.ms-excel")},
+        files={"file": ("sheet.xlsx", sample_workbook(), "application/vnd.ms-excel")},
         data={"name": "Nameless", "currency_code": ""},
     )
 
@@ -535,58 +568,58 @@ async def test_a_sheet_that_names_no_currency_asks_for_one(client: AsyncClient) 
     assert "does not specify a currency" in resp.json()["detail"]
 
 
-async def test_importing_the_same_sheet_twice_says_how_many_categories_there_are(
+async def test_reimport_reports_category_count(
     client: AsyncClient,
 ) -> None:
-    await setup(client)
-    first = await run(client, sample())
+    await set_up_admin(client)
+    first = await run_import(client, sample_workbook())
 
-    again = await run(client, sample(), project_id=first["project_id"])
+    again = await run_import(client, sample_workbook(), project_id=first["project_id"])
 
     categories = (await client.get(f"/api/projects/{first['project_id']}/categories")).json()
-    assert first["categories"] == len(categories)
-    assert again["categories"] == len(categories)
+    assert first["category_count"] == len(categories)
+    assert again["category_count"] == len(categories)
 
 
-async def test_what_has_arrived_survives_being_exported_and_read_again(
+async def test_outstanding_deliveries_are_reported_on_reimport(
     client: AsyncClient,
 ) -> None:
-    await setup(client)
-    made = await run(client, sample())
-    spend = (await client.get(f"/api/projects/{made['project_id']}/expenses")).json()["items"][0]
-    owed = await client.post(
-        f"/api/projects/{made['project_id']}/deliveries",
-        json={"expense_id": spend["id"], "description": "20 rods"},
+    await set_up_admin(client)
+    imported = await run_import(client, sample_workbook())
+    expense = (await client.get(f"/api/projects/{imported['project_id']}/expenses")).json()[
+        "items"
+    ][0]
+    delivery = await client.post(
+        f"/api/projects/{imported['project_id']}/deliveries",
+        json={"expense_id": expense["id"], "description": "20 rods"},
     )
 
-    waiting = await preview(
+    outstanding_preview = await preview_import(
         client,
-        (await client.get(f"/api/projects/{made['project_id']}/export")).content,
-        name="Still waiting",
+        (await client.get(f"/api/projects/{imported['project_id']}/export")).content,
+        name="Still outstanding",
         currency_code="",
     )
-    assert waiting["owed_rows"] == 1
-    assert "owed_not_importable" in [d["kind"] for d in waiting["decisions"]]
+    assert outstanding_preview["outstanding_rows"] == 1
+    assert "outstanding_not_importable" in [d["kind"] for d in outstanding_preview["decisions"]]
 
-    await client.post(f"/api/deliveries/{owed.json()['id']}/received")
+    await client.post(f"/api/deliveries/{delivery.json()['id']}/received")
 
-    arrived = await preview(
+    received_preview = await preview_import(
         client,
-        (await client.get(f"/api/projects/{made['project_id']}/export")).content,
-        name="Arrived",
+        (await client.get(f"/api/projects/{imported['project_id']}/export")).content,
+        name="Received",
         currency_code="",
     )
-    assert arrived["owed_rows"] == 0
-    assert "owed_not_importable" not in [d["kind"] for d in arrived["decisions"]]
+    assert received_preview["outstanding_rows"] == 0
+    assert "outstanding_not_importable" not in [d["kind"] for d in received_preview["decisions"]]
 
 
-async def test_a_sheet_past_the_limit_is_refused_before_it_is_read(
-    client: AsyncClient, monkeypatch
-) -> None:
+async def test_oversized_file_is_rejected_before_reading(client: AsyncClient, monkeypatch) -> None:
     from setout.config import get_settings
 
     monkeypatch.setattr(get_settings(), "max_import_bytes", 1024)
-    await setup(client)
+    await set_up_admin(client)
 
     resp = await client.post(
         "/api/import/preview",
@@ -597,3 +630,38 @@ async def test_a_sheet_past_the_limit_is_refused_before_it_is_read(
     assert resp.status_code == 413
     assert "larger than" in resp.json()["detail"]
     assert (await client.get("/api/projects")).json()["total"] == 0
+
+
+async def test_workbook_with_old_headers_and_sheet_names_imports(
+    client: AsyncClient,
+) -> None:
+    await set_up_admin(client)
+    data = workbook(
+        **{
+            "Budget": [OLD_BUDGET_HEADERS, ["3000", "Foundation", "", "", "", 0]]
+            + [["3001", "Pegging", 37500, "", "", 37500]],
+            "Vendors & Subcontractors": [
+                VENDOR_HEADERS,
+                ["Bright Star Aluminium", "", "Roofing", "", "", "", ""],
+            ],
+            "Invoices and Purchases": [
+                OLD_EXPENSE_HEADERS,
+                [3835, "Bright Star Aluminium", 3001, 44691, 500000, "", "Ayo", 1, 44691, ""],
+            ],
+        }
+    )
+
+    imported = await run_import(client, data)
+
+    assert imported["category_count"] == 1
+    assert imported["budget_item_count"] == 1
+    assert imported["budgeted_amount"] == 37_500_00
+    assert imported["expense_count"] == 1
+    assert imported["spent_amount"] == 500_000_00
+    assert imported["vendor_count"] == 1
+    assert imported["person_count"] == 1
+    expense = (await client.get(f"/api/projects/{imported['project_id']}/expenses")).json()[
+        "items"
+    ][0]
+    assert expense["paid_by_id"] is not None
+    assert expense["category_id"] is not None

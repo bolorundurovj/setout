@@ -1,8 +1,7 @@
-"""A decimal that reads back the way it was written.
+"""Serialises decimals in fixed-point notation.
 
-Tortoise quantizes and normalizes every decimal it loads, so 600 comes off the
-database as Decimal("6E+2") and the default serializer sends that string
-straight out. Fixed-point notation is what a size or a quantity means.
+Tortoise normalises every decimal it loads, so 600 loads as Decimal("6E+2"),
+which the default serialiser outputs unchanged.
 """
 
 from __future__ import annotations

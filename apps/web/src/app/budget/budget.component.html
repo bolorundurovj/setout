@@ -1,7 +1,7 @@
 <div class="budget">
   <div class="intro">
     <div class="intro-text">
-      <h2 class="t-heading">Set Budget</h2>
+      <h2 class="t-heading">Budget</h2>
       <p class="prose">
         The budget for {{ project().name }}. Set it before work starts. Every change records the
         date it was made.
@@ -71,25 +71,25 @@
               </span>
             }
 
-            <span class="right t-mono muted">{{ setOn(category.id) }}</span>
-            <span class="right t-mono muted">{{ changed(category.id) }}</span>
+            <span class="right t-mono muted">{{ setDate(category.id) }}</span>
+            <span class="right t-mono muted">{{ lastChangedDate(category.id) }}</span>
           </div>
 
           @if (openCategory() === category.id && !category.is_group) {
             <div class="items">
               @for (item of itemsFor(category.id); track item.id) {
-                <div class="item" [class.archived]="item.deleted_at">
+                <div class="item" [class.archived]="item.archived_at">
                   <span class="t-small">
                     {{ item.description }}
                     @if (item.cost_type) {
-                      <span class="split t-mono">{{ item.cost_type }}</span>
+                      <span class="tag t-mono">{{ item.cost_type }}</span>
                     }
-                    @if (item.deleted_at) {
-                      <span class="split t-mono">archived</span>
+                    @if (item.archived_at) {
+                      <span class="tag t-mono">archived</span>
                     }
                   </span>
                   <span class="right t-mono muted">{{ money(item.budgeted_amount) }}</span>
-                  @if (item.deleted_at) {
+                  @if (item.archived_at) {
                     <button
                       type="button"
                       class="link-action t-mono"
@@ -101,7 +101,7 @@
                     <button
                       type="button"
                       class="link-action t-mono"
-                      (click)="removeItem(category, item.id)"
+                      (click)="archiveItem(category, item.id)"
                     >
                       Archive
                     </button>
@@ -109,14 +109,14 @@
                 </div>
               }
               @if (itemsFor(category.id).length === 0) {
-                <p class="t-small muted">No budget set here yet.</p>
+                <p class="t-small muted">No budget items yet.</p>
               }
 
               <div class="add-item">
                 <input
                   class="input-field"
                   type="text"
-                  placeholder="Budgeted Amount"
+                  placeholder="Item description"
                   [value]="itemDescription()"
                   (input)="itemDescription.set(asValue($event))"
                 />
@@ -128,17 +128,17 @@
                     aria-label="Budgeted amount for this item"
                     [value]="itemAmount()"
                     (input)="itemAmount.set(asValue($event))"
-                    (keyup.enter)="addLineItem(category)"
+                    (keyup.enter)="addItem(category)"
                   />
                 </span>
                 <app-chip-group
-                  class="split-choice"
+                  class="cost-type-choice"
                   [chips]="costTypes"
                   [value]="itemCostType()"
                   label="Cost Type"
                   (valueChange)="itemCostType.set($event)"
                 />
-                <app-button [disabled]="!canAddItem()" (pressed)="addLineItem(category)">
+                <app-button [disabled]="!canAddItem()" (pressed)="addItem(category)">
                   + Budget Item
                 </app-button>
               </div>

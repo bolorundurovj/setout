@@ -1,14 +1,14 @@
 import {
-  asSize,
-  centroidOf,
   boundaryOf,
+  boundaryPointsText,
+  centroidOf,
   closeRing,
-  cornerText,
   degreesFrom,
-  inMetres,
+  formatAreaIn,
+  fromSquareMetres,
   parseBoundary,
+  parseBoundaryPoints,
   parseCoordinate,
-  parseCorners,
   pointInRing,
   ringOf,
 } from './land-geo';
@@ -22,7 +22,7 @@ const SQUARE: Position[] = [
 ];
 
 describe('land geo', () => {
-  describe('a point against a ring', () => {
+  describe('pointInRing and centroidOf', () => {
     const SQ: Position[] = [
       [0, 0],
       [4, 0],
@@ -30,33 +30,33 @@ describe('land geo', () => {
       [0, 4],
     ];
 
-    it('knows the middle is inside', () => {
+    it('returns true for a point inside the ring', () => {
       expect(pointInRing([2, 2], SQ)).toBe(true);
     });
 
-    it('knows what is outside', () => {
+    it('returns false for a point outside the ring', () => {
       expect(pointInRing([5, 2], SQ)).toBe(false);
       expect(pointInRing([-1, -1], SQ)).toBe(false);
     });
 
-    it('does not care which way the ring was drawn', () => {
+    it('ignores ring winding order', () => {
       expect(pointInRing([2, 2], [...SQ].reverse())).toBe(true);
     });
 
-    it('encloses nothing with fewer than three corners', () => {
+    it('returns false for a ring with fewer than three points', () => {
       expect(pointInRing([1, 1], SQ.slice(0, 2))).toBe(false);
     });
 
-    it('finds the centre of a square', () => {
+    it('returns the centroid of a square', () => {
       expect(centroidOf(SQ)).toEqual([2, 2]);
     });
 
-    it('has no centre to give for two corners', () => {
+    it('returns null centroid for two points', () => {
       expect(centroidOf(SQ.slice(0, 2))).toBeNull();
     });
 
-    it('puts the centre of an L outside the L, which is why callers check', () => {
-      const bent: Position[] = [
+    it('returns a centroid outside a concave L shape', () => {
+      const lShape: Position[] = [
         [0, 0],
         [4, 0],
         [4, 1],
@@ -65,51 +65,51 @@ describe('land geo', () => {
         [0, 4],
       ];
 
-      const middle = centroidOf(bent);
+      const middle = centroidOf(lShape);
 
       expect(middle).not.toBeNull();
-      expect(pointInRing(middle as Position, bent)).toBe(false);
+      expect(pointInRing(middle as Position, lShape)).toBe(false);
     });
   });
 
-  it('closes a ring that was left open', () => {
+  it('closes an open ring', () => {
     const closed = closeRing(SQUARE);
     expect(closed.length).toBe(5);
     expect(closed[4]).toEqual(closed[0]);
   });
 
-  it('leaves a ring that already closes alone', () => {
+  it('leaves a closed ring unchanged', () => {
     const closed = closeRing(SQUARE);
     expect(closeRing(closed)).toEqual(closed);
   });
 
-  it('will not make a boundary out of two corners', () => {
+  it('returns null boundary for two points', () => {
     expect(boundaryOf(SQUARE.slice(0, 2))).toBeNull();
   });
 
-  it('hands back the corners to draw, without the repeated one', () => {
+  it('returns ring points without the closing point', () => {
     const boundary = boundaryOf(SQUARE);
     expect(ringOf(boundary).length).toBe(4);
     expect(ringOf(null)).toEqual([]);
   });
 
-  it('converts an area into the unit that was asked for', () => {
-    expect(inMetres(10_000, 'sqm')).toBe(10_000);
-    expect(inMetres(10_000, 'hectare')).toBe(1);
-    expect(inMetres(4046.8564224, 'acre')).toBeCloseTo(1, 9);
+  it('converts square metres into the given unit', () => {
+    expect(fromSquareMetres(10_000, 'sqm')).toBe(10_000);
+    expect(fromSquareMetres(10_000, 'hectare')).toBe(1);
+    expect(fromSquareMetres(4046.8564224, 'acre')).toBeCloseTo(1, 9);
   });
 
-  it('refuses to invent a figure in plots', () => {
-    expect(inMetres(10_000, 'plot')).toBeNull();
-    expect(asSize(10_000, 'plot')).toBeNull();
+  it('returns null for plot units', () => {
+    expect(fromSquareMetres(10_000, 'plot')).toBeNull();
+    expect(formatAreaIn(10_000, 'plot')).toBeNull();
   });
 
-  it('rounds a size the way the field stores it', () => {
-    expect(asSize(648.5049, 'sqm')).toBe('648.5');
-    expect(asSize(10_000, 'hectare')).toBe('1');
+  it('rounds to two decimal places', () => {
+    expect(formatAreaIn(648.5049, 'sqm')).toBe('648.5');
+    expect(formatAreaIn(10_000, 'hectare')).toBe('1');
   });
 
-  it('reads a bare polygon', () => {
+  it('parses a bare Polygon', () => {
     const { boundary, error } = parseBoundary(
       JSON.stringify({ type: 'Polygon', coordinates: [closeRing(SQUARE)] }),
     );
@@ -117,7 +117,7 @@ describe('land geo', () => {
     expect(ringOf(boundary).length).toBe(4);
   });
 
-  it('reads what geojson.io hands you', () => {
+  it('parses a geojson.io FeatureCollection', () => {
     const { boundary } = parseBoundary(
       JSON.stringify({
         type: 'FeatureCollection',
@@ -133,18 +133,18 @@ describe('land geo', () => {
     expect(ringOf(boundary).length).toBe(4);
   });
 
-  it('says so when it is not JSON at all', () => {
-    expect(parseBoundary('a plot near the church').error).toBe('Not valid JSON.');
+  it('rejects text that is not JSON', () => {
+    expect(parseBoundary('land near the church').error).toBe('Not valid JSON.');
   });
 
-  it('says so when the shape is not a polygon', () => {
+  it('rejects a geometry that is not a Polygon', () => {
     const { error } = parseBoundary(
       JSON.stringify({ type: 'LineString', coordinates: [[3.3, 6.5]] }),
     );
     expect(error).toContain('Polygon');
   });
 
-  it('catches coordinates given the wrong way round', () => {
+  it('rejects out-of-range GeoJSON coordinates', () => {
     const { error } = parseBoundary(
       JSON.stringify({
         type: 'Polygon',
@@ -160,67 +160,67 @@ describe('land geo', () => {
     expect(error).toContain('Longitude comes first');
   });
 
-  it('treats an empty box as nothing to save, not an error', () => {
+  it('returns no boundary and no error for empty text', () => {
     expect(parseBoundary('   ')).toEqual({ boundary: undefined });
   });
 
-  describe('coordinates off a survey plan', () => {
-    it('reads a plain decimal degree', () => {
+  describe('boundary point text', () => {
+    it('parses decimal degrees', () => {
       expect(degreesFrom('6.5244')).toBeCloseTo(6.5244, 6);
       expect(degreesFrom('-6.5244')).toBeCloseTo(-6.5244, 6);
     });
 
-    it('reads degrees, minutes and seconds', () => {
+    it('parses degrees, minutes and seconds', () => {
       expect(degreesFrom(`6°31'27.8"N`)).toBeCloseTo(6.524389, 5);
       expect(degreesFrom(`3°22'45.1"E`)).toBeCloseTo(3.379194, 5);
     });
 
-    it('takes the hemisphere as the sign', () => {
+    it('applies the hemisphere letter as the sign', () => {
       expect(degreesFrom(`33°55'30"S`)).toBeCloseTo(-33.925, 5);
       expect(degreesFrom(`0°10'00"W`)).toBeCloseTo(-0.166667, 5);
       expect(degreesFrom('6.5244S')).toBeCloseTo(-6.5244, 6);
     });
 
-    it('reads degrees and minutes with no seconds', () => {
+    it('parses degrees and minutes without seconds', () => {
       expect(degreesFrom(`6°31.5'N`)).toBeCloseTo(6.525, 5);
     });
 
-    it('refuses a minus sign and a hemisphere at once', () => {
+    it('rejects a minus sign with degrees, minutes and seconds', () => {
       expect(degreesFrom(`-6°31'27.8"N`)).toBeNull();
     });
 
-    it('refuses what is not a coordinate at all', () => {
+    it('rejects non-numeric input', () => {
       expect(degreesFrom('beacon')).toBeNull();
       expect(degreesFrom('')).toBeNull();
     });
 
-    it('reads a pair latitude first, however it is separated', () => {
+    it('parses a latitude-first pair with any separator', () => {
       expect(parseCoordinate('6.5244, 3.3792')).toEqual([3.3792, 6.5244]);
       expect(parseCoordinate('6.5244 3.3792')).toEqual([3.3792, 6.5244]);
       expect(parseCoordinate('6.5244;3.3792')).toEqual([3.3792, 6.5244]);
     });
 
-    it('reads a pair written in degrees minutes seconds', () => {
-      const corner = parseCoordinate(`6°31'27.8"N 3°22'45.1"E`);
-      expect(corner?.[1]).toBeCloseTo(6.524389, 5);
-      expect(corner?.[0]).toBeCloseTo(3.379194, 5);
+    it('parses a pair in degrees, minutes and seconds', () => {
+      const position = parseCoordinate(`6°31'27.8"N 3°22'45.1"E`);
+      expect(position?.[1]).toBeCloseTo(6.524389, 5);
+      expect(position?.[0]).toBeCloseTo(3.379194, 5);
     });
 
-    it('ignores the beacon label a plan puts in front', () => {
+    it('strips a beacon label prefix', () => {
       expect(parseCoordinate('Beacon 3: 6.5244, 3.3792')).toEqual([3.3792, 6.5244]);
     });
 
-    it('refuses a pair that is not on Earth', () => {
+    it('rejects out-of-range coordinates', () => {
       expect(parseCoordinate('95.0, 3.3792')).toBeNull();
       expect(parseCoordinate('6.5244, 181')).toBeNull();
     });
 
-    it('refuses a line with only one number', () => {
+    it('rejects a line with one number', () => {
       expect(parseCoordinate('6.5244')).toBeNull();
     });
 
-    it('builds a boundary out of a typed list', () => {
-      const { boundary, error } = parseCorners(
+    it('parses boundary points into a boundary', () => {
+      const { boundary, error } = parseBoundaryPoints(
         ['6.5244, 3.3792', '6.5251, 3.3792', '6.5251, 3.3799', '6.5244, 3.3799'].join('\n'),
       );
       expect(error).toBeUndefined();
@@ -228,44 +228,46 @@ describe('land geo', () => {
       expect(ringOf(boundary)[0]).toEqual([3.3792, 6.5244]);
     });
 
-    it('takes degrees and dms mixed in one list', () => {
-      const { boundary, error } = parseCorners(
+    it('accepts decimal degrees and degrees, minutes and seconds in one list', () => {
+      const { boundary, error } = parseBoundaryPoints(
         ['6.5244, 3.3792', `6°31'30.4"N 3°22'48.0"E`, '6.5251, 3.3799'].join('\n'),
       );
       expect(error).toBeUndefined();
       expect(ringOf(boundary).length).toBe(3);
     });
 
-    it('still takes GeoJSON in the same box', () => {
-      const { boundary } = parseCorners(
+    it('accepts GeoJSON in the same text', () => {
+      const { boundary } = parseBoundaryPoints(
         JSON.stringify({ type: 'Polygon', coordinates: [closeRing(SQUARE)] }),
       );
       expect(ringOf(boundary).length).toBe(4);
     });
 
-    it('says which line it could not read', () => {
-      const { error } = parseCorners(['6.5244, 3.3792', 'somewhere near the church 12'].join('\n'));
+    it('reports the line number that is not a coordinate', () => {
+      const { error } = parseBoundaryPoints(
+        ['6.5244, 3.3792', 'somewhere near the church 12'].join('\n'),
+      );
       expect(error).toBe('Line 2 is not a valid coordinate.');
     });
 
-    it('says how many more corners it needs', () => {
-      const { error } = parseCorners(['6.5244, 3.3792', '6.5251, 3.3792'].join('\n'));
-      expect(error).toBe('1 more corner before it encloses anything.');
+    it('reports how many more boundary points are needed', () => {
+      const { error } = parseBoundaryPoints(['6.5244, 3.3792', '6.5251, 3.3792'].join('\n'));
+      expect(error).toBe('1 more boundary point needed to enclose an area.');
     });
 
-    it('writes the corners back out latitude first', () => {
-      const text = cornerText(boundaryOf(SQUARE));
+    it('formats boundary points latitude first', () => {
+      const text = boundaryPointsText(boundaryOf(SQUARE));
       expect(text.split('\n').length).toBe(4);
       expect(text.split('\n')[0]).toBe('6.5, 3.3');
     });
 
-    it('round trips a typed list', () => {
+    it('round-trips boundary point text', () => {
       const typed = ['6.5244, 3.3792', '6.5251, 3.3792', '6.5251, 3.3799'].join('\n');
-      expect(cornerText(parseCorners(typed).boundary)).toBe(typed);
+      expect(boundaryPointsText(parseBoundaryPoints(typed).boundary)).toBe(typed);
     });
 
-    it('skips a heading with no numbers in it', () => {
-      const { boundary, error } = parseCorners(
+    it('skips lines without numbers', () => {
+      const { boundary, error } = parseBoundaryPoints(
         ['SURVEY PLAN OF LAND AT EWURU', '6.5244, 3.3792', '6.5251, 3.3792', '6.5251, 3.3799'].join(
           '\n',
         ),
@@ -274,7 +276,7 @@ describe('land geo', () => {
       expect(ringOf(boundary).length).toBe(3);
     });
 
-    it('reads a survey plan copied out whole', () => {
+    it('parses a pasted survey plan', () => {
       const plan = [
         'SURVEY PLAN OF LAND AT EWURU',
         `Beacon 1: 6°31'27.8"N 3°22'45.1"E`,
@@ -283,7 +285,7 @@ describe('land geo', () => {
         `Beacon 4: 6°31'27.8"N 3°22'48.0"E`,
       ].join('\n');
 
-      const { boundary, error } = parseCorners(plan);
+      const { boundary, error } = parseBoundaryPoints(plan);
 
       expect(error).toBeUndefined();
       expect(ringOf(boundary).length).toBe(4);
@@ -291,9 +293,9 @@ describe('land geo', () => {
       expect(ringOf(boundary)[0][0]).toBeCloseTo(3.379194, 5);
     });
 
-    it('counts the corners it is short in plain words', () => {
-      expect(parseCorners('6.5244, 3.3792').error).toBe(
-        '2 more corners before it encloses anything.',
+    it('pluralises the missing boundary point count', () => {
+      expect(parseBoundaryPoints('6.5244, 3.3792').error).toBe(
+        '2 more boundary points needed to enclose an area.',
       );
     });
   });

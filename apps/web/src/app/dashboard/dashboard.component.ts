@@ -4,11 +4,11 @@ import type {
   CurrencyChoice,
   HomeAlert,
   HomeMonth,
+  HomeExpenseSummary,
   HomeProject,
-  HomeSpend,
 } from '@setout/api-client';
 import { AuthService } from '../auth/auth.service';
-import { formatMoney } from '../budget/money';
+import { formatAmount, formatMoney } from '../budget/money';
 import { ButtonComponent } from '../ui/button.component';
 import { TopbarComponent } from '../ui/topbar.component';
 import { HomeService } from './home.service';
@@ -21,7 +21,7 @@ export interface MonthBar {
   amount: number;
   height: number;
   figure: string;
-  busiest: boolean;
+  highest: boolean;
 }
 
 @Component({
@@ -44,17 +44,20 @@ export class DashboardComponent {
     year: 'numeric',
   });
 
-  readonly greeting = computed(() => `Welcome back, ${this.auth.user()?.name ?? 'you'}`);
+  readonly greeting = computed(() => {
+    const name = this.auth.user()?.name;
+    return name ? `Welcome back, ${name}` : 'Welcome back';
+  });
 
-  readonly choices = computed(() => this.home.summary()?.currencies ?? []);
-  readonly showing = computed(() => this.home.summary()?.currency_code ?? null);
-  readonly split = computed(() => this.choices().length > 1);
+  readonly currencies = computed(() => this.home.summary()?.currencies ?? []);
+  readonly selectedCurrency = computed(() => this.home.summary()?.currency_code ?? null);
+  readonly hasMultipleCurrencies = computed(() => this.currencies().length > 1);
 
   readonly budgeted = computed(() => this.home.summary()?.budgeted_amount ?? 0);
   readonly spent = computed(() => this.home.summary()?.spent_amount ?? 0);
-  readonly left = computed(() => Math.abs(this.budgeted() - this.spent()));
-  readonly over = computed(() => this.budgeted() > 0 && this.spent() > this.budgeted());
-  readonly leftLabel = computed(() => (this.over() ? 'Over by' : 'Remaining'));
+  readonly remaining = computed(() => Math.abs(this.budgeted() - this.spent()));
+  readonly isOverBudget = computed(() => this.budgeted() > 0 && this.spent() > this.budgeted());
+  readonly remainingLabel = computed(() => (this.isOverBudget() ? 'Over budget by' : 'Remaining'));
 
   readonly usedLabel = computed(() =>
     this.budgeted() ? `${Math.round((this.spent() / this.budgeted()) * 100)}%` : '—',
@@ -66,59 +69,60 @@ export class DashboardComponent {
 
   readonly alerts = computed(() => this.home.summary()?.alerts ?? []);
   readonly rows = computed(() => this.home.projects()?.rows ?? []);
-  readonly recent = computed(() => this.home.latest()?.rows ?? []);
+  readonly recent = computed(() => this.home.recent()?.rows ?? []);
 
-  readonly standing = computed(() => {
-    const found = this.home.summary();
-    if (!found) {
+  readonly summaryLine = computed(() => {
+    const summary = this.home.summary();
+    if (!summary) {
       return '';
     }
-    if (!found.projects) {
-      return 'No projects yet. A project needs a name, a currency and its categories.';
+    if (!summary.project_count) {
+      return 'No projects yet. Create a project with a name, currency and categories.';
     }
-    const projects = `${found.projects} ${found.projects === 1 ? 'project' : 'projects'} open`;
-    if (!found.alerts.length) {
+    const count = summary.project_count;
+    const projects = `${count} ${count === 1 ? 'project' : 'projects'}`;
+    if (!summary.alerts.length) {
       return `${projects}. Nothing needs attention.`;
     }
-    return `${projects}. ${found.alerts.map((alert) => alert.detail).join(', ')}.`;
+    return `${projects}. ${summary.alerts.map((alert) => alert.detail).join(', ')}.`;
   });
 
   readonly currencyNote = computed(() => {
-    const found = this.home.summary();
-    if (!found?.projects || !found.currency_code) {
+    const summary = this.home.summary();
+    if (!summary?.project_count || !summary.currency_code) {
       return '';
     }
-    const kept = found.currency_projects;
-    const counted = `${kept} ${kept === 1 ? 'project' : 'projects'}`;
-    if (!this.split()) {
-      return `${counted}, all in ${found.currency_code}. Totalled directly`;
+    const projectCount = summary.currency_project_count ?? 0;
+    const projectLabel = `${projectCount} ${projectCount === 1 ? 'project' : 'projects'}`;
+    if (!this.hasMultipleCurrencies()) {
+      return `${projectLabel}, all in ${summary.currency_code}.`;
     }
-    return `${counted} in ${found.currency_code}. Currencies are shown separately and never combined.`;
+    return `${projectLabel} in ${summary.currency_code}. Currencies are shown separately and never combined.`;
   });
 
   readonly bars = computed<MonthBar[]>(() => {
-    const found = this.home.months();
-    if (!found?.months.length) {
+    const months = this.home.months();
+    if (!months?.months.length) {
       return [];
     }
-    const tallest = Math.max(...found.months.map((month) => month.amount), 1);
-    return found.months.map((month) => ({
+    const tallest = Math.max(...months.months.map((month) => month.amount), 1);
+    return months.months.map((month) => ({
       month: month.month,
       label: this.monthName(month).toUpperCase(),
       amount: month.amount,
       height: Math.max(2, Math.round((month.amount / tallest) * 100)),
-      figure: this.bare(month.amount),
-      busiest: month.month === found.busiest_month,
+      figure: this.formatAmount(month.amount),
+      highest: month.month === months.highest_month,
     }));
   });
 
-  readonly heaviest = computed(() => {
-    const found = this.home.months();
-    const busiest = found?.months.find((month) => month.month === found.busiest_month);
-    if (!busiest) {
+  readonly highestMonthCaption = computed(() => {
+    const months = this.home.months();
+    const highest = months?.months.find((month) => month.month === months.highest_month);
+    if (!highest) {
       return '';
     }
-    return `Highest month: ${this.monthName(busiest)} at ${this.money(busiest.amount)}. Bars include every project in ${found?.currency_code}.`;
+    return `Highest month: ${this.monthName(highest)} at ${this.money(highest.amount)}. Bars include every project in ${months?.currency_code}.`;
   });
 
   constructor() {
@@ -126,28 +130,27 @@ export class DashboardComponent {
   }
 
   pillLabel(choice: CurrencyChoice): string {
-    return `${choice.currency_code} ${choice.projects}`;
+    return `${choice.currency_code} ${choice.project_count}`;
   }
 
-  showingPill(choice: CurrencyChoice): boolean {
-    return choice.currency_code === this.showing();
+  isSelectedCurrency(choice: CurrencyChoice): boolean {
+    return choice.currency_code === this.selectedCurrency();
   }
 
   showCurrency(choice: CurrencyChoice): void {
-    void this.home.show(choice.currency_code);
+    void this.home.selectCurrency(choice.currency_code);
   }
 
   money(minor: number): string {
-    const found = this.home.summary();
-    if (!found?.currency_code) {
-      return this.bare(minor);
+    const summary = this.home.summary();
+    if (!summary?.currency_code) {
+      return this.formatAmount(minor);
     }
-    return formatMoney(minor, found.currency_code, found.currency_exponent ?? 2);
+    return formatMoney(minor, summary.currency_code, summary.currency_exponent ?? 2);
   }
 
-  bare(minor: number): string {
-    const exponent = this.home.summary()?.currency_exponent ?? 2;
-    return new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(minor / 10 ** exponent);
+  formatAmount(minor: number): string {
+    return formatAmount(minor, this.home.summary()?.currency_exponent ?? 2);
   }
 
   monthName(month: HomeMonth): string {
@@ -164,11 +167,11 @@ export class DashboardComponent {
       .join('');
   }
 
-  rowMoney(row: HomeProject | HomeSpend, minor: number): string {
+  rowMoney(row: HomeProject | HomeExpenseSummary, minor: number): string {
     return formatMoney(minor, row.currency_code, row.currency_exponent);
   }
 
-  rowOver(row: HomeProject): boolean {
+  rowIsOverBudget(row: HomeProject): boolean {
     return row.budgeted_amount > 0 && row.spent_amount > row.budgeted_amount;
   }
 
@@ -179,22 +182,22 @@ export class DashboardComponent {
     return Math.min(100, (row.spent_amount / row.budgeted_amount) * 100);
   }
 
-  rowOverFill(row: HomeProject): number {
-    if (!this.rowOver(row)) {
+  rowOverBudgetPercent(row: HomeProject): number {
+    if (!this.rowIsOverBudget(row)) {
       return 0;
     }
-    const over = row.spent_amount - row.budgeted_amount;
-    return Math.min(100 - this.rowFill(row), (over / row.budgeted_amount) * 100);
+    const overspend = row.spent_amount - row.budgeted_amount;
+    return Math.min(100 - this.rowFill(row), (overspend / row.budgeted_amount) * 100);
   }
 
-  rowStanding(row: HomeProject): string {
+  rowBudgetStatus(row: HomeProject): string {
     if (!row.budgeted_amount) {
       return 'No budget set';
     }
     const gap = Math.abs(row.budgeted_amount - row.spent_amount);
-    return this.rowOver(row)
-      ? `Over by ${this.rowMoney(row, gap)}`
-      : `${this.rowMoney(row, gap)} left`;
+    return this.rowIsOverBudget(row)
+      ? `Over budget by ${this.rowMoney(row, gap)}`
+      : `${this.rowMoney(row, gap)} remaining`;
   }
 
   countLabel(row: HomeProject): string {
@@ -205,7 +208,7 @@ export class DashboardComponent {
     return alert.amount ? this.money(alert.amount) : '';
   }
 
-  day(row: HomeSpend): string {
+  formatDate(row: HomeExpenseSummary): string {
     return new Date(row.spent_on).toLocaleDateString(undefined, {
       day: 'numeric',
       month: 'short',
@@ -213,8 +216,8 @@ export class DashboardComponent {
     });
   }
 
-  where(row: HomeSpend): string {
-    return `${row.project_name} · ${row.category_name ?? 'Uncategorized'}`;
+  expenseLocation(row: HomeExpenseSummary): string {
+    return `${row.project_name} · ${row.category_name ?? 'Uncategorised'}`;
   }
 
   barTitle(bar: MonthBar): string {
@@ -225,11 +228,11 @@ export class DashboardComponent {
     void this.router.navigate(['/projects', row.id]);
   }
 
-  addExpense(row: HomeProject): void {
+  newExpense(row: HomeProject): void {
     void this.router.navigate(['/projects', row.id, 'expense']);
   }
 
-  openSpend(row: HomeSpend): void {
+  openExpense(row: HomeExpenseSummary): void {
     void this.router.navigate(['/projects', row.project_id, 'expense']);
   }
 
@@ -241,11 +244,11 @@ export class DashboardComponent {
     void this.router.navigate([
       '/projects',
       row.id,
-      alert.kind === 'uncategorized' ? 'table' : 'deliveries',
+      alert.kind === 'uncategorised' ? 'table' : 'deliveries',
     ]);
   }
 
-  allProjects(): void {
+  openProjects(): void {
     void this.router.navigate(['/projects']);
   }
 

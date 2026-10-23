@@ -10,10 +10,10 @@ import {
   PersonBalance,
   AdvanceUpdate,
   AgreementUpdate,
-  addAdvance,
-  addAgreement,
-  deleteAdvance,
-  deleteAgreement,
+  archiveAdvance,
+  archiveAgreement,
+  createAdvance,
+  createAgreement,
   listAdvances,
   listAgreements,
   listBalances,
@@ -38,8 +38,8 @@ export class AgreementService {
   private readonly agreementTotalState = signal(0);
   private readonly advanceTotalState = signal(0);
   private readonly advancePageState = signal(1);
-  private readonly heldFor = signal('');
-  private readonly deletedState = signal(false);
+  private readonly loadedProjectId = signal('');
+  private readonly includeArchivedState = signal(false);
 
   readonly agreements = this.agreementState.asReadonly();
   readonly advances = this.advanceState.asReadonly();
@@ -51,12 +51,12 @@ export class AgreementService {
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
 
-  /** Held state belongs to one project, so asking about another empties it first. */
-  private keepFor(projectId: string): void {
-    if (this.heldFor() === projectId) {
+  /** State is cached per project and cleared when a different project is requested. */
+  private resetForProject(projectId: string): void {
+    if (this.loadedProjectId() === projectId) {
       return;
     }
-    this.heldFor.set(projectId);
+    this.loadedProjectId.set(projectId);
     this.agreementState.set([]);
     this.advanceState.set([]);
     this.balanceState.set([]);
@@ -71,17 +71,17 @@ export class AgreementService {
   readonly agreedTotal = computed(() =>
     this.agreementState().reduce((total, row) => total + row.agreed_amount, 0),
   );
-  readonly owedTotal = computed(() =>
+  readonly balanceTotal = computed(() =>
     this.agreementState().reduce((total, row) => total + row.balance_amount, 0),
   );
 
   async load(projectId: string): Promise<void> {
-    this.keepFor(projectId);
+    this.resetForProject(projectId);
     this.error.set(null);
     try {
       const page = await this.api.invoke(listAgreements, {
         project_id: projectId,
-        include_deleted: this.deletedState(),
+        include_archived: this.includeArchivedState(),
         limit: SCROLL_SIZE,
         offset: 0,
       });
@@ -93,13 +93,13 @@ export class AgreementService {
   }
 
   async loadMore(projectId: string): Promise<void> {
-    this.keepFor(projectId);
+    this.resetForProject(projectId);
     if (!this.hasMore()) {
       return;
     }
     const page = await this.api.invoke(listAgreements, {
       project_id: projectId,
-      include_deleted: this.deletedState(),
+      include_archived: this.includeArchivedState(),
       limit: SCROLL_SIZE,
       offset: this.agreementState().length,
     });
@@ -108,9 +108,8 @@ export class AgreementService {
     await this.loadPayments(projectId);
   }
 
-  /** Every payment on the project, grouped by the agreement it was filed against. */
   async loadPayments(projectId: string): Promise<void> {
-    this.keepFor(projectId);
+    this.resetForProject(projectId);
     const byAgreement: Record<string, ExpenseRead[]> = {};
     try {
       for (let offset = 0; ;) {
@@ -136,19 +135,19 @@ export class AgreementService {
     this.paymentState.set(byAgreement);
   }
 
-  async loadAll(projectId: string, includeDeleted = false): Promise<void> {
-    this.keepFor(projectId);
-    this.deletedState.set(includeDeleted);
+  async loadAll(projectId: string, includeArchived = false): Promise<void> {
+    this.resetForProject(projectId);
+    this.includeArchivedState.set(includeArchived);
     await this.load(projectId);
     await this.loadPayments(projectId);
   }
 
   async loadAdvances(projectId: string, page = 1): Promise<void> {
-    this.keepFor(projectId);
+    this.resetForProject(projectId);
     try {
       const rows = await this.api.invoke(listAdvances, {
         project_id: projectId,
-        include_deleted: this.deletedState(),
+        include_archived: this.includeArchivedState(),
         limit: PAGE_SIZE,
         offset: offsetOf(page),
       });
@@ -161,7 +160,7 @@ export class AgreementService {
   }
 
   async loadBalances(projectId: string): Promise<void> {
-    this.keepFor(projectId);
+    this.resetForProject(projectId);
     try {
       this.balanceState.set(await this.api.invoke(listBalances, { project_id: projectId }));
     } catch {
@@ -169,11 +168,11 @@ export class AgreementService {
     }
   }
 
-  async add(projectId: string, body: AgreementCreate): Promise<AgreementRead | null> {
+  async create(projectId: string, body: AgreementCreate): Promise<AgreementRead | null> {
     this.saving.set(true);
     this.error.set(null);
     try {
-      const created = await this.api.invoke(addAgreement, { project_id: projectId, body });
+      const created = await this.api.invoke(createAgreement, { project_id: projectId, body });
       this.agreementState.update((rows) => [created, ...rows]);
       this.agreementTotalState.update((total) => total + 1);
       return created;
@@ -205,10 +204,10 @@ export class AgreementService {
     }
   }
 
-  async remove(agreementId: string): Promise<void> {
-    await this.api.invoke(deleteAgreement, { agreement_id: agreementId });
-    if (this.deletedState()) {
-      await this.load(this.heldFor());
+  async archive(agreementId: string): Promise<void> {
+    await this.api.invoke(archiveAgreement, { agreement_id: agreementId });
+    if (this.includeArchivedState()) {
+      await this.load(this.loadedProjectId());
       return;
     }
     this.agreementState.update((rows) => rows.filter((row) => row.id !== agreementId));
@@ -218,22 +217,22 @@ export class AgreementService {
   async restore(agreementId: string): Promise<AgreementRead | null> {
     this.error.set(null);
     try {
-      const back = await this.api.invoke(restoreAgreement, { agreement_id: agreementId });
+      const restored = await this.api.invoke(restoreAgreement, { agreement_id: agreementId });
       this.agreementState.update((rows) =>
-        rows.map((row) => (row.id === agreementId ? back : row)),
+        rows.map((row) => (row.id === agreementId ? restored : row)),
       );
-      return back;
+      return restored;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not restore that agreement.');
       return null;
     }
   }
 
-  async addAdvance(projectId: string, body: AdvanceCreate): Promise<AdvanceRead | null> {
+  async createAdvance(projectId: string, body: AdvanceCreate): Promise<AdvanceRead | null> {
     this.saving.set(true);
     this.error.set(null);
     try {
-      const created = await this.api.invoke(addAdvance, { project_id: projectId, body });
+      const created = await this.api.invoke(createAdvance, { project_id: projectId, body });
       await this.loadAdvances(projectId, this.advancePageState());
       await this.loadBalances(projectId);
       return created;
@@ -265,12 +264,12 @@ export class AgreementService {
     }
   }
 
-  async removeAdvance(projectId: string, advanceId: string): Promise<void> {
-    await this.api.invoke(deleteAdvance, { advance_id: advanceId });
-    const here = this.advancePageState();
-    await this.loadAdvances(projectId, here);
-    if (this.advanceState().length === 0 && here > 1) {
-      await this.loadAdvances(projectId, here - 1);
+  async archiveAdvance(projectId: string, advanceId: string): Promise<void> {
+    await this.api.invoke(archiveAdvance, { advance_id: advanceId });
+    const currentPage = this.advancePageState();
+    await this.loadAdvances(projectId, currentPage);
+    if (this.advanceState().length === 0 && currentPage > 1) {
+      await this.loadAdvances(projectId, currentPage - 1);
     }
     await this.loadBalances(projectId);
   }
@@ -278,10 +277,10 @@ export class AgreementService {
   async restoreAdvance(projectId: string, advanceId: string): Promise<AdvanceRead | null> {
     this.error.set(null);
     try {
-      const back = await this.api.invoke(restoreAdvance, { advance_id: advanceId });
+      const restored = await this.api.invoke(restoreAdvance, { advance_id: advanceId });
       await this.loadAdvances(projectId, this.advancePageState());
       await this.loadBalances(projectId);
-      return back;
+      return restored;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not restore that advance.');
       return null;

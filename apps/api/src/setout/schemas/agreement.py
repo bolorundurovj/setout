@@ -27,13 +27,13 @@ class AgreementRead(BaseModel):
     vendor_name: str
     description: str
     agreed_amount: int
-    # Both worked out from the expenses filed against it, never stored.
+    # Computed from the agreement's expenses; not stored.
     paid_amount: int
     balance_amount: int
     notes: str | None
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
+    archived_at: datetime | None
 
 
 class AgreementPage(BaseModel):
@@ -68,7 +68,7 @@ class AdvanceRead(BaseModel):
     notes: str | None
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
+    archived_at: datetime | None
 
 
 class AdvancePage(BaseModel):
@@ -86,5 +86,5 @@ class PersonBalance(BaseModel):
     currency_exponent: int
     advanced_amount: int
     spent_amount: int
-    # Positive means they still hold money, negative means they are owed it.
+    # Positive when the person holds unspent money, negative when you owe the person.
     balance_amount: int

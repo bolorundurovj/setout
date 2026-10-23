@@ -20,7 +20,7 @@ const project: ProjectRead = {
   spent_amount: 0,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
-  deleted_at: null,
+  archived_at: null,
 };
 
 function agreement(over: Partial<AgreementRead> = {}): AgreementRead {
@@ -36,18 +36,18 @@ function agreement(over: Partial<AgreementRead> = {}): AgreementRead {
     notes: null,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
     ...over,
   };
 }
 
 describe('AgreementsComponent', () => {
-  let added: unknown[][];
+  let created: unknown[][];
   let advances: unknown[][];
   let payments: unknown[][];
 
   function render(rows: AgreementRead[] = [], balances: unknown[] = []) {
-    added = [];
+    created = [];
     advances = [];
     payments = [];
     const service = {
@@ -64,22 +64,24 @@ describe('AgreementsComponent', () => {
       saving: () => false,
       error: () => null,
       agreedTotal: () => rows.reduce((t, r) => t + r.agreed_amount, 0),
-      owedTotal: () => rows.reduce((t, r) => t + r.balance_amount, 0),
+      balanceTotal: () => rows.reduce((t, r) => t + r.balance_amount, 0),
       load: async () => undefined,
       loadAdvances: async () => undefined,
       loadBalances: async () => undefined,
-      add: async (...args: unknown[]) => {
-        added.push(args);
+      create: async (...args: unknown[]) => {
+        created.push(args);
         return agreement();
       },
-      addAdvance: async (...args: unknown[]) => {
+      createAdvance: async (...args: unknown[]) => {
         advances.push(args);
         return { id: 'ad1', person_name: 'Mummy', amount: 10_000_000 };
       },
-      remove: async () => undefined,
-      removeAdvance: async () => undefined,
+      archive: async () => undefined,
+      archiveAdvance: async () => undefined,
+      delete: async () => undefined,
+      deleteAdvance: async () => undefined,
     };
-    const list = {
+    const choiceServiceStub = {
       vendors: () => [],
       people: () => [],
       choices: () => [],
@@ -100,8 +102,8 @@ describe('AgreementsComponent', () => {
       providers: [
         { provide: AgreementService, useValue: service },
         { provide: ExpenseService, useValue: expenses },
-        { provide: VendorService, useValue: list },
-        { provide: PersonService, useValue: list },
+        { provide: VendorService, useValue: choiceServiceStub },
+        { provide: PersonService, useValue: choiceServiceStub },
         { provide: ToastService, useValue: { show: () => undefined } },
       ],
     });
@@ -111,28 +113,28 @@ describe('AgreementsComponent', () => {
     return fixture.componentInstance;
   }
 
-  it('adds up what is still owed', () => {
+  it('totals the balance across agreements', () => {
     const component = render([
       agreement({ balance_amount: 6_000_000 }),
       agreement({ id: 'a2', balance_amount: 1_000_000 }),
     ]);
-    expect(component.agreements.owedTotal()).toBe(7_000_000);
+    expect(component.agreements.balanceTotal()).toBe(7_000_000);
   });
 
-  it('fills the meter by what has been paid', () => {
+  it('computes the paid percentage capped at 100', () => {
     const component = render();
     expect(component.paidPercent(agreement({ agreed_amount: 1000, paid_amount: 250 }))).toBe(25);
     expect(component.paidPercent(agreement({ agreed_amount: 1000, paid_amount: 5000 }))).toBe(100);
     expect(component.paidPercent(agreement({ agreed_amount: 0, paid_amount: 500 }))).toBe(0);
   });
 
-  it('calls an agreement settled once nothing is owed', () => {
+  it('marks an agreement settled once the balance is zero', () => {
     const component = render();
     expect(component.settled(agreement({ balance_amount: 0 }))).toBe(true);
     expect(component.settled(agreement({ balance_amount: 1 }))).toBe(false);
   });
 
-  it('will not save an agreement without a vendor and a price', async () => {
+  it('does not save an agreement without a vendor and an agreed amount', async () => {
     const component = render();
     expect(component.canSave()).toBe(false);
 
@@ -144,21 +146,21 @@ describe('AgreementsComponent', () => {
     expect(component.canSave()).toBe(true);
 
     await component.save();
-    expect(added[0][1]).toEqual({
+    expect(created[0][1]).toEqual({
       vendor_id: 'v1',
       description: 'Block work',
       agreed_amount: 22_300_000,
     });
   });
 
-  it('says whether someone holds money or is owed it', () => {
+  it('labels a positive balance as unspent and a negative one as owed', () => {
     const component = render();
-    expect(component.holding(37_500_00)).toBe('holds');
-    expect(component.holding(-11_000_00)).toBe('is owed');
-    expect(component.holding(0)).toBe('holds');
+    expect(component.balanceDirection(37_500_00)).toBe('Unspent');
+    expect(component.balanceDirection(-11_000_00)).toBe('Owed');
+    expect(component.balanceDirection(0)).toBe('Unspent');
   });
 
-  it('will not give an advance without a person and an amount', async () => {
+  it('does not issue an advance without a person and an amount', async () => {
     const component = render();
     expect(component.canSaveAdvance()).toBe(false);
 
@@ -185,7 +187,7 @@ describe('AgreementsComponent', () => {
     expect(body['vendor_id']).toBe('v1');
   });
 
-  it('will not record a payment of nothing', () => {
+  it('rejects a blank or zero payment', () => {
     const component = render([agreement()]);
     component.startPayment('a1');
     expect(component.canPay()).toBe(false);
@@ -193,9 +195,9 @@ describe('AgreementsComponent', () => {
     expect(component.canPay()).toBe(false);
   });
 
-  it('shows figures without repeating the currency', () => {
+  it('formats amounts without the currency symbol', () => {
     const component = render();
-    expect(component.bare(22_300_000)).toBe('223,000');
-    expect(component.bare(6_000_000)).toBe('60,000');
+    expect(component.formatAmount(22_300_000)).toBe('223,000');
+    expect(component.formatAmount(6_000_000)).toBe('60,000');
   });
 });

@@ -16,13 +16,13 @@ describe('IconComponent', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it.each(NAMES)('draws something for %s', (name) => {
+  it.each(NAMES)('renders an SVG for %s', (name) => {
     const svg = render(name).querySelector('svg');
 
     expect(svg?.querySelectorAll('path, circle').length).toBeGreaterThan(0);
   });
 
-  it('draws at the size asked for and takes the colour around it', () => {
+  it('uses the size input and currentColor', () => {
     const svg = render('home', 20).querySelector('svg');
 
     expect(svg?.getAttribute('width')).toBe('20');
@@ -30,7 +30,7 @@ describe('IconComponent', () => {
     expect(svg?.getAttribute('stroke')).toBe('currentColor');
   });
 
-  it('stays out of the way of anyone reading the label beside it', () => {
+  it('is hidden from assistive technology', () => {
     const svg = render('people').querySelector('svg');
 
     expect(svg?.getAttribute('aria-hidden')).toBe('true');

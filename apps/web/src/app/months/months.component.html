@@ -2,8 +2,8 @@
   <div class="intro">
     <h2 class="t-heading">Month by Month</h2>
     <p class="prose">
-      Expenses by month, oldest first. Each bar is split by category using the same colours as
-      elsewhere.
+      Expenses by month, oldest first. Each bar is split by top-level category, in the category
+      colours used in the budget.
     </p>
   </div>
 
@@ -13,7 +13,7 @@
 
   <div class="table">
     @for (row of rows(); track row.month) {
-      <div class="line">
+      <div class="month">
         <button
           type="button"
           class="row"
@@ -29,41 +29,41 @@
               }
             </span>
           </span>
-          <span class="figure right">{{ bare(row.amount) }}</span>
+          <span class="figure right">{{ plainAmount(row.amount) }}</span>
           <span class="count right">{{ countLabel(row) }}</span>
         </button>
 
         @if (isOpen(row)) {
-          @let filed = monthExpenses(row);
+          @let monthPage = monthExpenses(row);
           <div class="detail">
             <div class="legend">
               @for (part of row.parts; track part.categoryId) {
                 <div class="legend-row">
                   <span class="swatch" [class]="part.tint"></span>
                   <span class="legend-name">{{ part.name }}</span>
-                  <span class="figure right">{{ bare(part.amount) }}</span>
+                  <span class="figure right">{{ plainAmount(part.amount) }}</span>
                 </div>
               }
             </div>
 
-            @if (filed === undefined) {
+            @if (monthPage === undefined) {
               <p class="empty">Loading…</p>
-            } @else if (filed.total > 0) {
+            } @else if (monthPage.total > 0) {
               <div class="entries">
-                @for (expense of filed.rows; track expense.id) {
+                @for (expense of monthPage.rows; track expense.id) {
                   <div class="entry">
                     <span class="entry-text">
                       <span class="description">{{ expense.description }}</span>
                       <span class="entry-category">{{ categoryName(expense) }}</span>
                     </span>
-                    <span class="figure right">{{ bare(expense.amount) }}</span>
+                    <span class="figure right">{{ plainAmount(expense.amount) }}</span>
                   </div>
                 }
                 <app-pagination
-                  [total]="filed.total"
-                  [page]="filed.page"
+                  [total]="monthPage.total"
+                  [page]="monthPage.page"
                   noun="expenses"
-                  (pageChange)="goTo(row, $event)"
+                  (pageChange)="goToPage(row, $event)"
                 />
               </div>
             }
@@ -73,13 +73,13 @@
     }
 
     @if (rows().length === 0) {
-      <p class="empty">Nothing recorded yet.</p>
+      <p class="empty">No expenses yet.</p>
     }
 
     <div class="row total">
       <span class="total-label">Total</span>
       <span></span>
-      <span class="figure right">{{ bare(total()) }}</span>
+      <span class="figure right">{{ plainAmount(total()) }}</span>
       <span></span>
     </div>
   </div>

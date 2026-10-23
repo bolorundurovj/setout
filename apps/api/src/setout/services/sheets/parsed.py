@@ -5,16 +5,16 @@ from datetime import date
 from enum import StrEnum
 
 
-class Trouble(StrEnum):
-    NO_CATEGORY_YET = "no_category_yet"
+class ProblemKind(StrEnum):
+    BEFORE_FIRST_CATEGORY = "before_first_category"
     NO_DESCRIPTION = "no_description"
-    SEVERAL_CODES = "several_codes"
+    MULTIPLE_CODES = "multiple_codes"
     NOT_PAID = "not_paid"
 
 
 @dataclass
 class Problem:
-    kind: Trouble
+    kind: ProblemKind
     row: int
     detail: str
 
@@ -41,10 +41,10 @@ class BudgetedCategory:
 
 
 @dataclass
-class BudgetRead:
+class ParsedBudget:
     categories: list[BudgetedCategory] = field(default_factory=list)
     problems: list[Problem] = field(default_factory=list)
-    # Rows carrying nothing but a code, which the sheet keeps as spare lines.
+    # Rows with a cost code and nothing else: placeholder lines in the source sheet.
     blank_rows: int = 0
 
     @property
@@ -64,13 +64,13 @@ class VendorLine:
 
 
 @dataclass
-class VendorsRead:
+class ParsedVendors:
     vendors: list[VendorLine] = field(default_factory=list)
     problems: list[Problem] = field(default_factory=list)
 
 
 @dataclass
-class SpendLine:
+class ExpenseLine:
     row: int
     description: str
     amount: int
@@ -83,25 +83,26 @@ class SpendLine:
 
 
 @dataclass
-class SpendRead:
-    spend: list[SpendLine] = field(default_factory=list)
+class ParsedExpenses:
+    expenses: list[ExpenseLine] = field(default_factory=list)
     problems: list[Problem] = field(default_factory=list)
 
     @property
     def amount(self) -> int:
-        return sum(line.amount for line in self.spend)
+        return sum(line.amount for line in self.expenses)
 
 
 @dataclass
-class OwedLine:
+class OutstandingLine:
     row: int
     description: str
     vendor: str
     quantity: str
-    resolved: bool
+    received: bool
+    expected: str = ""
 
 
 @dataclass
-class OwedRead:
-    owed: list[OwedLine] = field(default_factory=list)
+class ParsedOutstanding:
+    outstanding: list[OutstandingLine] = field(default_factory=list)
     problems: list[Problem] = field(default_factory=list)

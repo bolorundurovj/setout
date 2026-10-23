@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
-import type { DeliveryRead, VendorRead, VendorSpend } from '@setout/api-client';
+import type { DeliveryRead, VendorExpenseSummary, VendorRead } from '@setout/api-client';
 import { DeliveryService } from '../deliveries/delivery.service';
 import { ToastService } from '../toast.service';
 import { VendorDetailComponent } from './vendor-detail.component';
 import { VendorService } from './vendor.service';
 
-function vendor(over: Partial<VendorRead> = {}): VendorRead {
+function vendor(overrides: Partial<VendorRead> = {}): VendorRead {
   return {
     id: 'v1',
     name: 'A Vendor',
@@ -20,12 +20,12 @@ function vendor(over: Partial<VendorRead> = {}): VendorRead {
     totals: [],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
-const spend: VendorSpend = {
+const summary: VendorExpenseSummary = {
   vendor_id: 'v1',
   name: 'A Vendor',
   projects: [
@@ -40,7 +40,7 @@ const spend: VendorSpend = {
   ],
 };
 
-function owedRow(over: Partial<DeliveryRead> = {}): DeliveryRead {
+function outstandingDelivery(overrides: Partial<DeliveryRead> = {}): DeliveryRead {
   return {
     id: 'd1',
     project_id: 'p1',
@@ -48,7 +48,7 @@ function owedRow(over: Partial<DeliveryRead> = {}): DeliveryRead {
     vendor_id: 'v1',
     vendor_name: 'A Vendor',
     description: '17 bags of cement',
-    promised: 'this week',
+    expected: 'this week',
     amount: 76_500_00,
     currency_code: 'NGN',
     currency_exponent: 2,
@@ -56,8 +56,8 @@ function owedRow(over: Partial<DeliveryRead> = {}): DeliveryRead {
     received_at: null,
     created_at: '2026-08-14T00:00:00Z',
     updated_at: '2026-08-14T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
@@ -67,24 +67,24 @@ describe('VendorDetailComponent', () => {
   let restored: string[];
   let toasts: { message: string; type: string }[];
   let navigations: unknown[][];
-  let owedRows: DeliveryRead[];
+  let outstandingDeliveries: DeliveryRead[];
   let marked: string[];
   let reloads: string[];
 
-  async function render(current: VendorRead | null = vendor(), owed: DeliveryRead[] = []) {
+  async function render(current: VendorRead | null = vendor(), outstanding: DeliveryRead[] = []) {
     edits = [];
     archived = [];
     restored = [];
     toasts = [];
     navigations = [];
-    owedRows = owed;
+    outstandingDeliveries = outstanding;
     marked = [];
     reloads = [];
 
     const vendors = {
       error: () => null,
       get: async () => current,
-      spend: async () => (current ? spend : null),
+      expenseSummary: async () => (current ? summary : null),
       agreements: async () => [],
       edit: async (_id: string, body: unknown) => void edits.push(body),
       archive: async (id: string) => void archived.push(id),
@@ -101,9 +101,13 @@ describe('VendorDetailComponent', () => {
           provide: DeliveryService,
           useValue: {
             error: () => null,
-            forVendor: () => ({ rows: owedRows, total: owedRows.length, owed: 0 }),
+            forVendor: () => ({
+              rows: outstandingDeliveries,
+              total: outstandingDeliveries.length,
+              outstandingAmount: 0,
+            }),
             loadForVendor: async () => void reloads.push('v1'),
-            receive: async (id: string) => void marked.push(id),
+            markReceived: async (id: string) => void marked.push(id),
           },
         },
         {
@@ -126,32 +130,34 @@ describe('VendorDetailComponent', () => {
     return component;
   }
 
-  it('reads the vendor and what was spent with them', async () => {
+  it('loads the vendor and its expense summary', async () => {
     const component = await render();
     expect(component.vendor()?.name).toBe('A Vendor');
-    expect(component.spend()?.projects.length).toBe(1);
+    expect(component.expenseSummary()?.projects.length).toBe(1);
     expect(component.loading()).toBe(false);
   });
 
-  it('lists what the vendor has been paid for and not delivered', async () => {
-    const component = await render(vendor(), [owedRow()]);
-    expect(component.owedHere().map((row) => row.description)).toEqual(['17 bags of cement']);
-    expect(component.owedWhen(owedRow())).toContain('promised this week');
+  it('lists the outstanding deliveries for the vendor', async () => {
+    const component = await render(vendor(), [outstandingDelivery()]);
+    expect(component.outstandingDeliveries().map((row) => row.description)).toEqual([
+      '17 bags of cement',
+    ]);
+    expect(component.deliveryDates(outstandingDelivery())).toContain('expected this week');
   });
 
-  it('asks the list again once something is marked delivered, so it leaves', async () => {
-    const component = await render(vendor(), [owedRow()]);
-    await component.markDelivered(owedRow());
+  it('reloads the outstanding deliveries after marking one received', async () => {
+    const component = await render(vendor(), [outstandingDelivery()]);
+    await component.markReceived(outstandingDelivery());
     expect(marked).toEqual(['d1']);
     expect(reloads).toContain('v1');
   });
 
-  it('goes to the form screen to edit', async () => {
+  it('opens the edit form', async () => {
     (await render()).edit();
     expect(navigations[0][0]).toEqual(['/vendors', 'v1', 'edit']);
   });
 
-  it('totals the spend per currency for the total row', async () => {
+  it('totals the spent amount per currency', async () => {
     const component = await render();
     const totals = component.totalsByCurrency({
       vendor_id: 'v1',
@@ -191,7 +197,7 @@ describe('VendorDetailComponent', () => {
       expense_count: 3,
       spent_amount: 1_000_000_00,
     });
-    expect(component.total(totals[0])).toContain('1,000,000');
+    expect(component.formatTotal(totals[0])).toContain('1,000,000');
   });
 
   it('archives and restores', async () => {
@@ -203,32 +209,32 @@ describe('VendorDetailComponent', () => {
     expect(restored).toEqual(['v1']);
   });
 
-  it('flags a vendor that carries only a name', async () => {
+  it('flags a vendor with only a name as incomplete', async () => {
     const component = await render();
-    expect(component.needsFillingIn(vendor())).toBe(false);
-    expect(component.needsFillingIn(vendor({ trade: null, contact_name: null, phone: null }))).toBe(
+    expect(component.isIncomplete(vendor())).toBe(false);
+    expect(component.isIncomplete(vendor({ trade: null, contact_name: null, phone: null }))).toBe(
       true,
     );
   });
 
-  it('formats spend in the project currency', async () => {
+  it('formats a project row in the project currency', async () => {
     const component = await render();
-    expect(component.money(spend.projects[0])).toContain('800,000');
+    expect(component.formatSpent(summary.projects[0])).toContain('800,000');
   });
 
-  it('copes with a vendor that is not there', async () => {
+  it('shows no vendor when the vendor is not found', async () => {
     const component = await render(null);
     expect(component.vendor()).toBeNull();
-    expect(component.spend()).toBeNull();
+    expect(component.expenseSummary()).toBeNull();
   });
 
-  it('names the vendor in the page title', async () => {
+  it('shows the vendor name in the page title', async () => {
     await render(vendor({ name: 'Corner Depot Cement' }));
     TestBed.tick();
     expect(TestBed.inject(Title).getTitle()).toBe('Corner Depot Cement · Setout');
   });
 
-  it('leaves the title alone for a vendor that is not there', async () => {
+  it('keeps the page title when the vendor is not found', async () => {
     TestBed.inject(Title).setTitle('Vendor · Setout');
     await render(null);
     TestBed.tick();

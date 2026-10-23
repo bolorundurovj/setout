@@ -33,8 +33,8 @@
   gap: 16px;
 }
 
-.owed,
-.done {
+.outstanding,
+.received {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -43,53 +43,87 @@
   border-radius: 12px;
 }
 
-.owed {
+.outstanding {
   border: 1px solid var(--over-edge);
   background: var(--over-surface);
+
+  &.overdue {
+    border-color: var(--danger-edge);
+  }
 }
 
-.done {
+.received {
   border: 1px solid var(--hairline);
   background: var(--surface);
 }
 
-.owed.archived,
-.done.archived {
+.outstanding.archived,
+.received.archived {
   border: 1px solid var(--hairline);
   background: var(--sidebar);
 }
 
-.owed.archived .owed-what,
-.owed.archived .owed-when,
-.owed.archived .owed-amount {
+.outstanding.archived .delivery-description,
+.outstanding.archived .delivery-detail,
+.outstanding.archived .outstanding-amount {
   color: var(--ink-3);
 }
 
-.owed-text {
+.delivery-text {
   display: flex;
   flex-direction: column;
   gap: 3px;
   min-width: 0;
 }
 
-.owed-what {
+.delivery-description {
   font-weight: 500;
   font-size: 13px;
   color: var(--over-ink);
 }
 
-.owed-when {
+.delivery-detail {
   font-size: 13px;
   color: var(--over-ink);
 }
 
-.done-what {
+.overdue-tag {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--danger-surface);
+  color: var(--danger-ink);
+  border: 1px solid var(--danger-edge);
+  font-weight: 500;
+}
+
+.confirm-delete {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  .delete-input {
+    width: 90px;
+    padding: 4px 8px;
+    font-size: 13px;
+    text-transform: uppercase;
+  }
+}
+
+.danger-text {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.received-description {
   font-size: 13px;
   color: var(--ink-2);
   text-decoration: line-through;
 }
 
-.owed-right {
+.delivery-actions {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -97,7 +131,7 @@
   justify-content: flex-end;
 }
 
-.owed.editing {
+.outstanding.editing {
   flex-direction: column;
   align-items: stretch;
   gap: 12px;
@@ -129,25 +163,25 @@
   gap: 8px;
 }
 
-.owed-amount,
-.done-amount {
+.outstanding-amount,
+.received-amount {
   font-weight: 500;
   font-size: 16px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.owed-amount {
+.outstanding-amount {
   color: var(--over-ink);
 }
 
-.done-amount {
+.received-amount {
   color: var(--ink-2);
 }
 
 @media (max-width: bp.$phone) {
-  .owed,
-  .done {
+  .outstanding,
+  .received {
     flex-direction: column;
     align-items: flex-start;
   }

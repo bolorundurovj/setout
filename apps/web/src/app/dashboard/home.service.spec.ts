@@ -2,25 +2,25 @@ import { TestBed } from '@angular/core/testing';
 import { Api } from '@setout/api-client';
 import { HomeService } from './home.service';
 
-interface Asked {
+interface Invocation {
   name: string;
   currency: string | null;
 }
 
 describe('HomeService', () => {
-  let asked: Asked[];
+  let invocations: Invocation[];
 
   function configure(reply: (name: string) => unknown) {
-    asked = [];
+    invocations = [];
     TestBed.resetTestingModule();
     const api = {
       invoke: async (fn: { name: string }, params?: { currency?: string | null }) => {
-        asked.push({ name: fn.name, currency: params?.currency ?? null });
-        const answer = reply(fn.name);
-        if (answer instanceof Error) {
-          throw answer;
+        invocations.push({ name: fn.name, currency: params?.currency ?? null });
+        const result = reply(fn.name);
+        if (result instanceof Error) {
+          throw result;
         }
-        return answer;
+        return result;
       },
     };
     TestBed.configureTestingModule({ providers: [{ provide: Api, useValue: api }] });
@@ -28,97 +28,97 @@ describe('HomeService', () => {
   }
 
   const summary = {
-    projects: 2,
+    project_count: 2,
     currencies: [
-      { currency_code: 'NGN', currency_exponent: 2, projects: 1 },
-      { currency_code: 'USD', currency_exponent: 2, projects: 1 },
+      { currency_code: 'NGN', currency_exponent: 2, project_count: 1 },
+      { currency_code: 'USD', currency_exponent: 2, project_count: 1 },
     ],
     currency_code: 'NGN',
     currency_exponent: 2,
-    currency_projects: 1,
+    currency_project_count: 1,
     budgeted_amount: 100,
     spent_amount: 40,
     alerts: [],
   };
 
-  function answer(name: string): unknown {
+  function stubReply(name: string): unknown {
     if (name === 'getHomeSummary') {
       return summary;
     }
     if (name === 'getHomeMonths') {
-      return { currency_code: 'NGN', currency_exponent: 2, months: [], busiest_month: null };
+      return { currency_code: 'NGN', currency_exponent: 2, months: [], highest_month: null };
     }
     return { rows: [] };
   }
 
-  it('reads each section on its own so one slow part holds up nothing else', async () => {
-    const service = configure(answer);
+  it('requests the summary and then each section', async () => {
+    const service = configure(stubReply);
 
     await service.load();
 
-    expect(asked.map((call) => call.name)).toEqual([
+    expect(invocations.map((call) => call.name)).toEqual([
       'getHomeSummary',
       'getHomeMonths',
       'getHomeProjects',
       'getHomeLatest',
     ]);
-    expect(service.summary()?.projects).toBe(2);
+    expect(service.summary()?.project_count).toBe(2);
     expect(service.months()?.currency_code).toBe('NGN');
     expect(service.projects()?.rows).toEqual([]);
-    expect(service.latest()?.rows).toEqual([]);
+    expect(service.recent()?.rows).toEqual([]);
     expect(service.error()).toBeNull();
   });
 
-  it('lets the server pick the currency first, then asks for that one by name', async () => {
-    const service = configure(answer);
+  it('uses the server default currency, then requests it explicitly', async () => {
+    const service = configure(stubReply);
 
     await service.load();
 
-    expect(asked[0].currency).toBeNull();
-    expect(asked.slice(1).map((call) => call.currency)).toEqual(['NGN', 'NGN', 'NGN']);
+    expect(invocations[0].currency).toBeNull();
+    expect(invocations.slice(1).map((call) => call.currency)).toEqual(['NGN', 'NGN', 'NGN']);
     expect(service.currency()).toBe('NGN');
   });
 
-  it('re-reads every section in the currency asked for', async () => {
-    const service = configure(answer);
+  it('reloads every section in the selected currency', async () => {
+    const service = configure(stubReply);
     await service.load();
-    asked = [];
+    invocations = [];
 
-    await service.show('USD');
+    await service.selectCurrency('USD');
 
-    expect(asked.map((call) => call.currency)).toEqual(['USD', 'USD', 'USD', 'USD']);
+    expect(invocations.map((call) => call.currency)).toEqual(['USD', 'USD', 'USD', 'USD']);
   });
 
-  it('does not go back to the server for the currency already shown', async () => {
-    const service = configure(answer);
+  it('skips reloading when the selected currency is unchanged', async () => {
+    const service = configure(stubReply);
     await service.load();
-    asked = [];
+    invocations = [];
 
-    await service.show('NGN');
+    await service.selectCurrency('NGN');
 
-    expect(asked).toEqual([]);
+    expect(invocations).toEqual([]);
   });
 
-  it('holds nothing rather than something stale when a read fails', async () => {
+  it('clears sections and sets an error when requests fail', async () => {
     const service = configure(() => new Error('offline'));
 
     await service.load();
 
     expect(service.summary()).toBeNull();
     expect(service.months()).toBeNull();
-    expect(service.error()).toBe('Could not load the dashboard.');
+    expect(service.error()).toBe('Could not load Home.');
   });
 
-  it('keeps the sections it did get when only one read fails', async () => {
+  it('keeps loaded sections when one request fails', async () => {
     const service = configure((name) =>
-      name === 'getHomeMonths' ? new Error('offline') : answer(name),
+      name === 'getHomeMonths' ? new Error('offline') : stubReply(name),
     );
 
     await service.load();
 
-    expect(service.summary()?.projects).toBe(2);
+    expect(service.summary()?.project_count).toBe(2);
     expect(service.months()).toBeNull();
-    expect(service.latest()?.rows).toEqual([]);
-    expect(service.error()).toBe('Could not load the dashboard.');
+    expect(service.recent()?.rows).toEqual([]);
+    expect(service.error()).toBe('Could not load Home.');
   });
 });

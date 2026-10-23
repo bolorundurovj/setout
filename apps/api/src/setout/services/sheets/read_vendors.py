@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from setout.services.sheets.detect import Found
-from setout.services.sheets.parsed import VendorLine, VendorsRead
+from setout.services.sheets.detect import DetectedSheet
+from setout.services.sheets.parsed import ParsedVendors, VendorLine
 from setout.services.sheets.values import as_phone, as_text
 
 
-def read(found: Found) -> VendorsRead:
-    out = VendorsRead()
-    at = found.columns
+def read(detected: DetectedSheet) -> ParsedVendors:
+    out = ParsedVendors()
+    at = detected.columns
     seen: set[str] = set()
 
-    for offset, row in enumerate(found.sheet.rows[found.header_row + 1 :]):
-        number = found.header_row + offset + 2
+    for offset, row in enumerate(detected.sheet.rows[detected.header_row + 1 :]):
+        number = detected.header_row + offset + 2
         name = as_text(_cell(row, at.get("company name", 0)))
         if not name:
             continue

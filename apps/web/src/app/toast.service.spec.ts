@@ -10,11 +10,11 @@ describe('ToastService', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it('says nothing until something is shown', () => {
+  it('has no message initially', () => {
     expect(make().message()).toBe('');
   });
 
-  it('shows a message as a success unless told otherwise', () => {
+  it('defaults the type to success', () => {
     const toast = make();
 
     toast.show('Saved.');
@@ -23,13 +23,13 @@ describe('ToastService', () => {
     expect(toast.type()).toBe('success');
   });
 
-  it('carries the kind it was given', () => {
+  it('stores the given type', () => {
     const toast = make();
     toast.show('Could not save.', 'error');
     expect(toast.type()).toBe('error');
   });
 
-  it('clears itself after a few seconds', () => {
+  it('clears the message after four seconds', () => {
     const toast = make();
     toast.show('Saved.');
 
@@ -38,7 +38,7 @@ describe('ToastService', () => {
     expect(toast.message()).toBe('');
   });
 
-  it('gives a second message the full time rather than the remains of the first', () => {
+  it('restarts the timeout for a new message', () => {
     const toast = make();
     toast.show('First.');
 

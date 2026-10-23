@@ -1,7 +1,7 @@
 <div #canvas class="canvas" role="application" [attr.aria-label]="ariaLabel()"></div>
 
 @if (tilesFailed()) {
-  <p class="t-small muted">Map tiles unavailable. The land is still shown.</p>
+  <p class="t-small muted">Map tiles unavailable. The pin and boundary are still shown.</p>
 }
 
 @if (editable()) {
@@ -14,26 +14,26 @@
     </div>
     <p class="t-small muted">
       @if (point()) {
-        Tap elsewhere to move the pin, or drag it.
+        Tap the map or drag the pin to move it.
       } @else {
         Tap the map to place the location pin.
       }
     </p>
   } @else {
-    @if (corners().length) {
+    @if (points().length) {
       <div class="tools">
         <app-button variant="secondary" (pressed)="undo()">Undo Last Point</app-button>
-        <app-button variant="secondary" (pressed)="clear()">Clear Survey</app-button>
+        <app-button variant="secondary" (pressed)="clear()">Clear Boundary</app-button>
       </div>
     }
     <p class="t-small muted">
-      @if (corners().length === 0) {
-        Tap the map to mark the first survey point.
-      } @else if (corners().length < 3) {
-        {{ 3 - corners().length }} more point{{ corners().length === 2 ? '' : 's' }} needed to
-        enclose an area.
+      @if (points().length === 0) {
+        Tap the map to mark the first boundary point.
+      } @else if (points().length < 3) {
+        {{ 3 - points().length }} more boundary point{{ points().length === 2 ? '' : 's' }} needed
+        to enclose an area.
       } @else {
-        {{ corners().length }} survey points. Drag one to move it.
+        {{ points().length }} boundary points. Drag one to move it.
       }
     </p>
   }

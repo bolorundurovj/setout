@@ -25,17 +25,21 @@ class ExpenseCreate(BaseModel):
         description="Minor units. Derived when both quantity and unit rate are given",
     )
     spent_on: date | None = Field(None, description="Defaults to today")
-    category_id: str | None = Field(None, description="Leave empty to file it later")
-    item_id: str | None = Field(None, description="What was bought, to build its price history")
-    vendor_id: str | None = Field(None, description="Who it was bought from")
-    agreement_id: str | None = Field(None, description="A part payment against what was agreed")
-    paid_by_id: str | None = Field(None, description="Who paid")
+    category_id: str | None = Field(None, description="Leave empty to categorise later")
+    item_id: str | None = Field(
+        None, description="The item bought. Used to build its price history"
+    )
+    vendor_id: str | None = Field(None, description="The vendor paid")
+    agreement_id: str | None = Field(
+        None, description="The agreement this expense is a part payment towards"
+    )
+    paid_by_id: str | None = Field(None, description="The person who paid. Null when you paid")
     quantity: Decimal | None = Field(None, gt=0, max_digits=12, decimal_places=3)
     unit_rate: int | None = Field(None, ge=0, description="Minor units")
     cost_type: CostType | None = None
     notes: str | None = None
     auto_categorize: bool = Field(
-        True, description="Use past purchases to choose the category when none is given"
+        True, description="Use past expenses to choose the category when none is given"
     )
 
 
@@ -57,19 +61,19 @@ class ExpenseUpdate(BaseModel):
 
 
 class CategorySuggestion(BaseModel):
-    category_id: str | None = Field(None, description="The category past purchases used most often")
+    category_id: str | None = Field(None, description="The category past expenses used most often")
     reason: str | None = Field(None, description="Why this category was suggested")
 
 
-class BulkFileExpenses(BaseModel):
+class BulkCategoriseExpenses(BaseModel):
     expense_ids: list[str] = Field(
-        ..., min_length=1, description="Uncategorized expenses to assign"
+        ..., min_length=1, description="Uncategorised expenses to assign"
     )
     category_id: str = Field(..., description="The category they should all be assigned to")
 
 
-class BulkFileResult(BaseModel):
-    filed_count: int = Field(..., description="How many uncategorized expenses were assigned")
+class BulkCategoriseResult(BaseModel):
+    categorised_count: int = Field(..., description="How many uncategorised expenses were assigned")
 
 
 class ExpenseRead(BaseModel):
@@ -87,10 +91,10 @@ class ExpenseRead(BaseModel):
     amount: int
     cost_type: CostType | None
     notes: str | None
-    attachment_count: int = Field(..., description="How many files are attached")
+    attachment_count: int = Field(..., description="Number of attachments")
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
+    archived_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -99,23 +103,23 @@ class ExpensePage(BaseModel):
     items: list[ExpenseRead]
     total: int
     total_amount: int = Field(
-        ..., description="What everything matching adds up to, not just this page"
+        ..., description="Total amount of all matching expenses, not only this page"
     )
     limit: int
     offset: int
 
 
-class MonthCategorySpend(BaseModel):
+class MonthCategoryExpenseSummary(BaseModel):
     category_id: str | None = Field(..., description="Null for expenses with no category")
     name: str
     amount: int
 
 
-class MonthSpend(BaseModel):
+class MonthExpenseSummary(BaseModel):
     month: str = Field(..., description="Calendar month as YYYY-MM")
     amount: int
     expense_count: int
-    categories: list[MonthCategorySpend] = Field(
+    categories: list[MonthCategoryExpenseSummary] = Field(
         ..., description="Split by the top-level category, in budget order"
     )
 
@@ -125,22 +129,22 @@ class ProjectMonths(BaseModel):
     currency_code: str
     currency_exponent: int
     total_amount: int
-    months: list[MonthSpend] = Field(
+    months: list[MonthExpenseSummary] = Field(
         ..., description="Oldest first. Months with no expenses are omitted"
     )
-    busiest_month: str | None = Field(..., description="Null until something has been spent")
+    highest_month: str | None = Field(..., description="Null when there are no expenses")
 
 
-class ProjectSpend(BaseModel):
+class ProjectExpenseSummary(BaseModel):
     project_id: str
     currency_code: str
     currency_exponent: int
     budgeted_amount: int
     spent_amount: int
-    uncategorized_amount: int
-    uncategorized_count: int
-    removed_count: int = Field(
-        ..., description="Expenses archived, no longer accounted for in total"
+    uncategorised_amount: int
+    uncategorised_count: int
+    archived_count: int = Field(
+        ..., description="Archived expenses, which are excluded from the total"
     )
     variance_percent: float | None = Field(
         ..., description="Null when there is no budget to compare against, never infinity"

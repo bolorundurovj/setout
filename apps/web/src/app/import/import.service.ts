@@ -9,17 +9,17 @@ import {
   runImport,
 } from '@setout/api-client';
 
-export interface Target {
+export interface ImportTarget {
   projectId: string | null;
   name: string;
   currencyCode: string;
 }
 
-export interface Answers {
+export interface ImportOptions {
   createMissingCategories: boolean;
   skipDuplicates: boolean;
-  takeUnpaid: boolean;
-  severalCodes: string;
+  includeUnpaid: boolean;
+  multipleCodes: string;
 }
 
 @Injectable({
@@ -28,11 +28,11 @@ export interface Answers {
 export class ImportService {
   private readonly api = inject(Api);
 
-  readonly working = signal(false);
+  readonly busy = signal(false);
   readonly error = signal<string | null>(null);
 
-  async look(file: File, target: Target): Promise<ImportReport | null> {
-    this.working.set(true);
+  async preview(file: File, target: ImportTarget): Promise<ImportReport | null> {
+    this.busy.set(true);
     this.error.set(null);
     try {
       return await this.api.invoke(previewImport, {
@@ -44,15 +44,19 @@ export class ImportService {
         },
       });
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'The file could not be read.');
+      this.error.set(detailOf(e) ?? 'Could not read the file.');
       return null;
     } finally {
-      this.working.set(false);
+      this.busy.set(false);
     }
   }
 
-  async bringIn(file: File, target: Target, answers: Answers): Promise<ImportResult | null> {
-    this.working.set(true);
+  async runImport(
+    file: File,
+    target: ImportTarget,
+    options: ImportOptions,
+  ): Promise<ImportResult | null> {
+    this.busy.set(true);
     this.error.set(null);
     try {
       return await this.api.invoke(runImport, {
@@ -61,21 +65,21 @@ export class ImportService {
           project_id: target.projectId,
           name: target.name,
           currency_code: target.currencyCode,
-          create_missing_categories: answers.createMissingCategories,
-          skip_duplicates: answers.skipDuplicates,
-          take_unpaid: answers.takeUnpaid,
-          several_codes: answers.severalCodes,
+          create_missing_categories: options.createMissingCategories,
+          skip_duplicates: options.skipDuplicates,
+          take_unpaid: options.includeUnpaid,
+          several_codes: options.multipleCodes,
         },
       });
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Nothing was brought in.');
+      this.error.set(detailOf(e) ?? 'Nothing was imported.');
       return null;
     } finally {
-      this.working.set(false);
+      this.busy.set(false);
     }
   }
 
-  sampleUrl(kind: string): string {
+  templateUrl(kind: string): string {
     return `${this.api.rootUrl}${importSample.PATH}?kind=${kind}`;
   }
 }

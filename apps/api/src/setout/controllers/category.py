@@ -20,7 +20,7 @@ from setout.schemas.category import (
     CategoryUpdate,
     ProjectBudget,
 )
-from setout.utils.cascade import delete_under_category, restore_under_category
+from setout.utils.cascade import archive_under_category, restore_under_category
 from setout.utils.categories import to_reads
 
 NOT_FOUND_CATEGORY = "Category not found"
@@ -32,23 +32,23 @@ class CategoryController:
         return [CategoryPresetRead.model_validate(p) for p in await CategoryPreset.all()]
 
     async def list_categories(
-        self, project_id: str, *, include_deleted: bool = False
+        self, project_id: str, *, include_archived: bool = False
     ) -> list[CategoryRead]:
         await self._project_or_404(project_id)
-        categories = await Category.filter(project_id=project_id, deleted_at__isnull=True)
+        categories = await Category.filter(project_id=project_id, archived_at__isnull=True)
         items = await BudgetItem.filter(
             category__project_id=project_id,
-            deleted_at__isnull=True,
+            archived_at__isnull=True,
         )
-        expenses = await Expense.filter(project_id=project_id, deleted_at__isnull=True)
+        expenses = await Expense.filter(project_id=project_id, archived_at__isnull=True)
         reads = to_reads(categories, items, expenses)
-        if include_deleted:
-            reads.extend(await self._removed_reads(project_id))
+        if include_archived:
+            reads.extend(await self._archived_reads(project_id))
         return reads
 
-    async def budget(self, project_id: str, *, include_deleted: bool = False) -> ProjectBudget:
+    async def budget(self, project_id: str, *, include_archived: bool = False) -> ProjectBudget:
         project = await self._project_or_404(project_id)
-        categories = await self.list_categories(project_id, include_deleted=include_deleted)
+        categories = await self.list_categories(project_id, include_archived=include_archived)
         return ProjectBudget(
             project_id=project.id,
             currency_code=project.currency_id,
@@ -56,15 +56,15 @@ class CategoryController:
             budgeted_amount=sum(
                 category.own_budgeted_amount
                 for category in categories
-                if category.deleted_at is None
+                if category.archived_at is None
             ),
             categories=categories,
         )
 
-    async def _removed_reads(self, project_id: str) -> list[CategoryRead]:
-        # A removed category reads its figures from the rows removed with it, and is
-        # left out of the live rollup so the budget total is unchanged by showing it.
-        categories = await Category.filter(project_id=project_id, deleted_at__not_isnull=True)
+    async def _archived_reads(self, project_id: str) -> list[CategoryRead]:
+        # Archived categories total only the rows archived with them and are excluded
+        # from the live rollup, so listing them does not change the budget total.
+        categories = await Category.filter(project_id=project_id, archived_at__not_isnull=True)
         if not categories:
             return []
         items = await BudgetItem.filter(category_id__in=[row.id for row in categories])
@@ -75,7 +75,7 @@ class CategoryController:
         if req.parent_id is not None:
             await self._category_or_404(req.parent_id, project_id=project_id)
         category = await Category.create(project_id=project_id, **req.model_dump())
-        return self._one(await self.list_categories(project_id), category.id)
+        return self._find_category(await self.list_categories(project_id), category.id)
 
     async def update(self, category_id: str, req: CategoryUpdate) -> CategoryRead:
         category = await self._category_or_404(category_id)
@@ -91,32 +91,32 @@ class CategoryController:
         if changes:
             category.update_from_dict(changes)
             await category.save()
-        return self._one(await self.list_categories(category.project_id), category.id)
+        return self._find_category(await self.list_categories(category.project_id), category.id)
 
-    async def delete(self, category_id: str) -> None:
+    async def archive(self, category_id: str) -> None:
         category = await self._category_or_404(category_id)
-        await self._holds_no_spend(category)
-        deleted_at = datetime.now(UTC)
-        category.deleted_at = deleted_at
+        await self._require_no_expenses(category)
+        archived_at = datetime.now(UTC)
+        category.archived_at = archived_at
         await category.save()
-        await delete_under_category(category.id, deleted_at)
+        await archive_under_category(category.id, archived_at)
 
     async def restore(self, category_id: str) -> CategoryRead:
-        category = await self._category_or_404(category_id, include_deleted=True)
-        if category.deleted_at is not None:
-            deleted_at = category.deleted_at
-            category.deleted_at = None
+        category = await self._category_or_404(category_id, include_archived=True)
+        if category.archived_at is not None:
+            archived_at = category.archived_at
+            category.archived_at = None
             await category.save()
-            await restore_under_category(category.id, deleted_at)
-        return self._one(await self.list_categories(category.project_id), category.id)
+            await restore_under_category(category.id, archived_at)
+        return self._find_category(await self.list_categories(category.project_id), category.id)
 
     async def list_items(
-        self, category_id: str, *, include_deleted: bool, limit: int, offset: int
+        self, category_id: str, *, include_archived: bool, limit: int, offset: int
     ) -> BudgetItemPage:
         await self._category_or_404(category_id)
         query = BudgetItem.filter(category_id=category_id)
-        if not include_deleted:
-            query = query.filter(deleted_at__isnull=True)
+        if not include_archived:
+            query = query.filter(archived_at__isnull=True)
         total = await query.count()
         items = await query.offset(offset).limit(limit)
         return BudgetItemPage(
@@ -126,12 +126,12 @@ class CategoryController:
             offset=offset,
         )
 
-    async def add_item(self, category_id: str, req: BudgetItemCreate) -> BudgetItemRead:
+    async def create_item(self, category_id: str, req: BudgetItemCreate) -> BudgetItemRead:
         category = await self._category_or_404(category_id)
-        if await Category.filter(parent_id=category.id, deleted_at__isnull=True).exists():
+        if await Category.filter(parent_id=category.id, archived_at__isnull=True).exists():
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="A category with subcategories has no budget of its own",
+                detail="Budget items cannot be added to a category that has subcategories",
             )
         item = await BudgetItem.create(
             category_id=category_id,
@@ -150,38 +150,38 @@ class CategoryController:
             await item.save()
         return BudgetItemRead.model_validate(item)
 
-    async def delete_item(self, item_id: str) -> None:
+    async def archive_item(self, item_id: str) -> None:
         item = await self._item_or_404(item_id)
-        item.deleted_at = datetime.now(UTC)
+        item.archived_at = datetime.now(UTC)
         await item.save()
 
     async def restore_item(self, item_id: str) -> BudgetItemRead:
-        item = await self._item_or_404(item_id, include_deleted=True)
-        if item.deleted_at is not None:
-            item.deleted_at = None
+        item = await self._item_or_404(item_id, include_archived=True)
+        if item.archived_at is not None:
+            item.archived_at = None
             await item.save()
         return BudgetItemRead.model_validate(item)
 
-    async def _holds_no_spend(self, category: Category) -> None:
-        # A deleted category would take its expenses out of every category total while
-        # the project total still counted them, which reads as money gone missing.
-        branch = [category.id, *await self._below(category)]
-        if await Expense.filter(category_id__in=branch, deleted_at__isnull=True).exists():
+    async def _require_no_expenses(self, category: Category) -> None:
+        # Archiving a category with expenses would exclude them from every category total
+        # while the project total still included them.
+        branch = [category.id, *await self._descendant_ids(category)]
+        if await Expense.filter(category_id__in=branch, archived_at__isnull=True).exists():
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="A category with expenses cannot be archived, only renamed",
             )
 
-    async def _below(self, category: Category) -> list[str]:
-        found: list[str] = []
-        edge = [category.id]
-        while edge:
-            children = await Category.filter(parent_id__in=edge, deleted_at__isnull=True)
-            edge = [child.id for child in children if child.id not in found]
-            found.extend(edge)
-        return found
+    async def _descendant_ids(self, category: Category) -> list[str]:
+        descendants: list[str] = []
+        level = [category.id]
+        while level:
+            children = await Category.filter(parent_id__in=level, archived_at__isnull=True)
+            level = [child.id for child in children if child.id not in descendants]
+            descendants.extend(level)
+        return descendants
 
-    def _one(self, categories: list[CategoryRead], category_id: str) -> CategoryRead:
+    def _find_category(self, categories: list[CategoryRead], category_id: str) -> CategoryRead:
         for category in categories:
             if category.id == category_id:
                 return category
@@ -189,7 +189,7 @@ class CategoryController:
 
     async def _project_or_404(self, project_id: str) -> Project:
         project = await Project.get_or_none(
-            id=project_id, deleted_at__isnull=True
+            id=project_id, archived_at__isnull=True
         ).prefetch_related("currency")
         if project is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
@@ -200,18 +200,18 @@ class CategoryController:
         category_id: str,
         *,
         project_id: str | None = None,
-        include_deleted: bool = False,
+        include_archived: bool = False,
     ) -> Category:
         category = await Category.get_or_none(id=category_id)
-        missing = category is None or (category.deleted_at is not None and not include_deleted)
+        missing = category is None or (category.archived_at is not None and not include_archived)
         if not missing and project_id is not None and category is not None:
             missing = category.project_id != project_id
         if missing or category is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND_CATEGORY)
         return category
 
-    async def _item_or_404(self, item_id: str, *, include_deleted: bool = False) -> BudgetItem:
+    async def _item_or_404(self, item_id: str, *, include_archived: bool = False) -> BudgetItem:
         item = await BudgetItem.get_or_none(id=item_id)
-        if item is None or (item.deleted_at is not None and not include_deleted):
+        if item is None or (item.archived_at is not None and not include_archived):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND_ITEM)
         return item

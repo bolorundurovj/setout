@@ -9,11 +9,10 @@ from setout.utils.ids import short_id
 
 
 class Delivery(Model):
-    """Something paid for that has not arrived.
+    """An item that has been paid for and is outstanding until it is received.
 
-    The money is already spent and already counted, so a delivery carries no
-    amount of its own: it hangs off the expense that paid for it and reads the
-    figure from there. Marking it received leaves the expense untouched.
+    A delivery has no amount of its own: its amount is that of the expense that
+    paid for it. Marking it received does not change the expense.
     """
 
     id = fields.CharField(max_length=12, primary_key=True, default=short_id)
@@ -30,11 +29,11 @@ class Delivery(Model):
     )
     expense_id: str
     description = fields.CharField(max_length=255)
-    promised = fields.CharField(max_length=255, null=True, default=None)
+    expected = fields.CharField(max_length=255, null=True, default=None)
     received_at = fields.DatetimeField(null=True, default=None)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    deleted_at = fields.DatetimeField(null=True, default=None)
+    archived_at = fields.DatetimeField(null=True, default=None)
 
     class Meta:
         table = "delivery"

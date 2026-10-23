@@ -18,51 +18,51 @@ import { PersonService } from './person.service';
   styleUrl: './people.component.scss',
 })
 export class PeopleComponent {
-  readonly people = inject(PersonService);
+  readonly personService = inject(PersonService);
   private readonly router = inject(Router);
 
   readonly notSet = '—';
 
   readonly search = signal('');
   readonly includeArchived = signal(false);
-  private readonly typing = debounce<string>(
-    (text) => void this.people.load(text, this.includeArchived()),
+  private readonly debouncedSearch = debounce<string>(
+    (text) => void this.personService.load(text, this.includeArchived()),
   );
 
   constructor() {
-    void this.people.load();
-    inject(DestroyRef).onDestroy(() => this.typing.cancel());
+    void this.personService.load();
+    inject(DestroyRef).onDestroy(() => this.debouncedSearch.cancel());
   }
 
-  value(event: Event): string {
+  inputValue(event: Event): string {
     return (event.target as HTMLInputElement).value;
   }
 
   onSearch(event: Event): void {
-    this.search.set(this.value(event));
-    this.typing.call(this.search());
+    this.search.set(this.inputValue(event));
+    this.debouncedSearch.call(this.search());
   }
 
   async setIncludeArchived(on: boolean): Promise<void> {
-    this.typing.cancel();
+    this.debouncedSearch.cancel();
     this.includeArchived.set(on);
-    await this.people.load(this.search(), on);
+    await this.personService.load(this.search(), on);
   }
 
   async goTo(page: number): Promise<void> {
-    await this.people.goTo(page);
+    await this.personService.goTo(page);
   }
 
   open(personId: string): void {
     void this.router.navigate(['/people', personId]);
   }
 
-  addSomeone(): void {
+  newPerson(): void {
     void this.router.navigate(['/people/new']);
   }
 
   peopleCountLabel(): string {
-    const total = this.people.total();
+    const total = this.personService.total();
     return `${total} ${total === 1 ? 'person' : 'people'}`;
   }
 
@@ -72,12 +72,12 @@ export class PeopleComponent {
 
   countLabel(person: PersonRead): string {
     if (person.expense_count === 0) {
-      return 'nothing bought yet';
+      return 'no expenses yet';
     }
-    return person.expense_count === 1 ? '1 purchase' : `${person.expense_count} purchases`;
+    return person.expense_count === 1 ? '1 expense' : `${person.expense_count} expenses`;
   }
 
-  money(total: PersonCurrencyTotal): string {
+  formatSpent(total: PersonCurrencyTotal): string {
     return formatMoney(total.spent_amount, total.currency_code, total.currency_exponent);
   }
 }

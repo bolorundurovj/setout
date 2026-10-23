@@ -14,6 +14,7 @@ from setout.schemas.project import (
     ProjectSummary,
     ProjectUpdate,
 )
+from setout.services.storage import Storage, get_storage
 
 router = APIRouter(
     tags=["projects"],
@@ -21,13 +22,14 @@ router = APIRouter(
 )
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+Store = Annotated[Storage, Depends(get_storage)]
 
 controller = ProjectController()
 
 NOT_FOUND: dict[int | str, dict[str, Any]] = {
     status.HTTP_404_NOT_FOUND: {"description": "Project not found"}
 }
-NOT_ARCHIVED: dict[int | str, dict[str, Any]] = {
+NOT_CLOSED: dict[int | str, dict[str, Any]] = {
     status.HTTP_409_CONFLICT: {"description": "The project is not closed"}
 }
 
@@ -35,11 +37,11 @@ NOT_ARCHIVED: dict[int | str, dict[str, Any]] = {
 @router.get("/projects", operation_id="listProjects")
 async def list_projects(
     user: CurrentUser,
-    include_deleted: Annotated[bool, Query(description="Include archived projects")] = False,
+    include_archived: Annotated[bool, Query(description="Include archived projects")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> ProjectPage:
-    return await controller.list(include_deleted=include_deleted, limit=limit, offset=offset)
+    return await controller.list(include_archived=include_archived, limit=limit, offset=offset)
 
 
 @router.post(
@@ -67,14 +69,14 @@ async def update_project(project_id: str, req: ProjectUpdate, user: CurrentUser)
     return await controller.update(project_id, req)
 
 
-@router.delete(
-    "/projects/{project_id}",
-    operation_id="deleteProject",
+@router.post(
+    "/projects/{project_id}/archive",
+    operation_id="archiveProject",
     status_code=status.HTTP_204_NO_CONTENT,
-    responses={**NOT_FOUND, **NOT_ARCHIVED},
+    responses={**NOT_FOUND, **NOT_CLOSED},
 )
-async def delete_project(project_id: str, user: CurrentUser) -> None:
-    await controller.delete(project_id)
+async def archive_project(project_id: str, user: CurrentUser) -> None:
+    await controller.archive(project_id)
 
 
 @router.post("/projects/{project_id}/restore", operation_id="restoreProject", responses=NOT_FOUND)

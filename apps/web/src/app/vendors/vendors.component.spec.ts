@@ -6,7 +6,7 @@ import { SEARCH_WAIT } from '../ui/debounce';
 import { VendorService } from './vendor.service';
 import { VendorsComponent } from './vendors.component';
 
-function vendor(over: Partial<VendorRead> = {}): VendorRead {
+function vendor(overrides: Partial<VendorRead> = {}): VendorRead {
   return {
     id: 'v1',
     name: 'A Vendor',
@@ -21,8 +21,8 @@ function vendor(over: Partial<VendorRead> = {}): VendorRead {
     ],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
@@ -69,7 +69,7 @@ describe('VendorsComponent', () => {
     return fixture.componentInstance;
   }
 
-  it('asks for the archived only when the toggle is on', async () => {
+  it('requests archived vendors only when the toggle is on', async () => {
     const component = render();
     await component.setIncludeArchived(true);
 
@@ -77,7 +77,7 @@ describe('VendorsComponent', () => {
     expect(loads[1]).toEqual({ search: '', archived: true });
   });
 
-  it('keeps the search term when the toggle changes, and asks only once', async () => {
+  it('keeps the search term and loads once when the toggle changes', async () => {
     vi.useFakeTimers();
     try {
       const component = render();
@@ -99,39 +99,39 @@ describe('VendorsComponent', () => {
     expect(navigations[0][0]).toEqual(['/vendors', 'v1']);
   });
 
-  it('reads the contact, falling back when there is none', () => {
+  it('shows the contact name or a placeholder when there is none', () => {
     const component = render();
     expect(component.contactLabel(vendor())).toBe('A Contact');
     expect(component.contactLabel(vendor({ contact_name: null }))).toBe(component.notSet);
   });
 
-  it('says so plainly when there is no phone', () => {
+  it('shows a placeholder when there is no phone', () => {
     const component = render();
     expect(component.phoneLabel(vendor())).toBe('0000 000 0000');
-    expect(component.phoneLabel(vendor({ phone: null }))).toBe('no phone');
+    expect(component.phoneLabel(vendor({ phone: null }))).toBe('—');
   });
 
-  it('counts the vendors and says they are shared', () => {
-    expect(render([vendor()]).countLabel()).toBe('1 vendor · shared across every project');
+  it('counts the vendors and notes they are shared across projects', () => {
+    expect(render([vendor()]).countLabel()).toBe('1 vendor · shared across all projects');
     expect(render([vendor(), vendor({ id: 'v2' })]).countLabel()).toBe(
-      '2 vendors · shared across every project',
+      '2 vendors · shared across all projects',
     );
   });
 
-  it('flips the archive toggle label', async () => {
+  it('switches the archive toggle label', async () => {
     const component = render();
     expect(component.archivedLabel()).toBe('Show archived');
     await component.setIncludeArchived(true);
     expect(component.archivedLabel()).toBe('Hide archived');
   });
 
-  it('goes to the form screen for a new vendor', () => {
+  it('opens the new vendor form', () => {
     render().newVendor();
     expect(navigations[0][0]).toEqual(['/vendors/new']);
   });
 
   it('formats a total in its own currency', () => {
     const component = render();
-    expect(component.money(vendor().totals[0])).toContain('750,000');
+    expect(component.formatSpent(vendor().totals[0])).toContain('750,000');
   });
 });

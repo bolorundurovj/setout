@@ -3,8 +3,8 @@
     <div class="intro-text">
       <h2 class="t-heading">Deliveries</h2>
       <p class="prose">
-        What you have paid for and not received. The amount is already counted as spent, so marking
-        an item delivered does not change any total.
+        Items that are paid for but not yet received. The amount is already counted as spent, so
+        marking an item received does not change any total.
       </p>
     </div>
     <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
@@ -16,80 +16,83 @@
     <p class="banner warn t-small">{{ deliveries.error() }}</p>
   }
 
-  @if (justRemoved(); as gone) {
+  @if (lastArchived(); as archived) {
     <p class="banner t-small">
-      {{ gone.description }} is archived.
-      <button type="button" class="link-action" (click)="putBackRemoved()">Undo</button>
+      {{ archived.description }} is archived.
+      <button type="button" class="link-action" (click)="restoreLastArchived()">Undo</button>
     </p>
   }
 
   <section class="block">
     <div class="block-head">
-      <h3 class="t-heading">Waiting</h3>
-      <span class="t-small muted">{{ owedNote() }}</span>
+      <h3 class="t-heading">Outstanding</h3>
+      <span class="t-small muted">{{ outstandingSummary() }}</span>
     </div>
 
-    @if (waitingRows().length === 0) {
+    @if (outstandingRows().length === 0) {
       <div class="card">
-        <p class="t-body">Nothing outstanding.</p>
-        <p class="t-small">
-          Tick "Paid for, not delivered yet" when adding an expense and it appears here.
-        </p>
+        <p class="t-body">No outstanding items.</p>
+        <p class="t-small">Select "Outstanding Delivery" when adding an expense to list it here.</p>
       </div>
     } @else {
-      @for (owed of waitingRows(); track owed.id) {
-        @if (editing() === owed.id) {
-          <div class="owed editing">
+      @for (delivery of outstandingRows(); track delivery.id) {
+        @if (editing() === delivery.id) {
+          <div class="outstanding editing">
             <div class="edit-fields">
               <div class="field">
-                <label class="t-micro" [attr.for]="'owed-what-' + owed.id"
-                  >What Is Outstanding</label
+                <label class="t-micro" [attr.for]="'delivery-description-' + delivery.id"
+                  >Description</label
                 >
                 <input
-                  [id]="'owed-what-' + owed.id"
+                  [id]="'delivery-description-' + delivery.id"
                   class="input-field"
                   type="text"
-                  [value]="editWhat()"
-                  (input)="editWhat.set(value($event))"
-                  (keyup.enter)="saveEdit(owed)"
+                  [value]="editDescription()"
+                  (input)="editDescription.set(value($event))"
+                  (keyup.enter)="saveEdit(delivery)"
                 />
               </div>
               <div class="field">
-                <label class="t-micro" [attr.for]="'owed-when-' + owed.id">Promised</label>
+                <label class="t-micro" [attr.for]="'delivery-expected-' + delivery.id"
+                  >Expected</label
+                >
                 <input
-                  [id]="'owed-when-' + owed.id"
+                  [id]="'delivery-expected-' + delivery.id"
                   class="input-field"
                   type="text"
-                  placeholder="this week"
-                  [value]="editPromised()"
-                  (input)="editPromised.set(value($event))"
-                  (keyup.enter)="saveEdit(owed)"
+                  [value]="editExpected()"
+                  (input)="editExpected.set(value($event))"
+                  (keyup.enter)="saveEdit(delivery)"
                 />
               </div>
             </div>
             <div class="edit-actions">
               <app-button variant="secondary" (pressed)="cancelEdit()">Cancel</app-button>
-              <app-button [disabled]="!canSaveEdit()" (pressed)="saveEdit(owed)">Save</app-button>
+              <app-button [disabled]="!canSaveEdit()" (pressed)="saveEdit(delivery)"
+                >Save</app-button
+              >
             </div>
           </div>
         } @else {
-          <div class="owed" [class.archived]="owed.deleted_at">
-            <span class="owed-text">
-              <span class="owed-what">{{ owed.description }}</span>
-              @if (owed.deleted_at) {
-                <span class="owed-when">{{ vendorName(owed) }} &middot; archived</span>
+          <div class="outstanding" [class.archived]="delivery.archived_at">
+            <span class="delivery-text">
+              <span class="delivery-description">{{ delivery.description }}</span>
+              @if (delivery.archived_at) {
+                <span class="delivery-detail">{{ vendorName(delivery) }} &middot; archived</span>
               } @else {
-                <span class="owed-when">{{ vendorName(owed) }} &middot; {{ waiting(owed) }}</span>
+                <span class="delivery-detail"
+                  >{{ vendorName(delivery) }} &middot; {{ outstandingDetail(delivery) }}</span
+                >
               }
             </span>
-            <span class="owed-right">
-              <span class="owed-amount t-mono">{{ money(owed.amount) }}</span>
-              @if (owed.deleted_at) {
-                <app-button variant="secondary" (pressed)="restore(owed)">Restore</app-button>
+            <span class="delivery-actions">
+              <span class="outstanding-amount t-mono">{{ money(delivery.amount) }}</span>
+              @if (delivery.archived_at) {
+                <app-button variant="secondary" (pressed)="restore(delivery)">Restore</app-button>
               } @else {
-                <app-button variant="secondary" (pressed)="startEdit(owed)">Change</app-button>
-                <app-button variant="danger" (pressed)="remove(owed)">Archive</app-button>
-                <app-button (pressed)="markDelivered(owed)">Mark Delivered</app-button>
+                <app-button variant="secondary" (pressed)="startEdit(delivery)">Edit</app-button>
+                <app-button variant="danger" (pressed)="archive(delivery)">Archive</app-button>
+                <app-button (pressed)="markReceived(delivery)">Mark Received</app-button>
               }
             </span>
           </div>
@@ -97,46 +100,48 @@
       }
 
       <app-pagination
-        [total]="waitingSet().total"
-        [page]="waitingPage()"
-        noun="waiting"
-        label="Waiting pages"
-        (pageChange)="goToWaiting($event)"
+        [total]="outstandingList().total"
+        [page]="outstandingPage()"
+        noun="items"
+        label="Outstanding deliveries pagination"
+        (pageChange)="goToOutstanding($event)"
       />
     }
   </section>
 
-  @if (arrivedRows().length > 0) {
+  @if (receivedRows().length > 0) {
     <section class="block">
-      <h3 class="t-heading">Delivered</h3>
-      @for (owed of arrivedRows(); track owed.id) {
-        <div class="done" [class.archived]="owed.deleted_at">
-          <span class="owed-text">
-            <span class="done-what">{{ owed.description }}</span>
+      <h3 class="t-heading">Received</h3>
+      @for (delivery of receivedRows(); track delivery.id) {
+        <div class="received" [class.archived]="delivery.archived_at">
+          <span class="delivery-text">
+            <span class="received-description">{{ delivery.description }}</span>
             <span class="t-small muted">
-              {{ vendorName(owed) }} &middot; arrived {{ arrivedOn(owed) }}
-              @if (owed.deleted_at) {
+              {{ vendorName(delivery) }} &middot; received {{ receivedOn(delivery) }}
+              @if (delivery.archived_at) {
                 &middot; archived
               }
             </span>
           </span>
-          <span class="owed-right">
-            <span class="done-amount t-mono">{{ money(owed.amount) }}</span>
-            @if (owed.deleted_at) {
-              <app-button variant="secondary" (pressed)="restore(owed)">Restore</app-button>
+          <span class="delivery-actions">
+            <span class="received-amount t-mono">{{ money(delivery.amount) }}</span>
+            @if (delivery.archived_at) {
+              <app-button variant="secondary" (pressed)="restore(delivery)">Restore</app-button>
             } @else {
-              <app-button variant="secondary" (pressed)="putBack(owed)">Not Yet</app-button>
+              <app-button variant="secondary" (pressed)="markOutstanding(delivery)"
+                >Mark Outstanding</app-button
+              >
             }
           </span>
         </div>
       }
 
       <app-pagination
-        [total]="arrivedSet().total"
-        [page]="arrivedPage()"
-        noun="delivered"
-        label="Delivered pages"
-        (pageChange)="goToArrived($event)"
+        [total]="receivedList().total"
+        [page]="receivedPage()"
+        noun="items"
+        label="Received deliveries pagination"
+        (pageChange)="goToReceived($event)"
       />
     </section>
   }

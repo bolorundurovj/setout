@@ -1,15 +1,19 @@
 export const PAGE_SIZE = 10;
 
-export const SCROLL_SIZE = 20;
+export const SCROLL_PAGE_SIZE = 20;
 
-// Pickers need every choice at once, and 100 is the most the API will hand over.
-export const CHOICE_LIMIT = 100;
+// Pickers load one page of at most 100 options, the API's maximum page size.
+export const PICKER_PAGE_SIZE = 100;
+
+// Remove once no module imports the old names.
+export const SCROLL_SIZE = SCROLL_PAGE_SIZE;
+export const CHOICE_LIMIT = PICKER_PAGE_SIZE;
 
 export function pageCount(total: number, size = PAGE_SIZE): number {
   return Math.max(1, Math.ceil(total / size));
 }
 
-// Pages are 1 based in the interface.
+// Pages are 1-based in the UI.
 export function offsetOf(page: number, size = PAGE_SIZE): number {
   return Math.max(0, (page - 1) * size);
 }
@@ -23,19 +27,19 @@ export function pageOf<T>(rows: T[], page: number, size = PAGE_SIZE): T[] {
   return rows.slice(from, from + size);
 }
 
-/** Page numbers to offer, with nulls where a run has been left out. */
-export function pageWindow(page: number, total: number, size = PAGE_SIZE): (number | null)[] {
+/** Page numbers to display, with null where a range is omitted. */
+export function pageNumbers(page: number, total: number, size = PAGE_SIZE): (number | null)[] {
   const last = pageCount(total, size);
-  const here = clampPage(page, total, size);
-  const wanted = new Set([1, last, here - 1, here, here + 1]);
-  const pages = [...wanted].filter((n) => n >= 1 && n <= last).sort((a, b) => a - b);
-  const window: (number | null)[] = [];
+  const current = clampPage(page, total, size);
+  const candidates = new Set([1, last, current - 1, current, current + 1]);
+  const pages = [...candidates].filter((n) => n >= 1 && n <= last).sort((a, b) => a - b);
+  const numbers: (number | null)[] = [];
   pages.forEach((number, index) => {
     const before = pages[index - 1];
     if (before !== undefined && number - before > 1) {
-      window.push(null);
+      numbers.push(null);
     }
-    window.push(number);
+    numbers.push(number);
   });
-  return window;
+  return numbers;
 }

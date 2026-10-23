@@ -12,7 +12,11 @@ import {
   viewChild,
   viewChildren,
 } from '@angular/core';
-import type { Chip } from './chip-group.component';
+export interface Option {
+  value: string;
+  label: string;
+  detail?: string | null;
+}
 
 let nextId = 0;
 
@@ -32,10 +36,10 @@ let nextId = 0;
       (click)="toggle()"
       (keydown)="onTriggerKeydown($event)"
     >
-      <span class="chosen">
-        <span class="chosen-label">{{ chosenLabel() }}</span>
-        @if (chosenDetail()) {
-          <span class="chosen-detail">{{ chosenDetail() }}</span>
+      <span class="selected">
+        <span class="selected-label">{{ selectedLabel() }}</span>
+        @if (selectedDetail()) {
+          <span class="selected-detail">{{ selectedDetail() }}</span>
         }
       </span>
       <svg viewBox="0 0 12 8" width="12" height="8" aria-hidden="true">
@@ -46,42 +50,42 @@ let nextId = 0;
     @if (open()) {
       <div class="popup">
         <input
-          #search
-          class="search"
+          #filter
+          class="filter"
           type="text"
           autocomplete="off"
-          placeholder="Type to narrow"
-          [attr.aria-label]="'Search ' + label()"
+          placeholder="Filter"
+          [attr.aria-label]="'Filter ' + label()"
           [attr.aria-controls]="listId"
           [attr.aria-activedescendant]="activeId()"
-          [value]="typed()"
-          (input)="onSearch($event)"
-          (keydown)="onSearchKeydown($event)"
+          [value]="filterText()"
+          (input)="onFilter($event)"
+          (keydown)="onFilterKeydown($event)"
         />
 
         @if (matches().length) {
           <ul class="options" role="listbox" [id]="listId" [attr.aria-label]="label()">
-            @for (chip of matches(); track chip.value; let i = $index) {
+            @for (option of matches(); track option.value; let i = $index) {
               <li
                 #option
                 role="option"
                 class="option"
                 [id]="listId + '-' + i"
-                [class.active]="i === active()"
-                [class.on]="chip.value === value()"
-                [attr.aria-selected]="chip.value === value()"
-                (mousedown)="choose(chip.value)"
-                (mouseenter)="active.set(i)"
+                [class.active]="i === activeIndex()"
+                [class.selected]="option.value === value()"
+                [attr.aria-selected]="option.value === value()"
+                (mousedown)="choose(option.value)"
+                (mouseenter)="activeIndex.set(i)"
               >
-                <span class="option-label">{{ chip.label }}</span>
-                @if (chip.detail) {
-                  <span class="option-detail">{{ chip.detail }}</span>
+                <span class="option-label">{{ option.label }}</span>
+                @if (option.detail) {
+                  <span class="option-detail">{{ option.detail }}</span>
                 }
               </li>
             }
           </ul>
         } @else {
-          <p class="empty t-small">Nothing matches that.</p>
+          <p class="empty t-small">No matches.</p>
         }
       </div>
     }
@@ -104,14 +108,14 @@ let nextId = 0;
         color: var(--ink-2);
       }
 
-      .chosen {
+      .selected {
         display: flex;
         flex-direction: column;
         gap: 2px;
         min-width: 0;
       }
 
-      .chosen-label {
+      .selected-label {
         font:
           400 14px/1.2 'DM Sans',
           sans-serif;
@@ -121,7 +125,7 @@ let nextId = 0;
         white-space: nowrap;
       }
 
-      .chosen-detail {
+      .selected-detail {
         font:
           400 11px/1.2 'DM Sans',
           sans-serif;
@@ -141,7 +145,7 @@ let nextId = 0;
         box-shadow: 0 8px 24px rgb(30 34 38 / 18%);
       }
 
-      .search {
+      .filter {
         width: 100%;
         height: 38px;
         padding: 0 10px;
@@ -196,16 +200,16 @@ let nextId = 0;
         background: var(--field);
       }
 
-      .option.on {
+      .option.selected {
         background: var(--accent);
       }
 
-      .option.on .option-label {
+      .option.selected .option-label {
         font-weight: 500;
         color: var(--on-accent);
       }
 
-      .option.on .option-detail {
+      .option.selected .option-detail {
         color: var(--on-accent);
         opacity: 0.85;
       }
@@ -220,53 +224,52 @@ let nextId = 0;
 export class OptionPickerComponent {
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
-  private readonly search = viewChild<ElementRef<HTMLInputElement>>('search');
+  private readonly filter = viewChild<ElementRef<HTMLInputElement>>('filter');
   private readonly optionEls = viewChildren<ElementRef<HTMLElement>>('option');
 
-  readonly chips = input.required<Chip[]>();
+  readonly options = input.required<Option[]>();
   readonly value = input('');
   readonly label = input('');
 
   readonly valueChange = output<string>();
 
   protected readonly open = signal(false);
-  protected readonly active = signal(0);
-  protected readonly typed = signal('');
+  protected readonly activeIndex = signal(0);
+  protected readonly filterText = signal('');
   protected readonly triggerId = `picker-trigger-${nextId}`;
   protected readonly listId = `picker-list-${nextId++}`;
 
-  private readonly chosen = computed(() =>
-    this.chips().find((chip) => chip.value === this.value()),
+  private readonly selected = computed(() =>
+    this.options().find((option) => option.value === this.value()),
   );
 
-  protected readonly chosenLabel = computed(() => this.chosen()?.label ?? 'Pick one');
-  protected readonly chosenDetail = computed(() => this.chosen()?.detail ?? '');
+  protected readonly selectedLabel = computed(() => this.selected()?.label ?? 'Select an option');
+  protected readonly selectedDetail = computed(() => this.selected()?.detail ?? '');
 
   protected readonly matches = computed(() => {
-    const typed = this.typed().trim().toLowerCase();
-    const chips = this.chips();
-    if (!typed) {
-      return chips;
+    const filterText = this.filterText().trim().toLowerCase();
+    const options = this.options();
+    if (!filterText) {
+      return options;
     }
-    return chips.filter((chip) =>
-      `${chip.label} ${chip.detail ?? ''}`.toLowerCase().includes(typed),
+    return options.filter((option) =>
+      `${option.label} ${option.detail ?? ''}`.toLowerCase().includes(filterText),
     );
   });
 
   protected readonly activeId = computed(() =>
-    this.matches().length ? `${this.listId}-${this.active()}` : null,
+    this.matches().length ? `${this.listId}-${this.activeIndex()}` : null,
   );
 
   constructor() {
-    // Both view queries resolve after render, so these run once the popup is
-    // actually in the DOM rather than racing change detection.
+    // View queries resolve after render, so these effects run once the popup is in the DOM.
     effect(() => {
       if (this.open()) {
-        this.search()?.nativeElement.focus();
+        this.filter()?.nativeElement.focus();
       }
     });
     effect(() => {
-      const option = this.optionEls()[this.active()];
+      const option = this.optionEls()[this.activeIndex()];
       // Optional call because jsdom does not implement scrollIntoView.
       option?.nativeElement.scrollIntoView?.({ block: 'nearest' });
     });
@@ -284,19 +287,19 @@ export class OptionPickerComponent {
       this.close();
       return;
     }
-    this.typed.set('');
-    this.active.set(
+    this.filterText.set('');
+    this.activeIndex.set(
       Math.max(
         0,
-        this.chips().findIndex((chip) => chip.value === this.value()),
+        this.options().findIndex((option) => option.value === this.value()),
       ),
     );
     this.open.set(true);
   }
 
-  onSearch(event: Event): void {
-    this.typed.set((event.target as HTMLInputElement).value);
-    this.active.set(0);
+  onFilter(event: Event): void {
+    this.filterText.set((event.target as HTMLInputElement).value);
+    this.activeIndex.set(0);
   }
 
   choose(value: string): void {
@@ -312,7 +315,7 @@ export class OptionPickerComponent {
     }
   }
 
-  onSearchKeydown(event: KeyboardEvent): void {
+  onFilterKeydown(event: KeyboardEvent): void {
     const matches = this.matches();
     if (event.key === 'Escape') {
       event.preventDefault();
@@ -326,24 +329,24 @@ export class OptionPickerComponent {
         return;
       }
       const step = event.key === 'ArrowDown' ? 1 : -1;
-      this.active.update((i) => (i + step + matches.length) % matches.length);
+      this.activeIndex.update((i) => (i + step + matches.length) % matches.length);
       return;
     }
     if (event.key === 'Home' || event.key === 'End') {
       event.preventDefault();
-      this.active.set(event.key === 'Home' ? 0 : matches.length - 1);
+      this.activeIndex.set(event.key === 'Home' ? 0 : matches.length - 1);
       return;
     }
     if (event.key === 'Enter') {
       event.preventDefault();
       if (matches.length) {
-        this.choose(matches[this.active()].value);
+        this.choose(matches[this.activeIndex()].value);
       }
     }
   }
 
   private close(): void {
     this.open.set(false);
-    this.typed.set('');
+    this.filterText.set('');
   }
 }

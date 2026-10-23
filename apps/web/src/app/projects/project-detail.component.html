@@ -5,11 +5,11 @@
       <h1 class="project-name">{{ p.name }}</h1>
       <app-currency-pill [code]="p.currency_code" tone="surface" />
       @if (p.land_id) {
-        <a class="home-link t-mono" [routerLink]="['/lands', p.land_id]">{{ p.land_name }}</a>
+        <a class="nav-link t-mono" [routerLink]="['/lands', p.land_id]">{{ p.land_name }}</a>
       }
-      <a class="home-link t-mono" routerLink="/projects">&#8592; All Projects</a>
+      <a class="nav-link t-mono" routerLink="/projects">&#8592; Projects</a>
     </div>
-    <app-button (pressed)="selectTab('expense')">Add Expense</app-button>
+    <app-button (pressed)="selectTab('expense')">New Expense</app-button>
   </div>
 
   <div class="tabs" role="tablist">
@@ -19,7 +19,6 @@
         role="tab"
         class="tab"
         [class.active]="tab.key === activeTab()"
-        [disabled]="!tab.ready"
         [attr.aria-selected]="tab.key === activeTab()"
         (click)="selectTab(tab.key)"
       >
@@ -54,7 +53,7 @@
 } @else {
   <div class="page">
     <div class="card">
-      <p class="t-body">{{ projects.error() ?? 'Loading the project…' }}</p>
+      <p class="t-body">{{ projects.error() ?? 'Loading project…' }}</p>
       <p class="t-small"><a class="link" routerLink="/projects">Back to Projects</a></p>
     </div>
   </div>

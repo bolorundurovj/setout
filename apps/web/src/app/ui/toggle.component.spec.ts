@@ -26,9 +26,9 @@ describe('ToggleComponent', () => {
     expect(emitted).toBe(true);
   });
 
-  it('marks the track as on when checked', async () => {
+  it('adds the checked class to the track when checked', async () => {
     const { fixture } = await render(true);
     const track = (fixture.nativeElement as HTMLElement).querySelector('.track');
-    expect(track?.classList.contains('on')).toBe(true);
+    expect(track?.classList.contains('checked')).toBe(true);
   });
 });

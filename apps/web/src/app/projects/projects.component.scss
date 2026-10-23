@@ -121,6 +121,18 @@
 .confirm {
   align-self: center;
   margin-right: 4px;
+
+  &.danger {
+    color: var(--danger);
+    font-weight: 500;
+  }
+}
+
+.delete-input {
+  width: 90px;
+  padding: 4px 8px;
+  font-size: 13px;
+  text-transform: uppercase;
 }
 
 .sentinel {
@@ -128,7 +140,7 @@
   text-align: center;
 }
 
-.figure-value.over {
+.figure-value.over-budget {
   color: var(--over);
 }
 

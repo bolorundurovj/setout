@@ -1,48 +1,53 @@
 import type { GeocodedPlace } from '@setout/api-client';
 
-/** What the plot says about where it is, as the form holds it. */
-export interface PlotPlace {
+/** Location fields as held by the land form. */
+export interface LandLocation {
   city: string;
   state: string;
   countryCode: string;
 }
 
-export type Disagreement = 'country' | 'state' | 'town';
+export type LocationMismatch = 'country' | 'state' | 'city';
 
-// A plot's state is the canonical ISO name, "Ogun". A geocoder usually returns
-// "Ogun State". Neither is wrong, so the suffix is dropped before comparing.
+// Stored states use the ISO name ("Ogun"); geocoders often return "Ogun State",
+// so the suffix is stripped before comparing.
 const SUFFIXES = /\s+(state|province|region|territory|district|county)$/i;
 
-function same(one: string | null | undefined, other: string | null | undefined): boolean {
+function matchesOrUnknown(
+  one: string | null | undefined,
+  other: string | null | undefined,
+): boolean {
   const a = (one ?? '').trim().replace(SUFFIXES, '').toLowerCase();
   const b = (other ?? '').trim().replace(SUFFIXES, '').toLowerCase();
-  // An empty side is unknown, not a disagreement.
   return !a || !b || a === b;
 }
 
-/**
- * Where the pin and the record fall out, coarsest first: a pin in the wrong
- * country is worth saying before a pin in the wrong street.
- */
-export function placeDisagrees(pin: GeocodedPlace, plot: PlotPlace): Disagreement | null {
-  if (!same(pin.country_code, plot.countryCode)) {
+/** Returns the coarsest mismatch between the pin and the form: country, state, then city. */
+export function findLocationMismatch(
+  geocoded: GeocodedPlace,
+  location: LandLocation,
+): LocationMismatch | null {
+  if (!matchesOrUnknown(geocoded.country_code, location.countryCode)) {
     return 'country';
   }
-  if (!same(pin.state, plot.state)) {
+  if (!matchesOrUnknown(geocoded.state, location.state)) {
     return 'state';
   }
-  if (!same(pin.city, plot.city)) {
-    return 'town';
+  if (!matchesOrUnknown(geocoded.city, location.city)) {
+    return 'city';
   }
   return null;
 }
 
-export function disagreementNote(where: Disagreement, pin: GeocodedPlace): string {
-  const said = {
-    country: pin.country_code,
-    state: pin.state,
-    town: pin.city,
-  }[where];
-  const noun = where === 'town' ? 'town' : where;
-  return `The location pin is in a different ${noun}. The map address is ${said}.`;
+export function locationMismatchMessage(
+  mismatch: LocationMismatch,
+  geocoded: GeocodedPlace,
+  countryName: (code: string) => string = (code) => code,
+): string {
+  const geocodedValue = {
+    country: countryName(geocoded.country_code ?? ''),
+    state: geocoded.state,
+    city: geocoded.city,
+  }[mismatch];
+  return `The location pin is in a different ${mismatch}: ${geocodedValue}.`;
 }

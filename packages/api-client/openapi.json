@@ -141,7 +141,7 @@
         }
       }
     },
-    "/api/auth/password": {
+    "/api/auth/passphrase": {
       "post": {
         "tags": [
           "auth"
@@ -171,7 +171,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PasswordChange"
+                "$ref": "#/components/schemas/PassphraseChange"
               }
             }
           }
@@ -184,7 +184,7 @@
             "description": "Not authenticated"
           },
           "403": {
-            "description": "The passphrase given does not match"
+            "description": "The current passphrase is incorrect"
           },
           "422": {
             "description": "Validation Error",
@@ -298,18 +298,18 @@
         }
       }
     },
-    "/api/auth/login": {
+    "/api/auth/sign-in": {
       "post": {
         "tags": [
           "auth"
         ],
-        "summary": "Login",
-        "operationId": "login",
+        "summary": "Sign In",
+        "operationId": "signIn",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
+                "$ref": "#/components/schemas/SignInRequest"
               }
             }
           },
@@ -330,7 +330,7 @@
             "description": "Invalid credentials"
           },
           "429": {
-            "description": "Too many wrong passphrases. Wait and try again"
+            "description": "Too many failed sign-in attempts. Try again later"
           },
           "422": {
             "description": "Validation Error",
@@ -348,13 +348,13 @@
         }
       }
     },
-    "/api/auth/logout": {
+    "/api/auth/sign-out": {
       "post": {
         "tags": [
           "auth"
         ],
-        "summary": "Logout",
-        "operationId": "logout",
+        "summary": "Sign Out",
+        "operationId": "signOut",
         "parameters": [
           {
             "name": "setout_session",
@@ -508,7 +508,7 @@
           "countries"
         ],
         "summary": "List States",
-        "description": "The states, provinces or regions of one country. What a plot's state must be one of.",
+        "description": "The states, provinces or regions of a country. A land record's state must be one of these.",
         "operationId": "listStates",
         "parameters": [
           {
@@ -680,8 +680,8 @@
         "tags": [
           "install"
         ],
-        "summary": "Export Record",
-        "operationId": "exportRecord",
+        "summary": "Export Backup",
+        "operationId": "exportBackup",
         "parameters": [
           {
             "name": "setout_session",
@@ -732,8 +732,8 @@
         "tags": [
           "install"
         ],
-        "summary": "Restore Record",
-        "operationId": "restoreRecord",
+        "summary": "Restore Backup",
+        "operationId": "restoreBackup",
         "parameters": [
           {
             "name": "setout_session",
@@ -777,10 +777,10 @@
             "description": "Not authenticated"
           },
           "409": {
-            "description": "Written by a different Setout or schema"
+            "description": "Created by a different Setout version or schema"
           },
           "422": {
-            "description": "The file does not fit"
+            "description": "The file is not a valid backup for this schema"
           },
           "400": {
             "description": "Bad Request: the body could not be parsed"
@@ -797,14 +797,14 @@
         "operationId": "listProjects",
         "parameters": [
           {
-            "name": "include_deleted",
+            "name": "include_archived",
             "in": "query",
             "required": false,
             "schema": {
               "type": "boolean",
               "description": "Include archived projects",
               "default": false,
-              "title": "Include Deleted"
+              "title": "Include Archived"
             },
             "description": "Include archived projects"
           },
@@ -1124,13 +1124,15 @@
             "description": "Bad Request: the body could not be parsed"
           }
         }
-      },
-      "delete": {
+      }
+    },
+    "/api/projects/{project_id}/archive": {
+      "post": {
         "tags": [
           "projects"
         ],
-        "summary": "Delete Project",
-        "operationId": "deleteProject",
+        "summary": "Archive Project",
+        "operationId": "archiveProject",
         "parameters": [
           {
             "name": "project_id",
@@ -1322,14 +1324,14 @@
             }
           },
           {
-            "name": "include_deleted",
+            "name": "include_archived",
             "in": "query",
             "required": false,
             "schema": {
               "type": "boolean",
               "description": "Include archived categories",
               "default": false,
-              "title": "Include Deleted"
+              "title": "Include Archived"
             },
             "description": "Include archived categories"
           },
@@ -1477,14 +1479,14 @@
             }
           },
           {
-            "name": "include_deleted",
+            "name": "include_archived",
             "in": "query",
             "required": false,
             "schema": {
               "type": "boolean",
               "description": "Include archived categories",
               "default": false,
-              "title": "Include Deleted"
+              "title": "Include Archived"
             },
             "description": "Include archived categories"
           },
@@ -1610,13 +1612,15 @@
             "description": "Bad Request: the body could not be parsed"
           }
         }
-      },
-      "delete": {
+      }
+    },
+    "/api/categories/{category_id}/archive": {
+      "post": {
         "tags": [
           "categories"
         ],
-        "summary": "Delete Category",
-        "operationId": "deleteCategory",
+        "summary": "Archive Category",
+        "operationId": "archiveCategory",
         "parameters": [
           {
             "name": "category_id",
@@ -1752,14 +1756,14 @@
             }
           },
           {
-            "name": "include_deleted",
+            "name": "include_archived",
             "in": "query",
             "required": false,
             "schema": {
               "type": "boolean",
               "description": "Include archived budget items",
               "default": false,
-              "title": "Include Deleted"
+              "title": "Include Archived"
             },
             "description": "Include archived budget items"
           },
@@ -1840,8 +1844,8 @@
         "tags": [
           "categories"
         ],
-        "summary": "Add Budget Item",
-        "operationId": "addBudgetItem",
+        "summary": "Create Budget Item",
+        "operationId": "createBudgetItem",
         "parameters": [
           {
             "name": "category_id",
@@ -1990,13 +1994,15 @@
             "description": "Bad Request: the body could not be parsed"
           }
         }
-      },
-      "delete": {
+      }
+    },
+    "/api/budget-items/{item_id}/archive": {
+      "post": {
         "tags": [
           "categories"
         ],
-        "summary": "Delete Budget Item",
-        "operationId": "deleteBudgetItem",
+        "summary": "Archive Budget Item",
+        "operationId": "archiveBudgetItem",
         "parameters": [
           {
             "name": "item_id",
@@ -2159,10 +2165,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Only payments on this agreement",
+              "description": "Only expenses against this agreement",
               "title": "Agreement Id"
             },
-            "description": "Only payments on this agreement"
+            "description": "Only expenses against this agreement"
           },
           {
             "name": "month",
@@ -2232,10 +2238,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Only what this person paid for",
+              "description": "Only expenses paid by this person",
               "title": "Paid By Id"
             },
-            "description": "Only what this person paid for"
+            "description": "Only expenses paid by this person"
           },
           {
             "name": "item_id",
@@ -2299,20 +2305,20 @@
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/ExpenseSort",
-              "description": "The order rows come back in",
+              "description": "Sort order",
               "default": "recent"
             },
-            "description": "The order rows come back in"
+            "description": "Sort order"
           },
           {
-            "name": "uncategorized_only",
+            "name": "uncategorised_only",
             "in": "query",
             "required": false,
             "schema": {
               "type": "boolean",
               "description": "Only expenses with no category",
               "default": false,
-              "title": "Uncategorized Only"
+              "title": "Uncategorised Only"
             },
             "description": "Only expenses with no category"
           },
@@ -2322,21 +2328,21 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Only payments assigned to an agreement",
+              "description": "Only expenses linked to an agreement",
               "default": false,
               "title": "Agreement Only"
             },
-            "description": "Only payments assigned to an agreement"
+            "description": "Only expenses linked to an agreement"
           },
           {
-            "name": "include_deleted",
+            "name": "include_archived",
             "in": "query",
             "required": false,
             "schema": {
               "type": "boolean",
               "description": "Include archived expenses",
               "default": false,
-              "title": "Include Deleted"
+              "title": "Include Archived"
             },
             "description": "Include archived expenses"
           },
@@ -2417,8 +2423,8 @@
         "tags": [
           "expenses"
         ],
-        "summary": "File Expenses",
-        "operationId": "fileExpenses",
+        "summary": "Categorise Expenses",
+        "operationId": "categoriseExpenses",
         "parameters": [
           {
             "name": "project_id",
@@ -2451,7 +2457,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BulkFileExpenses"
+                "$ref": "#/components/schemas/BulkCategoriseExpenses"
               }
             }
           }
@@ -2462,7 +2468,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BulkFileResult"
+                  "$ref": "#/components/schemas/BulkCategoriseResult"
                 }
               }
             }
@@ -2495,8 +2501,8 @@
         "tags": [
           "expenses"
         ],
-        "summary": "Add Expense",
-        "operationId": "addExpense",
+        "summary": "Create Expense",
+        "operationId": "createExpense",
         "parameters": [
           {
             "name": "project_id",
@@ -2600,10 +2606,10 @@
                   "type": "null"
                 }
               ],
-              "description": "What was bought",
+              "description": "The item purchased",
               "title": "Item Id"
             },
-            "description": "What was bought"
+            "description": "The item purchased"
           },
           {
             "name": "vendor_id",
@@ -2618,10 +2624,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Who it was bought from",
+              "description": "The vendor",
               "title": "Vendor Id"
             },
-            "description": "Who it was bought from"
+            "description": "The vendor"
           },
           {
             "name": "setout_session",
@@ -2670,13 +2676,13 @@
         }
       }
     },
-    "/api/projects/{project_id}/spend": {
+    "/api/projects/{project_id}/expense-summary": {
       "get": {
         "tags": [
           "expenses"
         ],
-        "summary": "Get Project Spend",
-        "operationId": "getProjectSpend",
+        "summary": "Get Project Expense Summary",
+        "operationId": "getProjectExpenseSummary",
         "parameters": [
           {
             "name": "project_id",
@@ -2710,7 +2716,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProjectSpend"
+                  "$ref": "#/components/schemas/ProjectExpenseSummary"
                 }
               }
             }
@@ -2935,13 +2941,15 @@
             "description": "Bad Request: the body could not be parsed"
           }
         }
-      },
-      "delete": {
+      }
+    },
+    "/api/expenses/{expense_id}/archive": {
+      "post": {
         "tags": [
           "expenses"
         ],
-        "summary": "Delete Expense",
-        "operationId": "deleteExpense",
+        "summary": "Archive Expense",
+        "operationId": "archiveExpense",
         "parameters": [
           {
             "name": "expense_id",
@@ -3371,13 +3379,15 @@
             "description": "Bad Request: the body could not be parsed"
           }
         }
-      },
-      "delete": {
+      }
+    },
+    "/api/items/{item_id}/archive": {
+      "post": {
         "tags": [
           "items"
         ],
-        "summary": "Delete Item",
-        "operationId": "deleteItem",
+        "summary": "Archive Item",
+        "operationId": "archiveItem",
         "parameters": [
           {
             "name": "item_id",
@@ -3661,11 +3671,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include archived land",
+              "description": "Include archived land records",
               "default": false,
               "title": "Include Archived"
             },
-            "description": "Include archived land"
+            "description": "Include archived land records"
           },
           {
             "name": "limit",
@@ -3944,13 +3954,15 @@
             "description": "Bad Request: the body could not be parsed"
           }
         }
-      },
-      "delete": {
+      }
+    },
+    "/api/lands/{land_id}/archive": {
+      "post": {
         "tags": [
           "lands"
         ],
-        "summary": "Delete Land",
-        "operationId": "deleteLand",
+        "summary": "Archive Land",
+        "operationId": "archiveLand",
         "parameters": [
           {
             "name": "land_id",
@@ -4083,16 +4095,16 @@
             }
           },
           {
-            "name": "include_deleted",
+            "name": "include_archived",
             "in": "query",
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include archived files",
+              "description": "Include archived documents",
               "default": false,
-              "title": "Include Deleted"
+              "title": "Include Archived"
             },
-            "description": "Include archived files"
+            "description": "Include archived documents"
           },
           {
             "name": "limit",
@@ -4171,8 +4183,8 @@
         "tags": [
           "lands"
         ],
-        "summary": "Add Land Document",
-        "operationId": "addLandDocument",
+        "summary": "Create Land Document",
+        "operationId": "createLandDocument",
         "parameters": [
           {
             "name": "land_id",
@@ -4205,7 +4217,7 @@
           "content": {
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/Body_addLandDocument"
+                "$ref": "#/components/schemas/Body_createLandDocument"
               }
             }
           }
@@ -4231,7 +4243,7 @@
             "description": "File too large"
           },
           "415": {
-            "description": "Not a photograph or a PDF"
+            "description": "Not an image or a PDF"
           },
           "422": {
             "description": "Validation Error",
@@ -4317,7 +4329,7 @@
           "lands"
         ],
         "summary": "Update Land Document",
-        "description": "Correct what a paper is called, or say what an Other one actually is.",
+        "description": "Change a document's type, or describe a document of type Other.",
         "operationId": "updateLandDocument",
         "parameters": [
           {
@@ -4387,61 +4399,6 @@
             "description": "Bad Request: the body could not be parsed"
           }
         }
-      },
-      "delete": {
-        "tags": [
-          "lands"
-        ],
-        "summary": "Delete Land Document",
-        "operationId": "deleteLandDocument",
-        "parameters": [
-          {
-            "name": "document_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Document Id"
-            }
-          },
-          {
-            "name": "setout_session",
-            "in": "cookie",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Setout Session"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "401": {
-            "description": "Not authenticated"
-          },
-          "404": {
-            "description": "Not found"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/api/land-documents/{document_id}/file": {
@@ -4450,7 +4407,7 @@
           "lands"
         ],
         "summary": "Download Land Document",
-        "description": "The file. Where the store can hand out a link of its own, this redirects\nto it and the bytes never pass through Setout.",
+        "description": "Serve the file inline, for the browser to display. Redirects to the storage URL when the\nstore provides one.",
         "operationId": "downloadLandDocument",
         "parameters": [
           {
@@ -4481,7 +4438,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The file itself",
+            "description": "The file contents",
             "content": {
               "application/octet-stream": {
                 "schema": {
@@ -4490,6 +4447,63 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/land-documents/{document_id}/archive": {
+      "post": {
+        "tags": [
+          "lands"
+        ],
+        "summary": "Archive Land Document",
+        "operationId": "archiveLandDocument",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "401": {
             "description": "Not authenticated"
@@ -4580,7 +4594,7 @@
           "lands"
         ],
         "summary": "List Land Valuations",
-        "description": "What the plot has been worth, newest first.",
+        "description": "Purchase price and valuations for the land record, newest first.",
         "operationId": "listLandValuations",
         "parameters": [
           {
@@ -4593,16 +4607,16 @@
             }
           },
           {
-            "name": "include_deleted",
+            "name": "include_archived",
             "in": "query",
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include archived entries",
+              "description": "Include archived valuations",
               "default": false,
-              "title": "Include Deleted"
+              "title": "Include Archived"
             },
-            "description": "Include archived entries"
+            "description": "Include archived valuations"
           },
           {
             "name": "limit",
@@ -4681,9 +4695,9 @@
         "tags": [
           "lands"
         ],
-        "summary": "Add Land Valuation",
-        "description": "The first entry fixes the currency every later one has to use.",
-        "operationId": "addLandValuation",
+        "summary": "Create Land Valuation",
+        "description": "The first valuation sets the currency. Later valuations must use the same currency.",
+        "operationId": "createLandValuation",
         "parameters": [
           {
             "name": "land_id",
@@ -4739,7 +4753,7 @@
             "description": "Not found"
           },
           "409": {
-            "description": "It already records what it was bought for"
+            "description": "The land record already has a purchase price"
           },
           "422": {
             "description": "Validation Error",
@@ -4819,7 +4833,7 @@
             "description": "Not found"
           },
           "409": {
-            "description": "It already records what it was bought for"
+            "description": "The land record already has a purchase price"
           },
           "422": {
             "description": "Validation Error",
@@ -4835,13 +4849,15 @@
             "description": "Bad Request: the body could not be parsed"
           }
         }
-      },
-      "delete": {
+      }
+    },
+    "/api/land-valuations/{valuation_id}/archive": {
+      "post": {
         "tags": [
           "lands"
         ],
-        "summary": "Delete Land Valuation",
-        "operationId": "deleteLandValuation",
+        "summary": "Archive Land Valuation",
+        "operationId": "archiveLandValuation",
         "parameters": [
           {
             "name": "valuation_id",
@@ -4962,7 +4978,7 @@
           "map"
         ],
         "summary": "Get Map Settings",
-        "description": "Where the map gets its tiles. Set SETOUT_MAP_TILE_URL to use your own.",
+        "description": "The map tile source. Set SETOUT_MAP_TILE_URL to use a different tile server.",
         "operationId": "getMapSettings",
         "parameters": [
           {
@@ -5015,7 +5031,7 @@
           "geocode"
         ],
         "summary": "Reverse Geocode",
-        "description": "What the map calls this spot, or nothing when the geocoder is off or out of reach.",
+        "description": "The address at these coordinates, or null when geocoding is disabled or unavailable.",
         "operationId": "reverseGeocode",
         "parameters": [
           {
@@ -5407,13 +5423,15 @@
             "description": "Bad Request: the body could not be parsed"
           }
         }
-      },
-      "delete": {
+      }
+    },
+    "/api/vendors/{vendor_id}/archive": {
+      "post": {
         "tags": [
           "vendors"
         ],
-        "summary": "Delete Vendor",
-        "operationId": "deleteVendor",
+        "summary": "Archive Vendor",
+        "operationId": "archiveVendor",
         "parameters": [
           {
             "name": "vendor_id",
@@ -5528,13 +5546,13 @@
         }
       }
     },
-    "/api/vendors/{vendor_id}/spend": {
+    "/api/vendors/{vendor_id}/expense-summary": {
       "get": {
         "tags": [
           "vendors"
         ],
-        "summary": "Get Vendor Spend",
-        "operationId": "getVendorSpend",
+        "summary": "Get Vendor Expense Summary",
+        "operationId": "getVendorExpenseSummary",
         "parameters": [
           {
             "name": "vendor_id",
@@ -5568,7 +5586,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VendorSpend"
+                  "$ref": "#/components/schemas/VendorExpenseSummary"
                 }
               }
             }
@@ -5971,13 +5989,15 @@
             "description": "Bad Request: the body could not be parsed"
           }
         }
-      },
-      "delete": {
+      }
+    },
+    "/api/people/{person_id}/archive": {
+      "post": {
         "tags": [
           "people"
         ],
-        "summary": "Delete Person",
-        "operationId": "deletePerson",
+        "summary": "Archive Person",
+        "operationId": "archivePerson",
         "parameters": [
           {
             "name": "person_id",
@@ -6092,13 +6112,13 @@
         }
       }
     },
-    "/api/people/{person_id}/spend": {
+    "/api/people/{person_id}/expense-summary": {
       "get": {
         "tags": [
           "people"
         ],
-        "summary": "Get Person Spend",
-        "operationId": "getPersonSpend",
+        "summary": "Get Person Expense Summary",
+        "operationId": "getPersonExpenseSummary",
         "parameters": [
           {
             "name": "person_id",
@@ -6132,7 +6152,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PersonSpend"
+                  "$ref": "#/components/schemas/PersonExpenseSummary"
                 }
               }
             }
@@ -6174,14 +6194,14 @@
             }
           },
           {
-            "name": "include_deleted",
+            "name": "include_archived",
             "in": "query",
             "required": false,
             "schema": {
               "type": "boolean",
               "description": "Include archived agreements",
               "default": false,
-              "title": "Include Deleted"
+              "title": "Include Archived"
             },
             "description": "Include archived agreements"
           },
@@ -6262,8 +6282,8 @@
         "tags": [
           "agreements"
         ],
-        "summary": "Add Agreement",
-        "operationId": "addAgreement",
+        "summary": "Create Agreement",
+        "operationId": "createAgreement",
         "parameters": [
           {
             "name": "project_id",
@@ -6471,13 +6491,15 @@
             "description": "Bad Request: the body could not be parsed"
           }
         }
-      },
-      "delete": {
+      }
+    },
+    "/api/agreements/{agreement_id}/archive": {
+      "post": {
         "tags": [
           "agreements"
         ],
-        "summary": "Delete Agreement",
-        "operationId": "deleteAgreement",
+        "summary": "Archive Agreement",
+        "operationId": "archiveAgreement",
         "parameters": [
           {
             "name": "agreement_id",
@@ -6610,14 +6632,14 @@
             }
           },
           {
-            "name": "include_deleted",
+            "name": "include_archived",
             "in": "query",
             "required": false,
             "schema": {
               "type": "boolean",
               "description": "Include archived advances",
               "default": false,
-              "title": "Include Deleted"
+              "title": "Include Archived"
             },
             "description": "Include archived advances"
           },
@@ -6698,8 +6720,8 @@
         "tags": [
           "agreements"
         ],
-        "summary": "Add Advance",
-        "operationId": "addAdvance",
+        "summary": "Create Advance",
+        "operationId": "createAdvance",
         "parameters": [
           {
             "name": "project_id",
@@ -6845,13 +6867,15 @@
             "description": "Bad Request: the body could not be parsed"
           }
         }
-      },
-      "delete": {
+      }
+    },
+    "/api/advances/{advance_id}/archive": {
+      "post": {
         "tags": [
           "agreements"
         ],
-        "summary": "Delete Advance",
-        "operationId": "deleteAdvance",
+        "summary": "Archive Advance",
+        "operationId": "archiveAdvance",
         "parameters": [
           {
             "name": "advance_id",
@@ -7075,11 +7099,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Only what has not arrived",
+              "description": "Only deliveries not yet received",
               "default": false,
               "title": "Outstanding Only"
             },
-            "description": "Only what has not arrived"
+            "description": "Only deliveries not yet received"
           },
           {
             "name": "received_only",
@@ -7087,21 +7111,21 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Only what has arrived",
+              "description": "Only received deliveries",
               "default": false,
               "title": "Received Only"
             },
-            "description": "Only what has arrived"
+            "description": "Only received deliveries"
           },
           {
-            "name": "include_deleted",
+            "name": "include_archived",
             "in": "query",
             "required": false,
             "schema": {
               "type": "boolean",
               "description": "Include archived deliveries",
               "default": false,
-              "title": "Include Deleted"
+              "title": "Include Archived"
             },
             "description": "Include archived deliveries"
           },
@@ -7182,8 +7206,8 @@
         "tags": [
           "deliveries"
         ],
-        "summary": "Add Delivery",
-        "operationId": "addDelivery",
+        "summary": "Create Delivery",
+        "operationId": "createDelivery",
         "parameters": [
           {
             "name": "project_id",
@@ -7289,11 +7313,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Only what has not arrived",
+              "description": "Only deliveries not yet received",
               "default": false,
               "title": "Outstanding Only"
             },
-            "description": "Only what has not arrived"
+            "description": "Only deliveries not yet received"
           },
           {
             "name": "received_only",
@@ -7301,21 +7325,21 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Only what has arrived",
+              "description": "Only received deliveries",
               "default": false,
               "title": "Received Only"
             },
-            "description": "Only what has arrived"
+            "description": "Only received deliveries"
           },
           {
-            "name": "include_deleted",
+            "name": "include_archived",
             "in": "query",
             "required": false,
             "schema": {
               "type": "boolean",
               "description": "Include archived deliveries",
               "default": false,
-              "title": "Include Deleted"
+              "title": "Include Archived"
             },
             "description": "Include archived deliveries"
           },
@@ -7527,61 +7551,6 @@
             "description": "Bad Request: the body could not be parsed"
           }
         }
-      },
-      "delete": {
-        "tags": [
-          "deliveries"
-        ],
-        "summary": "Delete Delivery",
-        "operationId": "deleteDelivery",
-        "parameters": [
-          {
-            "name": "delivery_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Delivery Id"
-            }
-          },
-          {
-            "name": "setout_session",
-            "in": "cookie",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Setout Session"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "401": {
-            "description": "Not authenticated"
-          },
-          "404": {
-            "description": "Not found"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/api/deliveries/{delivery_id}/received": {
@@ -7710,6 +7679,63 @@
         }
       }
     },
+    "/api/deliveries/{delivery_id}/archive": {
+      "post": {
+        "tags": [
+          "deliveries"
+        ],
+        "summary": "Archive Delivery",
+        "operationId": "archiveDelivery",
+        "parameters": [
+          {
+            "name": "delivery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Delivery Id"
+            }
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/deliveries/{delivery_id}/restore": {
       "post": {
         "tags": [
@@ -7780,7 +7806,7 @@
           "import"
         ],
         "summary": "Preview Import",
-        "description": "Say what the file holds and what would happen. Writes nothing.",
+        "description": "Preview what the file contains and what an import would change. Writes nothing.",
         "operationId": "previewImport",
         "parameters": [
           {
@@ -7903,7 +7929,7 @@
           "import"
         ],
         "summary": "Export Project",
-        "description": "The project as a workbook shaped like the one it came from.",
+        "description": "Export the project as a workbook in the import format.",
         "operationId": "exportProject",
         "parameters": [
           {
@@ -7961,8 +7987,8 @@
         "tags": [
           "import"
         ],
-        "summary": "Import Sample",
-        "description": "Something to fill in, for somebody with nothing to import yet.",
+        "summary": "Download Import Template",
+        "description": "Download an import template.",
         "operationId": "importSample",
         "parameters": [
           {
@@ -7972,11 +7998,11 @@
             "schema": {
               "type": "string",
               "pattern": "^(blank|example|budget-csv|spending-csv)$",
-              "description": "An empty workbook, one with rows to copy, or either sheet as a CSV",
+              "description": "An empty workbook, a workbook with example rows, or either sheet as a CSV",
               "default": "blank",
               "title": "Kind"
             },
-            "description": "An empty workbook, one with rows to copy, or either sheet as a CSV"
+            "description": "An empty workbook, a workbook with example rows, or either sheet as a CSV"
           },
           {
             "name": "setout_session",
@@ -7997,7 +8023,7 @@
         ],
         "responses": {
           "200": {
-            "description": "A sheet to start from",
+            "description": "The import template",
             "content": {
               "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
                 "schema": {
@@ -8041,16 +8067,16 @@
             }
           },
           {
-            "name": "include_deleted",
+            "name": "include_archived",
             "in": "query",
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include archived files",
+              "description": "Include archived attachments",
               "default": false,
-              "title": "Include Deleted"
+              "title": "Include Archived"
             },
-            "description": "Include archived files"
+            "description": "Include archived attachments"
           },
           {
             "name": "limit",
@@ -8131,8 +8157,8 @@
         "tags": [
           "attachments"
         ],
-        "summary": "Add Attachment",
-        "operationId": "addAttachment",
+        "summary": "Create Attachment",
+        "operationId": "createAttachment",
         "parameters": [
           {
             "name": "project_id",
@@ -8174,7 +8200,7 @@
           "content": {
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/Body_addAttachment"
+                "$ref": "#/components/schemas/Body_createAttachment"
               }
             }
           }
@@ -8200,7 +8226,7 @@
             "description": "File too large"
           },
           "415": {
-            "description": "Not a photograph or a PDF"
+            "description": "Not an image or a PDF"
           },
           "422": {
             "description": "Validation Error",
@@ -8280,61 +8306,6 @@
             }
           }
         }
-      },
-      "delete": {
-        "tags": [
-          "attachments"
-        ],
-        "summary": "Delete Attachment",
-        "operationId": "deleteAttachment",
-        "parameters": [
-          {
-            "name": "attachment_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Attachment Id"
-            }
-          },
-          {
-            "name": "setout_session",
-            "in": "cookie",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Setout Session"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "401": {
-            "description": "Not authenticated"
-          },
-          "404": {
-            "description": "Not found"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/api/attachments/{attachment_id}/file": {
@@ -8343,7 +8314,7 @@
           "attachments"
         ],
         "summary": "Download Attachment",
-        "description": "The file. Where the store can hand out a link of its own, this redirects\nto it and the bytes never pass through Setout.",
+        "description": "Serve the file inline, for the browser to display. Redirects to the storage URL when the\nstore provides one.",
         "operationId": "downloadAttachment",
         "parameters": [
           {
@@ -8374,7 +8345,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The file itself",
+            "description": "The file contents",
             "content": {
               "application/octet-stream": {
                 "schema": {
@@ -8383,6 +8354,63 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/attachments/{attachment_id}/archive": {
+      "post": {
+        "tags": [
+          "attachments"
+        ],
+        "summary": "Archive Attachment",
+        "operationId": "archiveAttachment",
+        "parameters": [
+          {
+            "name": "attachment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "401": {
             "description": "Not authenticated"
@@ -8473,7 +8501,7 @@
           "search"
         ],
         "summary": "Search",
-        "description": "Everything the record holds that matches, one group per kind.",
+        "description": "All matching records, grouped by kind.",
         "operationId": "search",
         "parameters": [
           {
@@ -8483,11 +8511,11 @@
             "schema": {
               "type": "string",
               "maxLength": 120,
-              "description": "What to look for",
+              "description": "Search text",
               "default": "",
               "title": "Q"
             },
-            "description": "What to look for"
+            "description": "Search text"
           },
           {
             "name": "limit",
@@ -8497,11 +8525,11 @@
               "type": "integer",
               "maximum": 50,
               "minimum": 1,
-              "description": "Rows per kind",
+              "description": "Results per kind",
               "default": 12,
               "title": "Limit"
             },
-            "description": "Rows per kind"
+            "description": "Results per kind"
           },
           {
             "name": "setout_session",
@@ -8553,7 +8581,7 @@
           "home"
         ],
         "summary": "Get Summary",
-        "description": "The totals and what needs attention, for one currency.",
+        "description": "Totals and alerts for one currency.",
         "operationId": "getHomeSummary",
         "parameters": [
           {
@@ -8571,10 +8599,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Which currency to read. Falls back to the account's, then the first in use",
+              "description": "Currency to report. Defaults to the base currency, then the first in use",
               "title": "Currency"
             },
-            "description": "Which currency to read. Falls back to the account's, then the first in use"
+            "description": "Currency to report. Defaults to the base currency, then the first in use"
           },
           {
             "name": "setout_session",
@@ -8626,7 +8654,7 @@
           "home"
         ],
         "summary": "Get Months",
-        "description": "Spend by calendar month, for one currency.",
+        "description": "Expenses by calendar month, for one currency.",
         "operationId": "getHomeMonths",
         "parameters": [
           {
@@ -8644,10 +8672,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Which currency to read. Falls back to the account's, then the first in use",
+              "description": "Currency to report. Defaults to the base currency, then the first in use",
               "title": "Currency"
             },
-            "description": "Which currency to read. Falls back to the account's, then the first in use"
+            "description": "Currency to report. Defaults to the base currency, then the first in use"
           },
           {
             "name": "setout_session",
@@ -8699,7 +8727,7 @@
           "home"
         ],
         "summary": "Get Projects",
-        "description": "Every open project kept in one currency, with how it stands.",
+        "description": "Projects that are not archived, in one currency, with budgeted and spent amounts.",
         "operationId": "getHomeProjects",
         "parameters": [
           {
@@ -8717,10 +8745,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Which currency to read. Falls back to the account's, then the first in use",
+              "description": "Currency to report. Defaults to the base currency, then the first in use",
               "title": "Currency"
             },
-            "description": "Which currency to read. Falls back to the account's, then the first in use"
+            "description": "Currency to report. Defaults to the base currency, then the first in use"
           },
           {
             "name": "setout_session",
@@ -8772,7 +8800,7 @@
           "home"
         ],
         "summary": "Get Latest",
-        "description": "The last few expenses recorded in one currency.",
+        "description": "The most recent expenses in one currency.",
         "operationId": "getHomeLatest",
         "parameters": [
           {
@@ -8790,10 +8818,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Which currency to read. Falls back to the account's, then the first in use",
+              "description": "Currency to report. Defaults to the base currency, then the first in use",
               "title": "Currency"
             },
-            "description": "Which currency to read. Falls back to the account's, then the first in use"
+            "description": "Currency to report. Defaults to the base currency, then the first in use"
           },
           {
             "name": "setout_session",
@@ -9010,7 +9038,7 @@
             "format": "date-time",
             "title": "Updated At"
           },
-          "deleted_at": {
+          "archived_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -9020,7 +9048,7 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At"
+            "title": "Archived At"
           }
         },
         "type": "object",
@@ -9034,7 +9062,7 @@
           "notes",
           "created_at",
           "updated_at",
-          "deleted_at"
+          "archived_at"
         ],
         "title": "AdvanceRead"
       },
@@ -9204,7 +9232,7 @@
             "format": "date-time",
             "title": "Updated At"
           },
-          "deleted_at": {
+          "archived_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -9214,7 +9242,7 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At"
+            "title": "Archived At"
           }
         },
         "type": "object",
@@ -9230,7 +9258,7 @@
           "notes",
           "created_at",
           "updated_at",
-          "deleted_at"
+          "archived_at"
         ],
         "title": "AgreementRead"
       },
@@ -9348,7 +9376,7 @@
             "format": "date-time",
             "title": "Updated At"
           },
-          "deleted_at": {
+          "archived_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -9358,7 +9386,7 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At"
+            "title": "Archived At"
           }
         },
         "type": "object",
@@ -9372,7 +9400,7 @@
           "checksum",
           "created_at",
           "updated_at",
-          "deleted_at"
+          "archived_at"
         ],
         "title": "AttachmentRead"
       },
@@ -9410,12 +9438,12 @@
           "format": {
             "type": "integer",
             "title": "Format",
-            "description": "The layout of this file. Bumped when it changes"
+            "description": "The backup format version. Incremented when the format changes"
           },
           "app_version": {
             "type": "string",
             "title": "App Version",
-            "description": "The Setout that wrote it"
+            "description": "The Setout version that created the backup"
           },
           "migration": {
             "anyOf": [
@@ -9427,7 +9455,7 @@
               }
             ],
             "title": "Migration",
-            "description": "The schema the rows came out of"
+            "description": "The last migration applied when the backup was created"
           },
           "exported_at": {
             "type": "string",
@@ -9440,7 +9468,7 @@
             },
             "type": "object",
             "title": "Row Counts",
-            "description": "Rows per table, for reading at a glance"
+            "description": "Row count per table"
           },
           "tables": {
             "additionalProperties": {
@@ -9467,35 +9495,35 @@
         ],
         "title": "Backup"
       },
-      "Body_addAttachment": {
+      "Body_createAttachment": {
         "properties": {
           "file": {
             "type": "string",
             "contentMediaType": "application/octet-stream",
             "title": "File",
-            "description": "The photograph or PDF"
+            "description": "An image or a PDF"
           }
         },
         "type": "object",
         "required": [
           "file"
         ],
-        "title": "Body_addAttachment"
+        "title": "Body_createAttachment"
       },
-      "Body_addLandDocument": {
+      "Body_createLandDocument": {
         "properties": {
           "file": {
             "type": "string",
             "contentMediaType": "application/octet-stream",
             "title": "File",
-            "description": "The scan or PDF"
+            "description": "An image or a PDF"
           },
           "kind": {
             "$ref": "#/components/schemas/LandDocumentKind",
             "description": "The document type",
             "default": "other"
           },
-          "note": {
+          "notes": {
             "anyOf": [
               {
                 "type": "string",
@@ -9505,15 +9533,15 @@
                 "type": "null"
               }
             ],
-            "title": "Note",
-            "description": "What it actually is, when the kind will not say"
+            "title": "Notes",
+            "description": "Describe this document, when the type is Other"
           }
         },
         "type": "object",
         "required": [
           "file"
         ],
-        "title": "Body_addLandDocument"
+        "title": "Body_createLandDocument"
       },
       "Body_previewImport": {
         "properties": {
@@ -9533,7 +9561,7 @@
               }
             ],
             "title": "Project Id",
-            "description": "Leave out to start a project"
+            "description": "Omit to create a new project"
           },
           "name": {
             "type": "string",
@@ -9600,7 +9628,7 @@
           },
           "several_codes": {
             "type": "string",
-            "pattern": "^(first|uncategorized)$",
+            "pattern": "^(first|uncategorised)$",
             "title": "Several Codes",
             "default": "first"
           }
@@ -9717,7 +9745,7 @@
             "format": "date-time",
             "title": "Updated At"
           },
-          "deleted_at": {
+          "archived_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -9727,7 +9755,7 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At"
+            "title": "Archived At"
           }
         },
         "type": "object",
@@ -9740,7 +9768,7 @@
           "set_at",
           "created_at",
           "updated_at",
-          "deleted_at"
+          "archived_at"
         ],
         "title": "BudgetItemRead"
       },
@@ -9786,7 +9814,7 @@
         "type": "object",
         "title": "BudgetItemUpdate"
       },
-      "BulkFileExpenses": {
+      "BulkCategoriseExpenses": {
         "properties": {
           "expense_ids": {
             "items": {
@@ -9795,7 +9823,7 @@
             "type": "array",
             "minItems": 1,
             "title": "Expense Ids",
-            "description": "Uncategorized expenses to assign"
+            "description": "Uncategorised expenses to assign"
           },
           "category_id": {
             "type": "string",
@@ -9808,21 +9836,21 @@
           "expense_ids",
           "category_id"
         ],
-        "title": "BulkFileExpenses"
+        "title": "BulkCategoriseExpenses"
       },
-      "BulkFileResult": {
+      "BulkCategoriseResult": {
         "properties": {
-          "filed_count": {
+          "categorised_count": {
             "type": "integer",
-            "title": "Filed Count",
-            "description": "How many uncategorized expenses were assigned"
+            "title": "Categorised Count",
+            "description": "How many uncategorised expenses were assigned"
           }
         },
         "type": "object",
         "required": [
-          "filed_count"
+          "categorised_count"
         ],
-        "title": "BulkFileResult"
+        "title": "BulkCategoriseResult"
       },
       "CategoryCreate": {
         "properties": {
@@ -10008,7 +10036,7 @@
             "format": "date-time",
             "title": "Updated At"
           },
-          "deleted_at": {
+          "archived_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -10018,7 +10046,7 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At"
+            "title": "Archived At"
           }
         },
         "type": "object",
@@ -10038,7 +10066,7 @@
           "own_expense_count",
           "created_at",
           "updated_at",
-          "deleted_at"
+          "archived_at"
         ],
         "title": "CategoryRead"
       },
@@ -10054,7 +10082,7 @@
               }
             ],
             "title": "Category Id",
-            "description": "The category past purchases used most often"
+            "description": "The category past expenses used most often"
           },
           "reason": {
             "anyOf": [
@@ -10158,27 +10186,27 @@
           "projects": {
             "type": "integer",
             "title": "Projects",
-            "description": "Not counting deleted ones"
+            "description": "Excludes archived projects"
           },
           "vendors": {
             "type": "integer",
             "title": "Vendors",
-            "description": "Not counting archived ones"
+            "description": "Excludes archived records"
           },
           "items": {
             "type": "integer",
             "title": "Items",
-            "description": "Not counting archived ones"
+            "description": "Excludes archived records"
           },
           "people": {
             "type": "integer",
             "title": "People",
-            "description": "Not counting archived ones"
+            "description": "Excludes archived records"
           },
           "lands": {
             "type": "integer",
             "title": "Lands",
-            "description": "Not counting archived ones"
+            "description": "Excludes archived records"
           }
         },
         "type": "object",
@@ -10201,16 +10229,16 @@
             "type": "integer",
             "title": "Currency Exponent"
           },
-          "projects": {
+          "project_count": {
             "type": "integer",
-            "title": "Projects"
+            "title": "Project Count"
           }
         },
         "type": "object",
         "required": [
           "currency_code",
           "currency_exponent",
-          "projects"
+          "project_count"
         ],
         "title": "CurrencyChoice"
       },
@@ -10277,7 +10305,7 @@
           "unpaid",
           "no_description",
           "above_any_category",
-          "owed_not_importable",
+          "outstanding_not_importable",
           "duplicates"
         ],
         "title": "DecisionKind"
@@ -10302,7 +10330,7 @@
             "title": "Description",
             "description": "What is outstanding. Defaults to the expense description"
           },
-          "promised": {
+          "expected": {
             "anyOf": [
               {
                 "type": "string",
@@ -10312,8 +10340,8 @@
                 "type": "null"
               }
             ],
-            "title": "Promised",
-            "description": "When it was promised, in words"
+            "title": "Expected",
+            "description": "When delivery is expected"
           }
         },
         "type": "object",
@@ -10335,10 +10363,10 @@
             "type": "integer",
             "title": "Total"
           },
-          "owed_amount": {
+          "outstanding_amount": {
             "type": "integer",
-            "title": "Owed Amount",
-            "description": "Outstanding amount across every matching row, in one project's currency"
+            "title": "Outstanding Amount",
+            "description": "Total outstanding amount of all matching rows, in the project currency"
           },
           "limit": {
             "type": "integer",
@@ -10353,7 +10381,7 @@
         "required": [
           "items",
           "total",
-          "owed_amount",
+          "outstanding_amount",
           "limit",
           "offset"
         ],
@@ -10399,7 +10427,7 @@
             "type": "string",
             "title": "Description"
           },
-          "promised": {
+          "expected": {
             "anyOf": [
               {
                 "type": "string"
@@ -10408,12 +10436,12 @@
                 "type": "null"
               }
             ],
-            "title": "Promised"
+            "title": "Expected"
           },
           "amount": {
             "type": "integer",
             "title": "Amount",
-            "description": "Read from the expense that paid for it"
+            "description": "Taken from the expense that paid for the delivery"
           },
           "currency_code": {
             "type": "string",
@@ -10450,7 +10478,7 @@
             "format": "date-time",
             "title": "Updated At"
           },
-          "deleted_at": {
+          "archived_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -10460,7 +10488,7 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At"
+            "title": "Archived At"
           }
         },
         "type": "object",
@@ -10471,7 +10499,7 @@
           "vendor_id",
           "vendor_name",
           "description",
-          "promised",
+          "expected",
           "amount",
           "currency_code",
           "currency_exponent",
@@ -10479,7 +10507,7 @@
           "received_at",
           "created_at",
           "updated_at",
-          "deleted_at"
+          "archived_at"
         ],
         "title": "DeliveryRead"
       },
@@ -10498,7 +10526,7 @@
             ],
             "title": "Description"
           },
-          "promised": {
+          "expected": {
             "anyOf": [
               {
                 "type": "string"
@@ -10507,7 +10535,7 @@
                 "type": "null"
               }
             ],
-            "title": "Promised"
+            "title": "Expected"
           }
         },
         "additionalProperties": false,
@@ -10558,7 +10586,7 @@
               }
             ],
             "title": "Category Id",
-            "description": "Leave empty to file it later"
+            "description": "Leave empty to categorise later"
           },
           "item_id": {
             "anyOf": [
@@ -10570,7 +10598,7 @@
               }
             ],
             "title": "Item Id",
-            "description": "What was bought, to build its price history"
+            "description": "The item bought. Used to build its price history"
           },
           "vendor_id": {
             "anyOf": [
@@ -10582,7 +10610,7 @@
               }
             ],
             "title": "Vendor Id",
-            "description": "Who it was bought from"
+            "description": "The vendor paid"
           },
           "agreement_id": {
             "anyOf": [
@@ -10594,7 +10622,7 @@
               }
             ],
             "title": "Agreement Id",
-            "description": "A part payment against what was agreed"
+            "description": "The agreement this expense is a part payment towards"
           },
           "paid_by_id": {
             "anyOf": [
@@ -10606,7 +10634,7 @@
               }
             ],
             "title": "Paid By Id",
-            "description": "Who paid"
+            "description": "The person who paid. Null when you paid"
           },
           "quantity": {
             "anyOf": [
@@ -10661,7 +10689,7 @@
           "auto_categorize": {
             "type": "boolean",
             "title": "Auto Categorize",
-            "description": "Use past purchases to choose the category when none is given",
+            "description": "Use past expenses to choose the category when none is given",
             "default": true
           }
         },
@@ -10687,7 +10715,7 @@
           "total_amount": {
             "type": "integer",
             "title": "Total Amount",
-            "description": "What everything matching adds up to, not just this page"
+            "description": "Total amount of all matching expenses, not only this page"
           },
           "limit": {
             "type": "integer",
@@ -10832,7 +10860,7 @@
           "attachment_count": {
             "type": "integer",
             "title": "Attachment Count",
-            "description": "How many files are attached"
+            "description": "Number of attachments"
           },
           "created_at": {
             "type": "string",
@@ -10844,7 +10872,7 @@
             "format": "date-time",
             "title": "Updated At"
           },
-          "deleted_at": {
+          "archived_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -10854,7 +10882,7 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At"
+            "title": "Archived At"
           }
         },
         "type": "object",
@@ -10876,7 +10904,7 @@
           "attachment_count",
           "created_at",
           "updated_at",
-          "deleted_at"
+          "archived_at"
         ],
         "title": "ExpenseRead"
       },
@@ -11062,7 +11090,7 @@
               }
             ],
             "title": "City",
-            "description": "Town, village or suburb, whichever it gave"
+            "description": "Town, village or suburb, as returned by the geocoder"
           },
           "state": {
             "anyOf": [
@@ -11090,7 +11118,7 @@
         },
         "type": "object",
         "title": "GeocodedPlace",
-        "description": "What the map calls a spot. Every part is optional: a geocoder answers with\nwhat it knows, and open country knows no street."
+        "description": "The address at a coordinate. Every field is optional, because the geocoder\nreturns only the parts it has."
       },
       "HTTPValidationError": {
         "properties": {
@@ -11215,7 +11243,7 @@
           "total": {
             "type": "integer",
             "title": "Total",
-            "description": "Everything that matched, not only what is listed"
+            "description": "Total matches, including those not listed"
           },
           "hits": {
             "items": {
@@ -11266,11 +11294,72 @@
         ],
         "title": "HomeAlert"
       },
+      "HomeExpenseSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "project_name": {
+            "type": "string",
+            "title": "Project Name"
+          },
+          "currency_code": {
+            "type": "string",
+            "title": "Currency Code"
+          },
+          "currency_exponent": {
+            "type": "integer",
+            "title": "Currency Exponent"
+          },
+          "category_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "spent_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Spent On"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "project_name",
+          "currency_code",
+          "currency_exponent",
+          "category_name",
+          "description",
+          "amount",
+          "spent_on"
+        ],
+        "title": "HomeExpenseSummary"
+      },
       "HomeLatest": {
         "properties": {
           "rows": {
             "items": {
-              "$ref": "#/components/schemas/HomeSpend"
+              "$ref": "#/components/schemas/HomeExpenseSummary"
             },
             "type": "array",
             "title": "Rows"
@@ -11332,7 +11421,7 @@
             "type": "array",
             "title": "Months"
           },
-          "busiest_month": {
+          "highest_month": {
             "anyOf": [
               {
                 "type": "string"
@@ -11341,7 +11430,7 @@
                 "type": "null"
               }
             ],
-            "title": "Busiest Month"
+            "title": "Highest Month"
           }
         },
         "type": "object",
@@ -11349,7 +11438,7 @@
           "currency_code",
           "currency_exponent",
           "months",
-          "busiest_month"
+          "highest_month"
         ],
         "title": "HomeMonths"
       },
@@ -11412,73 +11501,12 @@
         ],
         "title": "HomeProjects"
       },
-      "HomeSpend": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "project_id": {
-            "type": "string",
-            "title": "Project Id"
-          },
-          "project_name": {
-            "type": "string",
-            "title": "Project Name"
-          },
-          "currency_code": {
-            "type": "string",
-            "title": "Currency Code"
-          },
-          "currency_exponent": {
-            "type": "integer",
-            "title": "Currency Exponent"
-          },
-          "category_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Category Name"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description"
-          },
-          "amount": {
-            "type": "integer",
-            "title": "Amount"
-          },
-          "spent_on": {
-            "type": "string",
-            "format": "date",
-            "title": "Spent On"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "project_id",
-          "project_name",
-          "currency_code",
-          "currency_exponent",
-          "category_name",
-          "description",
-          "amount",
-          "spent_on"
-        ],
-        "title": "HomeSpend"
-      },
       "HomeSummary": {
         "properties": {
-          "projects": {
+          "project_count": {
             "type": "integer",
-            "title": "Projects",
-            "description": "Every project, whatever its currency"
+            "title": "Project Count",
+            "description": "All projects, in any currency"
           },
           "currencies": {
             "items": {
@@ -11509,9 +11537,9 @@
             ],
             "title": "Currency Exponent"
           },
-          "currency_projects": {
+          "currency_project_count": {
             "type": "integer",
-            "title": "Currency Projects",
+            "title": "Currency Project Count",
             "description": "Projects using this currency",
             "default": 0
           },
@@ -11533,7 +11561,7 @@
         },
         "type": "object",
         "required": [
-          "projects",
+          "project_count",
           "currencies",
           "currency_code",
           "currency_exponent",
@@ -11542,7 +11570,7 @@
           "alerts"
         ],
         "title": "HomeSummary",
-        "description": "The figures for one currency. Nothing here is ever added across two."
+        "description": "Figures for one currency. Amounts in different currencies are never added together."
       },
       "ImportReport": {
         "properties": {
@@ -11598,13 +11626,13 @@
             "type": "integer",
             "title": "Budgeted Lines"
           },
-          "spend_rows": {
+          "expense_rows": {
             "type": "integer",
-            "title": "Spend Rows"
+            "title": "Expense Rows"
           },
-          "spend_amount": {
+          "spent_amount": {
             "type": "integer",
-            "title": "Spend Amount"
+            "title": "Spent Amount"
           },
           "vendors_new": {
             "type": "integer",
@@ -11614,9 +11642,9 @@
             "type": "integer",
             "title": "Vendors Known"
           },
-          "owed_rows": {
+          "outstanding_rows": {
             "type": "integer",
-            "title": "Owed Rows"
+            "title": "Outstanding Rows"
           },
           "decisions": {
             "items": {
@@ -11653,11 +11681,11 @@
           "categories",
           "budgeted_amount",
           "budgeted_lines",
-          "spend_rows",
-          "spend_amount",
+          "expense_rows",
+          "spent_amount",
           "vendors_new",
           "vendors_known",
-          "owed_rows",
+          "outstanding_rows",
           "decisions",
           "sample",
           "left_behind"
@@ -11674,33 +11702,33 @@
             "type": "string",
             "title": "Project Name"
           },
-          "categories": {
+          "category_count": {
             "type": "integer",
-            "title": "Categories"
+            "title": "Category Count"
           },
-          "budget_items": {
+          "budget_item_count": {
             "type": "integer",
-            "title": "Budget Items"
+            "title": "Budget Item Count"
           },
           "budgeted_amount": {
             "type": "integer",
             "title": "Budgeted Amount"
           },
-          "expenses": {
+          "expense_count": {
             "type": "integer",
-            "title": "Expenses"
+            "title": "Expense Count"
           },
-          "spend_amount": {
+          "spent_amount": {
             "type": "integer",
-            "title": "Spend Amount"
+            "title": "Spent Amount"
           },
-          "vendors": {
+          "vendor_count": {
             "type": "integer",
-            "title": "Vendors"
+            "title": "Vendor Count"
           },
-          "people": {
+          "person_count": {
             "type": "integer",
-            "title": "People"
+            "title": "Person Count"
           },
           "skipped_duplicates": {
             "type": "integer",
@@ -11711,13 +11739,13 @@
         "required": [
           "project_id",
           "project_name",
-          "categories",
-          "budget_items",
+          "category_count",
+          "budget_item_count",
           "budgeted_amount",
-          "expenses",
-          "spend_amount",
-          "vendors",
-          "people",
+          "expense_count",
+          "spent_amount",
+          "vendor_count",
+          "person_count",
           "skipped_duplicates"
         ],
         "title": "ImportResult"
@@ -11738,14 +11766,14 @@
               }
             ],
             "title": "Migration",
-            "description": "The last schema change applied to this record"
+            "description": "The last migration applied to the database"
           },
-          "record_bytes": {
+          "data_bytes": {
             "type": "integer",
-            "title": "Record Bytes",
-            "description": "Everything under the data directory, added up"
+            "title": "Data Bytes",
+            "description": "Total size of the data directory, in bytes"
           },
-          "record_changed_at": {
+          "data_changed_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -11755,16 +11783,16 @@
                 "type": "null"
               }
             ],
-            "title": "Record Changed At",
-            "description": "When anything under the data directory was last written"
+            "title": "Data Changed At",
+            "description": "When a file in the data directory was last modified"
           }
         },
         "type": "object",
         "required": [
           "version",
           "migration",
-          "record_bytes",
-          "record_changed_at"
+          "data_bytes",
+          "data_changed_at"
         ],
         "title": "Install"
       },
@@ -11787,7 +11815,7 @@
               }
             ],
             "title": "Unit",
-            "description": "What the price is quoted in"
+            "description": "The unit the price is quoted in"
           },
           "notes": {
             "anyOf": [
@@ -12057,7 +12085,7 @@
               }
             ],
             "title": "Change Percent",
-            "description": "Null when there is only one price, so nothing to compare"
+            "description": "Null when there is only one price"
           },
           "points": {
             "items": {
@@ -12133,7 +12161,7 @@
               }
             ],
             "title": "Change Percent",
-            "description": "Null when there is only one price, so nothing to compare"
+            "description": "Null when there is only one price"
           }
         },
         "type": "object",
@@ -12244,7 +12272,7 @@
             "format": "date-time",
             "title": "Updated At"
           },
-          "deleted_at": {
+          "archived_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -12254,7 +12282,7 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At"
+            "title": "Archived At"
           }
         },
         "type": "object",
@@ -12267,7 +12295,7 @@
           "prices",
           "created_at",
           "updated_at",
-          "deleted_at"
+          "archived_at"
         ],
         "title": "ItemRead"
       },
@@ -12417,7 +12445,7 @@
               }
             ],
             "title": "Country Code",
-            "description": "Give one and the state is checked against it"
+            "description": "When given, the state is validated against this country"
           },
           "purchased_on": {
             "anyOf": [
@@ -12575,7 +12603,7 @@
           "kind": {
             "$ref": "#/components/schemas/LandDocumentKind"
           },
-          "note": {
+          "notes": {
             "anyOf": [
               {
                 "type": "string"
@@ -12584,7 +12612,7 @@
                 "type": "null"
               }
             ],
-            "title": "Note"
+            "title": "Notes"
           },
           "filename": {
             "type": "string",
@@ -12612,7 +12640,7 @@
             "format": "date-time",
             "title": "Updated At"
           },
-          "deleted_at": {
+          "archived_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -12622,7 +12650,7 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At"
+            "title": "Archived At"
           }
         },
         "type": "object",
@@ -12630,14 +12658,14 @@
           "id",
           "land_id",
           "kind",
-          "note",
+          "notes",
           "filename",
           "content_type",
           "byte_size",
           "checksum",
           "created_at",
           "updated_at",
-          "deleted_at"
+          "archived_at"
         ],
         "title": "LandDocumentRead"
       },
@@ -12653,7 +12681,7 @@
               }
             ]
           },
-          "note": {
+          "notes": {
             "anyOf": [
               {
                 "type": "string",
@@ -12663,7 +12691,7 @@
                 "type": "null"
               }
             ],
-            "title": "Note"
+            "title": "Notes"
           }
         },
         "additionalProperties": false,
@@ -12715,7 +12743,7 @@
             "type": "string",
             "title": "Status"
           },
-          "deleted_at": {
+          "archived_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -12725,7 +12753,7 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At"
+            "title": "Archived At"
           }
         },
         "type": "object",
@@ -12733,7 +12761,7 @@
           "id",
           "name",
           "status",
-          "deleted_at"
+          "archived_at"
         ],
         "title": "LandProject"
       },
@@ -12867,7 +12895,7 @@
               }
             ],
             "title": "Boundary Area Sqm",
-            "description": "Worked out from the boundary, never stored"
+            "description": "Calculated from the boundary; not stored"
           },
           "size_value": {
             "anyOf": [
@@ -12911,7 +12939,7 @@
               }
             ],
             "title": "Currency Code",
-            "description": "Every valuation is in this. Set by the first one"
+            "description": "The currency of every valuation. Set by the first valuation"
           },
           "currency_exponent": {
             "anyOf": [
@@ -12934,7 +12962,7 @@
               }
             ],
             "title": "Purchase Amount",
-            "description": "Minor units. What it was bought for"
+            "description": "Minor units. The purchase price"
           },
           "current_value": {
             "anyOf": [
@@ -12951,13 +12979,13 @@
           "valuation_count": {
             "type": "integer",
             "title": "Valuation Count",
-            "description": "Not counting removed ones",
+            "description": "Excludes archived ones",
             "default": 0
           },
           "document_count": {
             "type": "integer",
             "title": "Document Count",
-            "description": "Not counting removed ones"
+            "description": "Excludes archived ones"
           },
           "missing_kinds": {
             "items": {
@@ -12973,7 +13001,7 @@
             },
             "type": "array",
             "title": "Projects",
-            "description": "What is being built on it"
+            "description": "Projects on this land record"
           },
           "created_at": {
             "type": "string",
@@ -12985,7 +13013,7 @@
             "format": "date-time",
             "title": "Updated At"
           },
-          "deleted_at": {
+          "archived_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -12995,7 +13023,7 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At"
+            "title": "Archived At"
           }
         },
         "type": "object",
@@ -13020,7 +13048,7 @@
           "projects",
           "created_at",
           "updated_at",
-          "deleted_at"
+          "archived_at"
         ],
         "title": "LandRead"
       },
@@ -13107,7 +13135,7 @@
               }
             ],
             "title": "Country Code",
-            "description": "Give one and the state is checked against it"
+            "description": "When given, the state is validated against this country"
           },
           "purchased_on": {
             "anyOf": [
@@ -13224,14 +13252,14 @@
             "maxLength": 3,
             "minLength": 3,
             "title": "Currency Code",
-            "description": "Must match the land's, once it has one"
+            "description": "Must match the land record's currency, once set"
           },
           "valued_on": {
             "type": "string",
             "format": "date",
             "title": "Valued On"
           },
-          "note": {
+          "notes": {
             "anyOf": [
               {
                 "type": "string",
@@ -13241,7 +13269,7 @@
                 "type": "null"
               }
             ],
-            "title": "Note"
+            "title": "Notes"
           }
         },
         "type": "object",
@@ -13322,7 +13350,7 @@
             "format": "date",
             "title": "Valued On"
           },
-          "note": {
+          "notes": {
             "anyOf": [
               {
                 "type": "string"
@@ -13331,7 +13359,7 @@
                 "type": "null"
               }
             ],
-            "title": "Note"
+            "title": "Notes"
           },
           "created_at": {
             "type": "string",
@@ -13343,7 +13371,7 @@
             "format": "date-time",
             "title": "Updated At"
           },
-          "deleted_at": {
+          "archived_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -13353,7 +13381,7 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At"
+            "title": "Archived At"
           }
         },
         "type": "object",
@@ -13365,10 +13393,10 @@
           "currency_code",
           "currency_exponent",
           "valued_on",
-          "note",
+          "notes",
           "created_at",
           "updated_at",
-          "deleted_at"
+          "archived_at"
         ],
         "title": "LandValuationRead"
       },
@@ -13409,7 +13437,7 @@
             ],
             "title": "Valued On"
           },
-          "note": {
+          "notes": {
             "anyOf": [
               {
                 "type": "string",
@@ -13419,26 +13447,12 @@
                 "type": "null"
               }
             ],
-            "title": "Note"
+            "title": "Notes"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "title": "LandValuationUpdate"
-      },
-      "LoginRequest": {
-        "properties": {
-          "password": {
-            "type": "string",
-            "title": "Password",
-            "description": "The passphrase"
-          }
-        },
-        "type": "object",
-        "required": [
-          "password"
-        ],
-        "title": "LoginRequest"
       },
       "MapSettings": {
         "properties": {
@@ -13450,7 +13464,7 @@
           "attribution": {
             "type": "string",
             "title": "Attribution",
-            "description": "Credit the tiles carry, shown on the map"
+            "description": "Tile attribution, shown on the map"
           }
         },
         "type": "object",
@@ -13460,7 +13474,7 @@
         ],
         "title": "MapSettings"
       },
-      "MonthCategorySpend": {
+      "MonthCategoryExpenseSummary": {
         "properties": {
           "category_id": {
             "anyOf": [
@@ -13489,9 +13503,9 @@
           "name",
           "amount"
         ],
-        "title": "MonthCategorySpend"
+        "title": "MonthCategoryExpenseSummary"
       },
-      "MonthSpend": {
+      "MonthExpenseSummary": {
         "properties": {
           "month": {
             "type": "string",
@@ -13508,7 +13522,7 @@
           },
           "categories": {
             "items": {
-              "$ref": "#/components/schemas/MonthCategorySpend"
+              "$ref": "#/components/schemas/MonthCategoryExpenseSummary"
             },
             "type": "array",
             "title": "Categories",
@@ -13522,27 +13536,27 @@
           "expense_count",
           "categories"
         ],
-        "title": "MonthSpend"
+        "title": "MonthExpenseSummary"
       },
-      "PasswordChange": {
+      "PassphraseChange": {
         "properties": {
-          "current_password": {
+          "current_passphrase": {
             "type": "string",
-            "title": "Current Password",
-            "description": "The passphrase in use now"
+            "title": "Current Passphrase",
+            "description": "The current passphrase"
           },
-          "new_password": {
+          "new_passphrase": {
             "type": "string",
             "minLength": 8,
-            "title": "New Password"
+            "title": "New Passphrase"
           }
         },
         "type": "object",
         "required": [
-          "current_password",
-          "new_password"
+          "current_passphrase",
+          "new_passphrase"
         ],
-        "title": "PasswordChange"
+        "title": "PassphraseChange"
       },
       "PersonBalance": {
         "properties": {
@@ -13670,6 +13684,33 @@
         ],
         "title": "PersonCurrencyTotal"
       },
+      "PersonExpenseSummary": {
+        "properties": {
+          "person_id": {
+            "type": "string",
+            "title": "Person Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/PersonProjectExpenseSummary"
+            },
+            "type": "array",
+            "title": "Projects",
+            "description": "Amount paid per project. Two currencies are never added together"
+          }
+        },
+        "type": "object",
+        "required": [
+          "person_id",
+          "name",
+          "projects"
+        ],
+        "title": "PersonExpenseSummary"
+      },
       "PersonPage": {
         "properties": {
           "items": {
@@ -13701,7 +13742,7 @@
         ],
         "title": "PersonPage"
       },
-      "PersonProjectSpend": {
+      "PersonProjectExpenseSummary": {
         "properties": {
           "project_id": {
             "type": "string",
@@ -13737,7 +13778,7 @@
           "expense_count",
           "spent_amount"
         ],
-        "title": "PersonProjectSpend"
+        "title": "PersonProjectExpenseSummary"
       },
       "PersonRead": {
         "properties": {
@@ -13804,7 +13845,7 @@
             "format": "date-time",
             "title": "Updated At"
           },
-          "deleted_at": {
+          "archived_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -13814,7 +13855,7 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At"
+            "title": "Archived At"
           }
         },
         "type": "object",
@@ -13828,36 +13869,9 @@
           "totals",
           "created_at",
           "updated_at",
-          "deleted_at"
+          "archived_at"
         ],
         "title": "PersonRead"
-      },
-      "PersonSpend": {
-        "properties": {
-          "person_id": {
-            "type": "string",
-            "title": "Person Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "projects": {
-            "items": {
-              "$ref": "#/components/schemas/PersonProjectSpend"
-            },
-            "type": "array",
-            "title": "Projects",
-            "description": "What they spent, per project. Two currencies are never added together"
-          }
-        },
-        "type": "object",
-        "required": [
-          "person_id",
-          "name",
-          "projects"
-        ],
-        "title": "PersonSpend"
       },
       "PersonUpdate": {
         "properties": {
@@ -13962,7 +13976,7 @@
             "type": "string",
             "pattern": "^[A-Z]{3}$",
             "title": "Currency Code",
-            "description": "ISO 4217 code. Fixed once the project exists"
+            "description": "ISO 4217 code. Cannot be changed after the project is created"
           },
           "status": {
             "$ref": "#/components/schemas/ProjectStatus",
@@ -13978,7 +13992,7 @@
               }
             ],
             "title": "Land Id",
-            "description": "The plot it is being built on"
+            "description": "The land record the project is on"
           },
           "notes": {
             "anyOf": [
@@ -13998,6 +14012,68 @@
           "currency_code"
         ],
         "title": "ProjectCreate"
+      },
+      "ProjectExpenseSummary": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "currency_code": {
+            "type": "string",
+            "title": "Currency Code"
+          },
+          "currency_exponent": {
+            "type": "integer",
+            "title": "Currency Exponent"
+          },
+          "budgeted_amount": {
+            "type": "integer",
+            "title": "Budgeted Amount"
+          },
+          "spent_amount": {
+            "type": "integer",
+            "title": "Spent Amount"
+          },
+          "uncategorised_amount": {
+            "type": "integer",
+            "title": "Uncategorised Amount"
+          },
+          "uncategorised_count": {
+            "type": "integer",
+            "title": "Uncategorised Count"
+          },
+          "archived_count": {
+            "type": "integer",
+            "title": "Archived Count",
+            "description": "Archived expenses, which are excluded from the total"
+          },
+          "variance_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variance Percent",
+            "description": "Null when there is no budget to compare against, never infinity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "currency_code",
+          "currency_exponent",
+          "budgeted_amount",
+          "spent_amount",
+          "uncategorised_amount",
+          "uncategorised_count",
+          "archived_count",
+          "variance_percent"
+        ],
+        "title": "ProjectExpenseSummary"
       },
       "ProjectMonths": {
         "properties": {
@@ -14019,13 +14095,13 @@
           },
           "months": {
             "items": {
-              "$ref": "#/components/schemas/MonthSpend"
+              "$ref": "#/components/schemas/MonthExpenseSummary"
             },
             "type": "array",
             "title": "Months",
             "description": "Oldest first. Months with no expenses are omitted"
           },
-          "busiest_month": {
+          "highest_month": {
             "anyOf": [
               {
                 "type": "string"
@@ -14034,8 +14110,8 @@
                 "type": "null"
               }
             ],
-            "title": "Busiest Month",
-            "description": "Null until something has been spent"
+            "title": "Highest Month",
+            "description": "Null when there are no expenses"
           }
         },
         "type": "object",
@@ -14045,7 +14121,7 @@
           "currency_exponent",
           "total_amount",
           "months",
-          "busiest_month"
+          "highest_month"
         ],
         "title": "ProjectMonths"
       },
@@ -14152,7 +14228,7 @@
             "format": "date-time",
             "title": "Updated At"
           },
-          "deleted_at": {
+          "archived_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -14162,7 +14238,7 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At"
+            "title": "Archived At"
           }
         },
         "type": "object",
@@ -14179,71 +14255,9 @@
           "notes",
           "created_at",
           "updated_at",
-          "deleted_at"
+          "archived_at"
         ],
         "title": "ProjectRead"
-      },
-      "ProjectSpend": {
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "title": "Project Id"
-          },
-          "currency_code": {
-            "type": "string",
-            "title": "Currency Code"
-          },
-          "currency_exponent": {
-            "type": "integer",
-            "title": "Currency Exponent"
-          },
-          "budgeted_amount": {
-            "type": "integer",
-            "title": "Budgeted Amount"
-          },
-          "spent_amount": {
-            "type": "integer",
-            "title": "Spent Amount"
-          },
-          "uncategorized_amount": {
-            "type": "integer",
-            "title": "Uncategorized Amount"
-          },
-          "uncategorized_count": {
-            "type": "integer",
-            "title": "Uncategorized Count"
-          },
-          "removed_count": {
-            "type": "integer",
-            "title": "Removed Count",
-            "description": "Expenses archived, no longer accounted for in total"
-          },
-          "variance_percent": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Variance Percent",
-            "description": "Null when there is no budget to compare against, never infinity"
-          }
-        },
-        "type": "object",
-        "required": [
-          "project_id",
-          "currency_code",
-          "currency_exponent",
-          "budgeted_amount",
-          "spent_amount",
-          "uncategorized_amount",
-          "uncategorized_count",
-          "removed_count",
-          "variance_percent"
-        ],
-        "title": "ProjectSpend"
       },
       "ProjectStatus": {
         "type": "string",
@@ -14251,7 +14265,7 @@
           "active",
           "on_hold",
           "completed",
-          "archived"
+          "closed"
         ],
         "title": "ProjectStatus"
       },
@@ -14273,13 +14287,13 @@
             "type": "integer",
             "title": "Completed"
           },
+          "closed": {
+            "type": "integer",
+            "title": "Closed"
+          },
           "archived": {
             "type": "integer",
             "title": "Archived"
-          },
-          "deleted": {
-            "type": "integer",
-            "title": "Deleted"
           },
           "currency_codes": {
             "items": {
@@ -14295,8 +14309,8 @@
           "active",
           "on_hold",
           "completed",
+          "closed",
           "archived",
-          "deleted",
           "currency_codes"
         ],
         "title": "ProjectSummary"
@@ -14362,7 +14376,7 @@
           "accept_version_change": {
             "type": "boolean",
             "title": "Accept Version Change",
-            "description": "Required when the file was written by a different Setout or schema",
+            "description": "Required when the backup was created by a different Setout version or schema",
             "default": false
           }
         },
@@ -14385,7 +14399,7 @@
           "signed_out": {
             "type": "boolean",
             "title": "Signed Out",
-            "description": "Always true. The accounts came out of the file, so sessions cannot stand"
+            "description": "Always true. Accounts are replaced from the backup, so all sessions end"
           }
         },
         "type": "object",
@@ -14489,16 +14503,16 @@
             "title": "Email",
             "description": "Optional. Only used to identify the account"
           },
-          "password": {
+          "passphrase": {
             "type": "string",
             "minLength": 8,
-            "title": "Password"
+            "title": "Passphrase"
           }
         },
         "type": "object",
         "required": [
           "name",
-          "password"
+          "passphrase"
         ],
         "title": "SetupRequest"
       },
@@ -14542,6 +14556,20 @@
           "why"
         ],
         "title": "SheetSkipped"
+      },
+      "SignInRequest": {
+        "properties": {
+          "passphrase": {
+            "type": "string",
+            "title": "Passphrase",
+            "description": "The passphrase"
+          }
+        },
+        "type": "object",
+        "required": [
+          "passphrase"
+        ],
+        "title": "SignInRequest"
       },
       "StateRead": {
         "properties": {
@@ -14691,7 +14719,7 @@
             "format": "date-time",
             "title": "Created At"
           },
-          "deleted_at": {
+          "archived_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -14701,7 +14729,7 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At"
+            "title": "Archived At"
           }
         },
         "type": "object",
@@ -14716,7 +14744,7 @@
           "paid_amount",
           "balance_amount",
           "created_at",
-          "deleted_at"
+          "archived_at"
         ],
         "title": "VendorAgreement"
       },
@@ -14849,6 +14877,33 @@
         ],
         "title": "VendorCurrencyTotal"
       },
+      "VendorExpenseSummary": {
+        "properties": {
+          "vendor_id": {
+            "type": "string",
+            "title": "Vendor Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/VendorProjectExpenseSummary"
+            },
+            "type": "array",
+            "title": "Projects",
+            "description": "One row per project. Two currencies are never added together"
+          }
+        },
+        "type": "object",
+        "required": [
+          "vendor_id",
+          "name",
+          "projects"
+        ],
+        "title": "VendorExpenseSummary"
+      },
       "VendorPage": {
         "properties": {
           "items": {
@@ -14880,7 +14935,7 @@
         ],
         "title": "VendorPage"
       },
-      "VendorProjectSpend": {
+      "VendorProjectExpenseSummary": {
         "properties": {
           "project_id": {
             "type": "string",
@@ -14916,7 +14971,7 @@
           "expense_count",
           "spent_amount"
         ],
-        "title": "VendorProjectSpend"
+        "title": "VendorProjectExpenseSummary"
       },
       "VendorRead": {
         "properties": {
@@ -15005,7 +15060,7 @@
             "format": "date-time",
             "title": "Updated At"
           },
-          "deleted_at": {
+          "archived_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -15015,7 +15070,7 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At"
+            "title": "Archived At"
           }
         },
         "type": "object",
@@ -15031,36 +15086,9 @@
           "totals",
           "created_at",
           "updated_at",
-          "deleted_at"
+          "archived_at"
         ],
         "title": "VendorRead"
-      },
-      "VendorSpend": {
-        "properties": {
-          "vendor_id": {
-            "type": "string",
-            "title": "Vendor Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "projects": {
-            "items": {
-              "$ref": "#/components/schemas/VendorProjectSpend"
-            },
-            "type": "array",
-            "title": "Projects",
-            "description": "One row per project. Two currencies are never added together"
-          }
-        },
-        "type": "object",
-        "required": [
-          "vendor_id",
-          "name",
-          "projects"
-        ],
-        "title": "VendorSpend"
       },
       "VendorUpdate": {
         "properties": {

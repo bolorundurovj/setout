@@ -27,7 +27,7 @@ export function currencyShape(code: string, exponent: number): CurrencyShape {
       symbol: symbol ?? code,
       position: parts.findIndex((p) => p.type === 'currency') === 0 ? 'before' : 'after',
       decimals: String(exponent),
-      separators: [group, decimal].filter(Boolean).join('   ') || 'none',
+      separators: [group, decimal].filter(Boolean).join('   ') || 'None',
     };
   } catch {
     return fallback;

@@ -1,14 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import type { ExpenseRead, ProjectRead } from '@setout/api-client';
 import { BudgetService } from '../budget/budget.service';
-import { formatMoney } from '../budget/money';
-import { ExpenseService, type Nested } from '../expenses/expense.service';
+import { formatAmount, formatMoney } from '../budget/money';
+import { ExpenseService, type ExpensePage } from '../expenses/expense.service';
 import { PaginationComponent } from '../ui/pagination.component';
 
-/** How many category tints are declared in the stylesheet before they repeat. */
+/** Number of category tints in the stylesheet before they repeat. */
 const TINTS = 5;
 
-/** One category's share of a month, sized as a percentage of that month's bar. */
+/** A category's share of a month, as a percentage of that month's bar. */
 export interface MonthPart {
   categoryId: string | null;
   name: string;
@@ -42,10 +42,7 @@ export class MonthsComponent {
 
   readonly openMonth = signal<string | null>(null);
 
-  /**
-   * A tint per top level category, handed out in budget order so a category keeps the
-   * same colour in every bar however the months are read.
-   */
+  /** Assigns tints to top-level categories in budget order so each keeps one colour in every bar. */
   private readonly tints = computed(() => {
     const tints = new Map<string, string>();
     this.budget
@@ -60,23 +57,23 @@ export class MonthsComponent {
     if (!payload) {
       return [];
     }
-    // The heaviest month fills the column; the rest are drawn against it.
-    const heaviest = Math.max(1, ...payload.months.map((month) => month.amount));
+    // The highest month spans the full column; other months are scaled to it.
+    const maxAmount = Math.max(1, ...payload.months.map((month) => month.amount));
     const tints = this.tints();
     return payload.months.map((month) => ({
       month: month.month,
       label: this.label(month.month),
       amount: month.amount,
       count: month.expense_count,
-      barWidth: `${(month.amount / heaviest) * 100}%`,
+      barWidth: `${(month.amount / maxAmount) * 100}%`,
       parts: month.categories.map((part) => ({
         categoryId: part.category_id,
         name: part.name,
         amount: part.amount,
         width: month.amount ? `${(part.amount / month.amount) * 100}%` : '0%',
         tint: part.category_id
-          ? (tints.get(part.category_id) ?? 'tint-uncategorized')
-          : 'tint-uncategorized',
+          ? (tints.get(part.category_id) ?? 'tint-uncategorised')
+          : 'tint-uncategorised',
       })),
     }));
   });
@@ -84,12 +81,12 @@ export class MonthsComponent {
   readonly total = computed(() => this.expenses.months()?.total_amount ?? 0);
 
   readonly note = computed(() => {
-    const busiest = this.expenses.months()?.busiest_month;
-    const row = this.rows().find((month) => month.month === busiest);
+    const highestMonth = this.expenses.months()?.highest_month;
+    const row = this.rows().find((month) => month.month === highestMonth);
     if (!row) {
-      return 'Nothing recorded yet. The first expense you add opens the first month.';
+      return 'No expenses yet. Months appear as expenses are added.';
     }
-    return `Highest month: ${row.label} at ${this.money(row.amount)}. Every expense falls in the month it was spent, so the months total the project.`;
+    return `Highest month: ${row.label} at ${this.money(row.amount)}. Each expense is counted in the month it was spent, so the months add up to the project total.`;
   });
 
   constructor() {
@@ -104,15 +101,14 @@ export class MonthsComponent {
     return formatMoney(minor, project.currency_code, project.currency_exponent);
   }
 
-  /** Figures in the table drop the symbol, which the project bar already shows. */
-  bare(minor: number): string {
-    const exponent = this.project().currency_exponent;
-    return new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(minor / 10 ** exponent);
+  /** Table figures omit the currency symbol, which the project bar already shows. */
+  plainAmount(minor: number): string {
+    return formatAmount(minor, this.project().currency_exponent);
   }
 
   label(month: string): string {
-    const [year, number] = month.split('-');
-    return new Date(Number(year), Number(number) - 1, 1).toLocaleDateString(undefined, {
+    const [year, monthNumber] = month.split('-');
+    return new Date(Number(year), Number(monthNumber) - 1, 1).toLocaleDateString(undefined, {
       month: 'short',
       year: 'numeric',
     });
@@ -137,21 +133,21 @@ export class MonthsComponent {
     return this.openMonth() === row.month;
   }
 
-  monthExpenses(row: MonthRow): Nested | undefined {
+  monthExpenses(row: MonthRow): ExpensePage | undefined {
     return this.expenses.byMonth()[row.month];
   }
 
-  async goTo(row: MonthRow, page: number): Promise<void> {
+  async goToPage(row: MonthRow, page: number): Promise<void> {
     await this.expenses.loadForMonth(this.project().id, row.month, page);
   }
 
   categoryName(expense: ExpenseRead): string {
     if (!expense.category_id) {
-      return 'Uncategorized';
+      return 'Uncategorised';
     }
     return (
       this.budget.categories().find((category) => category.id === expense.category_id)?.name ??
-      'Uncategorized'
+      'Uncategorised'
     );
   }
 }

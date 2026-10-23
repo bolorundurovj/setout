@@ -1,7 +1,7 @@
 """ISO 3166 countries and their states, generated from pycountry.
 
-Only top level states are kept: what a person means by the state a plot
-sits in, not the districts inside it.
+Only top-level subdivisions are included: states, provinces and regions, not
+the districts inside them.
 """
 
 from __future__ import annotations

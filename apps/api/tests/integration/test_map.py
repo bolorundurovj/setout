@@ -7,7 +7,7 @@ pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
 
 async def _setup(client: AsyncClient) -> None:
-    await client.post("/api/auth/setup", json={"name": "Admin", "password": "password123"})
+    await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": "password123"})
 
 
 async def test_the_map_settings_require_authentication(client: AsyncClient) -> None:

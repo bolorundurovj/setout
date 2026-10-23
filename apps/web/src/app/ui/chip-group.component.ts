@@ -7,8 +7,8 @@ export interface Chip {
   detail?: string | null;
 }
 
-// Past this many, a wrapping pill row is unreadable and the picker takes over.
-const PILL_LIMIT = 8;
+// Above this count, chips render as an option picker instead of a wrapping row.
+const CHIP_LIMIT = 8;
 
 @Component({
   selector: 'app-chip-group',
@@ -16,9 +16,9 @@ const PILL_LIMIT = 8;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [OptionPickerComponent],
   template: `
-    @if (chips().length > pillLimit) {
+    @if (chips().length > chipLimit) {
       <app-option-picker
-        [chips]="chips()"
+        [options]="chips()"
         [value]="value()"
         [label]="label()"
         (valueChange)="valueChange.emit($event)"
@@ -29,7 +29,7 @@ const PILL_LIMIT = 8;
           <button
             type="button"
             class="chip"
-            [class.on]="chip.value === value()"
+            [class.selected]="chip.value === value()"
             [attr.aria-pressed]="chip.value === value()"
             (click)="pick(chip.value)"
           >
@@ -80,7 +80,7 @@ const PILL_LIMIT = 8;
         }
       }
 
-      .chip.on {
+      .chip.selected {
         background: var(--accent);
         border-color: var(--accent);
       }
@@ -92,7 +92,7 @@ const PILL_LIMIT = 8;
         color: var(--ink);
       }
 
-      .chip.on .chip-label {
+      .chip.selected .chip-label {
         font-weight: 500;
         color: var(--on-accent);
       }
@@ -104,7 +104,7 @@ const PILL_LIMIT = 8;
         color: var(--ink-3);
       }
 
-      .chip.on .chip-detail {
+      .chip.selected .chip-detail {
         color: var(--on-accent);
         opacity: 0.85;
       }
@@ -119,7 +119,7 @@ export class ChipGroupComponent {
 
   readonly valueChange = output<string>();
 
-  protected readonly pillLimit = PILL_LIMIT;
+  protected readonly chipLimit = CHIP_LIMIT;
 
   pick(value: string): void {
     if (this.clearable() && value === this.value()) {

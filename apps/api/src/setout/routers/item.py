@@ -70,14 +70,14 @@ async def update_item(item_id: str, req: ItemUpdate, user: CurrentUser) -> ItemR
     return await controller.update(item_id, req)
 
 
-@router.delete(
-    "/items/{item_id}",
-    operation_id="deleteItem",
+@router.post(
+    "/items/{item_id}/archive",
+    operation_id="archiveItem",
     status_code=status.HTTP_204_NO_CONTENT,
     responses=NOT_FOUND,
 )
-async def delete_item(item_id: str, user: CurrentUser) -> None:
-    await controller.delete(item_id)
+async def archive_item(item_id: str, user: CurrentUser) -> None:
+    await controller.archive(item_id)
 
 
 @router.post("/items/{item_id}/restore", operation_id="restoreItem", responses=NOT_FOUND)

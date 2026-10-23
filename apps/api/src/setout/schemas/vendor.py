@@ -46,7 +46,7 @@ class VendorRead(BaseModel):
     )
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
+    archived_at: datetime | None
 
 
 class VendorPage(BaseModel):
@@ -56,7 +56,7 @@ class VendorPage(BaseModel):
     offset: int
 
 
-class VendorProjectSpend(BaseModel):
+class VendorProjectExpenseSummary(BaseModel):
     project_id: str
     project_name: str
     currency_code: str
@@ -65,10 +65,10 @@ class VendorProjectSpend(BaseModel):
     spent_amount: int
 
 
-class VendorSpend(BaseModel):
+class VendorExpenseSummary(BaseModel):
     vendor_id: str
     name: str
-    projects: list[VendorProjectSpend] = Field(
+    projects: list[VendorProjectExpenseSummary] = Field(
         ..., description="One row per project. Two currencies are never added together"
     )
 
@@ -84,7 +84,7 @@ class VendorAgreement(BaseModel):
     paid_amount: int
     balance_amount: int
     created_at: datetime
-    deleted_at: datetime | None
+    archived_at: datetime | None
 
 
 class VendorAgreements(BaseModel):

@@ -10,63 +10,72 @@ from setout.services.sheets import (
     read_vendors,
     workbook,
 )
-from setout.services.sheets.detect import Shape
-from setout.services.sheets.parsed import BudgetRead, OwedRead, Problem, SpendRead, VendorsRead
+from setout.services.sheets.detect import SheetKind
+from setout.services.sheets.parsed import (
+    ParsedBudget,
+    ParsedExpenses,
+    ParsedOutstanding,
+    ParsedVendors,
+    Problem,
+)
 
-# Columns Setout keeps nowhere, named in the report rather than dropped in silence.
-LEFT_BEHIND = {
-    Shape.BUDGET: [
-        "Labor, Material and Fixed Costs: the budget holds one amount per line, not a split",
+UNIMPORTED_COLUMNS = {
+    SheetKind.BUDGET: [
+        "Labour, Material and Fixed Costs: each budget line stores one amount, not a split",
         "Actual Cost, Under/Over and Delta: Setout calculates these from expenses",
     ],
-    Shape.EXPENSES: ["Documents: the workbook holds only the file name, not the file"],
-    Shape.OUTSTANDING: ["Location"],
+    SheetKind.EXPENSES: ["Attachment: only the file name is imported, not the file"],
+}
+UNIMPORTED_IF_PRESENT = {
+    SheetKind.OUTSTANDING: {"expected": "Expected", "location": "Location"},
 }
 
 
 @dataclass
-class Gathered:
-    """Everything the file holds, read but not yet written anywhere."""
-
-    read: list[tuple[str, str, int]] = field(default_factory=list)
+class ParsedWorkbook:
+    sheets_read: list[tuple[str, str, int]] = field(default_factory=list)
     skipped: list[tuple[str, str]] = field(default_factory=list)
-    budget: BudgetRead = field(default_factory=BudgetRead)
-    vendors: VendorsRead = field(default_factory=VendorsRead)
-    spend: SpendRead = field(default_factory=SpendRead)
-    owed: OwedRead = field(default_factory=OwedRead)
-    left_behind: list[str] = field(default_factory=list)
+    budget: ParsedBudget = field(default_factory=ParsedBudget)
+    vendors: ParsedVendors = field(default_factory=ParsedVendors)
+    expenses: ParsedExpenses = field(default_factory=ParsedExpenses)
+    outstanding: ParsedOutstanding = field(default_factory=ParsedOutstanding)
+    unimported_columns: list[str] = field(default_factory=list)
 
     @property
     def problems(self) -> list[Problem]:
         return [
             *self.budget.problems,
             *self.vendors.problems,
-            *self.spend.problems,
-            *self.owed.problems,
+            *self.expenses.problems,
+            *self.outstanding.problems,
         ]
 
 
-def gather(sheets: list[workbook.Sheet], exponent: int) -> Gathered:
-    """The plan comes only from a budget sheet and the spend only from an invoices one."""
-    seen = detect.find(sheets)
-    out = Gathered(skipped=list(seen.skipped))
+def parse_workbook(sheets: list[workbook.Sheet], exponent: int) -> ParsedWorkbook:
+    detection = detect.detect_sheets(sheets)
+    out = ParsedWorkbook(skipped=list(detection.skipped))
 
-    for hit in seen.found:
+    for hit in detection.detected:
         rows = sum(
             1
             for row in hit.sheet.rows[hit.header_row + 1 :]
             if any(cell not in (None, "") for cell in row)
         )
-        out.read.append((hit.sheet.name, str(hit.shape), rows))
-        out.left_behind.extend(LEFT_BEHIND.get(hit.shape, []))
+        out.sheets_read.append((hit.sheet.name, str(hit.kind), rows))
+        out.unimported_columns.extend(UNIMPORTED_COLUMNS.get(hit.kind, []))
+        out.unimported_columns.extend(
+            label
+            for name, label in UNIMPORTED_IF_PRESENT.get(hit.kind, {}).items()
+            if name in hit.columns
+        )
 
-        if hit.shape is Shape.BUDGET:
+        if hit.kind is SheetKind.BUDGET:
             out.budget = read_budget.read(hit, exponent)
-        elif hit.shape is Shape.VENDORS:
+        elif hit.kind is SheetKind.VENDORS:
             out.vendors = read_vendors.read(hit)
-        elif hit.shape is Shape.EXPENSES:
-            out.spend = read_expenses.read(hit, exponent)
-        elif hit.shape is Shape.OUTSTANDING:
-            out.owed = read_outstanding.read(hit)
+        elif hit.kind is SheetKind.EXPENSES:
+            out.expenses = read_expenses.read(hit, exponent)
+        elif hit.kind is SheetKind.OUTSTANDING:
+            out.outstanding = read_outstanding.read(hit)
 
     return out

@@ -1,8 +1,4 @@
-"""Tortoise models.
-
-This package is imported by the Tortoise config, so every model must be
-importable from here.
-"""
+"""The Tortoise config imports this package, so every model must be importable from here."""
 
 from setout.models.advance import Advance
 from setout.models.agreement import Agreement

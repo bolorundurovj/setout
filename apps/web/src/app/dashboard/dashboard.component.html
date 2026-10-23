@@ -1,30 +1,30 @@
 <app-topbar title="Home" [subtitle]="today">
-  <app-button variant="secondary" (pressed)="allProjects()">All Projects</app-button>
+  <app-button variant="secondary" (pressed)="openProjects()">Projects</app-button>
   <app-button (pressed)="newProject()">New Project</app-button>
 </app-topbar>
 
 <div class="page">
   <div class="intro">
     <h1 class="t-display">{{ greeting() }}</h1>
-    <p class="prose">{{ standing() }}</p>
+    <p class="prose">{{ summaryLine() }}</p>
   </div>
 
-  @if (home.error(); as trouble) {
-    <p class="banner warn t-small">{{ trouble }}</p>
+  @if (home.error(); as error) {
+    <p class="banner warn t-small">{{ error }}</p>
   }
 
-  @if (home.summary(); as found) {
-    @if (found.projects) {
-      @if (found.currency_code) {
+  @if (home.summary(); as summary) {
+    @if (summary.project_count) {
+      @if (summary.currency_code) {
         <div class="totals">
-          @if (split()) {
+          @if (hasMultipleCurrencies()) {
             <div class="pills" role="group" aria-label="Currency">
-              @for (choice of choices(); track choice.currency_code) {
+              @for (choice of currencies(); track choice.currency_code) {
                 <button
                   type="button"
                   class="pill t-micro"
-                  [class.showing]="showingPill(choice)"
-                  [attr.aria-pressed]="showingPill(choice)"
+                  [class.selected]="isSelectedCurrency(choice)"
+                  [attr.aria-pressed]="isSelectedCurrency(choice)"
                   (click)="showCurrency(choice)"
                 >
                   {{ pillLabel(choice) }}
@@ -34,16 +34,18 @@
           }
           <div class="stats">
             <div class="stat">
-              <span class="t-micro">Budget {{ found.currency_code }}</span>
-              <span class="stat-value t-mono">{{ bare(budgeted()) }}</span>
+              <span class="t-micro">Budgeted {{ summary.currency_code }}</span>
+              <span class="stat-value t-mono">{{ formatAmount(budgeted()) }}</span>
             </div>
             <div class="stat">
-              <span class="t-micro">Spent {{ found.currency_code }}</span>
-              <span class="stat-value t-mono">{{ bare(spent()) }}</span>
+              <span class="t-micro">Spent {{ summary.currency_code }}</span>
+              <span class="stat-value t-mono">{{ formatAmount(spent()) }}</span>
             </div>
-            <div class="stat" [class.over]="over()">
-              <span class="t-micro">{{ leftLabel() }} {{ found.currency_code }}</span>
-              <span class="stat-value t-mono" [class.over-ink]="over()">{{ bare(left()) }}</span>
+            <div class="stat" [class.over-budget]="isOverBudget()">
+              <span class="t-micro">{{ remainingLabel() }} {{ summary.currency_code }}</span>
+              <span class="stat-value t-mono" [class.over-budget-text]="isOverBudget()">{{
+                formatAmount(remaining())
+              }}</span>
             </div>
             <div class="stat">
               <span class="t-micro">Used</span>
@@ -56,7 +58,7 @@
         </div>
       }
 
-      <p class="t-small note">{{ currencyNote() }}</p>
+      <p class="t-small caption">{{ currencyNote() }}</p>
 
       @if (rows().length) {
         <section class="block">
@@ -69,11 +71,11 @@
                   <span class="project-name">{{ row.name }}</span>
                   <span class="bar">
                     <span class="bar-fill" [style.width.%]="rowFill(row)"></span>
-                    @if (rowOver(row)) {
+                    @if (rowIsOverBudget(row)) {
                       <span
-                        class="bar-over"
+                        class="bar-over-budget"
                         [style.left.%]="rowFill(row)"
-                        [style.width.%]="rowOverFill(row)"
+                        [style.width.%]="rowOverBudgetPercent(row)"
                       ></span>
                     }
                   </span>
@@ -82,9 +84,11 @@
               </button>
               <span class="project-figures">
                 <span class="figure t-mono">{{ rowMoney(row, row.spent_amount) }}</span>
-                <span class="t-small" [class.over-ink]="rowOver(row)">{{ rowStanding(row) }}</span>
+                <span class="t-small" [class.over-budget-text]="rowIsOverBudget(row)">{{
+                  rowBudgetStatus(row)
+                }}</span>
               </span>
-              <app-button variant="secondary" (pressed)="addExpense(row)">Add Expense</app-button>
+              <app-button variant="secondary" (pressed)="newExpense(row)">New Expense</app-button>
             </div>
           }
         </section>
@@ -92,15 +96,15 @@
 
       @if (bars().length) {
         <section class="block">
-          <h2 class="t-heading">Expenses by Month, {{ found.currency_code }}</h2>
-          <div class="chart" role="img" [attr.aria-label]="heaviest()">
+          <h2 class="t-heading">Expenses by Month, {{ summary.currency_code }}</h2>
+          <div class="chart" role="img" [attr.aria-label]="highestMonthCaption()">
             @for (bar of bars(); track bar.month) {
               <span class="column" [title]="barTitle(bar)">
                 <span class="column-figure t-mono">{{ bar.figure }}</span>
                 <span class="column-track">
                   <span
                     class="column-fill"
-                    [class.busiest]="bar.busiest"
+                    [class.highest]="bar.highest"
                     [style.height.%]="bar.height"
                   ></span>
                 </span>
@@ -108,7 +112,7 @@
               </span>
             }
           </div>
-          <p class="t-small note">{{ heaviest() }}</p>
+          <p class="t-small caption">{{ highestMonthCaption() }}</p>
         </section>
       }
 
@@ -137,13 +141,13 @@
       @if (recent().length) {
         <section class="block">
           <h2 class="t-heading">Recent Expenses</h2>
-          <div class="latest">
+          <div class="recent">
             @for (row of recent(); track row.id) {
-              <button type="button" class="spend" (click)="openSpend(row)">
-                <span class="t-mono when">{{ day(row) }}</span>
-                <span class="spend-text">
+              <button type="button" class="expense" (click)="openExpense(row)">
+                <span class="t-mono date">{{ formatDate(row) }}</span>
+                <span class="expense-text">
                   <span class="t-body">{{ row.description }}</span>
-                  <span class="t-small muted">{{ where(row) }}</span>
+                  <span class="t-small muted">{{ expenseLocation(row) }}</span>
                 </span>
                 <span class="figure t-mono">{{ rowMoney(row, row.amount) }}</span>
               </button>
@@ -153,8 +157,10 @@
       }
     } @else {
       <div class="card">
-        <p class="t-body">Nothing recorded yet.</p>
-        <p class="t-small">A project needs a name, a currency and its categories, then a budget.</p>
+        <p class="t-body">No projects yet.</p>
+        <p class="t-small">
+          Create a project with a name, currency and categories, then set a budget.
+        </p>
         <div class="actions">
           <app-button (pressed)="newProject()">New Project</app-button>
         </div>

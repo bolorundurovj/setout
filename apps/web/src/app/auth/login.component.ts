@@ -17,7 +17,7 @@ import { ToastService } from '../toast.service';
         <div class="header">
           <app-logo [size]="44" />
           <div class="header-text">
-            <div class="t-display">SetOut</div>
+            <div class="t-display">Setout</div>
             <div class="t-small">Sign in on this device</div>
           </div>
         </div>
@@ -26,7 +26,7 @@ import { ToastService } from '../toast.service';
           <div class="t-micro">Passphrase</div>
           <input
             type="password"
-            [(ngModel)]="password"
+            [(ngModel)]="passphrase"
             placeholder="••••••••••"
             class="input-field"
             (keyup.enter)="onSubmit()"
@@ -34,13 +34,13 @@ import { ToastService } from '../toast.service';
         </div>
 
         <app-button
-          size="major"
+          size="large"
           class="block"
-          [disabled]="!password()"
+          [disabled]="!passphrase()"
           [loading]="authService.loading()"
           (pressed)="onSubmit()"
         >
-          {{ authService.loading() ? 'Signing in...' : 'Sign In' }}
+          {{ authService.loading() ? 'Signing in…' : 'Sign In' }}
         </app-button>
 
         @if (authService.error()) {
@@ -51,10 +51,10 @@ import { ToastService } from '../toast.service';
 
         <div class="footer">
           <div class="t-small">
-            First time on this server? <a routerLink="/setup" class="link">Set it up</a>
+            Server not set up yet? <a routerLink="/setup" class="link">Set up the server</a>
           </div>
           <div class="t-small" style="color: var(--ink-3)">
-            One person uses this. One passphrase, no accounts, no roles.
+            Single-user server. One passphrase, no separate accounts or roles.
           </div>
         </div>
       </div>
@@ -72,8 +72,8 @@ import { ToastService } from '../toast.service';
         justify-content: center;
         padding: 56px 24px;
       }
-      /* auto margins centre without clipping the top when the form is taller
-         than the viewport, which align-items: center would do. */
+      /* Auto margins centre the box without clipping its top when it is taller than the
+         viewport, which align-items: center does not. */
       .auth-box {
         width: 100%;
         max-width: 360px;
@@ -117,7 +117,7 @@ import { ToastService } from '../toast.service';
   ],
 })
 export class LoginComponent {
-  password = signal('');
+  passphrase = signal('');
 
   authService = inject(AuthService);
   router = inject(Router);
@@ -125,8 +125,8 @@ export class LoginComponent {
   toast = inject(ToastService);
 
   async onSubmit() {
-    if (!this.password()) return;
-    const success = await this.authService.login(this.password());
+    if (!this.passphrase()) return;
+    const success = await this.authService.signIn(this.passphrase());
     if (success) {
       this.toast.show('Signed in.');
       await this.router.navigate(['/']);

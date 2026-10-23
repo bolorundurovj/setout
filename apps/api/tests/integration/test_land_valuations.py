@@ -17,7 +17,7 @@ async def _setup(client: AsyncClient) -> None:
             if c[0] in ("NGN", "USD")
         ]
     )
-    await client.post("/api/auth/setup", json={"name": "Admin", "password": "password123"})
+    await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": "password123"})
 
 
 async def _land(client: AsyncClient, name: str = "Ewuru plot") -> str:
@@ -110,9 +110,9 @@ async def test_a_plot_reports_what_it_cost_and_what_it_is_worth_now(client: Asyn
 async def test_a_valuation_says_who_valued_it(client: AsyncClient) -> None:
     await _setup(client)
     land_id = await _land(client)
-    _, row = await _value(client, land_id, note="Bank valuation for the mortgage")
+    _, row = await _value(client, land_id, notes="Bank valuation for the mortgage")
 
-    assert row["note"] == "Bank valuation for the mortgage"
+    assert row["notes"] == "Bank valuation for the mortgage"
 
 
 async def test_a_valuation_can_be_corrected(client: AsyncClient) -> None:
@@ -121,12 +121,12 @@ async def test_a_valuation_can_be_corrected(client: AsyncClient) -> None:
     _, row = await _value(client, land_id)
 
     resp = await client.patch(
-        f"/api/land-valuations/{row['id']}", json={"amount": 5000000, "note": "Re-read the deed"}
+        f"/api/land-valuations/{row['id']}", json={"amount": 5000000, "notes": "Re-read the deed"}
     )
 
     assert resp.status_code == 200
     assert resp.json()["amount"] == 5000000
-    assert resp.json()["note"] == "Re-read the deed"
+    assert resp.json()["notes"] == "Re-read the deed"
 
 
 async def test_a_removed_valuation_comes_back(client: AsyncClient) -> None:
@@ -134,7 +134,7 @@ async def test_a_removed_valuation_comes_back(client: AsyncClient) -> None:
     land_id = await _land(client)
     _, row = await _value(client, land_id)
 
-    assert (await client.delete(f"/api/land-valuations/{row['id']}")).status_code == 204
+    assert (await client.post(f"/api/land-valuations/{row['id']}/archive")).status_code == 204
     assert (await client.get(f"/api/lands/{land_id}/valuations")).json()["total"] == 0
 
     resp = await client.post(f"/api/land-valuations/{row['id']}/restore")
@@ -147,7 +147,7 @@ async def test_losing_every_valuation_frees_the_currency(client: AsyncClient) ->
     await _setup(client)
     land_id = await _land(client)
     _, row = await _value(client, land_id)
-    await client.delete(f"/api/land-valuations/{row['id']}")
+    await client.post(f"/api/land-valuations/{row['id']}/archive")
 
     assert (await client.get(f"/api/lands/{land_id}")).json()["currency_code"] is None
 
@@ -160,7 +160,7 @@ async def test_archiving_a_plot_takes_its_valuations_with_it(client: AsyncClient
     await _setup(client)
     land_id = await _land(client)
     await _value(client, land_id)
-    await client.delete(f"/api/lands/{land_id}")
+    await client.post(f"/api/lands/{land_id}/archive")
 
     assert (await client.get(f"/api/lands/{land_id}")).json()["valuation_count"] == 0
 

@@ -28,15 +28,15 @@ function person(): PersonRead {
     totals: [],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
   };
 }
 
-describe('inputs on routes that carry no such param', () => {
-  let asked: string[];
+describe('route inputs without a matching param', () => {
+  let queries: string[];
 
   function setUp() {
-    asked = [];
+    queries = [];
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [Shell],
@@ -63,10 +63,10 @@ describe('inputs on routes that carry no such param', () => {
           provide: SearchService,
           useValue: {
             results: () => null,
-            looking: () => false,
+            loading: () => false,
             error: () => null,
-            look: async (wanted: string) => {
-              asked.push(wanted);
+            search: async (term: string) => {
+              queries.push(term);
             },
           },
         },
@@ -85,7 +85,7 @@ describe('inputs on routes that carry no such param', () => {
     }
   }
 
-  it('opens the add-a-person page with no id at all', async () => {
+  it('opens /people/new with an empty id', async () => {
     const fixture = setUp();
     await TestBed.inject(Router).navigateByUrl('/people/new');
     await settle(fixture);
@@ -94,10 +94,10 @@ describe('inputs on routes that carry no such param', () => {
       .componentInstance as PersonFormComponent;
     expect(form.id()).toBe('');
     expect(form.isEdit()).toBe(false);
-    expect(form.title()).toBe('Add Someone');
+    expect(form.title()).toBe('New Person');
   });
 
-  it('drops the id when leaving an edit for the add page', async () => {
+  it('clears the id when navigating from edit to /people/new', async () => {
     const fixture = setUp();
     const router = TestBed.inject(Router);
     await router.navigateByUrl('/people/pe1/edit');
@@ -112,7 +112,7 @@ describe('inputs on routes that carry no such param', () => {
     expect(form.isEdit()).toBe(false);
   });
 
-  it('opens search from a bare address with no query', async () => {
+  it('opens /search with no q parameter', async () => {
     const fixture = setUp();
     await TestBed.inject(Router).navigateByUrl('/search');
     await settle(fixture);
@@ -121,6 +121,6 @@ describe('inputs on routes that carry no such param', () => {
       .componentInstance as SearchComponent;
     expect(search.q()).toBe('');
     expect(search.empty()).toBe(false);
-    expect(asked).toEqual(['']);
+    expect(queries).toEqual(['']);
   });
 });

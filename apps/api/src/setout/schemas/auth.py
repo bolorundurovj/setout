@@ -4,11 +4,11 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 class SetupRequest(BaseModel):
     name: str = Field(..., description="The local account name")
     email: EmailStr | None = Field(None, description="Optional. Only used to identify the account")
-    password: str = Field(..., min_length=8)
+    passphrase: str = Field(..., min_length=8)
 
 
-class LoginRequest(BaseModel):
-    password: str = Field(..., description="The passphrase")
+class SignInRequest(BaseModel):
+    passphrase: str = Field(..., description="The passphrase")
 
 
 class AccountUpdate(BaseModel):
@@ -19,9 +19,9 @@ class AccountUpdate(BaseModel):
     base_currency: str | None = Field(None, min_length=3, max_length=3)
 
 
-class PasswordChange(BaseModel):
-    current_password: str = Field(..., description="The passphrase in use now")
-    new_password: str = Field(..., min_length=8)
+class PassphraseChange(BaseModel):
+    current_passphrase: str = Field(..., description="The current passphrase")
+    new_passphrase: str = Field(..., min_length=8)
 
 
 class UserResponse(BaseModel):

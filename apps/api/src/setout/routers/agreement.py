@@ -37,22 +37,24 @@ NOT_FOUND: dict[int | str, dict[str, Any]] = {
 async def list_agreements(
     project_id: str,
     user: CurrentUser,
-    include_deleted: Annotated[bool, Query(description="Include archived agreements")] = False,
+    include_archived: Annotated[bool, Query(description="Include archived agreements")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> AgreementPage:
     return await controller.list_agreements(
-        project_id, include_deleted=include_deleted, limit=limit, offset=offset
+        project_id, include_archived=include_archived, limit=limit, offset=offset
     )
 
 
 @router.post(
     "/projects/{project_id}/agreements",
-    operation_id="addAgreement",
+    operation_id="createAgreement",
     status_code=status.HTTP_201_CREATED,
     responses=NOT_FOUND,
 )
-async def add_agreement(project_id: str, req: AgreementCreate, user: CurrentUser) -> AgreementRead:
+async def create_agreement(
+    project_id: str, req: AgreementCreate, user: CurrentUser
+) -> AgreementRead:
     return await controller.create(project_id, req)
 
 
@@ -68,14 +70,14 @@ async def update_agreement(
     return await controller.update(agreement_id, req)
 
 
-@router.delete(
-    "/agreements/{agreement_id}",
-    operation_id="deleteAgreement",
+@router.post(
+    "/agreements/{agreement_id}/archive",
+    operation_id="archiveAgreement",
     status_code=status.HTTP_204_NO_CONTENT,
     responses=NOT_FOUND,
 )
-async def delete_agreement(agreement_id: str, user: CurrentUser) -> None:
-    await controller.delete(agreement_id)
+async def archive_agreement(agreement_id: str, user: CurrentUser) -> None:
+    await controller.archive(agreement_id)
 
 
 @router.post(
@@ -89,23 +91,23 @@ async def restore_agreement(agreement_id: str, user: CurrentUser) -> AgreementRe
 async def list_advances(
     project_id: str,
     user: CurrentUser,
-    include_deleted: Annotated[bool, Query(description="Include archived advances")] = False,
+    include_archived: Annotated[bool, Query(description="Include archived advances")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> AdvancePage:
     return await controller.list_advances(
-        project_id, include_deleted=include_deleted, limit=limit, offset=offset
+        project_id, include_archived=include_archived, limit=limit, offset=offset
     )
 
 
 @router.post(
     "/projects/{project_id}/advances",
-    operation_id="addAdvance",
+    operation_id="createAdvance",
     status_code=status.HTTP_201_CREATED,
     responses=NOT_FOUND,
 )
-async def add_advance(project_id: str, req: AdvanceCreate, user: CurrentUser) -> AdvanceRead:
-    return await controller.add_advance(project_id, req)
+async def create_advance(project_id: str, req: AdvanceCreate, user: CurrentUser) -> AdvanceRead:
+    return await controller.create_advance(project_id, req)
 
 
 @router.patch("/advances/{advance_id}", operation_id="updateAdvance", responses=NOT_FOUND)
@@ -113,14 +115,14 @@ async def update_advance(advance_id: str, req: AdvanceUpdate, user: CurrentUser)
     return await controller.update_advance(advance_id, req)
 
 
-@router.delete(
-    "/advances/{advance_id}",
-    operation_id="deleteAdvance",
+@router.post(
+    "/advances/{advance_id}/archive",
+    operation_id="archiveAdvance",
     status_code=status.HTTP_204_NO_CONTENT,
     responses=NOT_FOUND,
 )
-async def delete_advance(advance_id: str, user: CurrentUser) -> None:
-    await controller.delete_advance(advance_id)
+async def archive_advance(advance_id: str, user: CurrentUser) -> None:
+    await controller.archive_advance(advance_id)
 
 
 @router.post("/advances/{advance_id}/restore", operation_id="restoreAdvance", responses=NOT_FOUND)

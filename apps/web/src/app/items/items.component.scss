@@ -151,4 +151,22 @@
   }
 }
 
+.confirm-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+
+  .delete-input {
+    width: 80px;
+    padding: 2px 6px;
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+}
+
+.danger-link {
+  color: var(--danger) !important;
+}
+
 @include rows.stacked-rows;

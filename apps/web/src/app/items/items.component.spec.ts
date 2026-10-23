@@ -7,7 +7,7 @@ import { SEARCH_WAIT } from '../ui/debounce';
 import { ItemService } from './item.service';
 import { ItemsComponent } from './items.component';
 
-function price(over: Partial<ItemPriceSummary> = {}): ItemPriceSummary {
+function price(overrides: Partial<ItemPriceSummary> = {}): ItemPriceSummary {
   return {
     currency_code: 'NGN',
     currency_exponent: 2,
@@ -19,11 +19,11 @@ function price(over: Partial<ItemPriceSummary> = {}): ItemPriceSummary {
     lowest_price: 200_00,
     highest_price: 270_00,
     change_percent: 35.0,
-    ...over,
+    ...overrides,
   };
 }
 
-function item(over: Partial<ItemRead> = {}): ItemRead {
+function item(overrides: Partial<ItemRead> = {}): ItemRead {
   return {
     id: 'i1',
     name: 'Six inch blocks',
@@ -33,15 +33,15 @@ function item(over: Partial<ItemRead> = {}): ItemRead {
     prices: [price()],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
 describe('ItemsComponent', () => {
   let rows: ItemRead[];
   let added: unknown[];
-  let removed: string[];
+  let archived: string[];
   let searches: (string | undefined)[];
   let pages: number[];
   let navigations: unknown[][];
@@ -51,7 +51,7 @@ describe('ItemsComponent', () => {
   function render(initial: ItemRead[] = [item()]) {
     rows = initial;
     added = [];
-    removed = [];
+    archived = [];
     searches = [];
     pages = [];
     navigations = [];
@@ -74,7 +74,7 @@ describe('ItemsComponent', () => {
         return addResult;
       },
       edit: async () => null,
-      remove: async (id: string) => void removed.push(id),
+      archive: async (id: string) => void archived.push(id),
       restore: async () => undefined,
       prices: async () => null,
       lastPrice: async () => null,
@@ -97,7 +97,7 @@ describe('ItemsComponent', () => {
     return fixture.componentInstance;
   }
 
-  it('loads the catalogue on the way in', () => {
+  it('loads items on init', () => {
     render();
     expect(searches.length).toBe(1);
   });
@@ -123,7 +123,7 @@ describe('ItemsComponent', () => {
     expect(added[0]).toEqual({ name: 'Cement', unit: null });
   });
 
-  it('will not add an item without a name', async () => {
+  it('does not add an item without a name', async () => {
     const component = render();
     component.name.set('   ');
 
@@ -132,7 +132,7 @@ describe('ItemsComponent', () => {
     expect(added.length).toBe(0);
   });
 
-  it('reports an item that could not be added and keeps the form open', async () => {
+  it('shows an error and keeps the form open when adding fails', async () => {
     const component = render();
     addResult = null;
     component.name.set('Cement');
@@ -143,7 +143,7 @@ describe('ItemsComponent', () => {
     expect(component.name()).toBe('Cement');
   });
 
-  it('waits for the typing to stop before it asks the server', () => {
+  it('debounces search before loading', () => {
     vi.useFakeTimers();
     try {
       const component = render();
@@ -162,29 +162,30 @@ describe('ItemsComponent', () => {
   });
 
   it('opens an item', () => {
-    render().open('i1');
+    render().openItem('i1');
     expect(navigations[0][0]).toEqual(['/items', 'i1']);
   });
 
   it('archives an item', async () => {
     await render().archive('i1');
-    expect(removed).toEqual(['i1']);
+    expect(archived).toEqual(['i1']);
   });
 
-  it('reads the unit, or says there is none', () => {
+  it('formats the unit, or a placeholder when none is set', () => {
     const component = render();
-    expect(component.unitLabel(item())).toBe('per each');
+    expect(component.unitLabel(item())).toBe('each');
+    expect(component.unitLabel(item({ unit: 'bag' }))).toBe('per bag');
     expect(component.unitLabel(item({ unit: null }))).toBe(component.notSet);
   });
 
-  it('counts purchases in words', () => {
+  it('counts expenses for the item', () => {
     const component = render();
-    expect(component.countLabel(item({ purchase_count: 0 }))).toBe('never bought');
-    expect(component.countLabel(item({ purchase_count: 1 }))).toBe('bought once');
-    expect(component.countLabel(item({ purchase_count: 5 }))).toBe('bought 5 times');
+    expect(component.countLabel(item({ purchase_count: 0 }))).toBe('No expenses');
+    expect(component.countLabel(item({ purchase_count: 1 }))).toBe('1 expense');
+    expect(component.countLabel(item({ purchase_count: 5 }))).toBe('5 expenses');
   });
 
-  it('reads a price change either way', () => {
+  it('formats price increases and decreases', () => {
     const component = render();
     expect(component.changeLabel(price())).toBe('up 35.0%');
     expect(component.changeLabel(price({ change_percent: -12 }))).toBe('down 12.0%');
@@ -192,11 +193,11 @@ describe('ItemsComponent', () => {
     expect(component.changeLabel(price({ change_percent: null }))).toBe(component.notSet);
   });
 
-  it('flags only a rise', () => {
+  it('flags only price increases', () => {
     const component = render();
-    expect(component.hasRisen(price())).toBe(true);
-    expect(component.hasRisen(price({ change_percent: -12 }))).toBe(false);
-    expect(component.hasRisen(price({ change_percent: null }))).toBe(false);
+    expect(component.hasIncreased(price())).toBe(true);
+    expect(component.hasIncreased(price({ change_percent: -12 }))).toBe(false);
+    expect(component.hasIncreased(price({ change_percent: null }))).toBe(false);
   });
 
   it('formats a price in its own currency', () => {

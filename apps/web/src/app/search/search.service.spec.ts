@@ -3,50 +3,50 @@ import { Api } from '@setout/api-client';
 import { SearchService } from './search.service';
 
 describe('SearchService', () => {
-  let asked: Record<string, unknown>[];
+  let calls: Record<string, unknown>[];
 
-  function configure(reply: () => unknown) {
-    asked = [];
+  function configure(respond: () => unknown) {
+    calls = [];
     TestBed.resetTestingModule();
     const api = {
       invoke: async (fn: { name?: string }, params: Record<string, unknown>) => {
-        asked.push({ call: fn?.name ?? '', ...params });
-        const answer = reply();
-        if (answer instanceof Error) {
-          throw answer;
+        calls.push({ call: fn?.name ?? '', ...params });
+        const response = respond();
+        if (response instanceof Error) {
+          throw response;
         }
-        return answer;
+        return response;
       },
     };
     TestBed.configureTestingModule({ providers: [{ provide: Api, useValue: api }] });
     return TestBed.inject(SearchService);
   }
 
-  it('asks for the trimmed words', async () => {
+  it('sends the trimmed query', async () => {
     const service = configure(() => ({ query: 'cement', total: 1, groups: [] }));
 
-    await service.look('  cement  ');
+    await service.search('  cement  ');
 
-    expect(asked[0]['q']).toBe('cement');
+    expect(calls[0]['q']).toBe('cement');
     expect(service.results()?.total).toBe(1);
-    expect(service.looking()).toBe(false);
+    expect(service.loading()).toBe(false);
   });
 
-  it('asks for nothing when there is nothing to ask', async () => {
+  it('sends no request for a blank query', async () => {
     const service = configure(() => ({ query: '', total: 0, groups: [] }));
 
-    await service.look('   ');
+    await service.search('   ');
 
-    expect(asked).toEqual([]);
+    expect(calls).toEqual([]);
     expect(service.results()).toBeNull();
   });
 
-  it('holds no stale results when the search fails', async () => {
+  it('clears results when the search fails', async () => {
     const service = configure(() => new Error('offline'));
 
-    await service.look('cement');
+    await service.search('cement');
 
     expect(service.results()).toBeNull();
-    expect(service.error()).toBe('Could not search the record.');
+    expect(service.error()).toBe('Could not search.');
   });
 });

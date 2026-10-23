@@ -4,15 +4,15 @@ import re
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
-# Excel believes 1900 had a 29th of February, so serials above it are one too high.
+# Excel treats 1900 as a leap year, so serials after 28 Feb 1900 are one day too high.
 EPOCH = date(1899, 12, 31)
-PHANTOM_LEAP_DAY = 60
+EXCEL_FAKE_LEAP_DAY_SERIAL = 60
 
 COST_CODE = re.compile(r"\d+(?:\.\d+)?")
 
 
 def as_text(value: object) -> str:
-    """A cell as trimmed text, with the float Excel gives numeric cells undone."""
+    """Converts integral floats from numeric cells back to integer text."""
     if value is None:
         return ""
     if isinstance(value, str):
@@ -27,7 +27,6 @@ def as_text(value: object) -> str:
 
 
 def as_date(value: object) -> date | None:
-    """A cell as a date, whether it arrived as a serial, a string or a date."""
     if value is None or value == "":
         return None
     if isinstance(value, datetime):
@@ -54,13 +53,13 @@ def from_serial(serial: float) -> date | None:
     days = int(serial)
     if days <= 0:
         return None
-    if days > PHANTOM_LEAP_DAY:
+    if days > EXCEL_FAKE_LEAP_DAY_SERIAL:
         days -= 1
     return EPOCH + timedelta(days=days)
 
 
 def as_minor(value: object, exponent: int) -> int | None:
-    """A cell as whole minor units. Decimal throughout, so nothing rounds twice."""
+    """Uses Decimal throughout so the amount is rounded once."""
     if value is None or value == "":
         return None
     if isinstance(value, str):
@@ -87,7 +86,6 @@ def as_phone(value: object) -> str:
 
 
 def as_code(value: object) -> str:
-    """A cost code, with the trailing .0 of a numeric cell removed."""
     text = as_text(value)
     if not text:
         return ""
@@ -97,7 +95,6 @@ def as_code(value: object) -> str:
 
 
 def codes_in(value: object) -> list[str]:
-    """Every cost code in a cell. One row may name several, or none."""
     text = as_text(value)
     codes = []
     for match in COST_CODE.finditer(text):
@@ -109,12 +106,10 @@ def codes_in(value: object) -> list[str]:
 
 
 def is_category_code(code: str) -> bool:
-    """A code ending in three noughts heads a category; the rest sit under one."""
     return len(code) > 3 and code.endswith("000")
 
 
 def category_code_for(code: str) -> str:
-    """The heading a cost code sits under. 3001 belongs to category 3000."""
     if not code or not code.isdigit():
         return code
     if is_category_code(code):
@@ -124,6 +119,6 @@ def category_code_for(code: str) -> str:
     return code[:-3] + "000"
 
 
-def as_flag(value: object) -> bool:
+def as_bool(value: object) -> bool:
     text = as_text(value).lower()
     return text in ("1", "true", "yes", "y", "paid")

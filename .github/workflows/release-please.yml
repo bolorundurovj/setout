@@ -18,7 +18,7 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - name: Check the release token is there
+      - name: Verify RELEASE_TOKEN is set
         env:
           RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
@@ -37,7 +37,7 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_TOKEN }}
 
-      - name: Ask for an exact version when VERSION runs ahead of the last release
+      - name: Request an exact version when VERSION is above the last release
         run: |
           # VERSION ahead of the manifest means somebody set it on purpose, so
           # release exactly that. Equal means let the commits decide the bump.

@@ -6,8 +6,8 @@ import {
   ProjectRead,
   ProjectSummary,
   ProjectUpdate,
+  archiveProject,
   createProject,
-  deleteProject,
   getProject,
   getProjectSummary,
   listCurrencies,
@@ -26,39 +26,39 @@ export class ProjectService {
   private readonly api = inject(Api);
   private readonly counts = inject(CountsService);
 
-  private readonly state = signal<ProjectRead[]>([]);
+  private readonly projectsState = signal<ProjectRead[]>([]);
   private readonly currencyState = signal<CurrencyRead[]>([]);
   private readonly summaryState = signal<ProjectSummary | null>(null);
   private readonly totalState = signal(0);
   private readonly offsetState = signal(0);
-  private readonly includeDeletedState = signal(false);
+  private readonly includeArchivedState = signal(false);
 
-  readonly projects = this.state.asReadonly();
+  readonly projects = this.projectsState.asReadonly();
   readonly currencies = this.currencyState.asReadonly();
   readonly summary = this.summaryState.asReadonly();
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
-  readonly hasProjects = computed(() => this.state().length > 0);
+  readonly hasProjects = computed(() => this.projectsState().length > 0);
   readonly total = this.totalState.asReadonly();
-  readonly hasMore = computed(() => this.state().length < this.totalState());
+  readonly hasMore = computed(() => this.projectsState().length < this.totalState());
 
-  async load(includeDeleted = false): Promise<void> {
-    this.includeDeletedState.set(includeDeleted);
+  async load(includeArchived = false): Promise<void> {
+    this.includeArchivedState.set(includeArchived);
     this.offsetState.set(0);
     this.loading.set(true);
     this.error.set(null);
     try {
       const page = await this.api.invoke(listProjects, {
-        include_deleted: includeDeleted,
+        include_archived: includeArchived,
         limit: SCROLL_SIZE,
         offset: 0,
       });
-      this.state.set(page.items);
+      this.projectsState.set(page.items);
       this.totalState.set(page.total);
       this.offsetState.set(page.items.length);
     } catch {
-      this.error.set('Could not load projects.');
+      this.error.set('Could not load the projects.');
     } finally {
       this.loading.set(false);
     }
@@ -72,15 +72,15 @@ export class ProjectService {
     this.loading.set(true);
     try {
       const page = await this.api.invoke(listProjects, {
-        include_deleted: this.includeDeletedState(),
+        include_archived: this.includeArchivedState(),
         limit: SCROLL_SIZE,
         offset: this.offsetState(),
       });
-      this.state.update((projects) => [...projects, ...page.items]);
+      this.projectsState.update((projects) => [...projects, ...page.items]);
       this.totalState.set(page.total);
       this.offsetState.update((offset) => offset + page.items.length);
     } catch {
-      this.error.set('Could not load more projects.');
+      this.error.set('Could not load more of the projects.');
     } finally {
       this.loading.set(false);
     }
@@ -98,7 +98,7 @@ export class ProjectService {
     try {
       return await this.api.invoke(getProject, { project_id: id });
     } catch {
-      this.error.set('Could not load that project.');
+      this.error.set('Could not load the project.');
       return null;
     }
   }
@@ -119,7 +119,7 @@ export class ProjectService {
     this.error.set(null);
     try {
       const created = await this.api.invoke(createProject, { body });
-      this.state.update((projects) => [created, ...projects]);
+      this.projectsState.update((projects) => [created, ...projects]);
       this.totalState.update((total) => total + 1);
       await this.loadSummary();
       void this.counts.load();
@@ -136,18 +136,18 @@ export class ProjectService {
     this.error.set(null);
     try {
       const updated = await this.api.invoke(updateProject, { project_id: id, body });
-      this.state.update((projects) => projects.map((p) => (p.id === id ? updated : p)));
+      this.projectsState.update((projects) => projects.map((p) => (p.id === id ? updated : p)));
       await this.loadSummary();
       return updated;
     } catch (e: unknown) {
-      this.error.set(detailOf(e) ?? 'Could not save that project.');
+      this.error.set(detailOf(e) ?? 'Could not save the project.');
       return null;
     }
   }
 
-  async remove(id: string): Promise<void> {
-    await this.api.invoke(deleteProject, { project_id: id });
-    this.state.update((projects) => projects.filter((p) => p.id !== id));
+  async archive(id: string): Promise<void> {
+    await this.api.invoke(archiveProject, { project_id: id });
+    this.projectsState.update((projects) => projects.filter((p) => p.id !== id));
     this.totalState.update((total) => Math.max(0, total - 1));
     await this.loadSummary();
     void this.counts.load();
@@ -155,7 +155,7 @@ export class ProjectService {
 
   async restore(id: string): Promise<void> {
     const restored = await this.api.invoke(restoreProject, { project_id: id });
-    this.state.update((projects) => projects.map((p) => (p.id === id ? restored : p)));
+    this.projectsState.update((projects) => projects.map((p) => (p.id === id ? restored : p)));
     await this.loadSummary();
     void this.counts.load();
   }

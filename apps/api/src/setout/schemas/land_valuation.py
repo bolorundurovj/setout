@@ -11,10 +11,13 @@ class LandValuationCreate(BaseModel):
     kind: LandValuationKind = LandValuationKind.VALUATION
     amount: int = Field(..., ge=0, description="Minor units")
     currency_code: str = Field(
-        ..., min_length=3, max_length=3, description="Must match the land's, once it has one"
+        ...,
+        min_length=3,
+        max_length=3,
+        description="Must match the land record's currency, once set",
     )
     valued_on: date
-    note: str | None = Field(None, max_length=255)
+    notes: str | None = Field(None, max_length=255)
 
 
 class LandValuationUpdate(BaseModel):
@@ -23,7 +26,7 @@ class LandValuationUpdate(BaseModel):
     kind: LandValuationKind | None = None
     amount: int | None = Field(None, ge=0, description="Minor units")
     valued_on: date | None = None
-    note: str | None = Field(None, max_length=255)
+    notes: str | None = Field(None, max_length=255)
 
 
 class LandValuationRead(BaseModel):
@@ -34,10 +37,10 @@ class LandValuationRead(BaseModel):
     currency_code: str
     currency_exponent: int
     valued_on: date
-    note: str | None
+    notes: str | None
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
+    archived_at: datetime | None
 
 
 class LandValuationPage(BaseModel):

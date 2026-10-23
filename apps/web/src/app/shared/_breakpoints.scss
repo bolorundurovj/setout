@@ -1,6 +1,10 @@
 $phone: 599px;
 $narrow: 719px;
-$lap: 899px;
+$tablet: 899px;
 
 $phone-up: $phone + 1px;
-$lap-up: $lap + 1px;
+$tablet-up: $tablet + 1px;
+
+// Remove once no stylesheet uses the old names.
+$lap: $tablet;
+$lap-up: $tablet-up;

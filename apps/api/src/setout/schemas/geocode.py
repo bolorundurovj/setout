@@ -4,10 +4,12 @@ from pydantic import BaseModel, Field
 
 
 class GeocodedPlace(BaseModel):
-    """What the map calls a spot. Every part is optional: a geocoder answers with
-    what it knows, and open country knows no street."""
+    """The address at a coordinate. Every field is optional, because the geocoder
+    returns only the parts it has."""
 
     address: str | None = Field(None, description="The whole address, as one line")
-    city: str | None = Field(None, description="Town, village or suburb, whichever it gave")
+    city: str | None = Field(
+        None, description="Town, village or suburb, as returned by the geocoder"
+    )
     state: str | None = None
     country_code: str | None = Field(None, description="Two letters, upper case")

@@ -25,7 +25,7 @@ import { PaginationComponent } from '../ui/pagination.component';
 import { ToggleComponent } from '../ui/toggle.component';
 import { VendorService } from '../vendors/vendor.service';
 import { AddExpenseComponent } from './add-expense.component';
-import { ExpenseService, UNFILED, type ExpenseFilters } from './expense.service';
+import { ExpenseService, UNCATEGORISED, type ExpenseFilters } from './expense.service';
 
 const SORTS: Chip[] = [
   { value: 'recent', label: 'Newest first' },
@@ -63,24 +63,28 @@ export class ExpensesComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  readonly adding = signal(false);
+  readonly drawerOpen = signal(false);
   readonly editingExpense = signal<ExpenseRead | null>(null);
-  readonly filing = signal(false);
+  readonly assigning = signal(false);
   readonly includeArchived = signal(false);
   readonly selected = signal<Set<string>>(new Set());
   readonly bulkCategoryId = signal<string>('');
 
-  readonly uncategorized = computed(() => this.expenses.byCategory()[UNFILED]?.rows ?? []);
-  readonly uncategorizedTotal = computed(() => this.expenses.byCategory()[UNFILED]?.total ?? 0);
-  readonly uncategorizedPage = computed(() => this.expenses.byCategory()[UNFILED]?.page ?? 1);
+  readonly uncategorised = computed(() => this.expenses.byCategory()[UNCATEGORISED]?.rows ?? []);
+  readonly uncategorisedTotal = computed(
+    () => this.expenses.byCategory()[UNCATEGORISED]?.total ?? 0,
+  );
+  readonly uncategorisedPage = computed(() => this.expenses.byCategory()[UNCATEGORISED]?.page ?? 1);
   readonly allSelected = computed(
     () =>
-      this.uncategorized().length > 0 &&
-      this.uncategorized().every((e) => this.selected().has(e.id)),
+      this.uncategorised().length > 0 &&
+      this.uncategorised().every((e) => this.selected().has(e.id)),
   );
   readonly selectedCount = computed(() => this.selected().size);
-  readonly canFile = computed(() => this.selectedCount() > 0 && this.bulkCategoryId() !== '');
-  readonly fileableCategories = computed(() => this.budget.categories().filter((s) => !s.is_group));
+  readonly canAssign = computed(() => this.selectedCount() > 0 && this.bulkCategoryId() !== '');
+  readonly assignableCategories = computed(() =>
+    this.budget.categories().filter((s) => !s.is_group),
+  );
 
   readonly notSet = '—';
 
@@ -101,7 +105,7 @@ export class ExpensesComponent {
   ]);
 
   readonly personChips = computed<Chip[]>(() => [
-    { value: '', label: 'Anybody' },
+    { value: '', label: 'Anyone' },
     ...this.people.choices().map((p) => ({ value: p.id, label: p.name, detail: p.role })),
   ]);
 
@@ -111,36 +115,45 @@ export class ExpensesComponent {
   ]);
 
   readonly activeCount = computed(() => {
-    const held = this.filters();
-    const set = [held.search, held.vendorId, held.paidById, held.itemId, held.from, held.to];
-    return set.filter(Boolean).length + (held.sort && held.sort !== 'recent' ? 1 : 0);
+    const filters = this.filters();
+    const activeValues = [
+      filters.search,
+      filters.vendorId,
+      filters.paidById,
+      filters.itemId,
+      filters.from,
+      filters.to,
+    ];
+    return (
+      activeValues.filter(Boolean).length + (filters.sort && filters.sort !== 'recent' ? 1 : 0)
+    );
   });
 
   readonly filtered = computed(() => this.activeCount() > 0);
 
   readonly matchLine = computed(() => {
     const total = this.expenses.total();
-    const rows = total === 1 ? 'expense' : 'expenses';
-    return `${total} ${rows} matching · ${this.money(this.expenses.totalAmount())}`;
+    const noun = total === 1 ? 'expense' : 'expenses';
+    return `${total} ${noun} matching · ${this.money(this.expenses.totalAmount())}`;
   });
 
-  private readonly typing = debounce<string>((text) => {
+  private readonly debouncedSearch = debounce<string>((text) => {
     this.search.set(text);
     this.apply();
   });
 
   constructor() {
     effect(() => {
-      const held = this.filters();
-      this.search.set(held.search ?? '');
-      this.vendorId.set(held.vendorId ?? '');
-      this.paidById.set(held.paidById ?? '');
-      this.itemId.set(held.itemId ?? '');
-      this.from.set(held.from ?? '');
-      this.to.set(held.to ?? '');
-      this.sort.set(held.sort ?? 'recent');
+      const filters = this.filters();
+      this.search.set(filters.search ?? '');
+      this.vendorId.set(filters.vendorId ?? '');
+      this.paidById.set(filters.paidById ?? '');
+      this.itemId.set(filters.itemId ?? '');
+      this.from.set(filters.from ?? '');
+      this.to.set(filters.to ?? '');
+      this.sort.set(filters.sort ?? 'recent');
       void this.expenses.load(this.project().id, {
-        ...held,
+        ...filters,
         includeArchived: untracked(this.includeArchived),
       });
     });
@@ -150,7 +163,7 @@ export class ExpensesComponent {
       void this.people.loadChoices();
       void this.items.loadChoices();
     });
-    inject(DestroyRef).onDestroy(() => this.typing.cancel());
+    inject(DestroyRef).onDestroy(() => this.debouncedSearch.cancel());
   }
 
   value(event: Event): string {
@@ -158,11 +171,11 @@ export class ExpensesComponent {
   }
 
   onSearch(event: Event): void {
-    this.typing.call(this.value(event));
+    this.debouncedSearch.call(this.value(event));
   }
 
-  pick(which: 'vendorId' | 'paidById' | 'itemId', value: string): void {
-    this[which].set(value);
+  setFilter(field: 'vendorId' | 'paidById' | 'itemId', value: string): void {
+    this[field].set(value);
     this.apply();
   }
 
@@ -171,8 +184,8 @@ export class ExpensesComponent {
     this.apply();
   }
 
-  setDate(which: 'from' | 'to', event: Event): void {
-    this[which].set(this.value(event));
+  setDate(field: 'from' | 'to', event: Event): void {
+    this[field].set(this.value(event));
     this.apply();
   }
 
@@ -181,7 +194,7 @@ export class ExpensesComponent {
   }
 
   clear(): void {
-    this.typing.cancel();
+    this.debouncedSearch.cancel();
     this.search.set('');
     this.vendorId.set('');
     this.paidById.set('');
@@ -197,9 +210,9 @@ export class ExpensesComponent {
     return count ? `Filters (${count})` : 'Filters';
   }
 
-  /** The URL holds the filters, so the effect above reloads when they land. */
+  /** Filters are stored in the URL query; the route effect reloads the list when it changes. */
   private apply(): void {
-    this.filing.set(false);
+    this.assigning.set(false);
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {
@@ -221,24 +234,20 @@ export class ExpensesComponent {
     return formatMoney(minor, project.currency_code, project.currency_exponent);
   }
 
-  variance(percent: number): string {
-    const rounded = Math.abs(percent).toFixed(1);
-    if (percent > 0) {
-      return `${rounded}% over`;
-    }
-    return percent < 0 ? `${rounded}% under` : 'on budget';
+  usedPercent(variancePercent: number): string {
+    return `${(100 + variancePercent).toFixed(1)}%`;
   }
 
   categoryName(expense: ExpenseRead): string {
     if (!expense.category_id) {
-      return 'Uncategorized';
+      return 'Uncategorised';
     }
     return (
-      this.budget.categories().find((s) => s.id === expense.category_id)?.name ?? 'Uncategorized'
+      this.budget.categories().find((s) => s.id === expense.category_id)?.name ?? 'Uncategorised'
     );
   }
 
-  meta(expense: ExpenseRead): string {
+  detailLine(expense: ExpenseRead): string {
     const parts: string[] = [];
     if (expense.cost_type) {
       parts.push(expense.cost_type);
@@ -249,23 +258,23 @@ export class ExpensesComponent {
     return parts.join(' · ');
   }
 
-  photoTitle(expense: ExpenseRead): string {
+  attachmentTitle(expense: ExpenseRead): string {
     const count = expense.attachment_count;
-    return count === 1 ? 'One file attached' : `${count} files attached`;
+    return count === 1 ? '1 attachment' : `${count} attachments`;
   }
 
   openDrawer(): void {
     this.editingExpense.set(null);
-    this.adding.set(true);
+    this.drawerOpen.set(true);
   }
 
   edit(expense: ExpenseRead): void {
     this.editingExpense.set(expense);
-    this.adding.set(true);
+    this.drawerOpen.set(true);
   }
 
   closeDrawer(): void {
-    this.adding.set(false);
+    this.drawerOpen.set(false);
     this.editingExpense.set(null);
   }
 
@@ -280,28 +289,28 @@ export class ExpensesComponent {
     await this.expenses.goTo(this.project().id, page);
   }
 
-  startFiling(): void {
-    this.filing.set(true);
+  startAssigning(): void {
+    this.assigning.set(true);
     this.selected.set(new Set());
     this.bulkCategoryId.set('');
-    void this.expenses.loadForCategory(this.project().id, UNFILED);
+    void this.expenses.loadForCategory(this.project().id, UNCATEGORISED);
   }
 
-  stopFiling(): void {
-    this.filing.set(false);
+  stopAssigning(): void {
+    this.assigning.set(false);
     this.selected.set(new Set());
     this.bulkCategoryId.set('');
   }
 
-  async goToUncategorized(page: number): Promise<void> {
-    await this.expenses.loadForCategory(this.project().id, UNFILED, page);
+  async goToUncategorised(page: number): Promise<void> {
+    await this.expenses.loadForCategory(this.project().id, UNCATEGORISED, page);
   }
 
   toggleAll(): void {
     if (this.allSelected()) {
       this.selected.set(new Set());
     } else {
-      this.selected.set(new Set(this.uncategorized().map((e) => e.id)));
+      this.selected.set(new Set(this.uncategorised().map((e) => e.id)));
     }
   }
 
@@ -315,29 +324,32 @@ export class ExpensesComponent {
     this.selected.set(next);
   }
 
-  async fileSelected(): Promise<void> {
-    if (!this.canFile()) {
+  async assignSelected(): Promise<void> {
+    if (!this.canAssign()) {
       return;
     }
-    const count = await this.expenses.file(this.project().id, {
+    const count = await this.expenses.categorise(this.project().id, {
       expense_ids: Array.from(this.selected()),
       category_id: this.bulkCategoryId(),
     });
     if (count === null) {
-      this.toast.show(this.expenses.error() ?? 'Could not assign those expenses.', 'error');
+      this.toast.show(
+        this.expenses.error() ?? 'Could not assign a category to those expenses.',
+        'error',
+      );
       return;
     }
-    this.toast.show(`${count} expense${count === 1 ? '' : 's'} filed.`, 'success');
+    this.toast.show(`${count} expense${count === 1 ? '' : 's'} assigned.`, 'success');
     this.selected.set(new Set());
     this.bulkCategoryId.set('');
-    await this.expenses.loadForCategory(this.project().id, UNFILED, this.uncategorizedPage());
-    if (this.uncategorizedTotal() === 0) {
-      this.stopFiling();
+    await this.expenses.loadForCategory(this.project().id, UNCATEGORISED, this.uncategorisedPage());
+    if (this.uncategorisedTotal() === 0) {
+      this.stopAssigning();
     }
   }
 
-  async remove(expenseId: string): Promise<void> {
-    await this.expenses.remove(this.project().id, expenseId);
+  async archive(expenseId: string): Promise<void> {
+    await this.expenses.archive(this.project().id, expenseId);
     this.toast.show('Expense archived. Show archived to restore it.');
   }
 
@@ -347,7 +359,7 @@ export class ExpensesComponent {
   }
 
   async setIncludeArchived(on: boolean): Promise<void> {
-    this.filing.set(false);
+    this.assigning.set(false);
     this.includeArchived.set(on);
     await this.expenses.load(this.project().id, { ...this.filters(), includeArchived: on });
   }

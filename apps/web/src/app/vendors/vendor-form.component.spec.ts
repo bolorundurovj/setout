@@ -6,7 +6,7 @@ import { ToastService } from '../toast.service';
 import { VendorFormComponent } from './vendor-form.component';
 import { VendorService } from './vendor.service';
 
-function vendor(over: Partial<VendorRead> = {}): VendorRead {
+function vendor(overrides: Partial<VendorRead> = {}): VendorRead {
   return {
     id: 'v1',
     name: 'A Vendor',
@@ -19,8 +19,8 @@ function vendor(over: Partial<VendorRead> = {}): VendorRead {
     totals: [],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
@@ -78,14 +78,14 @@ describe('VendorFormComponent', () => {
     return component;
   }
 
-  it('starts empty for a new vendor', async () => {
+  it('starts empty when creating a vendor', async () => {
     const component = await render();
     expect(component.isEdit()).toBe(false);
     expect(component.title()).toBe('New Vendor');
     expect(component.name()).toBe('');
   });
 
-  it('fills itself from the vendor being edited', async () => {
+  it('populates the fields from the vendor being edited', async () => {
     const component = await render('v1');
     expect(component.isEdit()).toBe(true);
     expect(component.title()).toBe('Edit Vendor');
@@ -115,7 +115,7 @@ describe('VendorFormComponent', () => {
     expect(navigations[0][0]).toEqual(['/vendors', 'v9']);
   });
 
-  it('saves an edit rather than creating a second vendor', async () => {
+  it('updates the vendor when editing instead of creating one', async () => {
     const component = await render('v1');
     component.trade.set('another trade');
 
@@ -132,7 +132,7 @@ describe('VendorFormComponent', () => {
     });
   });
 
-  it('will not save without a name', async () => {
+  it('does not save without a name', async () => {
     const component = await render();
     component.name.set('   ');
 
@@ -141,7 +141,7 @@ describe('VendorFormComponent', () => {
     expect(added.length).toBe(0);
   });
 
-  it('reports a save that was refused and stays put', async () => {
+  it('shows the error and does not navigate when the save fails', async () => {
     const component = await render();
     saveResult = null;
     component.name.set('A Vendor');
@@ -152,7 +152,7 @@ describe('VendorFormComponent', () => {
     expect(navigations.length).toBe(0);
   });
 
-  it('cancels back to the list when new, and to the vendor when editing', async () => {
+  it('cancels to the list when creating and to the vendor when editing', async () => {
     (await render()).cancel();
     expect(navigations[0][0]).toEqual(['/vendors']);
 
@@ -160,22 +160,22 @@ describe('VendorFormComponent', () => {
     expect(navigations[0][0]).toEqual(['/vendors', 'v1']);
   });
 
-  it('copes with a vendor that is not there', async () => {
+  it('leaves the fields empty when the vendor is not found', async () => {
     const component = await render('v1', null);
     expect(component.name()).toBe('');
     expect(component.loading()).toBe(false);
   });
 
-  it('names who is being edited in the page title', async () => {
+  it('shows the edited name in the page title', async () => {
     await render('x1', vendor({ name: 'Corner Depot Cement' }));
     TestBed.tick();
     expect(TestBed.inject(Title).getTitle()).toBe('Edit Corner Depot Cement · Setout');
   });
 
-  it('leaves the title alone when adding a new one', async () => {
-    TestBed.inject(Title).setTitle('Add · Setout');
+  it('keeps the page title when creating a vendor', async () => {
+    TestBed.inject(Title).setTitle('New · Setout');
     await render('');
     TestBed.tick();
-    expect(TestBed.inject(Title).getTitle()).toBe('Add · Setout');
+    expect(TestBed.inject(Title).getTitle()).toBe('New · Setout');
   });
 });

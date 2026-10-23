@@ -8,7 +8,7 @@ import { ToastService } from '../toast.service';
 import { ToggleComponent } from '../ui/toggle.component';
 import { currencySymbol } from '../ui/currency-pill.component';
 import { BudgetService } from './budget.service';
-import { formatMoney, parseMoney } from './money';
+import { formatAmountInput, formatMoney, parseMoney } from './money';
 
 @Component({
   selector: 'app-budget',
@@ -69,19 +69,19 @@ export class BudgetComponent {
     const next: Record<string, string> = {};
     for (const category of this.budget.categories()) {
       const amount = category.own_budgeted_amount;
-      next[category.id] = amount ? (amount / 10 ** exponent).toFixed(exponent) : '';
+      next[category.id] = amount ? formatAmountInput(amount, exponent) : '';
     }
     this.drafts.set(next);
   }
 
   readonly costTypes: Chip[] = [
-    { value: '', label: 'Not split' },
+    { value: '', label: 'None' },
     { value: 'labour', label: 'Labour' },
     { value: 'material', label: 'Material' },
     { value: 'fixed', label: 'Fixed' },
   ];
 
-  splitOf(item: BudgetItemRead): string {
+  costTypeOf(item: BudgetItemRead): string {
     return item.cost_type ?? '';
   }
 
@@ -94,8 +94,7 @@ export class BudgetComponent {
     return this.itemDescription().trim().length > 0 && budgeted !== null && budgeted >= 0;
   }
 
-  /** Several items can sit under one category, which is what the row total sums. */
-  async addLineItem(category: CategoryRead): Promise<void> {
+  async addItem(category: CategoryRead): Promise<void> {
     const budgeted = parseMoney(this.itemAmount(), this.project().currency_exponent);
     if (!this.canAddItem() || budgeted === null) {
       return;
@@ -123,31 +122,32 @@ export class BudgetComponent {
     return this.budget.items()[categoryId] ?? [];
   }
 
-  /** Removed items are shown but count towards nothing. */
-  private liveItemsFor(categoryId: string): BudgetItemRead[] {
-    return this.itemsFor(categoryId).filter((item) => !item.deleted_at);
+  /** Archived items are displayed but excluded from totals. */
+  private activeItemsFor(categoryId: string): BudgetItemRead[] {
+    return this.itemsFor(categoryId).filter((item) => !item.archived_at);
   }
 
   draftFor(categoryId: string): string {
     return this.drafts()[categoryId] ?? '';
   }
 
-  /** The day the number was last set on purpose. */
-  setOn(categoryId: string): string {
-    const items = this.liveItemsFor(categoryId);
-    return items.length ? this.day(items[0].set_at) : '—';
+  setDate(categoryId: string): string {
+    const items = this.activeItemsFor(categoryId);
+    return items.length ? this.formatDate(items[0].set_at) : '—';
   }
 
-  changed(categoryId: string): string {
-    const items = this.liveItemsFor(categoryId);
+  lastChangedDate(categoryId: string): string {
+    const items = this.activeItemsFor(categoryId);
     if (!items.length) {
       return '—';
     }
     const latest = items.reduce((a, b) => (a.updated_at > b.updated_at ? a : b));
-    return latest.updated_at === latest.created_at ? 'never' : this.day(latest.updated_at);
+    return latest.updated_at === latest.created_at
+      ? 'Not changed'
+      : this.formatDate(latest.updated_at);
   }
 
-  private day(value: string): string {
+  private formatDate(value: string): string {
     return new Date(value).toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'short',
@@ -172,16 +172,16 @@ export class BudgetComponent {
     await this.budget.loadItems(category.id, this.includeArchived());
   }
 
-  /** One row, one number. Extra detail lives in the items under the row. */
+  /** A category with more than one item can only be changed through its items. */
   async commit(category: CategoryRead): Promise<void> {
     const typed = this.draftFor(category.id).trim();
-    const items = this.liveItemsFor(category.id);
+    const items = this.activeItemsFor(category.id);
     if (typed === '') {
       return;
     }
     const budgeted = parseMoney(typed, this.project().currency_exponent);
     if (budgeted === null) {
-      this.toast.show('That is not an amount.', 'error');
+      this.toast.show('Enter a valid amount.', 'error');
       this.syncDrafts();
       return;
     }
@@ -189,7 +189,7 @@ export class BudgetComponent {
       return;
     }
     if (items.length > 1) {
-      this.toast.show('This category has several budget items. Open it to change them.', 'info');
+      this.toast.show('This category has several budget items. Open it to edit them.', 'info');
       this.syncDrafts();
       return;
     }
@@ -214,20 +214,24 @@ export class BudgetComponent {
     this.toast.show(`${name} added.`);
   }
 
-  async removeItem(category: CategoryRead, itemId: string): Promise<void> {
-    await this.budget.removeItem(this.project().id, category.id, itemId, this.includeArchived());
+  async archiveItem(category: CategoryRead, itemId: string): Promise<void> {
+    await this.budget.archiveItem(this.project().id, category.id, itemId, this.includeArchived());
     await this.load();
     this.toast.show('Budget item archived. Show archived to restore it.');
   }
 
   async restoreItem(category: CategoryRead, itemId: string): Promise<void> {
-    const done = await this.budget.putItemBack(this.project().id, category.id, itemId);
+    const restored = await this.budget.restoreItem(this.project().id, category.id, itemId);
     await this.load();
     this.toast.show(
-      done
+      restored
         ? 'Budget item restored.'
         : (this.budget.error() ?? 'Could not restore that budget item.'),
-      done ? 'success' : 'error',
+      restored ? 'success' : 'error',
     );
+  }
+
+  value(event: Event): string {
+    return (event.target as HTMLInputElement).value;
   }
 }

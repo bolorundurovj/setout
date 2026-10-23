@@ -1,5 +1,3 @@
-"""Files on the disk Setout is running on, under SETOUT_DATA_DIR."""
-
 from __future__ import annotations
 
 import asyncio
@@ -9,8 +7,6 @@ from setout.services.storage.base import Storage
 
 
 class LocalStorage(Storage):
-    """The default: files under the same directory as the database."""
-
     def __init__(self, root: Path) -> None:
         self.root = root
 
@@ -36,5 +32,5 @@ class LocalStorage(Storage):
         path = (self.root / key).resolve()
         root = self.root.resolve()
         if not path.is_relative_to(root):
-            raise ValueError("That key is not inside the store")
+            raise ValueError("Storage key is outside the storage root")
         return path

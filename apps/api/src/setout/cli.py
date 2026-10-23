@@ -1,5 +1,3 @@
-"""Setout command-line interface."""
-
 from __future__ import annotations
 
 import argparse
@@ -15,7 +13,7 @@ from tortoise import Tortoise
 from setout.config import get_settings
 from setout.db import close_db, init_db
 from setout.models.user import Session, User
-from setout.services.auth import hash_password
+from setout.services.auth import hash_passphrase
 
 logger = logging.getLogger("setout.cli")
 
@@ -24,12 +22,10 @@ RECOVERY_FILE_NAME = "reset-passphrase.txt"
 
 
 def generate_passphrase(length: int = 20) -> str:
-    """Generate a random secure passphrase."""
     return secrets.token_urlsafe(length)
 
 
 def find_recovery_file(custom_path: str | Path | None = None) -> Path | None:
-    """Find a recovery file if one exists."""
     if custom_path:
         p = Path(custom_path).resolve()
         return p if p.is_file() else None
@@ -54,11 +50,7 @@ def find_recovery_file(custom_path: str | Path | None = None) -> Path | None:
 
 
 def read_recovery_file(file_path: Path) -> tuple[str | None, str] | None:
-    """Read credentials from a recovery file.
-
-    Expected format: either a single line with the new passphrase,
-    or username:new-passphrase. Lines starting with # are ignored.
-    """
+    """Format: the new passphrase, or account name:passphrase. Lines starting with # are ignored."""
     try:
         content = file_path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -82,21 +74,17 @@ def read_recovery_file(file_path: Path) -> tuple[str | None, str] | None:
 
 
 async def apply_passphrase_reset(user: User, new_passphrase: str) -> None:
-    """Apply new passphrase, clear failed attempts, and revoke active sessions."""
-    user.password_hash = hash_password(new_passphrase)
-    user.failed_logins = 0
+    user.passphrase_hash = hash_passphrase(new_passphrase)
+    user.failed_sign_ins = 0
     user.last_failed_at = None
     await user.save()
 
-    # Invalidate all active sessions so any compromised devices are signed out.
+    # Ends every session so that compromised devices are signed out.
     await Session.filter(user_id=user.id).delete()
 
 
 async def consume_recovery_file(custom_path: str | Path | None = None) -> bool:
-    """Check for, apply, and delete a recovery file if one exists.
-
-    Returns True if a recovery file was found and successfully applied.
-    """
+    """Returns True only when a recovery file was found and applied."""
     file_path = find_recovery_file(custom_path)
     if not file_path:
         return False
@@ -105,7 +93,7 @@ async def consume_recovery_file(custom_path: str | Path | None = None) -> bool:
     if not creds:
         return False
 
-    username, new_passphrase = creds
+    account_name, new_passphrase = creds
     if len(new_passphrase) < MIN_PASSPHRASE_LENGTH:
         logger.error(
             "Passphrase in recovery file %s is shorter than %d characters",
@@ -118,9 +106,9 @@ async def consume_recovery_file(custom_path: str | Path | None = None) -> bool:
     if manage_db:
         await init_db()
     try:
-        user = await User.get_or_none(name=username) if username else await User.first()
+        user = await User.get_or_none(name=account_name) if account_name else await User.first()
         if not user:
-            logger.error("No user found to reset via recovery file %s", file_path)
+            logger.error("No account found to reset via recovery file %s", file_path)
             return False
 
         await apply_passphrase_reset(user, new_passphrase)
@@ -139,21 +127,22 @@ async def consume_recovery_file(custom_path: str | Path | None = None) -> bool:
 async def reset_passphrase(
     *,
     file_path: str | Path | None = None,
-    username: str | None = None,
+    account_name: str | None = None,
     passphrase: str | None = None,
     generate: bool = False,
     use_stdin: bool = False,
 ) -> int:
-    """Reset the passphrase for an admin user."""
     target_file = find_recovery_file(file_path)
     if target_file and not passphrase and not generate and not use_stdin:
         creds = read_recovery_file(target_file)
         if not creds:
-            print(f"Error: Could not read valid passphrase from '{target_file}'.", file=sys.stderr)
+            print(
+                f"Error: Could not read a valid passphrase from '{target_file}'.", file=sys.stderr
+            )
             return 1
         file_user, new_passphrase = creds
-        if not username and file_user:
-            username = file_user
+        if not account_name and file_user:
+            account_name = file_user
     elif generate:
         new_passphrase = generate_passphrase()
     elif passphrase is not None:
@@ -184,9 +173,9 @@ async def reset_passphrase(
     if manage_db:
         await init_db()
     try:
-        user = await User.get_or_none(name=username) if username else await User.first()
+        user = await User.get_or_none(name=account_name) if account_name else await User.first()
         if not user:
-            target = f"user '{username}'" if username else "admin user"
+            target = f"account '{account_name}'" if account_name else "admin account"
             print(f"Error: No {target} found in the database.", file=sys.stderr)
             return 1
 
@@ -195,14 +184,14 @@ async def reset_passphrase(
         if target_file and target_file.is_file():
             try:
                 target_file.unlink()
-                print(f"Consumed and removed recovery file '{target_file}'.")
+                print(f"Deleted recovery file '{target_file}'.")
             except OSError as exc:
                 print(
-                    f"Warning: Could not remove recovery file '{target_file}': {exc}",
+                    f"Warning: Could not delete recovery file '{target_file}': {exc}",
                     file=sys.stderr,
                 )
 
-        print(f"Passphrase successfully reset for '{user.name}'.")
+        print(f"Passphrase reset for '{user.name}'.")
         if generate:
             print(f"Generated passphrase: {new_passphrase}")
         return 0
@@ -221,26 +210,28 @@ def build_parser() -> argparse.ArgumentParser:
     reset_parser = subparsers.add_parser(
         "reset-passphrase",
         help="Reset the admin passphrase.",
-        description="Reset the passphrase for an admin user account.",
+        description="Reset the passphrase for an admin account.",
     )
     reset_parser.add_argument(
         "-f",
         "--file",
         dest="file_path",
         help="Path to the recovery file containing the new passphrase."
-        " If not specified, checks for 'reset-passphrase.txt'.",
+        " If omitted, searches for 'reset-passphrase.txt'.",
     )
     reset_parser.add_argument(
+        "-n",
+        "--name",
         "-u",
         "--user",
-        dest="username",
-        help="Account username to reset. Defaults to the first user found.",
+        dest="account_name",
+        help="Account name to reset. Defaults to the first account found.",
     )
     reset_parser.add_argument(
         "-g",
         "--generate",
         action="store_true",
-        help="Generate a random secure passphrase automatically and print it.",
+        help="Generate a random passphrase and print it.",
     )
     reset_parser.add_argument(
         "--stdin",
@@ -264,7 +255,7 @@ def main(argv: list[str] | None = None) -> int:
         return asyncio.run(
             reset_passphrase(
                 file_path=args.file_path,
-                username=args.username,
+                account_name=args.account_name,
                 passphrase=args.passphrase,
                 generate=args.generate,
                 use_stdin=args.use_stdin,

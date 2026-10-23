@@ -20,10 +20,10 @@ const project: ProjectRead = {
   spent_amount: 0,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
-  deleted_at: null,
+  archived_at: null,
 };
 
-function category(over: Partial<CategoryRead> = {}): CategoryRead {
+function category(overrides: Partial<CategoryRead> = {}): CategoryRead {
   return {
     id: 's1',
     project_id: 'p1',
@@ -40,8 +40,8 @@ function category(over: Partial<CategoryRead> = {}): CategoryRead {
     own_expense_count: 0,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
@@ -49,8 +49,8 @@ describe('ProjectSettingsComponent', () => {
   let navigations: unknown[][];
   let saved: unknown[];
   let renamed: unknown[];
-  let removed: string[];
-  let putBack: string[];
+  let archived: string[];
+  let restored: string[];
   let toasts: { message: string; type?: string }[];
   let changes: number;
   let saveResult: ProjectRead | null;
@@ -60,8 +60,8 @@ describe('ProjectSettingsComponent', () => {
     navigations = [];
     saved = [];
     renamed = [];
-    removed = [];
-    putBack = [];
+    archived = [];
+    restored = [];
     toasts = [];
     changes = 0;
     saveResult = project;
@@ -76,7 +76,7 @@ describe('ProjectSettingsComponent', () => {
         {
           provide: ProjectService,
           useValue: {
-            error: () => 'Could not save that project.',
+            error: () => 'Could not save the project.',
             update: async (id: string, body: unknown) => {
               saved.push({ id, body });
               return saveResult;
@@ -93,12 +93,12 @@ describe('ProjectSettingsComponent', () => {
               renamed.push({ id, name });
               return categoryResult;
             },
-            removeCategory: async (_p: string, id: string) => {
-              removed.push(id);
+            archiveCategory: async (_p: string, id: string) => {
+              archived.push(id);
               return categoryResult;
             },
-            putCategoryBack: async (_p: string, id: string) => {
-              putBack.push(id);
+            restoreCategory: async (_p: string, id: string) => {
+              restored.push(id);
               return categoryResult;
             },
           },
@@ -124,17 +124,17 @@ describe('ProjectSettingsComponent', () => {
     return component;
   }
 
-  it('points the export at this project alone', async () => {
+  it('builds the export URL for this project', async () => {
     expect((await ready()).exportUrl()).toBe('/api/projects/p1/export');
   });
 
-  it('sends the import screen the project it was opened from', async () => {
-    (await ready()).importSheet();
+  it('opens the import page with this project selected', async () => {
+    (await ready()).importWorkbook();
     expect(navigations[0][0]).toEqual(['/import']);
     expect(navigations[0][1]).toEqual({ queryParams: { project: 'p1' } });
   });
 
-  it('starts on what the project already says', async () => {
+  it('initialises the fields from the project', async () => {
     const component = await ready();
     expect(component.name()).toBe('Jacaranda Close, Ewuru');
     expect(component.status()).toBe('active');
@@ -143,20 +143,20 @@ describe('ProjectSettingsComponent', () => {
     expect(component.canSave()).toBe(false);
   });
 
-  it('will not save until something changed', async () => {
+  it('does not allow saving until a field changes', async () => {
     const component = await ready();
     component.name.set('Jacaranda Close');
     expect(component.dirty()).toBe(true);
     expect(component.canSave()).toBe(true);
   });
 
-  it('refuses to save a project with no name', async () => {
+  it('does not allow saving a project with no name', async () => {
     const component = await ready();
     component.name.set('   ');
     expect(component.canSave()).toBe(false);
   });
 
-  it('sends the name, the status and the notes, trimmed', async () => {
+  it('sends the trimmed name, status and notes', async () => {
     const component = await ready();
     component.name.set('  Jacaranda Close  ');
     component.status.set('completed');
@@ -174,7 +174,7 @@ describe('ProjectSettingsComponent', () => {
     expect(toasts[0].message).toBe('Project saved.');
   });
 
-  it('sends nothing rather than an empty string when the notes are cleared', async () => {
+  it('sends null for notes when they are cleared', async () => {
     const component = await ready();
     component.notes.set('');
 
@@ -183,7 +183,7 @@ describe('ProjectSettingsComponent', () => {
     expect((saved[0] as { body: { notes: string | null } }).body.notes).toBeNull();
   });
 
-  it('says so and stays put when the save is refused', async () => {
+  it('shows the error and does not emit when the save fails', async () => {
     const component = await ready();
     saveResult = null;
     component.name.set('Something else');
@@ -191,31 +191,31 @@ describe('ProjectSettingsComponent', () => {
     await component.save();
 
     expect(changes).toBe(0);
-    expect(toasts[0]).toEqual({ message: 'Could not save that project.', type: 'error' });
+    expect(toasts[0]).toEqual({ message: 'Could not save the project.', type: 'error' });
   });
 
-  it('reads the shape of the currency off the formatter that prints it', async () => {
+  it('derives the currency format from the money formatter', async () => {
     const component = await ready();
-    expect(component.shape().decimals).toBe('2');
-    expect(component.shape().position).toBe('before');
-    expect(component.shape().separators).toBe(',   .');
+    expect(component.currencyFormat().decimals).toBe('2');
+    expect(component.currencyFormat().position).toBe('before');
+    expect(component.currencyFormat().separators).toBe(',   .');
     expect(component.preview()).toContain('48,893.00');
   });
 
-  it('counts what was spent against each category', async () => {
+  it('counts the expenses in each category', async () => {
     const component = await ready();
     expect(component.countLabel(category({ expense_count: 0 }))).toBe('no expenses');
     expect(component.countLabel(category({ expense_count: 1 }))).toBe('1 expense');
     expect(component.countLabel(category({ expense_count: 4 }))).toBe('4 expenses');
   });
 
-  it('only offers to remove a category that nothing was spent on', async () => {
+  it('offers archive only for a category with no expenses', async () => {
     const component = await ready();
-    expect(component.canRemove(category({ expense_count: 0 }))).toBe(true);
-    expect(component.canRemove(category({ expense_count: 1 }))).toBe(false);
+    expect(component.canArchive(category({ expense_count: 0 }))).toBe(true);
+    expect(component.canArchive(category({ expense_count: 1 }))).toBe(false);
   });
 
-  it('gives each branch its own tint, and a child the tint of its parent', async () => {
+  it('gives each top-level category its own tint and a child its parent tint', async () => {
     const component = await ready([
       category({ id: 'a' }),
       category({ id: 'b', sort_order: 1 }),
@@ -226,7 +226,7 @@ describe('ProjectSettingsComponent', () => {
     expect(component.tint(category({ id: 'b1', parent_id: 'b' }))).toBe('tint-2');
   });
 
-  it('renames a category and closes the box', async () => {
+  it('renames a category and closes the rename field', async () => {
     const component = await ready([category({ id: 'a', name: 'Interior work' })]);
     component.startRename(category({ id: 'a', name: 'Interior work' }));
     expect(component.newName()).toBe('Interior work');
@@ -238,7 +238,7 @@ describe('ProjectSettingsComponent', () => {
     expect(component.renaming()).toBeNull();
   });
 
-  it('does not go to the server for a name that did not change', async () => {
+  it('skips the request when the name is unchanged', async () => {
     const component = await ready();
     component.startRename(category({ name: 'Interior work' }));
     await component.rename(category({ name: 'Interior work' }));
@@ -247,7 +247,7 @@ describe('ProjectSettingsComponent', () => {
     expect(component.renaming()).toBeNull();
   });
 
-  it('passes on why the server would not take the rename', async () => {
+  it('shows the API error when the rename fails', async () => {
     const component = await ready([], 'A category with that name already exists');
     categoryResult = false;
     component.newName.set('Interior work');
@@ -260,39 +260,50 @@ describe('ProjectSettingsComponent', () => {
     });
   });
 
-  it('asks before removing a category, and one at a time', async () => {
+  it('confirms before archiving a category, one category at a time', async () => {
     const component = await ready();
-    component.ask(category({ id: 'a' }));
-    expect(component.removing()).toBe('a');
+    component.confirmArchive(category({ id: 'a' }));
+    expect(component.archiving()).toBe('a');
 
     component.startRename(category({ id: 'b' }));
-    expect(component.removing()).toBeNull();
+    expect(component.archiving()).toBeNull();
     expect(component.renaming()).toBe('b');
 
-    component.ask(category({ id: 'a' }));
+    component.confirmArchive(category({ id: 'a' }));
     expect(component.renaming()).toBeNull();
   });
 
-  it('archives a category once asked', async () => {
+  it('archives a category after confirmation', async () => {
     const component = await ready();
-    component.ask(category({ id: 'a' }));
+    component.confirmArchive(category({ id: 'a' }));
 
-    await component.remove(category({ id: 'a', name: 'Landscaping' }));
+    await component.archive(category({ id: 'a', name: 'Landscaping' }));
 
-    expect(removed).toEqual(['a']);
-    expect(component.removing()).toBeNull();
+    expect(archived).toEqual(['a']);
+    expect(component.archiving()).toBeNull();
     expect(toasts[0].message).toBe('Landscaping archived.');
   });
 
-  it('passes on the reason a category with expenses cannot go', async () => {
-    const component = await ready([], 'A category with expenses cannot be deleted, only renamed');
+  it('shows why a category with expenses cannot be archived', async () => {
+    const component = await ready([], 'A category with expenses cannot be archived, only renamed');
     categoryResult = false;
 
-    await component.remove(category({ name: 'Interior work' }));
+    await component.archive(category({ name: 'Interior work' }));
 
     expect(toasts[0]).toEqual({
-      message: 'A category with expenses cannot be deleted, only renamed',
+      message: 'A category with expenses cannot be archived, only renamed',
       type: 'error',
     });
+  });
+
+  it('restores the last archived category', async () => {
+    const component = await ready();
+    await component.archive(category({ id: 'a', name: 'Landscaping' }));
+    expect(component.lastArchived()?.id).toBe('a');
+
+    await component.restoreLastArchived();
+
+    expect(restored).toEqual(['a']);
+    expect(component.lastArchived()).toBeNull();
   });
 });

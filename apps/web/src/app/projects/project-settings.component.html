@@ -2,8 +2,8 @@
   <div class="intro">
     <h2 class="t-heading">Project Settings</h2>
     <p class="prose">
-      For {{ project().name }} only. Currency belongs to the project, and nothing is ever converted
-      between projects.
+      Settings for {{ project().name }} only. Each project has one currency, and amounts are never
+      converted between projects.
     </p>
   </div>
 
@@ -18,7 +18,7 @@
           type="text"
           autocomplete="off"
           [value]="name()"
-          (input)="name.set(value($event))"
+          (input)="name.set(inputValue($event))"
         />
       </label>
 
@@ -41,7 +41,7 @@
         (valueChange)="landId.set($event)"
       />
       <span class="t-small">
-        The plot this is being built on. One plot can carry more than one project.
+        The land this project is built on. One land record can have more than one project.
       </span>
     </div>
 
@@ -51,9 +51,9 @@
         class="input-field"
         type="text"
         autocomplete="off"
-        placeholder="What this build is"
+        placeholder="Optional notes"
         [value]="notes()"
-        (input)="notes.set(value($event))"
+        (input)="notes.set(inputValue($event))"
       />
     </label>
 
@@ -62,7 +62,7 @@
         Save Changes
       </app-button>
       @if (dirty()) {
-        <span class="t-small unsaved">Not saved yet.</span>
+        <span class="t-small unsaved">Unsaved changes.</span>
       }
     </div>
   </section>
@@ -80,31 +80,31 @@
       </div>
       <div class="fact">
         <span class="t-micro">Symbol</span>
-        <span class="fact-value t-mono">{{ shape().symbol }}</span>
+        <span class="fact-value t-mono">{{ currencyFormat().symbol }}</span>
       </div>
       <div class="fact">
         <span class="t-micro">Position</span>
-        <span class="fact-value t-mono">{{ shape().position }}</span>
+        <span class="fact-value t-mono">{{ currencyFormat().position }}</span>
       </div>
       <div class="fact">
         <span class="t-micro">Decimals</span>
-        <span class="fact-value t-mono">{{ shape().decimals }}</span>
+        <span class="fact-value t-mono">{{ currencyFormat().decimals }}</span>
       </div>
       <div class="fact">
         <span class="t-micro">Separators</span>
-        <span class="fact-value t-mono">{{ shape().separators }}</span>
+        <span class="fact-value t-mono">{{ currencyFormat().separators }}</span>
       </div>
     </div>
 
     <div class="preview">
-      <span class="t-small">The same stored amount, shown for this project</span>
+      <span class="t-small">Example amount in this project's format</span>
       <span class="preview-figure t-mono">{{ preview() }}</span>
     </div>
 
     <p class="t-small note">
-      The currency is set when the project is created. Amounts are stored in minor units, so
-      changing it would reprint existing amounts rather than convert them. Create another project
-      instead.
+      The currency is set when the project is created and cannot be changed. Amounts are stored in
+      minor units, so changing the currency would relabel existing amounts without converting them.
+      To use a different currency, create a new project.
     </p>
   </section>
 
@@ -124,9 +124,9 @@
           <div
             class="category"
             [class.child]="category.parent_id"
-            [class.archived]="category.deleted_at"
+            [class.archived]="category.archived_at"
           >
-            @if (category.deleted_at) {
+            @if (category.archived_at) {
               <span class="swatch" [class]="tint(category)"></span>
               <span class="category-name">{{ category.name }}</span>
               <span class="category-count t-mono">archived</span>
@@ -145,20 +145,20 @@
                 autocomplete="off"
                 [attr.aria-label]="'Rename ' + category.name"
                 [value]="newName()"
-                (input)="newName.set(value($event))"
+                (input)="newName.set(inputValue($event))"
                 (keyup.enter)="rename(category)"
                 (keyup.escape)="cancelRename()"
               />
               <button type="button" class="link-action" (click)="rename(category)">Save</button>
               <button type="button" class="link-action" (click)="cancelRename()">Cancel</button>
-            } @else if (removing() === category.id) {
+            } @else if (archiving() === category.id) {
               <span class="swatch" [class]="tint(category)"></span>
               <span class="category-name">{{ category.name }}</span>
               <span class="t-small confirm">Archive this category?</span>
-              <button type="button" class="link-action destructive" (click)="remove(category)">
+              <button type="button" class="link-action archive-action" (click)="archive(category)">
                 Yes, Archive
               </button>
-              <button type="button" class="link-action" (click)="cancelRemove()">Cancel</button>
+              <button type="button" class="link-action" (click)="cancelArchive()">Cancel</button>
             } @else {
               <span class="swatch" [class]="tint(category)"></span>
               <span class="category-name">{{ category.name }}</span>
@@ -171,14 +171,14 @@
               >
                 Rename
               </button>
-              @if (canRemove(category)) {
+              @if (canArchive(category)) {
                 <button
                   type="button"
-                  class="link-action destructive"
-                  [attr.aria-label]="'Remove ' + category.name"
-                  (click)="ask(category)"
+                  class="link-action archive-action"
+                  [attr.aria-label]="'Archive ' + category.name"
+                  (click)="confirmArchive(category)"
                 >
-                  Remove
+                  Archive
                 </button>
               }
             }
@@ -186,10 +186,10 @@
         }
       </div>
 
-      @if (justRemoved(); as gone) {
+      @if (lastArchived(); as archived) {
         <p class="t-small note">
-          {{ gone.name }} was deleted.
-          <button type="button" class="link-action" (click)="putCategoryBack()">Undo</button>
+          {{ archived.name }} was archived.
+          <button type="button" class="link-action" (click)="restoreLastArchived()">Restore</button>
         </p>
       }
 
@@ -198,21 +198,22 @@
   </section>
 
   <section class="card block">
-    <span class="t-micro">Spreadsheet</span>
+    <span class="t-micro">Workbook</span>
 
     <div class="actions">
-      <app-button variant="secondary" (pressed)="importSheet()">Import Spreadsheet</app-button>
-      <app-button variant="secondary" (pressed)="exportSheet()">Export Workbook</app-button>
+      <app-button variant="secondary" (pressed)="importWorkbook()">Import Workbook</app-button>
+      <app-button variant="secondary" (pressed)="exportWorkbook()">Export Workbook</app-button>
     </div>
 
     <p class="t-small note">
-      Import reads a whole workbook into {{ project().name }}. Rows already here, by date, amount
-      and description, are recognised, so a second import does not double the spend.
+      Import adds a whole workbook to {{ project().name }}. Rows that match existing expenses by
+      date, amount and description are skipped, so importing the same workbook twice does not
+      duplicate expenses.
     </p>
 
     <p class="t-small note">
-      Export writes {{ project().name }} back out in the shape it came from, and that workbook reads
-      into Setout again. Attached files are listed in it by name, not carried in it.
+      Export creates a workbook of {{ project().name }} in the import format, so it can be imported
+      into Setout again. Attachments are listed by file name and are not included.
     </p>
   </section>
 </div>

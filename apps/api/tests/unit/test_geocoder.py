@@ -18,7 +18,7 @@ REPLY = {
 
 @pytest.fixture(autouse=True)
 def _fresh(monkeypatch: pytest.MonkeyPatch) -> None:
-    geocoder.forget()
+    geocoder.clear_cache()
     monkeypatch.setattr(geocoder, "_last_call", 0.0)
     monkeypatch.setattr(geocoder, "MIN_SECONDS_BETWEEN", 0.0)
     settings = get_settings()

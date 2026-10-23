@@ -11,7 +11,7 @@ const TINTS: Tint[] = [
   { fill: '#f0ded7', ink: '#8b503c' },
 ];
 
-/** The same category keeps the same colour everywhere it is drawn. */
+/** Hashes the category id, so it differs from the budget-order --tint-* tokens in styles.scss. */
 export function tintFor(id: string): Tint {
   let sum = 0;
   for (let index = 0; index < id.length; index += 1) {

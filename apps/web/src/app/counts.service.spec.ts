@@ -18,7 +18,7 @@ describe('CountsService', () => {
     return TestBed.inject(CountsService);
   }
 
-  it('counts nothing before it has been loaded', () => {
+  it('returns zero counts before load', () => {
     const service = configure(() => ({}));
     expect(service.counts()).toBeNull();
     expect(service.projects()).toBe(0);
@@ -27,7 +27,7 @@ describe('CountsService', () => {
     expect(service.people()).toBe(0);
   });
 
-  it('reads every count from the one request', async () => {
+  it('reads every count from one request', async () => {
     const service = configure(() => ({ projects: 2, vendors: 6, items: 4, people: 3, lands: 5 }));
     await service.load();
 
@@ -38,7 +38,7 @@ describe('CountsService', () => {
     expect(service.people()).toBe(3);
   });
 
-  it('falls back to nothing rather than throwing at the navigation', async () => {
+  it('resets counts to null when the request fails', async () => {
     const service = configure(() => {
       throw new Error('offline');
     });

@@ -17,19 +17,19 @@ from setout.models.person import Person
 from setout.models.project import Project
 from setout.models.vendor import Vendor
 from setout.schemas.expense import (
-    BulkFileExpenses,
-    BulkFileResult,
+    BulkCategoriseExpenses,
+    BulkCategoriseResult,
     CategorySuggestion,
     ExpenseCreate,
     ExpensePage,
     ExpenseRead,
     ExpenseSort,
     ExpenseUpdate,
+    ProjectExpenseSummary,
     ProjectMonths,
-    ProjectSpend,
 )
 from setout.utils.attachments import counts_for
-from setout.utils.cascade import delete_under_expense, restore_under_expense
+from setout.utils.cascade import archive_under_expense, restore_under_expense
 from setout.utils.expenses import derived_amount
 from setout.utils.months import month_range, to_months
 
@@ -56,17 +56,17 @@ class ExpenseController:
         spent_from: date | None,
         spent_to: date | None,
         sort: ExpenseSort,
-        uncategorized_only: bool,
+        uncategorised_only: bool,
         agreement_only: bool,
-        include_deleted: bool,
+        include_archived: bool,
         limit: int,
         offset: int,
     ) -> ExpensePage:
         await self._project_or_404(project_id)
         query = Expense.filter(project_id=project_id)
-        if not include_deleted:
-            query = query.filter(deleted_at__isnull=True)
-        if uncategorized_only:
+        if not include_archived:
+            query = query.filter(archived_at__isnull=True)
+        if uncategorised_only:
             query = query.filter(category_id__isnull=True)
         elif category_id is not None:
             query = query.filter(category_id=category_id)
@@ -109,8 +109,8 @@ class ExpenseController:
         await self._project_or_404(project_id)
         category_id = await self._resolve_category(project_id, req)
         if category_id is not None:
-            await self._fileable_category(category_id, project_id)
-        await self._attribution_or_404(req.item_id, req.vendor_id, req.paid_by_id)
+            await self._categorisable_category(category_id, project_id)
+        await self._references_or_404(req.item_id, req.vendor_id, req.paid_by_id)
         await self._agreement_or_404(req.agreement_id, project_id)
         amount = self._amount(req.quantity, req.unit_rate, req.amount)
         expense = await Expense.create(
@@ -130,16 +130,18 @@ class ExpenseController:
         )
         return self._read(expense, 0)
 
-    async def bulk_file(self, project_id: str, req: BulkFileExpenses) -> BulkFileResult:
+    async def bulk_categorise(
+        self, project_id: str, req: BulkCategoriseExpenses
+    ) -> BulkCategoriseResult:
         await self._project_or_404(project_id)
-        await self._fileable_category(req.category_id, project_id)
-        filed = await Expense.filter(
+        await self._categorisable_category(req.category_id, project_id)
+        categorised = await Expense.filter(
             project_id=project_id,
             id__in=req.expense_ids,
-            deleted_at__isnull=True,
+            archived_at__isnull=True,
             category_id__isnull=True,
         ).update(category_id=req.category_id)
-        return BulkFileResult(filed_count=filed)
+        return BulkCategoriseResult(categorised_count=categorised)
 
     async def _resolve_category(self, project_id: str, req: ExpenseCreate) -> str | None:
         if req.category_id is not None:
@@ -147,11 +149,11 @@ class ExpenseController:
         if not req.auto_categorize:
             return None
         if req.item_id:
-            category_id = await self._strong_category(project_id, item_id=req.item_id)
+            category_id = await self._unanimous_category(project_id, item_id=req.item_id)
             if category_id:
                 return category_id
         if req.vendor_id:
-            return await self._strong_category(project_id, vendor_id=req.vendor_id)
+            return await self._unanimous_category(project_id, vendor_id=req.vendor_id)
         return None
 
     async def suggest_category(
@@ -162,13 +164,13 @@ class ExpenseController:
             category_id = await self._most_common_category(project_id, item_id=item_id)
             if category_id:
                 return CategorySuggestion(
-                    category_id=category_id, reason="Past purchases of this item"
+                    category_id=category_id, reason="Earlier expenses for this item"
                 )
         if vendor_id:
             category_id = await self._most_common_category(project_id, vendor_id=vendor_id)
             if category_id:
                 return CategorySuggestion(
-                    category_id=category_id, reason="Past purchases from this vendor"
+                    category_id=category_id, reason="Earlier expenses with this vendor"
                 )
         return CategorySuggestion(category_id=None, reason=None)
 
@@ -176,7 +178,7 @@ class ExpenseController:
         self, project_id: str, *, item_id: str | None = None, vendor_id: str | None = None
     ) -> tuple[dict[str, int], int]:
         query = Expense.filter(
-            project_id=project_id, deleted_at__isnull=True, category_id__isnull=False
+            project_id=project_id, archived_at__isnull=True, category_id__isnull=False
         )
         if item_id is not None:
             query = query.filter(item_id=item_id)
@@ -201,7 +203,7 @@ class ExpenseController:
         winners = [category_id for category_id, count in counts.items() if count == max_count]
         return winners[0] if len(winners) == 1 else None
 
-    async def _strong_category(
+    async def _unanimous_category(
         self, project_id: str, *, item_id: str | None = None, vendor_id: str | None = None
     ) -> str | None:
         counts, total = await self._category_counts(
@@ -224,15 +226,14 @@ class ExpenseController:
         expense = await self._expense_or_404(expense_id)
         changes = req.model_dump(exclude_unset=True)
         if changes.get("category_id") is not None:
-            await self._fileable_category(changes["category_id"], expense.project_id)
-        await self._attribution_or_404(
+            await self._categorisable_category(changes["category_id"], expense.project_id)
+        await self._references_or_404(
             changes.get("item_id"), changes.get("vendor_id"), changes.get("paid_by_id")
         )
         await self._agreement_or_404(changes.get("agreement_id"), expense.project_id)
         if changes:
-            # Amount is worked out below, so keep it out of the field update.
-            # The column is not nullable, and a caller sending a quantity and a
-            # rate sends a null amount on purpose.
+            # Amount is derived below. The column is not nullable, and a request with
+            # quantity and unit rate sends a null amount intentionally.
             entered = changes.pop("amount", None)
             expense.update_from_dict(changes)
             derived = derived_amount(expense.quantity, expense.unit_rate)
@@ -240,7 +241,7 @@ class ExpenseController:
                 if entered is not None and entered != derived:
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                        detail=f"Amount should be {derived}: quantity times unit rate",
+                        detail="Amount must equal quantity × unit rate",
                     )
                 expense.amount = derived
             elif entered is not None:
@@ -248,68 +249,67 @@ class ExpenseController:
             await expense.save()
         return self._read(expense, (await counts_for([expense.id])).get(expense.id, 0))
 
-    async def delete(self, expense_id: str) -> None:
+    async def archive(self, expense_id: str) -> None:
         expense = await self._expense_or_404(expense_id)
-        deleted_at = datetime.now(UTC)
-        expense.deleted_at = deleted_at
+        archived_at = datetime.now(UTC)
+        expense.archived_at = archived_at
         await expense.save()
-        await delete_under_expense(expense.id, deleted_at)
+        await archive_under_expense(expense.id, archived_at)
 
     async def restore(self, expense_id: str) -> ExpenseRead:
-        expense = await self._expense_or_404(expense_id, include_deleted=True)
-        if expense.deleted_at is not None:
-            deleted_at = expense.deleted_at
-            expense.deleted_at = None
+        expense = await self._expense_or_404(expense_id, include_archived=True)
+        if expense.archived_at is not None:
+            archived_at = expense.archived_at
+            expense.archived_at = None
             await expense.save()
-            await restore_under_expense(expense.id, deleted_at)
+            await restore_under_expense(expense.id, archived_at)
         return self._read(expense, (await counts_for([expense.id])).get(expense.id, 0))
 
-    async def spend(self, project_id: str) -> ProjectSpend:
+    async def expense_summary(self, project_id: str) -> ProjectExpenseSummary:
         project = await self._project_or_404(project_id)
-        # Filtered by category id rather than through a join, which would make the
-        # database group the sum per category.
+        # Filtered by category id instead of a join, which would group the sum per category.
         category_ids = await Category.filter(
-            project_id=project_id, deleted_at__isnull=True
+            project_id=project_id, archived_at__isnull=True
         ).values_list("id", flat=True)
         budgeted = await self._total(
-            BudgetItem.filter(category_id__in=category_ids, deleted_at__isnull=True),
+            BudgetItem.filter(category_id__in=category_ids, archived_at__isnull=True),
             "budgeted_amount",
         )
-        filed = Expense.filter(project_id=project_id, deleted_at__isnull=True)
-        spent = await self._total(filed, "amount")
-        uncategorized = await self._total(filed.filter(category_id__isnull=True), "amount")
-        uncategorized_count = await filed.filter(category_id__isnull=True).count()
-        removed = await Expense.filter(project_id=project_id, deleted_at__isnull=False).count()
-        return ProjectSpend(
+        active = Expense.filter(project_id=project_id, archived_at__isnull=True)
+        spent = await self._total(active, "amount")
+        uncategorised = await self._total(active.filter(category_id__isnull=True), "amount")
+        uncategorised_count = await active.filter(category_id__isnull=True).count()
+        archived = await Expense.filter(project_id=project_id, archived_at__isnull=False).count()
+        return ProjectExpenseSummary(
             project_id=project.id,
             currency_code=project.currency_id,
             currency_exponent=project.currency.exponent,
             budgeted_amount=budgeted,
             spent_amount=spent,
-            uncategorized_amount=uncategorized,
-            uncategorized_count=uncategorized_count,
-            removed_count=removed,
+            uncategorised_amount=uncategorised,
+            uncategorised_count=uncategorised_count,
+            archived_count=archived,
             variance_percent=round((spent - budgeted) / budgeted * 100, 2) if budgeted else None,
         )
 
     async def months(self, project_id: str) -> ProjectMonths:
         project = await self._project_or_404(project_id)
-        # Shaped in Python: the segments follow budget order and roll up to the
-        # top of each branch, which one query cannot say.
-        expenses = await Expense.filter(project_id=project_id, deleted_at__isnull=True).only(
+        # Built in Python: segments follow budget order and roll up to each top-level
+        # category, which a single query cannot express.
+        expenses = await Expense.filter(project_id=project_id, archived_at__isnull=True).only(
             "id", "spent_on", "category_id", "amount"
         )
-        categories = await Category.filter(project_id=project_id, deleted_at__isnull=True)
+        categories = await Category.filter(project_id=project_id, archived_at__isnull=True)
         months = to_months(expenses, categories)
-        # Ties go to the earlier month, which is the one already on the page.
-        busiest = max(months, key=lambda month: month.amount).month if months else None
+        # max() keeps the first maximum, so a tie resolves to the earlier month.
+        highest = max(months, key=lambda month: month.amount).month if months else None
         return ProjectMonths(
             project_id=project.id,
             currency_code=project.currency_id,
             currency_exponent=project.currency.exponent,
             total_amount=sum(month.amount for month in months),
             months=months,
-            busiest_month=busiest,
+            highest_month=highest,
         )
 
     def _amount(self, quantity: object, unit_rate: int | None, entered: int | None) -> int:
@@ -318,7 +318,7 @@ class ExpenseController:
             if entered is not None and entered != derived:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                    detail=f"Amount should be {derived}: quantity times unit rate",
+                    detail="Amount must equal quantity × unit rate",
                 )
             return derived
         if entered is None:
@@ -328,22 +328,22 @@ class ExpenseController:
             )
         return entered
 
-    async def _attribution_or_404(
+    async def _references_or_404(
         self, item_id: str | None, vendor_id: str | None, paid_by_id: str | None
     ) -> None:
         if (
             item_id is not None
-            and not await Item.filter(id=item_id, deleted_at__isnull=True).exists()
+            and not await Item.filter(id=item_id, archived_at__isnull=True).exists()
         ):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
         if (
             vendor_id is not None
-            and not await Vendor.filter(id=vendor_id, deleted_at__isnull=True).exists()
+            and not await Vendor.filter(id=vendor_id, archived_at__isnull=True).exists()
         ):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vendor not found")
         if (
             paid_by_id is not None
-            and not await Person.filter(id=paid_by_id, deleted_at__isnull=True).exists()
+            and not await Person.filter(id=paid_by_id, archived_at__isnull=True).exists()
         ):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Person not found")
 
@@ -351,7 +351,7 @@ class ExpenseController:
         if agreement_id is None:
             return
         exists = await Agreement.filter(
-            id=agreement_id, project_id=project_id, deleted_at__isnull=True
+            id=agreement_id, project_id=project_id, archived_at__isnull=True
         ).exists()
         if not exists:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agreement not found")
@@ -360,38 +360,37 @@ class ExpenseController:
         rows = await query.annotate(total=Sum(column)).values("total")
         return int(rows[0]["total"] or 0) if rows else 0
 
-    def _read(self, expense: Expense, attachments: int) -> ExpenseRead:
-        """The row, plus the one thing about it that a second query knows."""
+    def _read(self, expense: Expense, attachment_count: int) -> ExpenseRead:
         fields = {
             name: getattr(expense, name)
             for name in ExpenseRead.model_fields
             if name != "attachment_count"
         }
-        return ExpenseRead.model_validate({**fields, "attachment_count": attachments})
+        return ExpenseRead.model_validate({**fields, "attachment_count": attachment_count})
 
     async def _project_or_404(self, project_id: str) -> Project:
         project = await Project.get_or_none(
-            id=project_id, deleted_at__isnull=True
+            id=project_id, archived_at__isnull=True
         ).prefetch_related("currency")
         if project is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
         return project
 
-    async def _fileable_category(self, category_id: str, project_id: str) -> Category:
+    async def _categorisable_category(self, category_id: str, project_id: str) -> Category:
         category = await Category.get_or_none(
-            id=category_id, project_id=project_id, deleted_at__isnull=True
+            id=category_id, project_id=project_id, archived_at__isnull=True
         )
         if category is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
-        if await Category.filter(parent_id=category.id, deleted_at__isnull=True).exists():
+        if await Category.filter(parent_id=category.id, archived_at__isnull=True).exists():
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="A category with subcategories has no expenses of its own",
+                detail="Expenses cannot be assigned to a category that has subcategories",
             )
         return category
 
-    async def _expense_or_404(self, expense_id: str, *, include_deleted: bool = False) -> Expense:
+    async def _expense_or_404(self, expense_id: str, *, include_archived: bool = False) -> Expense:
         expense = await Expense.get_or_none(id=expense_id)
-        if expense is None or (expense.deleted_at is not None and not include_deleted):
+        if expense is None or (expense.archived_at is not None and not include_archived):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Expense not found")
         return expense

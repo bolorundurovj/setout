@@ -10,10 +10,9 @@ EARTH_RADIUS = 6378137.0
 
 
 def polygon_area_sqm(ring: Sequence[Sequence[float]]) -> float:
-    """Spherical excess over the WGS84 radius, the way OpenLayers measures it.
+    """Spherical excess over the WGS84 radius, matching OpenLayers.
 
-    Positions are GeoJSON order, longitude first. A ring of fewer than three
-    corners encloses nothing.
+    Positions are longitude first, as in GeoJSON. Returns 0 for fewer than three boundary points.
     """
     if len(ring) < 3:
         return 0.0

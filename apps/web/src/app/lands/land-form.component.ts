@@ -22,12 +22,12 @@ import { LandMapComponent, type LandPoint } from './land-map.component';
 import {
   boundaryText,
   centroidOf,
-  cornerText,
-  parseCorners,
+  boundaryPointsText,
+  parseBoundaryPoints,
   pointInRing,
   ringOf,
 } from './land-geo';
-import { disagreementNote, placeDisagrees, type Disagreement } from './land-place';
+import { findLocationMismatch, locationMismatchMessage } from './land-place';
 
 @Component({
   selector: 'app-land-form',
@@ -60,34 +60,34 @@ export class LandFormComponent {
   readonly state = signal('');
   readonly country = signal('');
   readonly purchasedOn = signal('');
-  readonly sizeValue = signal('');
-  readonly sizeUnit = signal('');
+  readonly statedArea = signal('');
+  readonly areaUnit = signal('');
   readonly notes = signal('');
-  readonly place = signal<LandPoint | null>(null);
-  readonly edge = signal<LandBoundary | null>(null);
-  readonly typing = signal(false);
-  readonly typed = signal('');
-  readonly typeNote = signal('');
+  readonly pin = signal<LandPoint | null>(null);
+  readonly boundary = signal<LandBoundary | null>(null);
+  readonly editingPoints = signal(false);
+  readonly pointsText = signal('');
+  readonly pointsError = signal('');
 
-  private typedTheEdge = false;
+  private boundaryFromText = false;
 
   readonly geocodedAddress = signal('');
-  readonly mapSays = signal<GeocodedPlace | null>(null);
-  private asking = 0;
+  readonly geocoded = signal<GeocodedPlace | null>(null);
+  private latestGeocodeRequest = 0;
 
   readonly mapTab = signal<'pin' | 'boundary'>('pin');
 
   readonly mapTabs: Tab[] = [
-    { value: 'pin', label: 'Pin' },
+    { value: 'pin', label: 'Location Pin' },
     { value: 'boundary', label: 'Boundary' },
   ];
 
-  readonly edgeBy = signal('draw');
+  readonly boundaryMethod = signal('draw');
 
-  readonly edgeWays: Chip[] = [
+  readonly boundaryMethods: Chip[] = [
     { value: 'draw', label: 'Draw on Map' },
-    { value: 'corners', label: 'Enter Survey Points' },
-    { value: 'survey', label: 'From a Survey' },
+    { value: 'points', label: 'Enter Boundary Points' },
+    { value: 'survey', label: 'Bearings and Distances' },
   ];
 
   readonly countryChips = computed<Chip[]>(() =>
@@ -100,28 +100,29 @@ export class LandFormComponent {
       .map((state) => ({ value: state.name, label: state.name })),
   );
 
-  /** Only a complaint when there is a pin and an edge for it to be outside of. */
   readonly pinIsOutside = computed(() => {
-    const pin = this.place();
-    const ring = ringOf(this.edge());
+    const pin = this.pin();
+    const ring = ringOf(this.boundary());
     return pin !== null && ring.length >= 3 && !pointInRing([pin.lon, pin.lat], ring);
   });
 
-  readonly placeNote = computed<string>(() => {
-    const said = this.mapSays();
-    if (!said) {
+  readonly mismatchMessage = computed<string>(() => {
+    const geocoded = this.geocoded();
+    if (!geocoded) {
       return '';
     }
-    const where = placeDisagrees(said, {
+    const mismatch = findLocationMismatch(geocoded, {
       city: this.city(),
       state: this.state(),
       countryCode: this.country(),
     });
-    return where ? disagreementNote(where as Disagreement, said) : '';
+    const countryName = (code: string) =>
+      this.countries.all().find((country) => country.code === code)?.name ?? code;
+    return mismatch ? locationMismatchMessage(mismatch, geocoded, countryName) : '';
   });
 
   readonly unitChips: Chip[] = [
-    { value: 'sqm', label: 'Square metres' },
+    { value: 'sqm', label: 'Square Metres' },
     { value: 'hectare', label: 'Hectares' },
     { value: 'acre', label: 'Acres' },
     { value: 'plot', label: 'Plots' },
@@ -133,11 +134,10 @@ export class LandFormComponent {
       this.id();
       void this.load();
     });
-    // Drawing on the map while the box is open keeps the two showing the same
-    // thing. Untracked, so it only ever answers the map, never its own writing.
+    // Syncs boundary point text with map edits; untracked so pointsText() writes do not retrigger.
     effect(() => {
-      const drawn = cornerText(this.edge());
-      untracked(() => this.matchTheMap(drawn));
+      const pointsFromMap = boundaryPointsText(this.boundary());
+      untracked(() => this.syncPointsText(pointsFromMap));
     });
     effect(() => {
       const name = this.name();
@@ -161,15 +161,15 @@ export class LandFormComponent {
       this.country.set(land.country_code ?? '');
       this.purchasedOn.set(land.purchased_on ?? '');
       void this.countries.loadStates(this.country());
-      this.sizeValue.set(land.size_value ?? '');
-      this.sizeUnit.set(land.size_unit ?? '');
+      this.statedArea.set(land.size_value ?? '');
+      this.areaUnit.set(land.size_unit ?? '');
       this.notes.set(land.notes ?? '');
-      this.place.set(
+      this.pin.set(
         land.latitude !== null && land.longitude !== null
           ? { lat: Number(land.latitude), lon: Number(land.longitude) }
           : null,
       );
-      this.edge.set(land.boundary ?? null);
+      this.boundary.set(land.boundary ?? null);
       this.geocodedAddress.set(land.geocoded_address ?? '');
     }
     this.loading.set(false);
@@ -185,17 +185,19 @@ export class LandFormComponent {
       return;
     }
     await this.countries.loadStates(code);
-    // A state the new country has never heard of would only be refused on save.
-    const held = this.state().trim().toLowerCase();
-    const known = this.countries.states(code).some((state) => state.name.toLowerCase() === held);
-    if (!known) {
+    // The server rejects a state that is not in the selected country's list.
+    const currentState = this.state().trim().toLowerCase();
+    const stateInCountry = this.countries
+      .states(code)
+      .some((state) => state.name.toLowerCase() === currentState);
+    if (!stateInCountry) {
       this.state.set('');
     }
   }
 
-  /** Drop the pin in the middle of the plot, unless the middle is outside it too. */
+  /** No-op when the centroid of a concave boundary falls outside it. */
   centrePin(): void {
-    const ring = ringOf(this.edge());
+    const ring = ringOf(this.boundary());
     const middle = centroidOf(ring);
     if (!middle || !pointInRing(middle, ring)) {
       return;
@@ -204,101 +206,104 @@ export class LandFormComponent {
   }
 
   async setPin(pin: LandPoint | null): Promise<void> {
-    this.place.set(pin);
-    await this.askTheMap(pin);
+    this.pin.set(pin);
+    await this.reverseGeocodePin(pin);
   }
 
-  /** The last answer wins, so dragging a pin about does not leave a stale note. */
-  private async askTheMap(pin: LandPoint | null): Promise<void> {
+  /** Discards responses from superseded requests so a dragged pin shows no stale address. */
+  private async reverseGeocodePin(pin: LandPoint | null): Promise<void> {
     if (!pin) {
-      this.mapSays.set(null);
+      this.geocoded.set(null);
       return;
     }
-    const ticket = ++this.asking;
-    const said = await this.lands.placeAt(pin.lat, pin.lon);
-    if (ticket !== this.asking) {
+    const requestId = ++this.latestGeocodeRequest;
+    const geocoded = await this.lands.reverseGeocode(pin.lat, pin.lon);
+    if (requestId !== this.latestGeocodeRequest) {
       return;
     }
-    this.mapSays.set(said);
-    if (said?.address) {
-      this.geocodedAddress.set(said.address);
+    this.geocoded.set(geocoded);
+    if (geocoded?.address) {
+      this.geocodedAddress.set(geocoded.address);
     }
   }
 
-  /** Take the map's word for where this is, in every field it answered. */
   useMapAddress(): void {
-    const said = this.mapSays();
-    if (!said) {
+    const geocoded = this.geocoded();
+    if (!geocoded) {
       return;
     }
-    if (said.address) {
-      this.address.set(said.address);
+    if (geocoded.address) {
+      this.address.set(geocoded.address);
     }
-    if (said.city) {
-      this.city.set(said.city);
+    if (geocoded.city) {
+      this.city.set(geocoded.city);
     }
-    if (said.country_code) {
-      void this.pickCountry(said.country_code).then(() => {
-        if (said.state) {
-          this.state.set(said.state);
+    if (geocoded.country_code) {
+      void this.pickCountry(geocoded.country_code).then(() => {
+        if (geocoded.state) {
+          this.state.set(geocoded.state);
         }
       });
       return;
     }
-    if (said.state) {
-      this.state.set(said.state);
+    if (geocoded.state) {
+      this.state.set(geocoded.state);
     }
   }
 
-  openTyping(): void {
-    this.typing.set(true);
-    this.typed.set(cornerText(this.edge()));
-    this.typeNote.set('');
+  openPointsEditor(): void {
+    this.editingPoints.set(true);
+    this.pointsText.set(boundaryPointsText(this.boundary()));
+    this.pointsError.set('');
   }
 
-  /** Redraws as it is typed, so a coordinate in the wrong order shows itself. */
-  onTyped(text: string): void {
-    this.typed.set(text);
-    const { boundary, error } = parseCorners(text);
-    this.typeNote.set(error ?? '');
+  /** Redraws on each keystroke so swapped coordinates are visible immediately. */
+  onPointsInput(text: string): void {
+    this.pointsText.set(text);
+    const { boundary, error } = parseBoundaryPoints(text);
+    this.pointsError.set(error ?? '');
     if (!error) {
-      // What was typed stays exactly as typed; only the map follows.
-      this.typedTheEdge = true;
-      this.edge.set(boundary ?? null);
+      // Stops syncPointsText from replacing the pointsText text with reformatted output.
+      this.boundaryFromText = true;
+      this.boundary.set(boundary ?? null);
     }
   }
 
-  private matchTheMap(drawn: string): void {
-    if (this.typedTheEdge) {
-      this.typedTheEdge = false;
+  private syncPointsText(pointsFromMap: string): void {
+    if (this.boundaryFromText) {
+      this.boundaryFromText = false;
       return;
     }
-    if (this.typing() && !this.typed().trim().startsWith('{') && drawn !== this.typed()) {
-      this.typed.set(drawn);
-      this.typeNote.set('');
+    if (
+      this.editingPoints() &&
+      !this.pointsText().trim().startsWith('{') &&
+      pointsFromMap !== this.pointsText()
+    ) {
+      this.pointsText.set(pointsFromMap);
+      this.pointsError.set('');
     }
   }
 
   showGeoJson(): void {
-    this.typed.set(boundaryText(this.edge()));
-    this.typeNote.set('');
+    this.pointsText.set(boundaryText(this.boundary()));
+    this.pointsError.set('');
   }
 
   title(): string {
-    return this.isEdit() ? 'Edit Land' : 'New Land';
+    return this.isEdit() ? 'Edit Land Record' : 'New Land Record';
   }
 
   subtitle(): string {
     return this.isEdit()
-      ? 'Changes here apply to every project that references this land.'
-      : 'A name is enough. The area and documents can be added later.';
+      ? 'Changes here apply to every project that references this land record.'
+      : 'Only the name is required. The area and documents can be added later.';
   }
 
   value(event: Event): string {
     return (event.target as HTMLInputElement).value;
   }
 
-  area(event: Event): string {
+  textareaValue(event: Event): string {
     return (event.target as HTMLTextAreaElement).value;
   }
 
@@ -306,12 +311,12 @@ export class LandFormComponent {
     if (this.name().trim().length === 0) {
       return false;
     }
-    return this.sizeNote() === '';
+    return this.statedAreaError() === '';
   }
 
-  sizeNote(): string {
-    const value = this.sizeValue().trim();
-    const unit = this.sizeUnit();
+  statedAreaError(): string {
+    const value = this.statedArea().trim();
+    const unit = this.areaUnit();
     if (value && !unit) {
       return 'Select a unit for the area.';
     }
@@ -332,7 +337,7 @@ export class LandFormComponent {
     if (!this.isValid()) {
       return;
     }
-    const size = this.sizeValue().trim();
+    const statedArea = this.statedArea().trim();
     const body = {
       name: this.name().trim(),
       address: this.address().trim() || null,
@@ -340,23 +345,23 @@ export class LandFormComponent {
       state: this.state().trim() || null,
       country_code: this.country() || null,
       purchased_on: this.purchasedOn() || null,
-      size_value: size || null,
-      size_unit: size ? (this.sizeUnit() as LandSizeUnit) : null,
+      size_value: statedArea || null,
+      size_unit: statedArea ? (this.areaUnit() as LandSizeUnit) : null,
       notes: this.notes().trim() || null,
-      latitude: this.place() ? String(this.place()?.lat) : null,
-      longitude: this.place() ? String(this.place()?.lon) : null,
-      boundary: this.edge(),
+      latitude: this.pin() ? String(this.pin()?.lat) : null,
+      longitude: this.pin() ? String(this.pin()?.lon) : null,
+      boundary: this.boundary(),
       geocoded_address: this.geocodedAddress().trim() || null,
     };
     const saved = this.isEdit()
       ? await this.lands.edit(this.id(), body)
-      : await this.lands.add(body);
+      : await this.lands.create(body);
 
     if (saved) {
-      this.toast.show(this.isEdit() ? 'Land saved.' : `${saved.name} added.`);
+      this.toast.show(this.isEdit() ? 'Land record saved.' : `${saved.name} created.`);
       void this.router.navigate(['/lands', saved.id]);
     } else {
-      this.toast.show(this.lands.error() ?? 'Could not save the land.', 'error');
+      this.toast.show(this.lands.error() ?? 'Could not save the land record.', 'error');
     }
   }
 }

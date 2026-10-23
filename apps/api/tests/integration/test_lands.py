@@ -14,7 +14,7 @@ async def _setup(client: AsyncClient) -> None:
     await Currency.bulk_create(
         [Currency(code=c[0], name=c[1], exponent=c[2]) for c in CURRENCIES if c[0] == "NGN"]
     )
-    await client.post("/api/auth/setup", json={"name": "Admin", "password": "password123"})
+    await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": "password123"})
 
 
 async def _land(client: AsyncClient, name: str, **extra: object) -> dict:
@@ -138,7 +138,7 @@ async def test_linking_to_land_that_is_not_there_is_refused(client: AsyncClient)
         "/api/projects", json={"name": "The house", "currency_code": "NGN", "land_id": "nope"}
     )
     assert resp.status_code == 422
-    assert "Unknown land" in resp.text
+    assert "Land not found" in resp.text
 
 
 async def test_one_plot_carries_more_than_one_project(client: AsyncClient) -> None:
@@ -157,7 +157,7 @@ async def test_archiving_land_leaves_the_projects_standing(client: AsyncClient) 
     land = await _land(client, "Ewuru plot")
     project = await _project(client, "The house", land_id=land["id"])
 
-    assert (await client.delete(f"/api/lands/{land['id']}")).status_code == 204
+    assert (await client.post(f"/api/lands/{land['id']}/archive")).status_code == 204
 
     still_there = await client.get(f"/api/projects/{project['id']}")
     assert still_there.status_code == 200
@@ -168,7 +168,7 @@ async def test_archived_land_leaves_the_list_and_can_come_back(client: AsyncClie
     await _setup(client)
     land = await _land(client, "Ewuru plot")
 
-    await client.delete(f"/api/lands/{land['id']}")
+    await client.post(f"/api/lands/{land['id']}/archive")
     assert (await client.get("/api/lands")).json()["total"] == 0
     assert (await client.get("/api/lands?include_archived=true")).json()["total"] == 1
 
@@ -203,7 +203,7 @@ async def test_a_restore_puts_the_land_back_under_its_project(client: AsyncClien
     await _project(client, "The house", land_id=land["id"])
     backup = (await client.get("/api/install/export")).json()
 
-    await client.delete(f"/api/lands/{land['id']}")
+    await client.post(f"/api/lands/{land['id']}/archive")
 
     resp = await client.post(
         "/api/install/restore", json={"backup": backup, "accept_version_change": False}
@@ -213,9 +213,9 @@ async def test_a_restore_puts_the_land_back_under_its_project(client: AsyncClien
     assert resp.json()["row_counts"]["land"] == 1
 
     # A restore signs every device out, so sign back in before looking.
-    await client.post("/api/auth/login", json={"password": "password123"})
+    await client.post("/api/auth/sign-in", json={"passphrase": "password123"})
     back = await client.get(f"/api/lands/{land['id']}")
-    assert back.json()["deleted_at"] is None
+    assert back.json()["archived_at"] is None
     assert [project["name"] for project in back.json()["projects"]] == ["The house"]
 
 
@@ -373,7 +373,7 @@ async def test_a_restore_carries_the_country_and_the_price_history(client: Async
     assert resp.status_code == 200, resp.text
     assert resp.json()["row_counts"]["land_valuation"] == 1
 
-    await client.post("/api/auth/login", json={"password": "password123"})
+    await client.post("/api/auth/sign-in", json={"passphrase": "password123"})
     back = (await client.get(f"/api/lands/{land['id']}")).json()
     assert back["country_name"] == "Nigeria"
     assert back["state"] == "Lagos"

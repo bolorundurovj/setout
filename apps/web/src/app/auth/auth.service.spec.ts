@@ -13,61 +13,61 @@ describe('AuthService', () => {
     return TestBed.inject(AuthService);
   }
 
-  it('starts signed out', () => {
+  it('starts signed out and not set up', () => {
     const service = configure(async () => ({}));
     expect(service.isAuthenticated()).toBe(false);
-    expect(service.isSetup()).toBe(false);
+    expect(service.isSetUp()).toBe(false);
   });
 
-  it('reflects the status it fetched', async () => {
+  it('reflects the fetched auth status', async () => {
     const service = configure(async () => ({
       is_setup: true,
       is_authenticated: true,
       user,
     }));
     await service.checkStatus();
-    expect(service.isSetup()).toBe(true);
+    expect(service.isSetUp()).toBe(true);
     expect(service.isAuthenticated()).toBe(true);
     expect(service.user()?.name).toBe('Admin');
   });
 
-  it('explains a wrong passphrase rather than throwing', async () => {
+  it('reports an incorrect passphrase on 401', async () => {
     const service = configure(async () => {
       throw { status: 401 };
     });
-    expect(await service.login('wrong')).toBe(false);
+    expect(await service.signIn('wrong')).toBe(false);
     expect(service.error()).toBe('Incorrect passphrase.');
     expect(service.loading()).toBe(false);
   });
 
-  it('says to wait when the server refuses a burst of attempts', async () => {
+  it('reports rate limiting on 429', async () => {
     const service = configure(async () => {
       throw { status: 429 };
     });
-    expect(await service.login('wrong')).toBe(false);
-    expect(service.error()).toBe('Too many wrong passphrases. Wait a moment and try again.');
+    expect(await service.signIn('wrong')).toBe(false);
+    expect(service.error()).toBe('Too many failed attempts. Try again later.');
   });
 
-  it('explains a server that is already set up', async () => {
+  it('reports an already set-up server on 409', async () => {
     const service = configure(async () => {
       throw { status: 409 };
     });
-    expect(await service.setup('Admin', undefined, 'password123')).toBe(false);
+    expect(await service.setup('Admin', undefined, 'passphrase123')).toBe(false);
     expect(service.error()).toBe('This server is already set up.');
   });
 
-  it('signs in and refreshes the status', async () => {
+  it('signs in and reloads the auth status', async () => {
     let calls = 0;
     const service = configure(async () => {
       calls += 1;
       return { is_setup: true, is_authenticated: true, user };
     });
-    expect(await service.login('password123')).toBe(true);
+    expect(await service.signIn('passphrase123')).toBe(true);
     expect(calls).toBe(2);
     expect(service.isAuthenticated()).toBe(true);
   });
 
-  it('sends the currency Home should open on and re-reads the account', async () => {
+  it('saves the base currency and reloads the auth status', async () => {
     const sent: unknown[] = [];
     const service = configure(async (_fn: unknown, params: unknown) => {
       sent.push(params);
@@ -79,7 +79,7 @@ describe('AuthService', () => {
     expect(service.user()?.base_currency).toBe('USD');
   });
 
-  it('says the currency would not save rather than throwing', async () => {
+  it('surfaces the error when the base currency is rejected', async () => {
     const service = configure(async () => {
       throw { status: 422, error: { detail: 'Unknown currency: ZZZ' } };
     });

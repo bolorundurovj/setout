@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Api } from '@setout/api-client';
 import { ExpenseService } from './expense.service';
 
-function expense(id: string, over: Record<string, unknown> = {}) {
+function expense(id: string, overrides: Record<string, unknown> = {}) {
   return {
     id,
     project_id: 'p1',
@@ -17,18 +17,18 @@ function expense(id: string, over: Record<string, unknown> = {}) {
     notes: null,
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
-    deleted_at: null,
-    ...over,
+    archived_at: null,
+    ...overrides,
   };
 }
 
-const spend = {
+const summary = {
   project_id: 'p1',
   currency_code: 'NGN',
   currency_exponent: 2,
   budgeted_amount: 382_830_000,
   spent_amount: 488_930_000,
-  uncategorized_amount: 5_300_000,
+  uncategorised_amount: 5_300_000,
   variance_percent: 27.72,
 };
 
@@ -55,35 +55,35 @@ describe('ExpenseService', () => {
     return TestBed.inject(ExpenseService);
   }
 
-  function standard(name: string) {
-    return name === 'getProjectSpend' ? spend : page([expense('e1')]);
+  function defaultReply(name: string) {
+    return name === 'getProjectExpenseSummary' ? summary : page([expense('e1')]);
   }
 
-  it('loads the first page and the project spend together', async () => {
-    const service = configure(standard);
+  it('loads the first page and the expense summary together', async () => {
+    const service = configure(defaultReply);
     await service.load('p1');
 
     expect(service.expenses().length).toBe(1);
     expect(service.total()).toBe(1);
-    expect(service.spend()?.spent_amount).toBe(488_930_000);
+    expect(service.summary()?.spent_amount).toBe(488_930_000);
     expect(names).toContain('listExpenses');
-    expect(names).toContain('getProjectSpend');
+    expect(names).toContain('getProjectExpenseSummary');
   });
 
-  it('leaves archived rows out unless the page includes them, and keeps that choice when paging', async () => {
-    const service = configure(standard);
+  it('excludes archived rows unless requested and keeps the choice when paging', async () => {
+    const service = configure(defaultReply);
     await service.load('p1');
-    expect((calls[0] as { include_deleted?: boolean }).include_deleted).toBe(false);
+    expect((calls[0] as { include_archived?: boolean }).include_archived).toBe(false);
 
     await service.load('p1', { includeArchived: true });
-    expect((calls[2] as { include_deleted?: boolean }).include_deleted).toBe(true);
+    expect((calls[2] as { include_archived?: boolean }).include_archived).toBe(true);
 
     await service.goTo('p1', 2);
-    expect((calls[4] as { include_deleted?: boolean }).include_deleted).toBe(true);
+    expect((calls[4] as { include_archived?: boolean }).include_archived).toBe(true);
   });
 
-  it('sends every filter it was given, and keeps them when turning a page', async () => {
-    const service = configure(standard);
+  it('sends every filter and keeps them when paging', async () => {
+    const service = configure(defaultReply);
     await service.load('p1', {
       search: 'cement',
       vendorId: 'v1',
@@ -107,8 +107,8 @@ describe('ExpenseService', () => {
     expect((calls[2] as Record<string, unknown>)['search']).toBe('cement');
   });
 
-  it('sends no filters when asked for the project plainly', async () => {
-    const service = configure(standard);
+  it('sends no filters when none are set', async () => {
+    const service = configure(defaultReply);
     await service.load('p1', { search: 'cement' });
     await service.load('p1');
 
@@ -117,21 +117,23 @@ describe('ExpenseService', () => {
     expect(asked['sort']).toBe('recent');
   });
 
-  it('reports what everything matching adds up to', async () => {
+  it('exposes the total amount of all matching expenses', async () => {
     const service = configure((name) =>
-      name === 'getProjectSpend' ? spend : { ...page([expense('e1')], 8), total_amount: 44_000 },
+      name === 'getProjectExpenseSummary'
+        ? summary
+        : { ...page([expense('e1')], 8), total_amount: 44_000 },
     );
     await service.load('p1');
 
     expect(service.totalAmount()).toBe(44_000);
   });
 
-  it('reports a failure instead of throwing', async () => {
+  it('sets an error instead of throwing when loading fails', async () => {
     const service = configure((name) => {
       if (name === 'listExpenses') {
         throw new Error('offline');
       }
-      return spend;
+      return summary;
     });
     await service.load('p1');
 
@@ -139,20 +141,20 @@ describe('ExpenseService', () => {
     expect(service.expenses()).toEqual([]);
   });
 
-  it('leaves the spend empty rather than stale when it cannot be read', async () => {
+  it('clears the expense summary when it cannot be loaded', async () => {
     const service = configure((name) => {
-      if (name === 'getProjectSpend') {
+      if (name === 'getProjectExpenseSummary') {
         throw new Error('offline');
       }
       return page([expense('e1')]);
     });
     await service.load('p1');
-    expect(service.spend()).toBeNull();
+    expect(service.summary()).toBeNull();
   });
 
-  it('asks for ten rows at the offset of the page wanted', async () => {
+  it('requests ten rows at the offset of the requested page', async () => {
     const service = configure((name) =>
-      name === 'getProjectSpend' ? spend : page([expense('e1')], 24),
+      name === 'getProjectExpenseSummary' ? summary : page([expense('e1')], 24),
     );
     await service.load('p1');
     expect((calls[0] as { limit?: number }).limit).toBe(10);
@@ -163,9 +165,9 @@ describe('ExpenseService', () => {
     expect(calls.some((args) => (args as { offset?: number })?.offset === 20)).toBe(true);
   });
 
-  it('pages a category and a month ten at a time, each keeping its own place', async () => {
+  it('pages category and month lists separately, ten rows each', async () => {
     const service = configure((name) =>
-      name === 'getProjectSpend' ? spend : page([expense('e1')], 24),
+      name === 'getProjectExpenseSummary' ? summary : page([expense('e1')], 24),
     );
     await service.loadForCategory('p1', 's1', 2);
     await service.loadForMonth('p1', '2026-06', 3);
@@ -176,12 +178,12 @@ describe('ExpenseService', () => {
     expect(service.byMonth()['2026-06'].rows.length).toBe(1);
   });
 
-  it('puts a new expense at the top and refreshes the spend', async () => {
+  it('reloads the list and expense summary after creating an expense', async () => {
     const service = configure((name) => {
-      if (name === 'getProjectSpend') {
-        return spend;
+      if (name === 'getProjectExpenseSummary') {
+        return summary;
       }
-      if (name === 'addExpense') {
+      if (name === 'createExpense') {
         return expense('e2', { description: 'Roofing sheets' });
       }
       return page([expense('e1')]);
@@ -193,15 +195,15 @@ describe('ExpenseService', () => {
     expect(created?.id).toBe('e2');
     expect(names.filter((n) => n === 'listExpenses').length).toBe(2);
     expect(service.saving()).toBe(false);
-    expect(names.filter((n) => n === 'getProjectSpend').length).toBe(2);
+    expect(names.filter((n) => n === 'getProjectExpenseSummary').length).toBe(2);
   });
 
-  it('surfaces the reason the backend refused the expense', async () => {
+  it('shows the server error when creating fails', async () => {
     const service = configure((name) => {
-      if (name === 'addExpense') {
+      if (name === 'createExpense') {
         throw { error: { detail: 'Amount should be 150000: quantity times unit rate' } };
       }
-      return spend;
+      return summary;
     });
 
     const created = await service.add('p1', { description: 'Blocks', amount: 1 });
@@ -211,39 +213,41 @@ describe('ExpenseService', () => {
     expect(service.saving()).toBe(false);
   });
 
-  it('falls back to a plain message when the failure carries no detail', async () => {
+  it('falls back to a generic error when the server gives no detail', async () => {
     const service = configure((name) => {
-      if (name === 'addExpense') {
+      if (name === 'createExpense') {
         throw new Error('offline');
       }
-      return spend;
+      return summary;
     });
 
     await service.add('p1', { description: 'Blocks', amount: 1 });
     expect(service.error()).toBe('Could not save the expense.');
   });
 
-  it('reads the page back after removing one', async () => {
-    const service = configure(standard);
+  it('reloads the page after archiving', async () => {
+    const service = configure(defaultReply);
     await service.load('p1');
 
-    await service.remove('p1', 'e1');
+    await service.archive('p1', 'e1');
 
-    expect(names).toContain('deleteExpense');
+    expect(names).toContain('archiveExpense');
     expect(names.filter((n) => n === 'listExpenses').length).toBe(2);
   });
 
-  it('steps back off a page that the removal emptied', async () => {
-    const service = configure((name) => (name === 'getProjectSpend' ? spend : page([], 10)));
+  it('moves to the previous page when archiving empties the current one', async () => {
+    const service = configure((name) =>
+      name === 'getProjectExpenseSummary' ? summary : page([], 10),
+    );
     await service.goTo('p1', 2);
 
-    await service.remove('p1', 'e1');
+    await service.archive('p1', 'e1');
 
     expect(service.page()).toBe(1);
   });
 
-  it('reloads everything after a restore, since order depends on the date', async () => {
-    const service = configure(standard);
+  it('reloads the list after restoring', async () => {
+    const service = configure(defaultReply);
     await service.restore('p1', 'e1');
 
     expect(names).toContain('restoreExpense');
@@ -251,35 +255,35 @@ describe('ExpenseService', () => {
     expect(service.expenses().length).toBe(1);
   });
 
-  it('files many uncategorized expenses and refreshes the list', async () => {
+  it('assigns a category to expenses in bulk and reloads the list', async () => {
     const service = configure((name) => {
-      if (name === 'fileExpenses') {
-        return { filed_count: 2 };
+      if (name === 'categoriseExpenses') {
+        return { categorised_count: 2 };
       }
-      return standard(name);
+      return defaultReply(name);
     });
 
-    const count = await service.file('p1', { expense_ids: ['e1', 'e2'], category_id: 's1' });
+    const count = await service.categorise('p1', { expense_ids: ['e1', 'e2'], category_id: 's1' });
 
     expect(count).toBe(2);
-    expect(names).toContain('fileExpenses');
+    expect(names).toContain('categoriseExpenses');
     expect(names).toContain('listExpenses');
-    expect(names).toContain('getProjectSpend');
+    expect(names).toContain('getProjectExpenseSummary');
     expect(service.saving()).toBe(false);
   });
 
-  it('surfaces the reason the backend refused bulk filing', async () => {
+  it('shows the server error when bulk categorising fails', async () => {
     const service = configure((name) => {
-      if (name === 'fileExpenses') {
-        throw { error: { detail: 'A category with children holds no spend of its own' } };
+      if (name === 'categoriseExpenses') {
+        throw { error: { detail: 'A category with children holds no expenses of its own' } };
       }
-      return standard(name);
+      return defaultReply(name);
     });
 
-    const count = await service.file('p1', { expense_ids: ['e1'], category_id: 'sg' });
+    const count = await service.categorise('p1', { expense_ids: ['e1'], category_id: 'sg' });
 
     expect(count).toBeNull();
-    expect(service.error()).toBe('A category with children holds no spend of its own');
+    expect(service.error()).toBe('A category with children holds no expenses of its own');
     expect(service.saving()).toBe(false);
   });
 });

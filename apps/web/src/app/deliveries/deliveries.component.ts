@@ -21,52 +21,52 @@ export class DeliveriesComponent {
   readonly deliveries = inject(DeliveryService);
   private readonly toast = inject(ToastService);
 
-  readonly waitingPage = signal(1);
-  readonly arrivedPage = signal(1);
+  readonly outstandingPage = signal(1);
+  readonly receivedPage = signal(1);
   readonly includeArchived = signal(false);
 
   readonly editing = signal<string | null>(null);
-  readonly editWhat = signal('');
-  readonly editPromised = signal('');
-  readonly justRemoved = signal<DeliveryRead | null>(null);
+  readonly editDescription = signal('');
+  readonly editExpected = signal('');
+  readonly lastArchived = signal<DeliveryRead | null>(null);
 
-  readonly waitingSet = computed(() => this.deliveries.waiting(this.project().id));
-  readonly arrivedSet = computed(() => this.deliveries.arrived(this.project().id));
+  readonly outstandingList = computed(() => this.deliveries.outstanding(this.project().id));
+  readonly receivedList = computed(() => this.deliveries.received(this.project().id));
 
-  readonly waitingRows = computed(() => this.waitingSet().rows);
-  readonly arrivedRows = computed(() => this.arrivedSet().rows);
+  readonly outstandingRows = computed(() => this.outstandingList().rows);
+  readonly receivedRows = computed(() => this.receivedList().rows);
 
-  readonly owedNote = computed(() => {
-    const set = this.waitingSet();
+  readonly outstandingSummary = computed(() => {
+    const list = this.outstandingList();
     if (this.includeArchived()) {
-      return `${this.money(set.owed)} outstanding, archived rows aside.`;
+      return `${this.money(list.outstandingAmount)} outstanding, excluding archived items.`;
     }
-    if (set.total === 0) {
-      return 'Everything paid for has arrived.';
+    if (list.total === 0) {
+      return 'All paid items have been received.';
     }
-    const things = set.total === 1 ? 'thing' : 'things';
-    return `${set.total} ${things} outstanding, ${this.money(set.owed)} paid for.`;
+    const noun = list.total === 1 ? 'item' : 'items';
+    return `${list.total} ${noun} outstanding, ${this.money(list.outstandingAmount)} paid.`;
   });
 
   constructor() {
     queueMicrotask(() => void this.refresh());
   }
 
-  async goToWaiting(page: number): Promise<void> {
-    this.waitingPage.set(page);
-    await this.deliveries.loadWaiting(this.project().id, page, this.includeArchived());
+  async goToOutstanding(page: number): Promise<void> {
+    this.outstandingPage.set(page);
+    await this.deliveries.loadOutstanding(this.project().id, page, this.includeArchived());
   }
 
-  async goToArrived(page: number): Promise<void> {
-    this.arrivedPage.set(page);
-    await this.deliveries.loadArrived(this.project().id, page, this.includeArchived());
+  async goToReceived(page: number): Promise<void> {
+    this.receivedPage.set(page);
+    await this.deliveries.loadReceived(this.project().id, page, this.includeArchived());
   }
 
   async setIncludeArchived(on: boolean): Promise<void> {
     this.includeArchived.set(on);
     this.cancelEdit();
-    this.waitingPage.set(1);
-    this.arrivedPage.set(1);
+    this.outstandingPage.set(1);
+    this.receivedPage.set(1);
     await this.refresh();
   }
 
@@ -79,116 +79,115 @@ export class DeliveriesComponent {
     return formatMoney(minor, project.currency_code, project.currency_exponent);
   }
 
-  vendorName(owed: DeliveryRead): string {
-    return owed.vendor_name ?? 'vendor not recorded';
+  vendorName(delivery: DeliveryRead): string {
+    return delivery.vendor_name ?? 'vendor not recorded';
   }
 
-  paidOn(owed: DeliveryRead): string {
-    return new Date(owed.spent_on).toLocaleDateString(undefined, {
+  paidOn(delivery: DeliveryRead): string {
+    return new Date(delivery.spent_on).toLocaleDateString(undefined, {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
     });
   }
 
-  arrivedOn(owed: DeliveryRead): string {
-    if (!owed.received_at) {
+  receivedOn(delivery: DeliveryRead): string {
+    if (!delivery.received_at) {
       return '';
     }
-    return new Date(owed.received_at).toLocaleDateString(undefined, {
+    return new Date(delivery.received_at).toLocaleDateString(undefined, {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
     });
   }
 
-  waiting(owed: DeliveryRead): string {
-    return owed.promised
-      ? `Paid ${this.paidOn(owed)} · promised ${owed.promised}`
-      : `Paid ${this.paidOn(owed)}`;
+  outstandingDetail(delivery: DeliveryRead): string {
+    const paid = `Paid ${this.paidOn(delivery)}`;
+    return delivery.expected ? `${paid} · expected ${delivery.expected}` : paid;
   }
 
   value(event: Event): string {
     return (event.target as HTMLInputElement).value;
   }
 
-  startEdit(owed: DeliveryRead): void {
-    this.editing.set(owed.id);
-    this.editWhat.set(owed.description);
-    this.editPromised.set(owed.promised ?? '');
+  startEdit(delivery: DeliveryRead): void {
+    this.editing.set(delivery.id);
+    this.editDescription.set(delivery.description);
+    this.editExpected.set(delivery.expected ?? '');
   }
 
   cancelEdit(): void {
     this.editing.set(null);
-    this.editWhat.set('');
-    this.editPromised.set('');
+    this.editDescription.set('');
+    this.editExpected.set('');
   }
 
   canSaveEdit(): boolean {
-    return this.editWhat().trim().length > 0;
+    return this.editDescription().trim().length > 0;
   }
 
-  async saveEdit(owed: DeliveryRead): Promise<void> {
+  async saveEdit(delivery: DeliveryRead): Promise<void> {
     if (!this.canSaveEdit()) {
       return;
     }
-    const promised = this.editPromised().trim();
-    const changed = await this.deliveries.update(owed.id, {
-      description: this.editWhat().trim(),
-      promised: promised.length > 0 ? promised : null,
+    const expected = this.editExpected().trim();
+    const changed = await this.deliveries.update(delivery.id, {
+      description: this.editDescription().trim(),
+      expected: expected.length > 0 ? expected : null,
     });
     if (!changed) {
-      this.toast.show(this.deliveries.error() ?? 'Could not change what is outstanding.', 'error');
+      this.toast.show(this.deliveries.error() ?? 'Could not update the delivery.', 'error');
       return;
     }
     this.cancelEdit();
-    this.toast.show(`${changed.description} changed.`);
+    this.toast.show(`${changed.description} updated.`);
   }
 
-  async markDelivered(owed: DeliveryRead): Promise<void> {
-    await this.deliveries.receive(owed.id);
+  async markReceived(delivery: DeliveryRead): Promise<void> {
+    await this.deliveries.markReceived(delivery.id);
     await this.refresh();
-    this.toast.show(`${owed.description} marked delivered.`);
+    this.toast.show(`${delivery.description} marked received.`);
   }
 
-  async putBack(owed: DeliveryRead): Promise<void> {
-    await this.deliveries.unreceive(owed.id);
+  async markOutstanding(delivery: DeliveryRead): Promise<void> {
+    await this.deliveries.markOutstanding(delivery.id);
     await this.refresh();
-    this.toast.show(`${owed.description} is waiting again.`);
+    this.toast.show(`${delivery.description} marked outstanding.`);
   }
 
-  async remove(owed: DeliveryRead): Promise<void> {
-    await this.deliveries.remove(owed.id);
-    this.justRemoved.set(owed);
+  async archive(delivery: DeliveryRead): Promise<void> {
+    await this.deliveries.archive(delivery.id);
+    this.lastArchived.set(delivery);
     await this.refresh();
-    this.toast.show(`${owed.description} archived. The expense stands.`);
+    this.toast.show(`${delivery.description} archived. The expense is unchanged.`);
   }
 
-  async putBackRemoved(): Promise<void> {
-    const gone = this.justRemoved();
-    if (!gone) {
+  async restoreLastArchived(): Promise<void> {
+    const archived = this.lastArchived();
+    if (!archived) {
       return;
     }
-    await this.restore(gone);
+    await this.restore(archived);
   }
 
-  async restore(owed: DeliveryRead): Promise<void> {
-    const back = await this.deliveries.restore(owed.id);
-    this.justRemoved.set(null);
-    if (!back) {
+  async restore(delivery: DeliveryRead): Promise<void> {
+    const restored = await this.deliveries.restore(delivery.id);
+    this.lastArchived.set(null);
+    if (!restored) {
       this.toast.show(this.deliveries.error() ?? 'Could not restore that delivery.', 'error');
       return;
     }
     await this.refresh();
-    this.toast.show(`${back.description} restored.`);
+    this.toast.show(`${restored.description} restored.`);
   }
 
   private async refresh(): Promise<void> {
     const projectId = this.project().id;
-    const removed = this.includeArchived();
+    const includeArchived = this.includeArchived();
     await Promise.all([
-      this.deliveries.loadWaiting(projectId, this.waitingPage(), removed),
-      this.deliveries.loadArrived(projectId, this.arrivedPage(), removed),
+      this.deliveries.loadOutstanding(projectId, this.outstandingPage(), includeArchived),
+      this.deliveries.loadReceived(projectId, this.receivedPage(), includeArchived),
     ]);
   }
 }

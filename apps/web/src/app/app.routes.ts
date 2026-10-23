@@ -23,12 +23,12 @@ import { authGuard, guestGuard } from './auth/auth.guard';
 export const routes: Routes = [
   { path: 'login', component: LoginComponent, canActivate: [guestGuard], title: 'Sign In' },
   { path: 'setup', component: SetupComponent, canActivate: [guestGuard], title: 'Setup' },
-  { path: '', component: DashboardComponent, canActivate: [authGuard], title: 'Dashboard' },
+  { path: '', component: DashboardComponent, canActivate: [authGuard], title: 'Home' },
   {
     path: 'projects',
     component: ProjectsComponent,
     canActivate: [authGuard],
-    title: 'All Projects',
+    title: 'Projects',
   },
   {
     path: 'search',
@@ -99,7 +99,7 @@ export const routes: Routes = [
     path: 'people/new',
     component: PersonFormComponent,
     canActivate: [authGuard],
-    title: 'Add Person',
+    title: 'New Person',
   },
   {
     path: 'people/:id/edit',

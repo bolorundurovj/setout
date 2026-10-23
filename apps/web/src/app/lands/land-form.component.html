@@ -1,5 +1,5 @@
 <div class="page">
-  <a class="link t-mono back" routerLink="/lands">&#8592; Back</a>
+  <a class="link t-mono back" routerLink="/lands">&#8592; Land</a>
 
   <div class="head">
     <h1 class="t-display">{{ title() }}</h1>
@@ -13,7 +13,7 @@
         class="input-field"
         type="text"
         autocomplete="off"
-        placeholder="Name of the land"
+        placeholder="Name of the land record"
         [value]="name()"
         (input)="name.set(value($event))"
         (keyup.enter)="save()"
@@ -88,14 +88,14 @@
         (input)="purchasedOn.set(value($event))"
       />
       <span class="t-small muted"
-        >Purchase price and valuations are recorded on the land's page.</span
+        >Purchase price and valuations are recorded on the land record's page.</span
       >
     </label>
 
     <div class="field">
       <span class="t-micro">Location</span>
       <app-tabs
-        label="Location Pin or Mapped Survey"
+        label="Location Pin or Boundary"
         [tabs]="mapTabs"
         [value]="mapTab()"
         (valueChange)="mapTab.set($any($event))"
@@ -105,35 +105,35 @@
           @if (mapTab() === 'pin') {
             <app-land-map
               mode="pin"
-              [point]="place()"
+              [point]="pin()"
               [editable]="true"
               (pointChange)="setPin($event)"
             />
           } @else {
             <app-land-map
               mode="boundary"
-              [boundary]="edge()"
+              [boundary]="boundary()"
               [editable]="true"
-              (boundaryChange)="edge.set($event)"
+              (boundaryChange)="boundary.set($event)"
             />
           }
         </div>
       } @placeholder {
-        <div class="map-waiting"></div>
+        <div class="map-placeholder"></div>
       }
 
       @if (pinIsOutside()) {
         <p class="t-small warn">
-          The location pin is outside the mapped survey.
+          The location pin is outside the boundary.
           <button type="button" class="link t-mono" (click)="centrePin()">
-            Centre Pin in Land
+            Move Pin Inside Boundary
           </button>
         </p>
       }
 
-      @if (placeNote()) {
+      @if (mismatchMessage()) {
         <p class="t-small warn">
-          {{ placeNote() }}
+          {{ mismatchMessage() }}
           <button type="button" class="link t-mono" (click)="useMapAddress()">
             Use Map Address
           </button>
@@ -142,38 +142,39 @@
 
       @if (mapTab() === 'boundary') {
         <div class="field">
-          <span class="t-micro">How you are describing the edge</span>
+          <span class="t-micro">Boundary Input Method</span>
           <app-chip-group
-            label="How you are describing the edge"
-            [chips]="edgeWays"
-            [value]="edgeBy()"
-            (valueChange)="edgeBy.set($event)"
+            label="Boundary Input Method"
+            [chips]="boundaryMethods"
+            [value]="boundaryMethod()"
+            (valueChange)="boundaryMethod.set($event)"
           />
         </div>
       }
 
-      @if (mapTab() === 'boundary' && edgeBy() === 'survey') {
-        <app-land-survey (boundaryChange)="edge.set($event)" />
+      @if (mapTab() === 'boundary' && boundaryMethod() === 'survey') {
+        <app-land-survey (boundaryChange)="boundary.set($event)" />
       }
 
-      @if (mapTab() === 'boundary' && edgeBy() === 'corners') {
-        @if (typing()) {
+      @if (mapTab() === 'boundary' && boundaryMethod() === 'points') {
+        @if (editingPoints()) {
           <label class="field">
-            <span class="t-micro">Survey Points (latitude first, one per line)</span>
+            <span class="t-micro">Boundary Points (latitude first, one per line)</span>
             <textarea
-              class="input-field geojson t-mono"
+              class="input-field points-input t-mono"
               rows="6"
               spellcheck="false"
               autocapitalize="off"
               placeholder="6.5244, 3.3792&#10;6&#176;31'30.4&quot;N 3&#176;22'48.0&quot;E"
-              [value]="typed()"
-              (input)="onTyped(area($event))"
+              [value]="pointsText()"
+              (input)="onPointsInput(textareaValue($event))"
             ></textarea>
-            @if (typeNote()) {
-              <span class="t-small warn">{{ typeNote() }}</span>
+            @if (pointsError()) {
+              <span class="t-small warn">{{ pointsError() }}</span>
             } @else {
               <span class="t-small muted">
-                Degrees, or degrees minutes seconds from the survey. Draw the outline on
+                Decimal degrees, or degrees, minutes and seconds, from the survey plan. Draw the
+                outline on
                 <a class="link" href="https://geojson.io" target="_blank" rel="noopener"
                   >geojson.io</a
                 >
@@ -182,14 +183,14 @@
             }
           </label>
           <div class="form-actions">
-            <app-button variant="secondary" (pressed)="typing.set(false)">Done</app-button>
+            <app-button variant="secondary" (pressed)="editingPoints.set(false)">Done</app-button>
             <button type="button" class="link t-mono" (click)="showGeoJson()">
               Show as GeoJSON
             </button>
           </div>
         } @else {
-          <button type="button" class="link t-mono" (click)="openTyping()">
-            Enter Survey Points
+          <button type="button" class="link t-mono" (click)="openPointsEditor()">
+            Enter Boundary Points
           </button>
         }
       }
@@ -204,8 +205,8 @@
         step="0.01"
         autocomplete="off"
         placeholder="Area stated on the survey"
-        [value]="sizeValue()"
-        (input)="sizeValue.set(value($event))"
+        [value]="statedArea()"
+        (input)="statedArea.set(value($event))"
       />
     </label>
 
@@ -214,12 +215,12 @@
       <app-chip-group
         label="Unit"
         [chips]="unitChips"
-        [value]="sizeUnit()"
+        [value]="areaUnit()"
         [clearable]="true"
-        (valueChange)="sizeUnit.set($event)"
+        (valueChange)="areaUnit.set($event)"
       />
-      @if (sizeNote()) {
-        <span class="t-small warn">{{ sizeNote() }}</span>
+      @if (statedAreaError()) {
+        <span class="t-small warn">{{ statedAreaError() }}</span>
       } @else {
         <span class="t-small muted">Stored as entered, without conversion.</span>
       }
@@ -245,7 +246,7 @@
     </div>
 
     @if (!isEdit()) {
-      <p class="t-small muted">Documents are added afterwards from the land's page.</p>
+      <p class="t-small muted">Documents are added afterwards from the land record's page.</p>
     }
   </div>
 </div>

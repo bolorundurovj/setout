@@ -5,7 +5,7 @@ import type { ItemPricePoint, ItemPriceSeries, ItemPrices } from '@setout/api-cl
 import { ItemDetailComponent } from './item-detail.component';
 import { ItemService } from './item.service';
 
-function point(id: string, day: string, rate: number, over: Partial<ItemPricePoint> = {}) {
+function point(id: string, day: string, rate: number, overrides: Partial<ItemPricePoint> = {}) {
   return {
     expense_id: id,
     spent_on: day,
@@ -15,11 +15,11 @@ function point(id: string, day: string, rate: number, over: Partial<ItemPricePoi
     project_name: 'Jacaranda Close, Ewuru',
     vendor_id: 'v1',
     vendor_name: 'Segun Blocks Owode',
-    ...over,
+    ...overrides,
   } as ItemPricePoint;
 }
 
-function series(over: Partial<ItemPriceSeries> = {}): ItemPriceSeries {
+function series(overrides: Partial<ItemPriceSeries> = {}): ItemPriceSeries {
   return {
     currency_code: 'NGN',
     currency_exponent: 2,
@@ -36,7 +36,7 @@ function series(over: Partial<ItemPriceSeries> = {}): ItemPriceSeries {
       point('e2', '2026-02-05', 210_00),
       point('e3', '2026-03-05', 230_00),
     ],
-    ...over,
+    ...overrides,
   };
 }
 
@@ -58,17 +58,17 @@ describe('ItemDetailComponent', () => {
     return component;
   }
 
-  function prices(over: Partial<ItemPrices> = {}): ItemPrices {
+  function prices(overrides: Partial<ItemPrices> = {}): ItemPrices {
     return {
       item_id: 'i1',
       name: 'Six inch blocks',
       unit: 'each',
       series: [series()],
-      ...over,
+      ...overrides,
     };
   }
 
-  it('reads the price history', async () => {
+  it('loads the price history', async () => {
     const component = await render(prices());
     expect(component.series().length).toBe(1);
     expect(component.loading()).toBe(false);
@@ -76,34 +76,38 @@ describe('ItemDetailComponent', () => {
 
   it('lists the newest price first', async () => {
     const component = await render(prices());
-    expect(component.newestFirst(series()).map((p) => p.expense_id)).toEqual(['e3', 'e2', 'e1']);
+    expect(component.pageNewestFirst(series()).map((p) => p.expense_id)).toEqual([
+      'e3',
+      'e2',
+      'e1',
+    ]);
   });
 
-  it('says when there is no unit', async () => {
-    expect((await render(prices())).unitLabel()).toBe('per each');
+  it('formats the unit, or says none is recorded', async () => {
+    expect((await render(prices())).unitLabel()).toBe('each');
     expect((await render(prices({ unit: null }))).unitLabel()).toBe('no unit recorded');
   });
 
-  it('reads a change either way', async () => {
+  it('formats increases and decreases', async () => {
     const component = await render(prices());
-    expect(component.changeLabel(series())).toBe('risen 15.0%');
-    expect(component.changeLabel(series({ change_percent: -8 }))).toBe('fallen 8.0%');
+    expect(component.changeLabel(series())).toBe('up 15.0%');
+    expect(component.changeLabel(series({ change_percent: -8 }))).toBe('down 8.0%');
     expect(component.changeLabel(series({ change_percent: 0 }))).toBe('no change');
     expect(component.changeLabel(series({ change_percent: null }))).toBe(component.notSet);
   });
 
-  it('says what the change is measured from', async () => {
+  it('shows the date the change is measured from', async () => {
     const component = await render(prices());
     expect(component.changeSince(series())).toBe('since 2026-01-05');
   });
 
-  it('counts purchases in words', async () => {
+  it('counts expenses in each currency', async () => {
     const component = await render(prices());
-    expect(component.countLabel(series({ count: 1 }))).toBe('bought once');
-    expect(component.countLabel(series({ count: 3 }))).toBe('bought 3 times');
+    expect(component.countLabel(series({ count: 1 }))).toBe('1 expense');
+    expect(component.countLabel(series({ count: 3 }))).toBe('3 expenses');
   });
 
-  it('reads a quantity, or says there is none', async () => {
+  it('formats the quantity, or a placeholder when none is set', async () => {
     const component = await render(prices());
     expect(component.quantityLabel(point('e1', '2026-01-05', 100))).toBe('1');
     expect(component.quantityLabel(point('e1', '2026-01-05', 100, { quantity: null }))).toBe(
@@ -111,26 +115,26 @@ describe('ItemDetailComponent', () => {
     );
   });
 
-  it('keeps two currencies apart', async () => {
+  it('lists each currency separately', async () => {
     const component = await render(
       prices({ series: [series(), series({ currency_code: 'USD', currency_exponent: 2 })] }),
     );
     expect(component.series().map((s) => s.currency_code)).toEqual(['NGN', 'USD']);
   });
 
-  it('copes with an item that is not there', async () => {
+  it('handles a missing item', async () => {
     const component = await render(null);
     expect(component.prices()).toBeNull();
     expect(component.series()).toEqual([]);
   });
 
-  it('names the item in the page title', async () => {
+  it('sets the page title to the item name', async () => {
     await render(prices({ name: 'Six inch blocks' }));
     TestBed.tick();
     expect(TestBed.inject(Title).getTitle()).toBe('Six inch blocks · Setout');
   });
 
-  it('leaves the title alone for an item that is not there', async () => {
+  it('leaves the page title unchanged for a missing item', async () => {
     TestBed.inject(Title).setTitle('Item · Setout');
     await render(null);
     TestBed.tick();

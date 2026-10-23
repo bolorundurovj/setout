@@ -15,7 +15,7 @@ def own_totals(items: list[BudgetItem]) -> dict[str, int]:
     return totals
 
 
-def own_spend(expenses: list[Expense]) -> dict[str, int]:
+def own_spent(expenses: list[Expense]) -> dict[str, int]:
     totals: dict[str, int] = defaultdict(int)
     for expense in expenses:
         if expense.category_id is not None:
@@ -32,10 +32,9 @@ def own_counts(expenses: list[Expense]) -> dict[str, int]:
 
 
 def rolled_up_totals(categories: list[Category], own: dict[str, int]) -> dict[str, int]:
-    """Add each category's total to every ancestor above it.
+    """Add each category's total to every ancestor.
 
-    A group category holds no budget of its own, so its number is the sum of what
-    sits below it.
+    A parent category has no budget of its own, so its total is the sum of its subcategories.
     """
     parents = {category.id: category.parent_id for category in categories}
     rolled = {category.id: own.get(category.id, 0) for category in categories}
@@ -59,11 +58,11 @@ def to_reads(
 ) -> list[CategoryRead]:
     own = own_totals(items)
     rolled = rolled_up_totals(categories, own)
-    spent_own = own_spend(expenses or [])
+    spent_own = own_spent(expenses or [])
     spent_rolled = rolled_up_totals(categories, spent_own)
     count_own = own_counts(expenses or [])
     count_rolled = rolled_up_totals(categories, count_own)
-    has_children = {category.parent_id for category in categories if category.parent_id is not None}
+    parent_ids = {category.parent_id for category in categories if category.parent_id is not None}
     return [
         CategoryRead(
             id=category.id,
@@ -72,7 +71,7 @@ def to_reads(
             name=category.name,
             parent_id=category.parent_id,
             sort_order=category.sort_order,
-            is_group=category.id in has_children,
+            is_group=category.id in parent_ids,
             budgeted_amount=rolled.get(category.id, 0),
             own_budgeted_amount=own.get(category.id, 0),
             spent_amount=spent_rolled.get(category.id, 0),
@@ -81,7 +80,7 @@ def to_reads(
             own_expense_count=count_own.get(category.id, 0),
             created_at=category.created_at,
             updated_at=category.updated_at,
-            deleted_at=category.deleted_at,
+            archived_at=category.archived_at,
         )
         for category in categories
     ]

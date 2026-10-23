@@ -75,7 +75,7 @@ def test_spend_below_a_group_lands_on_the_group() -> None:
     ]
 
 
-def test_segments_keep_budget_order_with_uncategorized_last() -> None:
+def test_segments_keep_budget_order_with_uncategorised_last() -> None:
     categories = [_category("1", "Late", sort_order=9), _category("2", "Early", sort_order=1)]
     months = to_months(
         [
@@ -88,7 +88,7 @@ def test_segments_keep_budget_order_with_uncategorized_last() -> None:
     assert [part.name for part in months[0].categories] == [
         "Early",
         "Late",
-        "Not filed to a category",
+        "Uncategorised",
     ]
 
 

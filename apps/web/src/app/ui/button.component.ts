@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger';
-export type ButtonSize = 'compact' | 'major';
+export type ButtonSize = 'compact' | 'large';
 
 @Component({
   selector: 'app-button',
@@ -54,7 +54,7 @@ export type ButtonSize = 'compact' | 'major';
           sans-serif;
       }
 
-      .btn-major {
+      .btn-large {
         display: block;
         width: 100%;
         text-align: center;
@@ -82,9 +82,9 @@ export type ButtonSize = 'compact' | 'major';
       }
 
       .btn-danger {
-        background: var(--over-surface);
-        border-color: var(--over-edge);
-        color: var(--over-ink);
+        background: var(--danger-surface);
+        border-color: var(--danger-edge);
+        color: var(--danger-ink);
       }
     `,
   ],

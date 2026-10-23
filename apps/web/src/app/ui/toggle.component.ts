@@ -12,8 +12,8 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
       [attr.aria-checked]="checked()"
       (click)="toggled.emit(!checked())"
     >
-      <span class="track" [class.on]="checked()">
-        <span class="knob"></span>
+      <span class="track" [class.checked]="checked()">
+        <span class="thumb"></span>
       </span>
       <span class="label"><ng-content /></span>
     </button>
@@ -56,13 +56,13 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
         border: 1px solid var(--rule);
         transition: background 0.15s;
 
-        &.on {
+        &.checked {
           background: var(--accent);
           border-color: var(--accent);
         }
       }
 
-      .knob {
+      .thumb {
         position: absolute;
         top: 1px;
         left: 1px;
@@ -74,7 +74,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
         transition: transform 0.15s;
       }
 
-      .track.on .knob {
+      .track.checked .thumb {
         transform: translateX(16px);
       }
     `,

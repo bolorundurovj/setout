@@ -15,7 +15,7 @@ function agreement(id: string, over: Record<string, unknown> = {}) {
     notes: null,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
     ...over,
   };
 }
@@ -25,28 +25,28 @@ function page(items: unknown[], total?: number) {
 }
 
 describe('AgreementService', () => {
-  let asked: Record<string, unknown>[];
+  let invocations: Record<string, unknown>[];
 
   function configure(reply: (name: string, params: Record<string, unknown>) => unknown) {
-    asked = [];
+    invocations = [];
     TestBed.resetTestingModule();
     const api = {
       invoke: async (fn: { name?: string }, params: Record<string, unknown>) => {
-        asked.push({ call: fn?.name ?? '', ...params });
-        const answer = reply(fn?.name ?? '', params ?? {});
-        if (answer instanceof Error) {
-          throw answer;
+        invocations.push({ call: fn?.name ?? '', ...params });
+        const result = reply(fn?.name ?? '', params ?? {});
+        if (result instanceof Error) {
+          throw result;
         }
-        return answer;
+        return result;
       },
     };
     TestBed.configureTestingModule({ providers: [{ provide: Api, useValue: api }] });
     return TestBed.inject(AgreementService);
   }
 
-  const calls = (name: string) => asked.filter((call) => call['call'] === name);
+  const calls = (name: string) => invocations.filter((call) => call['call'] === name);
 
-  it('reads the agreements on a project and says how many there are', async () => {
+  it('loads the agreements for a project with the total count', async () => {
     const service = configure(() => page([agreement('a1'), agreement('a2')], 5));
 
     await service.load('p1');
@@ -56,7 +56,7 @@ describe('AgreementService', () => {
     expect(service.hasMore()).toBe(true);
   });
 
-  it('says so rather than showing a half list when the read fails', async () => {
+  it('sets an error and leaves the list empty when listing fails', async () => {
     const service = configure(() => new Error('offline'));
 
     await service.load('p1');
@@ -65,7 +65,7 @@ describe('AgreementService', () => {
     expect(service.agreements()).toEqual([]);
   });
 
-  it('adds up what was agreed and what is still owed', async () => {
+  it('totals the agreed and balance amounts', async () => {
     const service = configure(() =>
       page([
         agreement('a1', { agreed_amount: 100_00, balance_amount: 40_00 }),
@@ -76,10 +76,10 @@ describe('AgreementService', () => {
     await service.load('p1');
 
     expect(service.agreedTotal()).toBe(350_00);
-    expect(service.owedTotal()).toBe(40_00);
+    expect(service.balanceTotal()).toBe(40_00);
   });
 
-  it('asks for nothing more once the whole list is in hand', async () => {
+  it('skips loadMore when all rows are loaded', async () => {
     const service = configure(() => page([agreement('a1')], 1));
     await service.load('p1');
 
@@ -88,7 +88,7 @@ describe('AgreementService', () => {
     expect(calls('listAgreements').length).toBe(1);
   });
 
-  it('reads every payment in one request and groups them by agreement', async () => {
+  it('loads payments in one request and groups them by agreement', async () => {
     const service = configure((name) =>
       name === 'listAgreements'
         ? page([agreement('a1'), agreement('a2')])
@@ -106,7 +106,7 @@ describe('AgreementService', () => {
     expect(service.payments()['a2'].map((row) => row.id)).toEqual(['e2']);
   });
 
-  it('keeps asking while there are more payments than one page holds', async () => {
+  it('pages through payments until the total is reached', async () => {
     const rows = Array.from({ length: 120 }, (_, index) => ({
       id: `e${index}`,
       agreement_id: 'a1',
@@ -126,7 +126,7 @@ describe('AgreementService', () => {
     expect(service.payments()['a1'].length).toBe(120);
   });
 
-  it('says so rather than showing an agreement as unpaid when the read fails', async () => {
+  it('sets an error when loading payments fails', async () => {
     const service = configure((name) =>
       name === 'listExpenses' ? new Error('offline') : page([agreement('a1')]),
     );
@@ -137,84 +137,84 @@ describe('AgreementService', () => {
     expect(service.payments()['a1']).toBeUndefined();
   });
 
-  it('puts a new agreement at the top and counts it', async () => {
+  it('prepends a created agreement and increments the total', async () => {
     const service = configure((name) =>
-      name === 'addAgreement' ? agreement('new') : page([agreement('a1')], 1),
+      name === 'createAgreement' ? agreement('new') : page([agreement('a1')], 1),
     );
     await service.load('p1');
 
-    const made = await service.add('p1', {
+    const created = await service.create('p1', {
       vendor_id: 'v1',
       description: 'Roofing',
       agreed_amount: 10_000,
     });
 
-    expect(made?.id).toBe('new');
+    expect(created?.id).toBe('new');
     expect(service.agreements().map((row) => row.id)).toEqual(['new', 'a1']);
     expect(service.agreementTotal()).toBe(2);
   });
 
-  it('repeats what the server said about an agreement it would not take', async () => {
+  it('surfaces the server error detail when creating fails', async () => {
     const service = configure((name) =>
-      name === 'addAgreement'
+      name === 'createAgreement'
         ? Object.assign(new Error('refused'), { error: { detail: 'That vendor is archived' } })
         : page([]),
     );
 
-    const made = await service.add('p1', {
+    const created = await service.create('p1', {
       vendor_id: 'v1',
       description: 'Roofing',
       agreed_amount: 1,
     });
 
-    expect(made).toBeNull();
+    expect(created).toBeNull();
     expect(service.error()).toBe('That vendor is archived');
     expect(service.saving()).toBe(false);
   });
 
-  it('takes a deleted agreement out of the list and off the count', async () => {
+  it('removes an archived agreement from the list and decrements the total', async () => {
     const service = configure((name) =>
       name === 'listAgreements' ? page([agreement('a1'), agreement('a2')], 2) : undefined,
     );
     await service.load('p1');
 
-    await service.remove('a1');
+    await service.archive('a1');
 
     expect(service.agreements().map((row) => row.id)).toEqual(['a2']);
     expect(service.agreementTotal()).toBe(1);
   });
 
-  it('leaves deleted rows out of both lists unless the page includes them', async () => {
+  it('excludes archived agreements and advances unless include_archived is set', async () => {
     const service = configure((name) =>
       name === 'listAgreements' ? page([agreement('a1')], 1) : page([{ id: 'ad1' }], 1),
     );
     await service.loadAll('p1');
     await service.loadAdvances('p1');
-    expect(calls('listAgreements')[0]['include_deleted']).toBe(false);
-    expect(calls('listAdvances')[0]['include_deleted']).toBe(false);
+    expect(calls('listAgreements')[0]['include_archived']).toBe(false);
+    expect(calls('listAdvances')[0]['include_archived']).toBe(false);
 
     await service.loadAll('p1', true);
     await service.loadAdvances('p1');
-    expect(calls('listAgreements')[1]['include_deleted']).toBe(true);
-    expect(calls('listAdvances')[1]['include_deleted']).toBe(true);
+    expect(calls('listAgreements')[1]['include_archived']).toBe(true);
+    expect(calls('listAdvances')[1]['include_archived']).toBe(true);
   });
 
-  it('puts a restored agreement back in place, no longer deleted', async () => {
+  it('replaces a restored agreement in place with archived_at cleared', async () => {
     const service = configure((name) => {
       if (name === 'listAgreements') {
-        return page([agreement('a1', { deleted_at: '2026-09-01T00:00:00Z' })], 1);
+        return page([agreement('a1', { archived_at: '2026-09-01T00:00:00Z' })], 1);
       }
       return name === 'restoreAgreement' ? agreement('a1') : undefined;
     });
     await service.loadAll('p1', true);
 
-    const back = await service.restore('a1');
+    const restored = await service.restore('a1');
 
-    expect(back?.deleted_at).toBeNull();
-    expect(service.agreements()[0].deleted_at).toBeNull();
+    expect(restored?.archived_at).toBeNull();
+    expect(service.agreements()[0].archived_at).toBeNull();
   });
 
-  it('reads the advances and balances again once one is restored', async () => {
+  it('reloads advances and balances after restoring an advance', async () => {
     const service = configure((name) =>
       name === 'listBalances'
         ? []
@@ -230,7 +230,7 @@ describe('AgreementService', () => {
     expect(calls('listBalances').length).toBe(1);
   });
 
-  it('reads advances a page at a time and remembers which page it is on', async () => {
+  it('loads advances by page and records the current page', async () => {
     const service = configure(() => page([{ id: 'ad1' }], 24));
 
     await service.loadAdvances('p1', 3);
@@ -240,55 +240,54 @@ describe('AgreementService', () => {
     expect(calls('listAdvances')[0]['offset']).toBe(20);
   });
 
-  it('reads the balances again once an advance is given, since they move together', async () => {
+  it('reloads advances and balances after creating an advance', async () => {
     const service = configure((name) => (name === 'listBalances' ? [] : page([{ id: 'ad1' }])));
 
-    await service.addAdvance('p1', { person_id: 'pe1', amount: 5_000 });
+    await service.createAdvance('p1', { person_id: 'pe1', amount: 5_000 });
 
     expect(calls('listAdvances').length).toBe(1);
     expect(calls('listBalances').length).toBe(1);
   });
 
-  it('steps back a page when removing the last advance on it empties it', async () => {
+  it('moves to the previous page when archiving the last advance on a page', async () => {
     let rows: unknown[] = [{ id: 'ad1' }];
     const service = configure((name) => {
       if (name === 'listBalances') {
         return [];
       }
       if (name === 'listAdvances') {
-        const answer = page(rows, 10);
+        const result = page(rows, 10);
         rows = [];
-        return answer;
+        return result;
       }
       return undefined;
     });
     await service.loadAdvances('p1', 2);
 
-    await service.removeAdvance('p1', 'ad1');
+    await service.archiveAdvance('p1', 'ad1');
 
     const pages = calls('listAdvances').map((call) => call['offset']);
     expect(pages).toEqual([10, 10, 0]);
   });
 
-  it('empties what it holds when a different project is asked about', async () => {
-    let held = [agreement('a1')];
+  it('clears cached state on project change', async () => {
+    let rows = [agreement('a1')];
     const service = configure((name) =>
-      name === 'listAgreements' ? page(held) : page([{ id: 'e1', agreement_id: 'a1' }]),
+      name === 'listAgreements' ? page(rows) : page([{ id: 'e1', agreement_id: 'a1' }]),
     );
     await service.loadAll('p1');
     expect(service.agreements().length).toBe(1);
     expect(Object.keys(service.payments())).toEqual(['a1']);
 
-    held = [];
+    rows = [];
     await service.load('p2');
 
-    // The old project's rows must not sit under the new one's name.
     expect(service.agreements()).toEqual([]);
     expect(service.payments()).toEqual({});
     expect(service.agreementTotal()).toBe(0);
   });
 
-  it('keeps what it holds while the same project is asked again', async () => {
+  it('keeps cached state for the same project', async () => {
     const service = configure((name) =>
       name === 'listAgreements'
         ? page([agreement('a1')], 1)
@@ -302,7 +301,7 @@ describe('AgreementService', () => {
     expect(service.payments()['a1'].length).toBe(1);
   });
 
-  it('puts a corrected agreement back in place of the old one', async () => {
+  it('replaces an updated agreement in place', async () => {
     const service = configure((name) =>
       name === 'updateAgreement'
         ? agreement('a1', { description: 'Block work and rendering', agreed_amount: 200_000_00 })
@@ -317,7 +316,7 @@ describe('AgreementService', () => {
     expect(service.agreements()[1].id).toBe('a2');
   });
 
-  it('reads the advances and balances again once one is corrected', async () => {
+  it('reloads advances and balances after updating an advance', async () => {
     const service = configure((name) =>
       name === 'updateAdvance'
         ? { id: 'ad1', person_name: 'Aunty Ngozi', amount: 9_000 }
@@ -331,17 +330,17 @@ describe('AgreementService', () => {
     expect(calls('listBalances').length).toBe(1);
   });
 
-  it('repeats what the server said about a correction it would not take', async () => {
+  it('surfaces the server error detail when updating fails', async () => {
     const service = configure((name) =>
       name === 'updateAgreement'
         ? Object.assign(new Error('no'), {
-            error: { detail: 'Agreed price is below what is paid' },
+            error: { detail: 'Agreed amount is below what is paid' },
           })
         : page([agreement('a1')]),
     );
     await service.load('p1');
 
     expect(await service.edit('a1', { agreed_amount: 1 })).toBeNull();
-    expect(service.error()).toBe('Agreed price is below what is paid');
+    expect(service.error()).toBe('Agreed amount is below what is paid');
   });
 });

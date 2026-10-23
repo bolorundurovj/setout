@@ -22,21 +22,25 @@ controller = InstallController()
 
 @router.get("", operation_id="getInstall")
 async def get_install(user: CurrentUser) -> Install:
-    return await controller.facts()
+    return await controller.info()
 
 
-@router.get("/export", operation_id="exportRecord")
-async def export_record(user: CurrentUser) -> Backup:
+@router.get("/export", operation_id="exportBackup")
+async def export_backup(user: CurrentUser) -> Backup:
     return await controller.export()
 
 
 @router.post(
     "/restore",
-    operation_id="restoreRecord",
+    operation_id="restoreBackup",
     responses={
-        status.HTTP_409_CONFLICT: {"description": "Written by a different Setout or schema"},
-        status.HTTP_422_UNPROCESSABLE_CONTENT: {"description": "The file does not fit"},
+        status.HTTP_409_CONFLICT: {
+            "description": "Created by a different Setout version or schema"
+        },
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {
+            "description": "The file is not a valid backup for this schema"
+        },
     },
 )
-async def restore_record(req: RestoreRequest, user: CurrentUser) -> RestoreResult:
+async def restore_backup(req: RestoreRequest, user: CurrentUser) -> RestoreResult:
     return await controller.restore(req)

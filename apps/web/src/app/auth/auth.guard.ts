@@ -10,7 +10,7 @@ export const authGuard: CanActivateFn = async () => {
     await auth.checkStatus();
   }
 
-  if (!auth.isSetup()) {
+  if (!auth.isSetUp()) {
     return router.parseUrl('/setup');
   }
 
@@ -29,7 +29,7 @@ export const guestGuard: CanActivateFn = async () => {
     await auth.checkStatus();
   }
 
-  if (!auth.isSetup()) {
+  if (!auth.isSetUp()) {
     return true;
   }
 

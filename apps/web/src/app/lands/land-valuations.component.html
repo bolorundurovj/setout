@@ -6,25 +6,32 @@
   <div class="entries">
     @for (row of rows(); track row.id; let i = $index) {
       <div class="entry">
-        <span class="entry-what">
+        <span class="entry-info">
           <span class="t-body">{{ label(row) }}</span>
           <span class="t-small muted">{{ row.valued_on }}</span>
-          @if (row.note) {
-            <span class="t-micro">{{ row.note }}</span>
+          @if (row.notes) {
+            <span class="t-micro">{{ row.notes }}</span>
           }
         </span>
-        <span class="entry-money">
-          <span class="t-body t-mono">{{ money(row) }}</span>
-          @if (change(i)) {
-            <span class="t-micro shift">{{ change(i) }}</span>
+        <span class="entry-amount">
+          <span class="t-body t-mono">{{ amountLabel(row) }}</span>
+          @if (percentChange(i)) {
+            <span class="t-micro entry-change">{{ percentChange(i) }}</span>
           }
         </span>
         <span class="entry-actions">
-          <button type="button" class="link t-mono" (click)="remove(row)">Archive</button>
+          <button type="button" class="link t-mono" (click)="archive(row)">Archive</button>
         </span>
       </div>
     }
   </div>
+}
+
+@if (lastArchived(); as archived) {
+  <p class="t-small muted">
+    {{ label(archived) }} of {{ amountLabel(archived) }} was archived.
+    <button type="button" class="link t-mono" (click)="restoreLastArchived()">Undo</button>
+  </p>
 }
 
 @if (adding()) {
@@ -39,10 +46,10 @@
       />
     </div>
 
-    @if (pinned()) {
+    @if (landCurrency()) {
       <div class="field">
         <span class="t-micro">Currency</span>
-        <app-currency-pill [code]="pinned()" />
+        <app-currency-pill [code]="landCurrency()" />
         <span class="t-small muted">Set by the first entry so values can be compared.</span>
       </div>
     } @else {
@@ -84,14 +91,14 @@
     </label>
 
     <label class="field">
-      <span class="t-micro">Note</span>
+      <span class="t-micro">Notes</span>
       <input
         class="input-field"
         type="text"
         autocomplete="off"
-        placeholder="Who valued it, or why"
-        [value]="note()"
-        (input)="note.set(value($event))"
+        placeholder="Valuer or reason"
+        [value]="notes()"
+        (input)="notes.set(value($event))"
       />
     </label>
 
@@ -104,6 +111,6 @@
   </div>
 } @else {
   <app-button variant="secondary" (pressed)="open()">
-    {{ bought() ? 'Record a valuation' : 'Record what it cost' }}
+    {{ hasPurchasePrice() ? 'New Valuation' : 'New Purchase Price' }}
   </app-button>
 }

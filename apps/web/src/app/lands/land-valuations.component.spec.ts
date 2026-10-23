@@ -7,7 +7,7 @@ import { LandValuationsComponent } from './land-valuations.component';
 function land(over: Partial<LandRead> = {}): LandRead {
   return {
     id: 'l1',
-    name: 'Ewuru plot',
+    name: 'Ewuru',
     address: null,
     geocoded_address: null,
     city: null,
@@ -32,7 +32,7 @@ function land(over: Partial<LandRead> = {}): LandRead {
     projects: [],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
     ...over,
   };
 }
@@ -46,29 +46,38 @@ function entry(over: Partial<LandValuationRead> = {}): LandValuationRead {
     currency_code: 'NGN',
     currency_exponent: 2,
     valued_on: '2023-03-11',
-    note: null,
+    notes: null,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
-    deleted_at: null,
+    archived_at: null,
     ...over,
   };
 }
 
 describe('LandValuationsComponent', () => {
   let recorded: LandValuationCreate[];
+  let archived: string[];
+  let restored: string[];
 
   async function render(row: LandRead = land(), rows: LandValuationRead[] = []) {
     recorded = [];
+    archived = [];
+    restored = [];
 
     const lands = {
       saving: () => false,
       error: () => null,
       valuations: async () => rows,
-      addValuation: async (_id: string, body: LandValuationCreate) => {
+      createValuation: async (_id: string, body: LandValuationCreate) => {
         recorded.push(body);
         return entry();
       },
-      removeValuation: async () => undefined,
+      archiveValuation: async (id: string) => {
+        archived.push(id);
+      },
+      restoreValuation: async (id: string) => {
+        restored.push(id);
+      },
     };
 
     const projects = {
@@ -96,28 +105,28 @@ describe('LandValuationsComponent', () => {
     return { component, element: fixture.nativeElement as HTMLElement };
   }
 
-  it('offers to record what it cost before anything is known', async () => {
+  it('offers Purchase Price when no entry exists', async () => {
     const { component } = await render();
     component.open();
     expect(component.kindChips().map((chip) => chip.value)).toContain('purchase');
   });
 
-  it('stops offering a purchase once the plot has one', async () => {
+  it('offers only Valuation once a purchase price exists', async () => {
     const { component } = await render(land(), [entry({ kind: 'purchase' })]);
     expect(component.kindChips().map((chip) => chip.value)).toEqual(['valuation']);
   });
 
-  it('lets the first entry pick the currency', async () => {
+  it('leaves the currency open before the first entry', async () => {
     const { component } = await render();
-    expect(component.pinned()).toBe('');
+    expect(component.landCurrency()).toBe('');
   });
 
-  it('fixes the currency once the plot has one', async () => {
+  it('uses the land record currency once one is set', async () => {
     const { component } = await render(land({ currency_code: 'NGN', currency_exponent: 2 }));
-    expect(component.pinned()).toBe('NGN');
+    expect(component.landCurrency()).toBe('NGN');
   });
 
-  it('does not rescale the figure when the currency changes mid entry', async () => {
+  it('keeps the typed amount when the currency changes', async () => {
     const { component } = await render();
     component.open();
     component.amount.set('1000');
@@ -126,12 +135,11 @@ describe('LandValuationsComponent', () => {
     expect(component.exponent()).toBe(2);
 
     component.currency.set('JPY');
-    // The typed string is untouched; only the exponent it will be read with moved.
     expect(component.amount()).toBe('1000');
     expect(component.exponent()).toBe(0);
   });
 
-  it('converts to minor units with the currency chosen at the time', async () => {
+  it('converts to minor units with the currency selected at save time', async () => {
     const { component } = await render();
     component.open();
     component.currency.set('JPY');
@@ -143,7 +151,7 @@ describe('LandValuationsComponent', () => {
     expect(recorded[0]).toMatchObject({ amount: 1000, currency_code: 'JPY' });
   });
 
-  it('will not save without an amount, a currency and a day', async () => {
+  it('requires an amount, a currency and a date', async () => {
     const { component } = await render();
     component.open();
     expect(component.isValid()).toBe(false);
@@ -156,28 +164,39 @@ describe('LandValuationsComponent', () => {
     expect(component.isValid()).toBe(true);
   });
 
-  it('shows what it moved by since the entry before it', async () => {
+  it('shows the percentage change from the previous entry', async () => {
     const { component } = await render(land({ currency_code: 'NGN', currency_exponent: 2 }), [
       entry({ id: 'v2', amount: 6200000, valued_on: '2025-01-02' }),
       entry({ id: 'v1', amount: 4500000, valued_on: '2023-03-11', kind: 'purchase' }),
     ]);
 
-    expect(component.change(0)).toBe('+37.8%');
-    expect(component.change(1)).toBe('');
+    expect(component.percentChange(0)).toBe('+37.8%');
+    expect(component.percentChange(1)).toBe('');
   });
 
-  it('reads a fall as a fall', async () => {
+  it('shows a negative change for a lower valuation', async () => {
     const { component } = await render(land({ currency_code: 'NGN', currency_exponent: 2 }), [
       entry({ id: 'v2', amount: 4000000, valued_on: '2025-01-02' }),
       entry({ id: 'v1', amount: 5000000, valued_on: '2023-03-11' }),
     ]);
 
-    expect(component.change(0)).toBe('-20%');
+    expect(component.percentChange(0)).toBe('-20%');
   });
 
-  it('names the purchase for what it is', async () => {
+  it('labels purchase and valuation entries', async () => {
     const { component } = await render();
     expect(component.label(entry({ kind: 'purchase' }))).toBe('Purchase Price');
     expect(component.label(entry())).toBe('Valuation');
+  });
+
+  it('restores the last archived valuation on undo', async () => {
+    const { component } = await render(land(), [entry()]);
+    await component.archive(entry());
+    expect(archived).toEqual(['v1']);
+    expect(component.lastArchived()?.id).toBe('v1');
+
+    await component.restoreLastArchived();
+    expect(restored).toEqual(['v1']);
+    expect(component.lastArchived()).toBeNull();
   });
 });

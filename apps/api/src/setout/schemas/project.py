@@ -14,10 +14,10 @@ class ProjectCreate(BaseModel):
     currency_code: str = Field(
         ...,
         pattern=CURRENCY_PATTERN,
-        description="ISO 4217 code. Fixed once the project exists",
+        description="ISO 4217 code. Cannot be changed after the project is created",
     )
     status: ProjectStatus = ProjectStatus.ACTIVE
-    land_id: str | None = Field(None, description="The plot it is being built on")
+    land_id: str | None = Field(None, description="The land record the project is on")
     notes: str | None = None
 
 
@@ -35,8 +35,8 @@ class ProjectSummary(BaseModel):
     active: int
     on_hold: int
     completed: int
+    closed: int
     archived: int
-    deleted: int
     currency_codes: list[str]
 
 
@@ -45,7 +45,7 @@ class ProjectRead(BaseModel):
     name: str
     currency_code: str
     currency_exponent: int
-    # Both summed from the rows beneath the project, never stored.
+    # Computed from budget items and expenses; not stored.
     budgeted_amount: int
     spent_amount: int
     status: ProjectStatus
@@ -54,7 +54,7 @@ class ProjectRead(BaseModel):
     notes: str | None
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
+    archived_at: datetime | None
 
 
 class ProjectPage(BaseModel):

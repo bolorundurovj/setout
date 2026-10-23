@@ -20,10 +20,10 @@ describe('ImportService', () => {
 
   const file = new File(['a sheet'], 'budget.xlsx', { type: 'application/vnd.ms-excel' });
 
-  it('sends the file itself, and the project it is going into', async () => {
+  it('sends the file and the target project', async () => {
     const service = configure(() => ({ budgeted_amount: 0 }));
 
-    await service.look(file, { projectId: 'p1', name: '', currencyCode: 'NGN' });
+    await service.preview(file, { projectId: 'p1', name: '', currencyCode: 'NGN' });
 
     const body = asked[0]['body'] as Record<string, unknown>;
     expect(asked[0]['call']).toBe('previewImport');
@@ -31,10 +31,10 @@ describe('ImportService', () => {
     expect(body['project_id']).toBe('p1');
   });
 
-  it('sends a name and a currency when there is no project yet', async () => {
+  it('sends a name and currency for a new project', async () => {
     const service = configure(() => ({ budgeted_amount: 0 }));
 
-    await service.look(file, { projectId: null, name: 'Jacaranda Close', currencyCode: 'NGN' });
+    await service.preview(file, { projectId: null, name: 'Jacaranda Close', currencyCode: 'NGN' });
 
     const body = asked[0]['body'] as Record<string, unknown>;
     expect(body['project_id']).toBeNull();
@@ -42,17 +42,17 @@ describe('ImportService', () => {
     expect(body['currency_code']).toBe('NGN');
   });
 
-  it('carries every answer through to the write', async () => {
+  it('sends every import option', async () => {
     const service = configure(() => ({ project_id: 'p1' }));
 
-    await service.bringIn(
+    await service.runImport(
       file,
       { projectId: 'p1', name: '', currencyCode: 'NGN' },
       {
         createMissingCategories: false,
         skipDuplicates: false,
-        takeUnpaid: false,
-        severalCodes: 'uncategorized',
+        includeUnpaid: false,
+        multipleCodes: 'uncategorised',
       },
     );
 
@@ -61,46 +61,46 @@ describe('ImportService', () => {
     expect(body['create_missing_categories']).toBe(false);
     expect(body['skip_duplicates']).toBe(false);
     expect(body['take_unpaid']).toBe(false);
-    expect(body['several_codes']).toBe('uncategorized');
+    expect(body['several_codes']).toBe('uncategorised');
   });
 
-  it('repeats what the server said about a file it could not read', async () => {
+  it('shows the server error detail', async () => {
     const service = configure(() => {
       throw { error: { detail: 'No sheet in that file looks like a budget' } };
     });
 
-    const found = await service.look(file, { projectId: 'p1', name: '', currencyCode: 'NGN' });
+    const report = await service.preview(file, { projectId: 'p1', name: '', currencyCode: 'NGN' });
 
-    expect(found).toBeNull();
+    expect(report).toBeNull();
     expect(service.error()).toBe('No sheet in that file looks like a budget');
   });
 
-  it('reads the first complaint out of a validation list', async () => {
+  it('shows the first validation message', async () => {
     const service = configure(() => {
       throw { error: { detail: [{ msg: 'A new project needs a name' }] } };
     });
 
-    await service.bringIn(
+    await service.runImport(
       file,
       { projectId: null, name: '', currencyCode: 'NGN' },
       {
         createMissingCategories: true,
         skipDuplicates: true,
-        takeUnpaid: true,
-        severalCodes: 'first',
+        includeUnpaid: true,
+        multipleCodes: 'first',
       },
     );
 
     expect(service.error()).toBe('A new project needs a name');
   });
 
-  it('says something plain when the server said nothing useful', async () => {
+  it('falls back to a generic error', async () => {
     const service = configure(() => {
       throw new Error('offline');
     });
 
-    await service.look(file, { projectId: 'p1', name: '', currencyCode: 'NGN' });
+    await service.preview(file, { projectId: 'p1', name: '', currencyCode: 'NGN' });
 
-    expect(service.error()).toBe('The file could not be read.');
+    expect(service.error()).toBe('Could not read the file.');
   });
 });

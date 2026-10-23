@@ -17,31 +17,31 @@ from setout.utils.balances import paid_by_agreement
 class ExportController:
     async def workbook(self, project_id: str) -> tuple[str, bytes]:
         project = await Project.get_or_none(
-            id=project_id, deleted_at__isnull=True
+            id=project_id, archived_at__isnull=True
         ).prefetch_related("currency")
         if project is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
-        book = write.Book(
+        book = write.ExportWorkbook(
             project_name=project.name,
             exponent=project.currency.exponent,
             currency_code=project.currency_id,
         )
-        codes = await self._plan(project, book)
-        await self._spend(project, book, codes)
-        await self._owed(project, book)
+        codes = await self._budget(project, book)
+        await self._expenses(project, book, codes)
+        await self._outstanding(project, book)
         await self._agreements(project, book)
-        await self._files(project, book)
+        await self._attachments(project, book)
         return project.name, write.build(book)
 
-    async def _plan(self, project: Project, book: write.Book) -> dict[str, str]:
-        categories = await Category.filter(project_id=project.id, deleted_at__isnull=True).order_by(
-            "sort_order", "id"
-        )
+    async def _budget(self, project: Project, book: write.ExportWorkbook) -> dict[str, str]:
+        categories = await Category.filter(
+            project_id=project.id, archived_at__isnull=True
+        ).order_by("sort_order", "id")
         items = await BudgetItem.filter(
             category__project_id=project.id,
-            category__deleted_at__isnull=True,
-            deleted_at__isnull=True,
+            category__archived_at__isnull=True,
+            archived_at__isnull=True,
         )
         by_category: dict[str, list[BudgetItem]] = {}
         for item in items:
@@ -56,7 +56,7 @@ class ExportController:
             )
             codes[category.id] = code
             lines = [
-                write.PlanLine(
+                write.BudgetLine(
                     code=f"{code[:-3]}{number:03d}",
                     name=item.description,
                     budgeted_amount=item.budgeted_amount,
@@ -64,16 +64,18 @@ class ExportController:
                 )
                 for number, item in enumerate(by_category.get(category.id, []), start=1)
             ]
-            book.categories.append(write.PlanCategory(code=code, name=category.name, lines=lines))
+            book.categories.append(write.BudgetCategory(code=code, name=category.name, lines=lines))
         return codes
 
-    async def _spend(self, project: Project, book: write.Book, codes: dict[str, str]) -> None:
+    async def _expenses(
+        self, project: Project, book: write.ExportWorkbook, codes: dict[str, str]
+    ) -> None:
         rows = await Expense.filter(
-            project_id=project.id, deleted_at__isnull=True
+            project_id=project.id, archived_at__isnull=True
         ).prefetch_related("vendor", "paid_by", "item")
-        files: dict[str, str] = {}
-        for attachment in await Attachment.filter(project_id=project.id, deleted_at__isnull=True):
-            files.setdefault(attachment.expense_id, attachment.filename)
+        attachment_names: dict[str, str] = {}
+        for attachment in await Attachment.filter(project_id=project.id, archived_at__isnull=True):
+            attachment_names.setdefault(attachment.expense_id, attachment.filename)
 
         vendors: dict[str, write.VendorRow] = {}
         people: dict[str, write.PersonRow] = {}
@@ -100,8 +102,8 @@ class ExportController:
                 )
             item = expense.item
             if item and expense.unit_rate is not None:
-                held = prices.get(item.id)
-                if held is None or held.spent_on is None or expense.spent_on >= held.spent_on:
+                latest = prices.get(item.id)
+                if latest is None or latest.spent_on is None or expense.spent_on >= latest.spent_on:
                     prices[item.id] = write.PriceRow(
                         name=item.name,
                         unit=item.unit or "",
@@ -110,14 +112,14 @@ class ExportController:
                         spent_on=expense.spent_on,
                     )
 
-            book.spend.append(
-                write.SpendRow(
+            book.expenses.append(
+                write.ExpenseRow(
                     vendor=vendor.name if vendor else "",
                     code=codes.get(expense.category_id or "", ""),
                     description=expense.description,
                     spent_on=expense.spent_on,
                     amount=expense.amount,
-                    document=files.get(expense.id, ""),
+                    attachment=attachment_names.get(expense.id, ""),
                     paid_by=person.name if person else "",
                     notes=expense.notes or "",
                 )
@@ -127,24 +129,24 @@ class ExportController:
         book.people.extend(people.values())
         book.prices.extend(prices.values())
 
-    async def _owed(self, project: Project, book: write.Book) -> None:
+    async def _outstanding(self, project: Project, book: write.ExportWorkbook) -> None:
         rows = await Delivery.filter(
-            project_id=project.id, deleted_at__isnull=True, expense__deleted_at__isnull=True
+            project_id=project.id, archived_at__isnull=True, expense__archived_at__isnull=True
         ).prefetch_related("expense__vendor")
         for row in rows:
             vendor = row.expense.vendor
-            book.owed.append(
-                write.OwedRow(
+            book.outstanding.append(
+                write.OutstandingRow(
                     description=row.description,
                     vendor=vendor.name if vendor else "",
-                    promised=row.promised or "",
+                    expected=row.expected,
                     received_on=row.received_at.date() if row.received_at else None,
                 )
             )
 
-    async def _agreements(self, project: Project, book: write.Book) -> None:
+    async def _agreements(self, project: Project, book: write.ExportWorkbook) -> None:
         rows = await Agreement.filter(
-            project_id=project.id, deleted_at__isnull=True
+            project_id=project.id, archived_at__isnull=True
         ).prefetch_related("vendor")
         paid = await paid_by_agreement([row.id for row in rows])
         for row in rows:
@@ -168,15 +170,15 @@ class ExportController:
                     )
                 )
 
-    async def _files(self, project: Project, book: write.Book) -> None:
+    async def _attachments(self, project: Project, book: write.ExportWorkbook) -> None:
         rows = await Attachment.filter(
-            project_id=project.id, deleted_at__isnull=True
+            project_id=project.id, archived_at__isnull=True
         ).prefetch_related("expense")
         for row in rows:
-            book.files.append(
-                write.FileRow(
+            book.attachments.append(
+                write.AttachmentRow(
                     filename=row.filename,
-                    against=row.expense.description,
+                    expense_description=row.expense.description,
                     byte_size=row.byte_size,
                     checksum=row.checksum,
                 )

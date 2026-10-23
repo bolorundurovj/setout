@@ -3,9 +3,9 @@ import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
 import type {
   PersonCurrencyTotal,
-  PersonProjectSpend,
+  PersonExpenseSummary,
+  PersonProjectExpenseSummary,
   PersonRead,
-  PersonSpend,
 } from '@setout/api-client';
 import { formatMoney } from '../budget/money';
 import { ToastService } from '../toast.service';
@@ -21,7 +21,7 @@ import { PersonService } from './person.service';
   styleUrl: './person-detail.component.scss',
 })
 export class PersonDetailComponent {
-  private readonly people = inject(PersonService);
+  private readonly personService = inject(PersonService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
 
@@ -30,7 +30,7 @@ export class PersonDetailComponent {
   readonly id = input.required<string>();
 
   readonly person = signal<PersonRead | null>(null);
-  readonly spend = signal<PersonSpend | null>(null);
+  readonly expenseSummary = signal<PersonExpenseSummary | null>(null);
   readonly loading = signal(true);
 
   readonly notSet = '—';
@@ -49,20 +49,16 @@ export class PersonDetailComponent {
   }
 
   async load(): Promise<void> {
-    const [person, spend] = await Promise.all([
-      this.people.get(this.id()),
-      this.people.spend(this.id()),
+    const [person, expenseSummary] = await Promise.all([
+      this.personService.get(this.id()),
+      this.personService.expenseSummary(this.id()),
     ]);
     this.person.set(person);
-    this.spend.set(spend);
+    this.expenseSummary.set(expenseSummary);
     this.loading.set(false);
   }
 
-  value(event: Event): string {
-    return (event.target as HTMLInputElement).value;
-  }
-
-  money(row: PersonProjectSpend): string {
+  formatSpent(row: PersonProjectExpenseSummary): string {
     return formatMoney(row.spent_amount, row.currency_code, row.currency_exponent);
   }
 
@@ -72,18 +68,18 @@ export class PersonDetailComponent {
 
   countLabel(person: PersonRead): string {
     if (person.expense_count === 0) {
-      return 'nothing recorded yet';
+      return 'no expenses yet';
     }
-    return person.expense_count === 1 ? '1 purchase' : `${person.expense_count} purchases`;
+    return person.expense_count === 1 ? '1 expense' : `${person.expense_count} expenses`;
   }
 
-  spentTotals(spend: PersonSpend): PersonCurrencyTotal[] {
+  spentTotals(summary: PersonExpenseSummary): PersonCurrencyTotal[] {
     const rows = new Map<string, PersonCurrencyTotal>();
-    for (const project of spend.projects) {
-      const held = rows.get(project.currency_code);
-      if (held) {
-        held.expense_count += project.expense_count;
-        held.spent_amount += project.spent_amount;
+    for (const project of summary.projects) {
+      const existing = rows.get(project.currency_code);
+      if (existing) {
+        existing.expense_count += project.expense_count;
+        existing.spent_amount += project.spent_amount;
       } else {
         rows.set(project.currency_code, {
           currency_code: project.currency_code,
@@ -96,18 +92,18 @@ export class PersonDetailComponent {
     return [...rows.values()];
   }
 
-  total(total: PersonCurrencyTotal): string {
+  formatTotal(total: PersonCurrencyTotal): string {
     return formatMoney(total.spent_amount, total.currency_code, total.currency_exponent);
   }
 
   async archive(): Promise<void> {
-    await this.people.archive(this.id());
+    await this.personService.archive(this.id());
     await this.load();
     this.toast.show('Person archived.');
   }
 
   async restore(): Promise<void> {
-    await this.people.restore(this.id());
+    await this.personService.restore(this.id());
     await this.load();
     this.toast.show('Person restored.');
   }

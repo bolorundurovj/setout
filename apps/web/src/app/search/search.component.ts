@@ -6,7 +6,7 @@ import { ButtonComponent } from '../ui/button.component';
 import { TopbarComponent } from '../ui/topbar.component';
 import { SearchService } from './search.service';
 
-const NAMES: Record<string, string> = {
+const GROUP_LABELS: Record<string, string> = {
   projects: 'Projects',
   expenses: 'Expenses',
   vendors: 'Vendors',
@@ -25,30 +25,30 @@ const NAMES: Record<string, string> = {
 export class SearchComponent {
   readonly q = input('');
 
-  readonly results = inject(SearchService);
+  readonly search = inject(SearchService);
   private readonly router = inject(Router);
 
-  readonly line = computed(() => {
-    const found = this.results.results();
-    if (!found) {
+  readonly summary = computed(() => {
+    const results = this.search.results();
+    if (!results) {
       return '';
     }
-    const matches = found.total === 1 ? 'match' : 'matches';
-    return `${found.total} ${matches} for "${found.query}"`;
+    const matches = results.total === 1 ? 'match' : 'matches';
+    return `${results.total} ${matches} for "${results.query}"`;
   });
 
   readonly empty = computed(
-    () => !this.results.looking() && this.q().trim().length > 0 && !this.results.results()?.total,
+    () => !this.search.loading() && this.q().trim().length > 0 && !this.search.results()?.total,
   );
 
   constructor() {
     effect(() => {
-      void this.results.look(this.q());
+      void this.search.search(this.q());
     });
   }
 
   heading(group: HitGroup): string {
-    const name = NAMES[group.kind] ?? group.kind;
+    const name = GROUP_LABELS[group.kind] ?? group.kind;
     if (group.total > group.hits.length) {
       return `${name} · showing ${group.hits.length} of ${group.total}`;
     }
@@ -62,7 +62,7 @@ export class SearchComponent {
     return formatMoney(hit.amount, hit.currency_code, hit.currency_exponent ?? 2);
   }
 
-  day(hit: Hit): string {
+  spentOn(hit: Hit): string {
     if (!hit.spent_on) {
       return '';
     }
@@ -93,7 +93,7 @@ export class SearchComponent {
     }
   }
 
-  clear(): void {
+  exitSearch(): void {
     void this.router.navigate(['/']);
   }
 }

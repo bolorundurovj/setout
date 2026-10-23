@@ -38,7 +38,7 @@
   min-width: 0;
 }
 
-.when {
+.date {
   font-size: 13px;
   color: var(--ink-3);
 }
@@ -55,7 +55,7 @@
     grid-template-columns: 1fr auto;
   }
 
-  .when {
+  .date {
     display: none;
   }
 }

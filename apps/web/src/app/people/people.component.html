@@ -1,9 +1,9 @@
 <app-topbar title="People" [subtitle]="peopleCountLabel()">
-  <app-button (pressed)="addSomeone()">Add Person</app-button>
+  <app-button (pressed)="newPerson()">New Person</app-button>
 </app-topbar>
 
 <div class="page">
-  <p class="prose">Anyone who spends money on your behalf. Balances run across every project.</p>
+  <p class="prose">People who pay for expenses on your behalf.</p>
 
   <div class="controls">
     <input
@@ -19,70 +19,57 @@
     </app-toggle>
   </div>
 
-  @if (people.error()) {
-    <p class="t-small error">{{ people.error() }}</p>
+  @if (personService.error()) {
+    <p class="t-small error">{{ personService.error() }}</p>
   }
 
-  @if (people.people().length === 0) {
+  @if (personService.people().length === 0) {
     <div class="card">
-      <p class="t-body">{{ search() ? 'Nobody matches that.' : 'Nobody added yet.' }}</p>
-      <p class="t-small">
-        Add anyone who buys on your behalf, then record them as the payer on an expense.
-      </p>
+      <p class="t-body">{{ search() ? 'No people match the search.' : 'No people yet.' }}</p>
+      <p class="t-small">Add each person, then select them as the payer on an expense.</p>
     </div>
   } @else {
     <div class="table">
       <div class="row head">
         <span class="t-micro">Person</span>
-        <span class="t-micro right">Given</span>
         <span class="t-micro right">Spent</span>
-        <span class="t-micro right">Outstanding Balance</span>
       </div>
 
-      @for (person of people.people(); track person.id) {
+      @for (person of personService.people(); track person.id) {
         <button
           type="button"
           class="row"
-          [class.archived]="person.deleted_at"
+          [class.archived]="person.archived_at"
           (click)="open(person.id)"
         >
           <span class="name-cell">
             <span class="person-name">{{ person.name }}</span>
             <span class="t-micro">
               {{ person.role ?? notSet }} &middot; {{ countLabel(person) }}
-              @if (person.deleted_at) {
+              @if (person.archived_at) {
                 &middot; archived
               }
             </span>
           </span>
-
-          <span class="right t-mono muted">{{ notSet }}</span>
 
           <span class="totals">
             @if (person.totals.length === 0) {
               <span class="t-mono muted">{{ notSet }}</span>
             } @else {
               @for (total of person.totals; track total.currency_code) {
-                <span class="t-mono figure">{{ money(total) }}</span>
+                <span class="t-mono figure">{{ formatSpent(total) }}</span>
               }
             }
           </span>
-
-          <span class="right t-mono muted">{{ notSet }}</span>
         </button>
       }
     </div>
 
     <app-pagination
-      [total]="people.total()"
-      [page]="people.page()"
+      [total]="personService.total()"
+      [page]="personService.page()"
       noun="people"
       (pageChange)="goTo($event)"
     />
-
-    <p class="t-small muted">
-      A negative balance is money you owe the person. A positive balance is your money they still
-      hold. Given and Outstanding Balance are filled in by advances.
-    </p>
   }
 </div>

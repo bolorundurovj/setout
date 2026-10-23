@@ -25,9 +25,11 @@ def test_build_parser_options() -> None:
     args = parser.parse_args(["reset-passphrase", "--file", "secret.txt", "--user", "Alice"])
     assert args.command == "reset-passphrase"
     assert args.file_path == "secret.txt"
-    assert args.username == "Alice"
+    assert args.account_name == "Alice"
     assert args.generate is False
     assert args.use_stdin is False
+
+    assert parser.parse_args(["reset-passphrase", "--name", "Bola"]).account_name == "Bola"
 
     args_gen = parser.parse_args(["reset-passphrase", "-g", "--stdin"])
     assert args_gen.generate is True
@@ -93,7 +95,7 @@ def test_main_calls_reset_passphrase(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_reset(
         *,
         file_path: str | Path | None = None,
-        username: str | None = None,
+        account_name: str | None = None,
         passphrase: str | None = None,
         generate: bool = False,
         use_stdin: bool = False,
@@ -101,7 +103,7 @@ def test_main_calls_reset_passphrase(monkeypatch: pytest.MonkeyPatch) -> None:
         called_with.update(
             {
                 "file_path": file_path,
-                "username": username,
+                "account_name": account_name,
                 "passphrase": passphrase,
                 "generate": generate,
                 "use_stdin": use_stdin,
@@ -114,7 +116,7 @@ def test_main_calls_reset_passphrase(monkeypatch: pytest.MonkeyPatch) -> None:
     assert exit_code == 0
     assert called_with == {
         "file_path": "secret.txt",
-        "username": "Admin",
+        "account_name": "Admin",
         "passphrase": None,
         "generate": False,
         "use_stdin": False,

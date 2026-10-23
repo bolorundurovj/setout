@@ -25,15 +25,15 @@ class DeliveryController:
         vendor_id: str | None,
         outstanding_only: bool,
         received_only: bool,
-        include_deleted: bool,
+        include_archived: bool,
         limit: int,
         offset: int,
     ) -> DeliveryPage:
         if project_id is not None:
             await self._project_or_404(project_id)
         query = Delivery.all()
-        if not include_deleted:
-            query = query.filter(deleted_at__isnull=True, expense__deleted_at__isnull=True)
+        if not include_archived:
+            query = query.filter(archived_at__isnull=True, expense__archived_at__isnull=True)
         if project_id is not None:
             query = query.filter(project_id=project_id)
         if vendor_id is not None:
@@ -43,38 +43,41 @@ class DeliveryController:
         if received_only:
             query = query.filter(received_at__isnull=False)
         total = await query.count()
-        owed_rows = query.filter(received_at__isnull=True)
-        if include_deleted:
-            owed_rows = owed_rows.filter(deleted_at__isnull=True, expense__deleted_at__isnull=True)
-        owed = await owed_rows.prefetch_related("expense")
+        outstanding_rows = query.filter(received_at__isnull=True)
+        if include_archived:
+            outstanding_rows = outstanding_rows.filter(
+                archived_at__isnull=True, expense__archived_at__isnull=True
+            )
+        outstanding = await outstanding_rows.prefetch_related("expense")
         rows = (
-            await query.offset(offset)
+            await query.order_by("-created_at", "id")
+            .offset(offset)
             .limit(limit)
             .prefetch_related("expense__vendor", "project__currency")
         )
         return DeliveryPage(
             items=[self._read(row) for row in rows],
             total=total,
-            owed_amount=sum(row.expense.amount for row in owed),
+            outstanding_amount=sum(row.expense.amount for row in outstanding),
             limit=limit,
             offset=offset,
         )
 
     async def create(self, project_id: str, req: DeliveryCreate) -> DeliveryRead:
         await self._project_or_404(project_id)
-        expense = await Expense.get_or_none(id=req.expense_id, deleted_at__isnull=True)
+        expense = await Expense.get_or_none(id=req.expense_id, archived_at__isnull=True)
         if expense is None or expense.project_id != project_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Expense not found")
-        if await Delivery.filter(expense_id=expense.id, deleted_at__isnull=True).exists():
+        if await Delivery.filter(expense_id=expense.id, archived_at__isnull=True).exists():
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="That expense already has a pending delivery",
+                detail="This expense already has a delivery",
             )
         delivery = await Delivery.create(
             project_id=project_id,
             expense_id=expense.id,
             description=req.description or expense.description,
-            promised=req.promised,
+            expected=req.expected,
         )
         await delivery.fetch_related("expense__vendor", "project__currency")
         return self._read(delivery)
@@ -90,29 +93,29 @@ class DeliveryController:
             await delivery.save()
         return self._read(delivery)
 
-    async def receive(self, delivery_id: str) -> DeliveryRead:
+    async def mark_received(self, delivery_id: str) -> DeliveryRead:
         delivery = await self._delivery_or_404(delivery_id)
         if delivery.received_at is None:
             delivery.received_at = datetime.now(UTC)
             await delivery.save()
         return self._read(delivery)
 
-    async def unreceive(self, delivery_id: str) -> DeliveryRead:
+    async def mark_not_received(self, delivery_id: str) -> DeliveryRead:
         delivery = await self._delivery_or_404(delivery_id)
         if delivery.received_at is not None:
             delivery.received_at = None
             await delivery.save()
         return self._read(delivery)
 
-    async def delete(self, delivery_id: str) -> None:
+    async def archive(self, delivery_id: str) -> None:
         delivery = await self._delivery_or_404(delivery_id)
-        delivery.deleted_at = datetime.now(UTC)
+        delivery.archived_at = datetime.now(UTC)
         await delivery.save()
 
     async def restore(self, delivery_id: str) -> DeliveryRead:
-        delivery = await self._delivery_or_404(delivery_id, include_deleted=True)
-        if delivery.deleted_at is not None:
-            delivery.deleted_at = None
+        delivery = await self._delivery_or_404(delivery_id, include_archived=True)
+        if delivery.archived_at is not None:
+            delivery.archived_at = None
             await delivery.save()
         return self._read(delivery)
 
@@ -126,7 +129,7 @@ class DeliveryController:
             vendor_id=vendor.id if vendor else None,
             vendor_name=vendor.name if vendor else None,
             description=delivery.description,
-            promised=delivery.promised,
+            expected=delivery.expected,
             amount=expense.amount,
             currency_code=delivery.project.currency_id,
             currency_exponent=delivery.project.currency.exponent,
@@ -134,23 +137,23 @@ class DeliveryController:
             received_at=delivery.received_at,
             created_at=delivery.created_at,
             updated_at=delivery.updated_at,
-            deleted_at=delivery.deleted_at,
+            archived_at=delivery.archived_at,
         )
 
     async def _project_or_404(self, project_id: str) -> Project:
-        project = await Project.get_or_none(id=project_id, deleted_at__isnull=True)
+        project = await Project.get_or_none(id=project_id, archived_at__isnull=True)
         if project is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
         return project
 
     async def _delivery_or_404(
-        self, delivery_id: str, *, include_deleted: bool = False
+        self, delivery_id: str, *, include_archived: bool = False
     ) -> Delivery:
         delivery = await Delivery.get_or_none(id=delivery_id).prefetch_related(
             "expense__vendor", "project__currency"
         )
-        if delivery is None or (delivery.deleted_at is not None and not include_deleted):
+        if delivery is None or (delivery.archived_at is not None and not include_archived):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
-        if delivery.expense.deleted_at is not None:
+        if delivery.expense.archived_at is not None and not include_archived:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
         return delivery

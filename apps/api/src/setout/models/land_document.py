@@ -19,7 +19,7 @@ class LandDocumentKind(StrEnum):
 
 
 class LandDocument(Model):
-    """A paper that says the land is yours, or says what may be built on it."""
+    """A document for a land record, such as a title deed or a building permit."""
 
     id = fields.CharField(max_length=12, primary_key=True, default=short_id)
     land: fields.ForeignKeyRelation[Land] = fields.ForeignKeyField(
@@ -32,24 +32,26 @@ class LandDocument(Model):
         LandDocumentKind,
         max_length=32,
         default=LandDocumentKind.OTHER,
-        description="What the paper is, so a land can say which ones it is missing",
+        description="The document type, used to list the documents a land record is missing",
     )
-    note = fields.CharField(
+    notes = fields.CharField(
         max_length=255,
         null=True,
         default=None,
-        description="What the paper actually is, when the kind does not say",
+        description="Describes the document when the type is Other",
     )
-    filename = fields.CharField(max_length=255, description="What it was called where it came from")
+    filename = fields.CharField(max_length=255, description="The original filename")
     content_type = fields.CharField(max_length=127)
     byte_size = fields.IntField()
     checksum = fields.CharField(
-        max_length=64, db_index=True, description="sha256 of the contents, and the stored name"
+        max_length=64,
+        db_index=True,
+        description="SHA-256 of the contents, also used as the stored filename",
     )
     storage_key = fields.CharField(max_length=255)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    deleted_at = fields.DatetimeField(null=True, default=None)
+    archived_at = fields.DatetimeField(null=True, default=None)
 
     class Meta:
         table = "land_document"

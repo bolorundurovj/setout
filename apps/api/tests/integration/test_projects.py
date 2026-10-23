@@ -14,7 +14,7 @@ async def _sign_in(client: AsyncClient) -> None:
     )
     resp = await client.post(
         "/api/auth/setup",
-        json={"name": "Admin", "password": "password123"},
+        json={"name": "Admin", "passphrase": "password123"},
     )
     assert resp.status_code == 200
 
@@ -48,7 +48,7 @@ async def test_create_and_list_a_project(client: AsyncClient) -> None:
     assert created["currency_code"] == "NGN"
     assert created["currency_exponent"] == 2
     assert created["status"] == "active"
-    assert created["deleted_at"] is None
+    assert created["archived_at"] is None
 
     page = (await client.get("/api/projects")).json()
     assert [p["id"] for p in page["items"]] == [created["id"]]
@@ -77,32 +77,32 @@ async def test_the_currency_cannot_be_changed(client: AsyncClient) -> None:
     assert unchanged["currency_code"] == "NGN"
 
 
-async def test_a_project_must_be_archived_before_it_is_deleted(client: AsyncClient) -> None:
+async def test_a_project_must_be_archived_before_it_is_archived(client: AsyncClient) -> None:
     await _sign_in(client)
     project = await _create(client)
 
-    resp = await client.delete(f"/api/projects/{project['id']}")
+    resp = await client.post(f"/api/projects/{project['id']}/archive")
     assert resp.status_code == 409
 
-    await client.patch(f"/api/projects/{project['id']}", json={"status": "archived"})
-    assert (await client.delete(f"/api/projects/{project['id']}")).status_code == 204
+    await client.patch(f"/api/projects/{project['id']}", json={"status": "closed"})
+    assert (await client.post(f"/api/projects/{project['id']}/archive")).status_code == 204
 
 
-async def test_a_deleted_project_is_hidden_and_restorable(client: AsyncClient) -> None:
+async def test_a_archived_project_is_hidden_and_restorable(client: AsyncClient) -> None:
     await _sign_in(client)
     project = await _create(client)
-    await client.patch(f"/api/projects/{project['id']}", json={"status": "archived"})
-    await client.delete(f"/api/projects/{project['id']}")
+    await client.patch(f"/api/projects/{project['id']}", json={"status": "closed"})
+    await client.post(f"/api/projects/{project['id']}/archive")
 
     assert (await client.get("/api/projects")).json()["items"] == []
     assert (await client.get(f"/api/projects/{project['id']}")).status_code == 404
 
-    with_deleted = (await client.get("/api/projects", params={"include_deleted": True})).json()
+    with_deleted = (await client.get("/api/projects", params={"include_archived": True})).json()
     assert [p["id"] for p in with_deleted["items"]] == [project["id"]]
 
     restored = await client.post(f"/api/projects/{project['id']}/restore")
     assert restored.status_code == 200
-    assert restored.json()["deleted_at"] is None
+    assert restored.json()["archived_at"] is None
     assert len((await client.get("/api/projects")).json()["items"]) == 1
 
 
@@ -121,22 +121,22 @@ async def test_name_and_notes_can_be_updated(client: AsyncClient) -> None:
 async def test_summary_counts_by_status(client: AsyncClient) -> None:
     await _sign_in(client)
     active = await _create(client)
-    archived = await _create(client, name="Owode Bungalow")
-    deleted = await _create(client, name="Gone", currency_code="JPY")
+    closed = await _create(client, name="Owode Bungalow")
+    archived = await _create(client, name="Gone", currency_code="JPY")
 
-    await client.patch(f"/api/projects/{archived['id']}", json={"status": "archived"})
-    await client.patch(f"/api/projects/{deleted['id']}", json={"status": "archived"})
-    await client.delete(f"/api/projects/{deleted['id']}")
+    await client.patch(f"/api/projects/{closed['id']}", json={"status": "closed"})
+    await client.patch(f"/api/projects/{archived['id']}", json={"status": "closed"})
+    await client.post(f"/api/projects/{archived['id']}/archive")
 
     resp = await client.get("/api/project-summary")
     assert resp.status_code == 200
     body = resp.json()
     assert body["total"] == 2
     assert body["active"] == 1
+    assert body["closed"] == 1
     assert body["archived"] == 1
-    assert body["deleted"] == 1
     assert body["currency_codes"] == ["NGN"]
-    assert active["id"] != archived["id"]
+    assert active["id"] != closed["id"]
 
 
 async def test_summary_lists_every_currency_in_use(client: AsyncClient) -> None:
@@ -175,9 +175,9 @@ async def test_pagination_bounds_are_enforced(client: AsyncClient) -> None:
 
 async def _archive_and_delete(client: AsyncClient, project_id: str) -> None:
     assert (
-        await client.patch(f"/api/projects/{project_id}", json={"status": "archived"})
+        await client.patch(f"/api/projects/{project_id}", json={"status": "closed"})
     ).status_code == 200
-    assert (await client.delete(f"/api/projects/{project_id}")).status_code == 204
+    assert (await client.post(f"/api/projects/{project_id}/archive")).status_code == 204
 
 
 async def test_deleting_a_project_takes_everything_it_owns(client: AsyncClient) -> None:
@@ -209,7 +209,7 @@ async def test_deleting_a_project_takes_everything_it_owns(client: AsyncClient) 
 
     await _archive_and_delete(client, project["id"])
 
-    spent = (await client.get(f"/api/vendors/{vendor['id']}/spend")).json()
+    spent = (await client.get(f"/api/vendors/{vendor['id']}/expense-summary")).json()
     assert spent["projects"] == []
     categories = await client.get(f"/api/projects/{project['id']}/categories")
     assert categories.status_code == 404
@@ -228,11 +228,11 @@ async def test_restoring_a_project_brings_back_what_it_took(client: AsyncClient)
     await _archive_and_delete(client, project["id"])
     assert (await client.post(f"/api/projects/{project['id']}/restore")).status_code == 200
 
-    spent = (await client.get(f"/api/vendors/{vendor['id']}/spend")).json()
+    spent = (await client.get(f"/api/vendors/{vendor['id']}/expense-summary")).json()
     assert [row["expense_count"] for row in spent["projects"]] == [1]
 
 
-async def test_a_restored_project_leaves_what_was_deleted_on_purpose_deleted(
+async def test_a_restored_project_leaves_what_was_archived_on_purpose_archived(
     client: AsyncClient,
 ) -> None:
     await _sign_in(client)
@@ -250,7 +250,7 @@ async def test_a_restored_project_leaves_what_was_deleted_on_purpose_deleted(
             json={"description": "Nails", "amount": 2_500_00, "vendor_id": vendor["id"]},
         )
     ).json()
-    assert (await client.delete(f"/api/expenses/{gone['id']}")).status_code == 204
+    assert (await client.post(f"/api/expenses/{gone['id']}/archive")).status_code == 204
 
     await _archive_and_delete(client, project["id"])
     await client.post(f"/api/projects/{project['id']}/restore")

@@ -8,30 +8,30 @@ import bcrypt
 from setout.config import Settings, get_settings
 
 
-def hash_password(password: str) -> str:
+def hash_passphrase(passphrase: str) -> str:
     salt = bcrypt.gensalt()
-    return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
+    return bcrypt.hashpw(passphrase.encode("utf-8"), salt).decode("utf-8")
 
 
-def verify_password(password: str, hashed: str) -> bool:
+def verify_passphrase(passphrase: str, hashed: str) -> bool:
     try:
-        return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
+        return bcrypt.checkpw(passphrase.encode("utf-8"), hashed.encode("utf-8"))
     except ValueError:
         return False
 
 
 def delay_for(failures: int, settings: Settings) -> float | None:
-    """Seconds to wait before answering, or None when the attempt should be refused.
+    """Returns None once the attempt limit is reached.
 
-    Setout has one account, so a lockout could be used to keep the owner out.
+    A delay replaces a lockout, which would lock out the only account.
     """
-    if failures >= settings.login_max_attempts:
+    if failures >= settings.sign_in_max_attempts:
         return None
-    over = failures - settings.login_free_attempts
-    if over < 0:
+    delayed_attempts = failures - settings.sign_in_free_attempts
+    if delayed_attempts < 0:
         return 0.0
-    wait: float = settings.login_delay_seconds * (2**over)
-    return min(wait, settings.login_delay_cap_seconds)
+    wait: float = settings.sign_in_delay_seconds * (2**delayed_attempts)
+    return min(wait, settings.sign_in_delay_cap_seconds)
 
 
 def _signature(session_id: str) -> str:
@@ -44,17 +44,11 @@ def sign_session_id(session_id: str) -> str:
 
 
 def read_session_id(cookie_value: str) -> str | None:
-    """Return the session id, or None when the signature does not match.
-
-    Session ids are random and stored in the database, so the signature is not
-    what makes them unguessable. It lets us reject a tampered cookie without
-    touching the database.
-    """
+    """The signature rejects a tampered cookie without a database lookup."""
     session_id, separator, signature = cookie_value.rpartition(".")
     if not separator or not session_id or not signature:
         return None
-    # Compare as bytes: compare_digest rejects non-ASCII str, and the cookie is
-    # whatever the caller sent.
+    # compare_digest rejects non-ASCII str, and the cookie value is untrusted input.
     if not hmac.compare_digest(signature.encode("utf-8"), _signature(session_id).encode("utf-8")):
         return None
     return session_id

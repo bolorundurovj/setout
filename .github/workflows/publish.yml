@@ -108,7 +108,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Work out the tags
+      - name: Compute image tags and labels
         id: meta
         uses: docker/metadata-action@v6
         with:
@@ -123,7 +123,7 @@ jobs:
             type=raw,value=latest,enable=${{ github.event_name == 'release' }}
           labels: |
             org.opencontainers.image.title=Setout
-            org.opencontainers.image.description=Self-hosted tracker for construction spend on personal building projects
+            org.opencontainers.image.description=Self-hosted tracker for construction expenses on personal building projects
             org.opencontainers.image.licenses=AGPL-3.0-or-later
 
       - name: Create the manifest list
@@ -137,9 +137,9 @@ jobs:
         env:
           GHCR_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         run: |
-          version=$(jq -r --arg image "$GHCR_IMAGE" \
+          image_ref=$(jq -r --arg image "$GHCR_IMAGE" \
             'first(.tags[] | select(startswith($image + ":")))' <<< "$DOCKER_METADATA_OUTPUT_JSON")
-          echo "value=$(docker buildx imagetools inspect "$version" --format '{{json .Manifest}}' | jq -r .digest)" >> "$GITHUB_OUTPUT"
+          echo "value=$(docker buildx imagetools inspect "$image_ref" --format '{{json .Manifest}}' | jq -r .digest)" >> "$GITHUB_OUTPUT"
 
       # Attestation takes one subject, so it covers the primary registry only.
       - name: Attest the build provenance

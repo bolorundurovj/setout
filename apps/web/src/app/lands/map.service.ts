@@ -17,7 +17,7 @@ export class MapService {
     try {
       this.state.set(await this.api.invoke(getMapSettings));
     } catch {
-      // A map with no tiles still draws the plot, so this is not worth a toast.
+      // The map still draws the pin and boundary without tiles, so no toast is shown.
       this.state.set(null);
     }
   }
