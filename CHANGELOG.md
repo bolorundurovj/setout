@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.4.0](https://github.com/bolorundurovj/setout/compare/v2.3.0...v2.4.0) (2026-10-23)
+
+
+### Features
+
+* migrate default object storage from minio to rustfs with automatic migration ([a48a414](https://github.com/bolorundurovj/setout/commit/a48a414d1893be74890ee2fa80875466a53334c2))
+
+
+### Documentation
+
+* update guides and architecture diagrams for rustfs ([b1ad503](https://github.com/bolorundurovj/setout/commit/b1ad503900b9a0f797975d3c7804d987a1360afd))
+
+
+### Build and dependencies
+
+* **deps:** bump @angular/router ([#104](https://github.com/bolorundurovj/setout/issues/104)) ([7c1b497](https://github.com/bolorundurovj/setout/commit/7c1b497a168508df64c7de57ce9b027e2e59eefa))
+
 ## [2.3.0](https://github.com/bolorundurovj/setout/compare/v2.2.0...v2.3.0) (2026-10-23)
 
 
