@@ -223,5 +223,3 @@
 ### Chores
 
 * release 1.0.0 ([caf133f](https://github.com/bolorundurovj/setout/commit/caf133fbaf26094c2fbf12536b2c2dd38c09cb49))
-
-## Changelog

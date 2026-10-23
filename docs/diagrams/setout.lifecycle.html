@@ -5159,9 +5159,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <path d="M 72 112 L 1304 112" class="a-default" stroke-width="0.8" stroke-dasharray="3,8"/>
         <text x="72" y="100" class="t-dim" font-size="10" font-weight="600">01 / Project status</text>
         <path d="M 72 264 L 1304 264" class="a-default" stroke-width="0.8" stroke-dasharray="3,8"/>
-        <text x="72" y="252" class="t-dim" font-size="10" font-weight="600">02 / Interruptions + recovery</text>
+        <text x="72" y="252" class="t-dim" font-size="10" font-weight="600">02 / Reversible changes</text>
         <path d="M 72 436 L 1304 436" class="a-default" stroke-width="0.8" stroke-dasharray="3,8"/>
-        <text x="72" y="424" class="t-dim" font-size="10" font-weight="600">03 / End states</text>
+        <text x="72" y="424" class="t-dim" font-size="10" font-weight="600">03 / Row archiving</text>
 
         <!-- Primary lifecycle rail -->
         <path d="M 154 157 L 594 157" class="a-emphasis" stroke-width="2.2" marker-end="url(#arrowhead-emphasis)"/>
@@ -5170,9 +5170,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <path data-edge-from="active" data-edge-to="on_hold" data-edge-label="pause" data-edge-key="0" data-composition-points="153,157;189,157" d="M 153 157 L 189 157" class="a-default" stroke-width="1.1" marker-end="url(#arrowhead)"/>
         <path data-edge-from="on_hold" data-edge-to="active" data-edge-label="resume" data-edge-key="1" data-composition-points="189,157;189,222;153,222;153,157" d="M 189 157 L 189 212 Q 189 222 179 222 L 163 222 Q 153 222 153 212 L 153 157" class="a-emphasis" stroke-width="2" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="active" data-edge-to="completed" data-edge-label="complete" data-edge-key="2" data-composition-points="153,157;153,222;343,222;343,157" d="M 153 157 L 153 212 Q 153 222 163 222 L 333 222 Q 343 222 343 212 L 343 157" class="a-emphasis" stroke-width="2" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="completed" data-edge-to="archived" data-edge-label="archive" data-edge-key="3" data-composition-points="461,157;497,157" d="M 461 157 L 497 157" class="a-default" stroke-width="1.1" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="archived" data-edge-to="deleted" data-edge-label="delete" data-edge-key="4" data-composition-points="556,188;556,450" d="M 556 188 L 556 450" class="a-security" stroke-width="1.1" marker-end="url(#arrowhead-security)"/>
-        <path data-edge-from="deleted" data-edge-to="archived" data-edge-label="restore" data-edge-key="5" data-composition-points="556,450;651,450;651,188;556,188" d="M 556 450 L 641 450 Q 651 450 651 440 L 651 198 Q 651 188 641 188 L 556 188" class="a-dashed" stroke-width="1.1" marker-end="url(#arrowhead-dashed)"/>
+        <path data-edge-from="completed" data-edge-to="closed" data-edge-label="close" data-edge-key="3" data-composition-points="461,157;497,157" d="M 461 157 L 497 157" class="a-default" stroke-width="1.1" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="closed" data-edge-to="archived" data-edge-label="archive" data-edge-key="4" data-composition-points="556,188;556,450" d="M 556 188 L 556 450" class="a-security" stroke-width="1.1" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="archived" data-edge-to="closed" data-edge-label="restore" data-edge-key="5" data-composition-points="556,450;651,450;651,188;556,188" d="M 556 450 L 641 450 Q 651 450 651 440 L 651 198 Q 651 188 641 188 L 556 188" class="a-dashed" stroke-width="1.1" marker-end="url(#arrowhead-dashed)"/>
 
         <!-- States -->
         <g id="node-active" data-node-id="active" data-node-label="Active" tabindex="0" role="button" aria-label="Focus Active, Project status" aria-pressed="false" data-node-kind="start" data-node-context="Project status">
@@ -5210,8 +5210,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <text data-node-label="" x="402" y="147" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Completed</text>
         </g>
 
-        <g id="node-archived" data-node-id="archived" data-node-label="Archived" tabindex="0" role="button" aria-label="Focus Archived, Project status" aria-pressed="false" data-node-kind="neutral" data-node-context="Project status">
-          <title>Archived · Project status</title>
+        <g id="node-closed" data-node-id="closed" data-node-label="Closed" tabindex="0" role="button" aria-label="Focus Closed, Project status" aria-pressed="false" data-node-kind="neutral" data-node-context="Project status">
+          <title>Closed · Project status</title>
           <rect x="497" y="126" width="118" height="62" rx="7" class="c-mask"/>
           <rect x="497" y="126" width="118" height="62" rx="7" class="c-external" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="neutral" class="semantic-sigil s-external" transform="translate(598 132) scale(0.6875)">
@@ -5219,11 +5219,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             <circle cx="8" cy="8" r="1.2" class="sigil-fill"/>
           </g>
         <text data-detail="fine" x="507" y="140" class="t-muted" font-size="7" font-weight="700">04</text>
-          <text data-node-label="" x="556" y="147" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Archived</text>
+          <text data-node-label="" x="556" y="147" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Closed</text>
         </g>
 
-        <g id="node-deleted" data-node-id="deleted" data-node-label="Deleted" tabindex="0" role="button" aria-label="Focus Deleted, End states" aria-pressed="false" data-node-kind="failure" data-node-context="End states">
-          <title>Deleted · End states</title>
+        <g id="node-archived" data-node-id="archived" data-node-label="Archived (row)" tabindex="0" role="button" aria-label="Focus Archived (row), Row archiving" aria-pressed="false" data-node-kind="failure" data-node-context="Row archiving">
+          <title>Archived (row) · Row archiving</title>
           <rect x="497" y="450" width="118" height="58" rx="7" class="c-mask"/>
           <rect x="497" y="450" width="118" height="58" rx="7" class="c-security" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="failure" class="semantic-sigil s-security" transform="translate(598 456) scale(0.6875)">
@@ -5231,7 +5231,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             <path d="m5.7 5.7 4.6 4.6m0-4.6-4.6 4.6"/>
           </g>
         <text data-detail="fine" x="507" y="464" class="t-security" font-size="7" font-weight="700">05</text>
-          <text data-node-label="" x="556" y="471" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Deleted</text>
+          <text data-node-label="" x="556" y="471" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Archived (row)</text>
         </g>
 
         <!-- Transition labels -->
@@ -5247,15 +5247,15 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <rect x="222.4" y="201" width="51.2" height="16" rx="4" class="c-mask"/>
           <text x="248" y="212" class="t-backend" font-size="8" text-anchor="middle">complete</text>
         </g>
-        <g data-detail="context" data-edge-from="completed" data-edge-to="archived" data-edge-label="archive" data-edge-key="3">
-          <rect x="455.85" y="111" width="46.300000000000004" height="16" rx="4" class="c-mask"/>
-          <text x="479" y="122" class="t-muted" font-size="8" text-anchor="middle">archive</text>
+        <g data-detail="context" data-edge-from="completed" data-edge-to="closed" data-edge-label="close" data-edge-key="3">
+          <rect x="460.75" y="111" width="36.5" height="16" rx="4" class="c-mask"/>
+          <text x="479" y="122" class="t-muted" font-size="8" text-anchor="middle">close</text>
         </g>
-        <g data-detail="context" data-edge-from="archived" data-edge-to="deleted" data-edge-label="delete" data-edge-key="4">
-          <rect x="535.3" y="197" width="41.400000000000006" height="16" rx="4" class="c-mask"/>
-          <text x="556" y="208" class="t-security" font-size="8" text-anchor="middle">delete</text>
+        <g data-detail="context" data-edge-from="closed" data-edge-to="archived" data-edge-label="archive" data-edge-key="4">
+          <rect x="532.85" y="197" width="46.300000000000004" height="16" rx="4" class="c-mask"/>
+          <text x="556" y="208" class="t-security" font-size="8" text-anchor="middle">archive</text>
         </g>
-        <g data-detail="context" data-edge-from="deleted" data-edge-to="archived" data-edge-label="restore" data-edge-key="5">
+        <g data-detail="context" data-edge-from="archived" data-edge-to="closed" data-edge-label="restore" data-edge-key="5">
           <rect x="627.85" y="298" width="46.300000000000004" height="16" rx="4" class="c-mask"/>
           <text x="651" y="309" class="t-messagebus" font-size="8" text-anchor="middle">restore</text>
         </g>
@@ -5476,19 +5476,19 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Status flow</h3>
         </div>
         <ul>
-          <li>&bull; A project is created Active and tracks spending</li>
+          <li>&bull; A project is created Active and tracks expenses</li>
           <li>&bull; On hold pauses it; Completed finishes the build</li>
-          <li>&bull; Only an Archived project can be deleted</li>
+          <li>&bull; Only a Closed project can be archived</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot rose"></div>
-          <h3>Soft delete</h3>
+          <h3>Archiving</h3>
         </div>
         <ul>
-          <li>&bull; Delete keeps the row and can be restored</li>
+          <li>&bull; Archiving keeps the row and can be restored</li>
           <li>&bull; On hold is recoverable back to Active</li>
         </ul>
       </div>
@@ -5779,6 +5779,190 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         return getComputedStyle(document.body).backgroundColor || '#ffffff';
       }
 
+      function cleanExportClone(clone) {
+        // View transforms and neighborhood focus are HTML exploration state,
+        // never part of a downloaded full-diagram artifact.
+        clone.style.removeProperty('transform');
+        clone.style.removeProperty('clip-path');
+        clone.removeAttribute('data-view-scale');
+        clone.removeAttribute('data-focus-active');
+        clone.removeAttribute('data-reach-active');
+        clone.removeAttribute('data-lens-active');
+        clone.removeAttribute('data-lens-flow-count');
+        clone.removeAttribute('data-lens-flow-density');
+        clone.removeAttribute('data-legend-preview-active');
+        clone.removeAttribute('data-relationship-preview-active');
+        clone.removeAttribute('data-relationship-direct-active');
+        clone.removeAttribute('data-relationship-pin-active');
+        clone.removeAttribute('data-intent-trace-active');
+        clone.removeAttribute('data-route-picking');
+        clone.removeAttribute('data-route-active');
+        clone.removeAttribute('data-route-journey');
+        clone.removeAttribute('data-share-route');
+        clone.removeAttribute('data-share-reach');
+        clone.removeAttribute('data-story-active');
+        clone.removeAttribute('data-story-playing');
+        clone.removeAttribute('data-story-beat');
+        clone.removeAttribute('data-story-next');
+        clone.removeAttribute('data-story-follow');
+        clone.removeAttribute('data-chapter-handoff');
+        clone.removeAttribute('data-chapter-anchor');
+        clone.removeAttribute('data-chapter-preview');
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-chapter-handoff-overlay]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-chapter-role]'), function (el) {
+          el.removeAttribute('data-chapter-role');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-chapter-preview-role]'), function (el) {
+          el.removeAttribute('data-chapter-preview-role');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-story-overlay], [data-story-carrier-overlay]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-intent-trace-overlay]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-route-probe-overlay]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-route-journey-overlay]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-semantic-lens-overlay]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-legend-bridge-runtime]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-legend-kind]'), function (el) {
+          el.removeAttribute('data-legend-kind');
+          el.removeAttribute('data-legend-label');
+          el.removeAttribute('data-legend-count');
+          el.removeAttribute('data-legend-zero');
+          el.removeAttribute('data-legend-selected');
+          el.removeAttribute('role');
+          el.removeAttribute('tabindex');
+          el.removeAttribute('aria-label');
+          el.removeAttribute('aria-pressed');
+          el.removeAttribute('aria-haspopup');
+          el.removeAttribute('aria-controls');
+          el.removeAttribute('aria-expanded');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-legend-bridge]'), function (el) {
+          el.removeAttribute('data-legend-bridge');
+          el.removeAttribute('role');
+          el.removeAttribute('aria-label');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-relationship-pulse-overlay]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-relationship-hit-overlay]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-source-evidence-beacon]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-source-evidence-count]'), function (el) {
+          var originalLabel = el.getAttribute('data-source-evidence-original-label');
+          if (originalLabel == null || originalLabel === '') el.removeAttribute('aria-label');
+          else el.setAttribute('aria-label', originalLabel);
+          el.removeAttribute('data-source-evidence-count');
+          el.removeAttribute('data-source-evidence-original-label');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-story-step], [data-story-beat-state], [data-story-beat-step]'), function (el) {
+          el.removeAttribute('data-story-step');
+          el.removeAttribute('data-story-beat-state');
+          el.removeAttribute('data-story-beat-step');
+          el.style.removeProperty('--story-step');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-focus-match], [data-focus-selected]'), function (el) {
+          el.removeAttribute('data-focus-match');
+          el.removeAttribute('data-focus-selected');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-reach-match], [data-reach-origin], [data-reach-depth]'), function (el) {
+          el.removeAttribute('data-reach-match');
+          el.removeAttribute('data-reach-origin');
+          el.removeAttribute('data-reach-depth');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-lens-match], [data-lens-selected], [data-lens-peer]'), function (el) {
+          el.removeAttribute('data-lens-match');
+          el.removeAttribute('data-lens-selected');
+          el.removeAttribute('data-lens-peer');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-legend-preview-match], [data-legend-preview-selected], [data-legend-preview-peer]'), function (el) {
+          el.removeAttribute('data-legend-preview-match');
+          el.removeAttribute('data-legend-preview-selected');
+          el.removeAttribute('data-legend-preview-peer');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-relationship-preview], [data-relationship-preview-node], [data-relationship-preview-source], [data-relationship-preview-target]'), function (el) {
+          el.removeAttribute('data-relationship-preview');
+          el.removeAttribute('data-relationship-preview-node');
+          el.removeAttribute('data-relationship-preview-source');
+          el.removeAttribute('data-relationship-preview-target');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-intent-trace-match], [data-intent-trace-selected]'), function (el) {
+          el.removeAttribute('data-intent-trace-match');
+          el.removeAttribute('data-intent-trace-selected');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-route-match], [data-route-start], [data-route-end], [data-route-step], [data-route-candidate], [data-route-journey-state], [data-route-journey-current]'), function (el) {
+          el.removeAttribute('data-route-match');
+          el.removeAttribute('data-route-start');
+          el.removeAttribute('data-route-end');
+          el.removeAttribute('data-route-step');
+          el.removeAttribute('data-route-candidate');
+          el.removeAttribute('data-route-journey-state');
+          el.removeAttribute('data-route-journey-current');
+          el.style.removeProperty('--route-step');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-share-route-match], [data-share-route-step], [data-share-route-start], [data-share-route-end], [data-share-route-middle]'), function (el) {
+          el.removeAttribute('data-share-route-match');
+          el.removeAttribute('data-share-route-step');
+          el.removeAttribute('data-share-route-start');
+          el.removeAttribute('data-share-route-end');
+          el.removeAttribute('data-share-route-middle');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-share-reach-match], [data-share-reach-origin], [data-share-reach-depth]'), function (el) {
+          el.removeAttribute('data-share-reach-match');
+          el.removeAttribute('data-share-reach-origin');
+          el.removeAttribute('data-share-reach-depth');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-detail], [data-detail-anchor]'), function (el) {
+          el.removeAttribute('data-detail');
+          el.removeAttribute('data-detail-anchor');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-node-id][aria-pressed]'), function (el) {
+          el.setAttribute('aria-pressed', 'false');
+        });
+        return !clone.hasAttribute('data-view-scale') &&
+          !clone.hasAttribute('data-focus-active') &&
+          !clone.hasAttribute('data-reach-active') &&
+          !clone.hasAttribute('data-lens-active') &&
+          !clone.hasAttribute('data-lens-flow-count') &&
+          !clone.hasAttribute('data-lens-flow-density') &&
+          !clone.hasAttribute('data-legend-preview-active') &&
+          !clone.hasAttribute('data-relationship-preview-active') &&
+          !clone.hasAttribute('data-relationship-direct-active') &&
+          !clone.hasAttribute('data-intent-trace-active') &&
+          !clone.hasAttribute('data-route-picking') &&
+          !clone.hasAttribute('data-route-active') &&
+          !clone.hasAttribute('data-route-journey') &&
+          !clone.hasAttribute('data-share-route') &&
+          !clone.hasAttribute('data-share-reach') &&
+          !clone.hasAttribute('data-story-active') &&
+          !clone.hasAttribute('data-story-playing') &&
+          !clone.hasAttribute('data-story-beat') &&
+          !clone.hasAttribute('data-story-next') &&
+          !clone.hasAttribute('data-story-follow') &&
+          !clone.hasAttribute('data-chapter-handoff') &&
+          !clone.hasAttribute('data-chapter-anchor') &&
+          !clone.hasAttribute('data-chapter-preview') &&
+          !clone.style.getPropertyValue('transform') &&
+          !clone.style.getPropertyValue('clip-path') &&
+          clone.querySelectorAll('[data-story-overlay], [data-story-carrier-overlay], [data-story-carrier-token], [data-story-step], [data-story-beat-state], [data-story-beat-step], [data-chapter-handoff-overlay], [data-chapter-role], [data-chapter-preview-role], [data-focus-match], [data-focus-selected], [data-reach-match], [data-reach-origin], [data-reach-depth], [data-semantic-lens-overlay], [data-lens-match], [data-lens-selected], [data-lens-peer], [data-legend-bridge], [data-legend-kind], [data-legend-bridge-runtime], [data-legend-count], [data-legend-zero], [data-legend-selected], [data-legend-preview-match], [data-legend-preview-selected], [data-legend-preview-peer], [data-relationship-hit-overlay], [data-relationship-pulse-overlay], [data-relationship-preview], [data-relationship-preview-node], [data-relationship-preview-source], [data-relationship-preview-target], [data-intent-trace-overlay], [data-intent-trace-match], [data-intent-trace-selected], [data-route-probe-overlay], [data-route-journey-overlay], [data-route-match], [data-route-start], [data-route-end], [data-route-step], [data-route-candidate], [data-route-journey-state], [data-route-journey-current], [data-share-route-match], [data-share-route-step], [data-share-route-start], [data-share-route-end], [data-share-route-middle], [data-share-reach-match], [data-share-reach-origin], [data-share-reach-depth], [data-source-evidence-beacon], [data-source-evidence-count], [data-source-evidence-original-label], [data-detail], [data-detail-anchor]').length === 0;
+      }
+
+
       /**
        * Serialize the main SVG into a standalone document.
        *
@@ -5964,186 +6148,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         var svg = document.querySelector('.diagram-container svg');
         var clone = svg.cloneNode(true);
 
-        // View transforms and neighborhood focus are HTML exploration state,
-        // never part of a downloaded full-diagram artifact.
-        clone.style.removeProperty('transform');
-        clone.style.removeProperty('clip-path');
-        clone.removeAttribute('data-view-scale');
-        clone.removeAttribute('data-focus-active');
-        clone.removeAttribute('data-reach-active');
-        clone.removeAttribute('data-lens-active');
-        clone.removeAttribute('data-lens-flow-count');
-        clone.removeAttribute('data-lens-flow-density');
-        clone.removeAttribute('data-legend-preview-active');
-        clone.removeAttribute('data-relationship-preview-active');
-        clone.removeAttribute('data-relationship-direct-active');
-        clone.removeAttribute('data-relationship-pin-active');
-        clone.removeAttribute('data-intent-trace-active');
-        clone.removeAttribute('data-route-picking');
-        clone.removeAttribute('data-route-active');
-        clone.removeAttribute('data-route-journey');
-        clone.removeAttribute('data-share-route');
-        clone.removeAttribute('data-share-reach');
-        clone.removeAttribute('data-story-active');
-        clone.removeAttribute('data-story-playing');
-        clone.removeAttribute('data-story-beat');
-        clone.removeAttribute('data-story-next');
-        clone.removeAttribute('data-story-follow');
-        clone.removeAttribute('data-chapter-handoff');
-        clone.removeAttribute('data-chapter-anchor');
-        clone.removeAttribute('data-chapter-preview');
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-chapter-handoff-overlay]'), function (el) {
-          el.remove();
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-chapter-role]'), function (el) {
-          el.removeAttribute('data-chapter-role');
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-chapter-preview-role]'), function (el) {
-          el.removeAttribute('data-chapter-preview-role');
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-story-overlay], [data-story-carrier-overlay]'), function (el) {
-          el.remove();
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-intent-trace-overlay]'), function (el) {
-          el.remove();
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-route-probe-overlay]'), function (el) {
-          el.remove();
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-route-journey-overlay]'), function (el) {
-          el.remove();
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-semantic-lens-overlay]'), function (el) {
-          el.remove();
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-legend-bridge-runtime]'), function (el) {
-          el.remove();
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-legend-kind]'), function (el) {
-          el.removeAttribute('data-legend-kind');
-          el.removeAttribute('data-legend-label');
-          el.removeAttribute('data-legend-count');
-          el.removeAttribute('data-legend-zero');
-          el.removeAttribute('data-legend-selected');
-          el.removeAttribute('role');
-          el.removeAttribute('tabindex');
-          el.removeAttribute('aria-label');
-          el.removeAttribute('aria-pressed');
-          el.removeAttribute('aria-haspopup');
-          el.removeAttribute('aria-controls');
-          el.removeAttribute('aria-expanded');
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-legend-bridge]'), function (el) {
-          el.removeAttribute('data-legend-bridge');
-          el.removeAttribute('role');
-          el.removeAttribute('aria-label');
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-relationship-pulse-overlay]'), function (el) {
-          el.remove();
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-relationship-hit-overlay]'), function (el) {
-          el.remove();
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-source-evidence-beacon]'), function (el) {
-          el.remove();
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-source-evidence-count]'), function (el) {
-          var originalLabel = el.getAttribute('data-source-evidence-original-label');
-          if (originalLabel == null || originalLabel === '') el.removeAttribute('aria-label');
-          else el.setAttribute('aria-label', originalLabel);
-          el.removeAttribute('data-source-evidence-count');
-          el.removeAttribute('data-source-evidence-original-label');
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-story-step], [data-story-beat-state], [data-story-beat-step]'), function (el) {
-          el.removeAttribute('data-story-step');
-          el.removeAttribute('data-story-beat-state');
-          el.removeAttribute('data-story-beat-step');
-          el.style.removeProperty('--story-step');
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-focus-match], [data-focus-selected]'), function (el) {
-          el.removeAttribute('data-focus-match');
-          el.removeAttribute('data-focus-selected');
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-reach-match], [data-reach-origin], [data-reach-depth]'), function (el) {
-          el.removeAttribute('data-reach-match');
-          el.removeAttribute('data-reach-origin');
-          el.removeAttribute('data-reach-depth');
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-lens-match], [data-lens-selected], [data-lens-peer]'), function (el) {
-          el.removeAttribute('data-lens-match');
-          el.removeAttribute('data-lens-selected');
-          el.removeAttribute('data-lens-peer');
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-legend-preview-match], [data-legend-preview-selected], [data-legend-preview-peer]'), function (el) {
-          el.removeAttribute('data-legend-preview-match');
-          el.removeAttribute('data-legend-preview-selected');
-          el.removeAttribute('data-legend-preview-peer');
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-relationship-preview], [data-relationship-preview-node], [data-relationship-preview-source], [data-relationship-preview-target]'), function (el) {
-          el.removeAttribute('data-relationship-preview');
-          el.removeAttribute('data-relationship-preview-node');
-          el.removeAttribute('data-relationship-preview-source');
-          el.removeAttribute('data-relationship-preview-target');
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-intent-trace-match], [data-intent-trace-selected]'), function (el) {
-          el.removeAttribute('data-intent-trace-match');
-          el.removeAttribute('data-intent-trace-selected');
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-route-match], [data-route-start], [data-route-end], [data-route-step], [data-route-candidate], [data-route-journey-state], [data-route-journey-current]'), function (el) {
-          el.removeAttribute('data-route-match');
-          el.removeAttribute('data-route-start');
-          el.removeAttribute('data-route-end');
-          el.removeAttribute('data-route-step');
-          el.removeAttribute('data-route-candidate');
-          el.removeAttribute('data-route-journey-state');
-          el.removeAttribute('data-route-journey-current');
-          el.style.removeProperty('--route-step');
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-share-route-match], [data-share-route-step], [data-share-route-start], [data-share-route-end], [data-share-route-middle]'), function (el) {
-          el.removeAttribute('data-share-route-match');
-          el.removeAttribute('data-share-route-step');
-          el.removeAttribute('data-share-route-start');
-          el.removeAttribute('data-share-route-end');
-          el.removeAttribute('data-share-route-middle');
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-share-reach-match], [data-share-reach-origin], [data-share-reach-depth]'), function (el) {
-          el.removeAttribute('data-share-reach-match');
-          el.removeAttribute('data-share-reach-origin');
-          el.removeAttribute('data-share-reach-depth');
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-detail], [data-detail-anchor]'), function (el) {
-          el.removeAttribute('data-detail');
-          el.removeAttribute('data-detail-anchor');
-        });
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-node-id][aria-pressed]'), function (el) {
-          el.setAttribute('aria-pressed', 'false');
-        });
-        var canonicalStateClean = !clone.hasAttribute('data-view-scale') &&
-          !clone.hasAttribute('data-focus-active') &&
-          !clone.hasAttribute('data-reach-active') &&
-          !clone.hasAttribute('data-lens-active') &&
-          !clone.hasAttribute('data-lens-flow-count') &&
-          !clone.hasAttribute('data-lens-flow-density') &&
-          !clone.hasAttribute('data-legend-preview-active') &&
-          !clone.hasAttribute('data-relationship-preview-active') &&
-          !clone.hasAttribute('data-relationship-direct-active') &&
-          !clone.hasAttribute('data-intent-trace-active') &&
-          !clone.hasAttribute('data-route-picking') &&
-          !clone.hasAttribute('data-route-active') &&
-          !clone.hasAttribute('data-route-journey') &&
-          !clone.hasAttribute('data-share-route') &&
-          !clone.hasAttribute('data-share-reach') &&
-          !clone.hasAttribute('data-story-active') &&
-          !clone.hasAttribute('data-story-playing') &&
-          !clone.hasAttribute('data-story-beat') &&
-          !clone.hasAttribute('data-story-next') &&
-          !clone.hasAttribute('data-story-follow') &&
-          !clone.hasAttribute('data-chapter-handoff') &&
-          !clone.hasAttribute('data-chapter-anchor') &&
-          !clone.hasAttribute('data-chapter-preview') &&
-          !clone.style.getPropertyValue('transform') &&
-          !clone.style.getPropertyValue('clip-path') &&
-          clone.querySelectorAll('[data-story-overlay], [data-story-carrier-overlay], [data-story-carrier-token], [data-story-step], [data-story-beat-state], [data-story-beat-step], [data-chapter-handoff-overlay], [data-chapter-role], [data-chapter-preview-role], [data-focus-match], [data-focus-selected], [data-reach-match], [data-reach-origin], [data-reach-depth], [data-semantic-lens-overlay], [data-lens-match], [data-lens-selected], [data-lens-peer], [data-legend-bridge], [data-legend-kind], [data-legend-bridge-runtime], [data-legend-count], [data-legend-zero], [data-legend-selected], [data-legend-preview-match], [data-legend-preview-selected], [data-legend-preview-peer], [data-relationship-hit-overlay], [data-relationship-pulse-overlay], [data-relationship-preview], [data-relationship-preview-node], [data-relationship-preview-source], [data-relationship-preview-target], [data-intent-trace-overlay], [data-intent-trace-match], [data-intent-trace-selected], [data-route-probe-overlay], [data-route-journey-overlay], [data-route-match], [data-route-start], [data-route-end], [data-route-step], [data-route-candidate], [data-route-journey-state], [data-route-journey-current], [data-share-route-match], [data-share-route-step], [data-share-route-start], [data-share-route-end], [data-share-route-middle], [data-share-reach-match], [data-share-reach-origin], [data-share-reach-depth], [data-source-evidence-beacon], [data-source-evidence-count], [data-source-evidence-original-label], [data-detail], [data-detail-anchor]').length === 0;
+        var canonicalStateClean = cleanExportClone(clone);
 
         var vb = svg.viewBox.baseVal;
         var finiteSvgDimensions = Number.isFinite(vb.x) && Number.isFinite(vb.y) &&
@@ -10083,7 +10088,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
       function centerStoryStop(stop) {
         if (!stop || !trail) return false;
-        var target = Math.max(0, stop.offsetLeft - (trail.clientWidth - stop.offsetWidth) / 2);
+        var bounds = stop.getBoundingClientRect();
+        var viewportLeft = trail.getBoundingClientRect().left + trail.clientLeft;
+        var target = Math.max(0, trail.scrollLeft + bounds.left - viewportLeft - (trail.clientWidth - bounds.width) / 2);
         trail.scrollLeft = target;
         return true;
       }
@@ -10832,6 +10839,22 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           renderPlayback();
         });
         storyMotionObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-motion'] });
+      }
+      if (typeof ResizeObserver === 'function') {
+        var chapterViewportWidth = chapterList.clientWidth;
+        var trailViewportWidth = trail.clientWidth;
+        var storyScrollObserver = new ResizeObserver(function () {
+          var chapterWidth = chapterList.clientWidth;
+          var trailWidth = trail.clientWidth;
+          if (chapterWidth !== chapterViewportWidth && activeIndex >= 0) centerChapterButton(chapterButtons[activeIndex]);
+          if (trailWidth !== trailViewportWidth && storyBeatIndex >= 0) {
+            centerStoryStop(trail.querySelectorAll('[data-story-node]')[storyBeatIndex]);
+          }
+          chapterViewportWidth = chapterWidth;
+          trailViewportWidth = trailWidth;
+        });
+        storyScrollObserver.observe(chapterList);
+        storyScrollObserver.observe(trail);
       }
       window.addEventListener('beforeprint', function () {
         clearChapterPreview({ clearIntents: true });

@@ -1,6 +1,6 @@
 # Setout Showcase
 
-Setout keeps construction expenses visible while the work is happening: set a budget by category, record expenses as they occur, and see where the money went.
+Setout tracks construction expenses while the work is in progress: set a budget by category, record expenses as they occur, and see how the money was spent.
 
 <p align="center">
   <img src="../assets/showcase.gif" alt="Animated tour of Setout's home, dashboard, budget and expense screens" width="720" />
@@ -8,8 +8,8 @@ Setout keeps construction expenses visible while the work is happening: set a bu
 
 ## Home
 
-The home screen totals every project without mixing currencies and surfaces the
-items that need attention.
+The home screen shows totals for every project without combining currencies, and lists the
+alerts that need attention.
 
 <p align="center">
   <img src="../assets/showcase-home.png" alt="Setout home screen" width="720" />
@@ -17,25 +17,25 @@ items that need attention.
 
 ## Project dashboard
 
-Each project shows its budget, expenses, monthly totals and outstanding items in one place.
+Each project shows its budget, expenses, monthly totals and outstanding deliveries in one place.
 
 <p align="center">
   <img src="../assets/showcase-dashboard.png" alt="Setout project dashboard" width="720" />
 </p>
 
-## Budget vs spent
+## Budget vs Spent
 
 Categories keep budgeted costs separate from actual expenses, so the budget can be
-adjusted without rewriting the record of what was spent.
+adjusted without changing the recorded expenses.
 
 <p align="center">
-  <img src="../assets/showcase-budget.png" alt="Setout budget vs spent view" width="720" />
+  <img src="../assets/showcase-budget.png" alt="Setout Budget vs Spent view" width="720" />
 </p>
 
-## Add an expense
+## New expense
 
-The required fields stay short enough to use on a phone. Quantity, rate, category, item, vendor and payer are available when needed.
+The form has few required fields, so it can be completed on a phone. Quantity, unit rate, category, item, vendor and who paid (Paid By) are optional.
 
 <p align="center">
-  <img src="../assets/showcase-add-expense.png" alt="Setout add expense form" width="720" />
+  <img src="../assets/showcase-add-expense.png" alt="Setout new expense form" width="720" />
 </p>

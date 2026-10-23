@@ -8,7 +8,7 @@
   },
   "components": [
     { "id": "users", "type": "external", "label": "Browser", "sublabel": "phone · desktop", "pos": [40, 280], "size": [120, 64] },
-    { "id": "web", "type": "frontend", "label": "Angular SPA", "sublabel": "@setout/api-client SDK", "pos": [230, 280], "size": [160, 72], "tag": "no hand-written HTTP" },
+    { "id": "web", "type": "frontend", "label": "Angular SPA", "sublabel": "@setout/api-client SDK", "pos": [230, 280], "size": [160, 72], "tag": "no handwritten HTTP" },
     { "id": "api", "type": "backend", "label": "FastAPI", "sublabel": "routers · controllers · services", "pos": [470, 280], "size": [160, 72] },
     { "id": "db", "type": "database", "label": "Database", "sublabel": "SQLite · Postgres", "pos": [740, 280], "size": [150, 72], "tag": "Tortoise ORM" },
     { "id": "storage", "type": "cloud", "label": "Object storage", "sublabel": "S3 · MinIO · local disk", "pos": [740, 110], "size": [150, 72], "tag": "sha256-named" }

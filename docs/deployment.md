@@ -8,10 +8,10 @@ Setout ships as one image: the API serves the built frontend, applies migrations
 | --- | --- |
 | Set `SETOUT_SECRET_KEY` to a long random value | It signs session cookies, so anyone who knows it can forge a session. The app warns on startup while it is the default |
 | Set `SETOUT_COOKIE_SECURE=true` | Otherwise the session cookie is sent over plain HTTP |
-| Change `MINIO_ROOT_PASSWORD` and the Postgres password | The compose defaults exist so the stack starts with one command. They are not production defaults |
+| Change `MINIO_ROOT_PASSWORD` and the Postgres password | The compose defaults exist so that the stack starts with one command. They are not suitable for production |
 | Put it behind HTTPS | See below |
 | Set `SETOUT_CORS_ORIGINS` to the origin you serve from | It defaults to the local dev server |
-| Nothing, for guessing | Repeated wrong passphrases are already slowed and then refused with `429`. There is no lockout to be locked out of, and the settings that shape it are in [configuration](configuration.md). If you lose the passphrase, reset it with the recovery command in [troubleshooting](troubleshooting.md#i-forgot-the-admin-passphrase) |
+| No action needed for passphrase guessing | Repeated wrong passphrases are already delayed and then refused with `429`. There is no account lockout, and the settings that control the delay are in [configuration](configuration.md). If you lose the passphrase, reset it with the recovery command in [troubleshooting](troubleshooting.md#i-forgot-the-admin-passphrase) |
 
 ## Behind a reverse proxy
 
@@ -28,7 +28,7 @@ Set `SETOUT_COOKIE_SECURE=true` once TLS is in front, and keep
 Point `SETOUT_DATABASE_URL` at `postgres://user:password@host:5432/setout`. The
 compose stack publishes Postgres on host port 5433 by default, kept off 5432 to avoid clashing with an existing Postgres on the machine.
 
-Moving an existing SQLite installation to Postgres is a data migration, not a file copy. Use the data export in [Backup and restore](backup-and-restore.md). A restore refuses a mismatched engine by design.
+Moving an existing SQLite installation to Postgres is a data migration, not a file copy. Use the in-app backup described in [Backup and restore](backup-and-restore.md). A server backup restore rejects a mismatched engine by design.
 
 ## Attachments in a bucket
 
@@ -41,13 +41,13 @@ set `SETOUT_S3_PUBLIC_URL` to the address they can reach. In the compose stack
 this is `http://<host>:9000` by default; change it when Setout is accessed from
 another machine.
 
-A bucket is not included in the backup archive. Back it up separately.
+A bucket is not included in the server backup. Back it up separately.
 
 ## Upgrades
 
-Pull the new image and restart. Migrations run on startup and the log reports when the database was behind. Take a backup first: use the shell archive rather than the data export, because only the archive restores the installation exactly as it was.
+Pull the new image and restart. Migrations run on startup and the log reports when the database was behind. Take a backup first: use a server backup rather than the in-app backup, because only a server backup restores the installation exactly as it was.
 
-Pin a version rather than tracking `latest`, so upgrades are deliberate:
+Pin a version rather than tracking `latest`, so that upgrades are deliberate:
 
 ```bash
 SETOUT_IMAGE_TAG=1.2.3 docker compose -f docker/docker-compose.yml up -d
@@ -66,17 +66,17 @@ docker inspect ghcr.io/bolorundurovj/setout:1.2.3 \
 Every tag goes to Docker Hub as `bolorundurovj/setout` as well, pushed as the
 same manifest, so a digest pinned against one registry matches the other.
 
-Each GHCR image also carries a signed record of which workflow built it, from
-which repository and at which commit. It distinguishes an image built from this source from one pushed with a stolen token:
+Each GHCR image also carries a signed build provenance attestation: which workflow
+built it, from which repository and at which commit. It distinguishes an image built from this source from one pushed with a stolen token:
 
 ```bash
 gh attestation verify oci://ghcr.io/bolorundurovj/setout:1.2.3 \
   --repo bolorundurovj/setout
 ```
 
-The record is attached to the image in GHCR rather than stored inside it, so it
-does not follow the copy to Docker Hub. Verification runs against GHCR, and the
-digests are identical, so the result covers the Docker Hub copy as well.
+The attestation is attached to the image in GHCR rather than stored inside it, so it
+is not copied to Docker Hub. Verification runs against GHCR, and the
+digests are identical, so the result also applies to the Docker Hub image.
 
 ## Health checks
 

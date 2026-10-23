@@ -3,7 +3,8 @@
   "diagram_type": "workflow",
   "meta": {
     "title": "Recording an Expense",
-    "quality_profile": "showcase"
+    "quality_profile": "showcase",
+    "legend": {"entries": {"frontend": {"label": "User"}, "backend": {"label": "API"}, "database": {"label": "Persistence"}}}
   },
   "lanes": [
     { "id": "ui", "label": "User" },
@@ -21,10 +22,10 @@
     { "id": "add", "lane": "ui", "col": 1, "type": "frontend", "label": "Add expense" },
     { "id": "form", "lane": "ui", "col": 2, "type": "frontend", "label": "Required fields", "sublabel": "description · amount · date", "width": 150 },
     { "id": "enrich", "lane": "ui", "col": 3, "type": "frontend", "label": "More details", "sublabel": "quantity × rate · category · item · vendor", "tag": "optional", "width": 180 },
-    { "id": "sdk", "lane": "api", "col": 3, "type": "backend", "label": "Generated SDK", "sublabel": "@setout/api-client", "tag": "no hand-written HTTP" },
+    { "id": "sdk", "lane": "api", "col": 3, "type": "backend", "label": "Generated SDK", "sublabel": "@setout/api-client", "tag": "no handwritten HTTP" },
     { "id": "router", "lane": "api", "col": 4, "type": "backend", "label": "Router", "sublabel": "path + operation_id" },
     { "id": "controller", "lane": "api", "col": 5, "type": "backend", "label": "Controller", "sublabel": "validate · persist" },
-    { "id": "db", "lane": "store", "col": 5, "type": "database", "label": "Database", "sublabel": "expense saved", "tag": "soft delete" }
+    { "id": "db", "lane": "store", "col": 5, "type": "database", "label": "Database", "sublabel": "expense saved", "tag": "archive" }
   ],
   "edges": [
     { "id": "open-add", "from": "open", "to": "add", "role": "main" },
@@ -37,7 +38,7 @@
   ],
   "cards": [
     { "dot": "cyan", "title": "One main path", "items": ["From opening a project to a persisted expense", "Optional detail stays on a short side branch"] },
-    { "dot": "emerald", "title": "No hand-written HTTP", "items": ["The SDK is generated from the OpenAPI schema", "Every operation_id is pinned by a contract test"] },
-    { "dot": "rose", "title": "Soft delete", "items": ["Removing an expense retains the row", "A deleted expense can be restored"] }
+    { "dot": "emerald", "title": "No handwritten HTTP", "items": ["The SDK is generated from the OpenAPI schema", "Every operation_id is pinned by a contract test"] },
+    { "dot": "rose", "title": "Archiving", "items": ["Archiving an expense keeps the row", "An archived expense can be restored"] }
   ]
 }

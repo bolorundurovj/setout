@@ -1,6 +1,6 @@
 # Setout documentation
 
-Start here.
+The guides below cover running and developing Setout.
 
 ## Running it
 

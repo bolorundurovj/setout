@@ -5,15 +5,15 @@ body:
   - type: markdown
     attributes:
       value: |
-        Check [the roadmap](../blob/master/docs/roadmap.md) first. Several things
-        are already designed but not built, and saying you want one of them is
-        the fastest way to move it up.
+        Check [the roadmap](../blob/master/docs/roadmap.md) first. Several features
+        are already designed but not built, and requesting one of them is
+        the most effective way to raise its priority.
 
   - type: textarea
     id: problem
     attributes:
       label: The problem
-      description: What are you trying to do, and where does Setout get in the way? Describe the situation, not the solution.
+      description: What are you trying to do, and what does Setout not support? Describe the situation, not the solution.
     validations:
       required: true
 
@@ -35,8 +35,8 @@ body:
     attributes:
       label: Does it fit how Setout works
       description: |
-        Setout keeps a budget and the spend against it apart: a budget is set
-        deliberately, and an expense can never write one. Amounts are whole
+        Setout keeps a budget separate from the expenses against it: a budget is set
+        deliberately, and an expense cannot change one. Amounts are whole
         minor units, and a project's currency never changes.
       options:
         - label: This does not require an expense to change a budget figure

@@ -9,10 +9,10 @@ docker compose -f docker/docker-compose.yml pull
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-That brings up the app on 8474, Postgres for the database, and MinIO for attachments, with the bucket created before the app starts. The MinIO console is on
+This starts the app on port 8474, Postgres for the database, and MinIO for attachments, with the bucket created before the app starts. The MinIO console is on
 9001.
 
-The image is published to `ghcr.io/bolorundurovj/setout` for amd64 and arm64, so a Raspberry Pi or an ARM server pulls the same way any other machine does. It is
+The image is published to `ghcr.io/bolorundurovj/setout` for amd64 and arm64, so a Raspberry Pi or an ARM server uses the same commands as any other machine. It is
 published to Docker Hub as `bolorundurovj/setout` at the same time, with the same
 tags and the same digests, so either name pulls the identical image.
 
@@ -31,7 +31,7 @@ SETOUT_IMAGE_TAG=1.2.3 docker compose -f docker/docker-compose.yml up -d
 
 The compose file also carries a `build:` block, so `docker compose build` builds your own image from the checkout.
 
-Put any of the compose variables in a `.env` file beside the compose file. The defaults exist so the stack starts with one command. They are not production defaults: **change `SETOUT_SECRET_KEY` and the MinIO password before exposing this to anyone else.** See [Configuration](configuration.md) for the full
+Put any of the compose variables in a `.env` file beside the compose file. The defaults exist so that the stack starts with one command. They are not suitable for production: **change `SETOUT_SECRET_KEY` and the MinIO password before exposing this to anyone else.** See [Configuration](configuration.md) for the full
 list, and [Deployment](deployment.md) before exposing it.
 
 To run the container against SQLite and local files instead, unset
@@ -43,7 +43,7 @@ service. The database and attachments then both live under `SETOUT_DATA_DIR`, wh
 You need:
 
 - uv, the Python dependency manager
-- Node 24.15.0 or later, as declared by the workspace. Angular 22 also accepts 22.22.3 or later
+- Node 24.15.0 or later, as declared by the workspace. Angular 22 also supports Node 22.22.3 or later
 - Yarn, through `corepack enable`
 - GNU Make
 - Docker, only if you want to build the image
@@ -63,7 +63,7 @@ same checkout from WSL as well; see [Troubleshooting](troubleshooting.md).
 
 ## The first run
 
-Open the web app. The first run guides you through creating the local admin account with a passphrase. There are no roles and no email is required: one passphrase. Signing in sets a session cookie on your device.
+Open the web app. On the first run it asks you to create the local admin account with a passphrase. There are no roles and no email address is required: one passphrase. Signing in sets a session cookie on your device.
 
 If you are reaching Setout over anything other than localhost, set `SETOUT_COOKIE_SECURE=true` and put it behind HTTPS, or the session cookie is sent unencrypted.
 
