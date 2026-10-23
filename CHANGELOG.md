@@ -1,5 +1,36 @@
 # Changelog
 
+## [2.3.0](https://github.com/bolorundurovj/setout/compare/v2.2.0...v2.3.0) (2026-10-23)
+
+
+### Features
+
+* add permanent deletion across all entities behind typed confirmation ([1e0ddcb](https://github.com/bolorundurovj/setout/commit/1e0ddcb3e8090284a57414e77b2dec5759d22a76))
+* migrate delivery expected field to date with overdue detection ([392a218](https://github.com/bolorundurovj/setout/commit/392a218414d03b7f585eaaf399f572ab5800ae44))
+
+
+### Bug Fixes
+
+* update seed script delivery expected to date ([8f55168](https://github.com/bolorundurovj/setout/commit/8f551681486431117ed097f1f0b7ebca3aeb6e7a))
+
+
+### Refactoring
+
+* align terminology and standardise British English spelling ([3861dc3](https://github.com/bolorundurovj/setout/commit/3861dc35830ddf2b05dd7dfd89137c9e817f6ad9))
+
+
+### Documentation
+
+* add interactive architecture diagrams and update guides ([73037a3](https://github.com/bolorundurovj/setout/commit/73037a36e20ae436ff7279b516ee169d432b4242))
+
+
+### Build and dependencies
+
+* **deps:** bump @angular/router ([#91](https://github.com/bolorundurovj/setout/issues/91)) ([76d610b](https://github.com/bolorundurovj/setout/commit/76d610baf5678a78436d30a46845925582b59502))
+* **deps:** bump hono from 4.13.2 to 4.13.13 ([#90](https://github.com/bolorundurovj/setout/issues/90)) ([900da89](https://github.com/bolorundurovj/setout/commit/900da893313bcfe7e1cb10d22b4c59715031a0d2))
+* **deps:** bump ip-address from 10.5.0 to 10.7.3 ([#89](https://github.com/bolorundurovj/setout/issues/89)) ([43ebf52](https://github.com/bolorundurovj/setout/commit/43ebf522cfa67c39c3b640a334fdc207f3ce2ae4))
+* **deps:** bump undici from 8.10.0 to 8.12.3 ([#100](https://github.com/bolorundurovj/setout/issues/100)) ([1eefcc9](https://github.com/bolorundurovj/setout/commit/1eefcc9c3ef9da3f7250b818237d2626186993f0))
+
 ## [2.2.0](https://github.com/bolorundurovj/setout/compare/v2.1.0...v2.2.0) (2026-09-17)
 
 
