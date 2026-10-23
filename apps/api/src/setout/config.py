@@ -67,20 +67,29 @@ class Settings(BaseSettings):
     # Attachment storage: "local" for disk under data_dir, or "s3" for an S3-compatible bucket.
     storage_backend: str = "local"
     s3_bucket: str = ""
-    # Leave empty for AWS. Set for MinIO, R2, B2, Spaces and other S3-compatible services.
+    # Leave empty for AWS. Set for RustFS, R2, B2, Spaces and other S3-compatible services.
     s3_endpoint_url: str = ""
     s3_region: str = ""
     s3_access_key_id: str = ""
     s3_secret_access_key: str = ""
     # Key prefix inside the bucket, so the bucket can be shared.
     s3_prefix: str = "attachments"
-    # MinIO and some other services require path-style bucket addressing.
+    # RustFS and some other services require path-style bucket addressing.
     s3_use_path_style: bool = False
     # Expiry of presigned bucket URLs, in seconds.
     s3_link_seconds: int = 300
     # The bucket URL browsers use. Leave empty to use s3_endpoint_url; set it when
     # the API reaches the bucket at an internal Docker address.
     s3_public_url: str = ""
+    # Automatically create the target S3 bucket on startup if it does not exist.
+    s3_auto_create_bucket: bool = True
+
+    # Legacy storage migration: point to a directory or legacy S3 endpoint to automatically
+    # migrate legacy MinIO/S3 attachments to the active storage on boot.
+    legacy_storage_dir: Path | None = None
+    legacy_s3_endpoint_url: str = ""
+    legacy_s3_access_key_id: str = ""
+    legacy_s3_secret_access_key: str = ""
 
     # Maximum attachment size, in bytes.
     max_attachment_bytes: int = 25 * 1024 * 1024

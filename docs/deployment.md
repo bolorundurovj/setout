@@ -8,7 +8,7 @@ Setout ships as one image: the API serves the built frontend, applies migrations
 | --- | --- |
 | Set `SETOUT_SECRET_KEY` to a long random value | It signs session cookies, so anyone who knows it can forge a session. The app warns on startup while it is the default |
 | Set `SETOUT_COOKIE_SECURE=true` | Otherwise the session cookie is sent over plain HTTP |
-| Change `MINIO_ROOT_PASSWORD` and the Postgres password | The compose defaults exist so that the stack starts with one command. They are not suitable for production |
+| Change `STORAGE_SECRET_KEY` (or `MINIO_ROOT_PASSWORD`) and the Postgres password | The compose defaults exist so that the stack starts with one command. They are not suitable for production |
 | Put it behind HTTPS | See below |
 | Set `SETOUT_CORS_ORIGINS` to the origin you serve from | It defaults to the local dev server |
 | No action needed for passphrase guessing | Repeated wrong passphrases are already delayed and then refused with `429`. There is no account lockout, and the settings that control the delay are in [configuration](configuration.md). If you lose the passphrase, reset it with the recovery command in [troubleshooting](troubleshooting.md#i-forgot-the-admin-passphrase) |
@@ -33,10 +33,10 @@ Moving an existing SQLite installation to Postgres is a data migration, not a fi
 ## Attachments in a bucket
 
 Set `SETOUT_STORAGE_BACKEND=s3` with the bucket, credentials and, for anything
-that is not Amazon, `SETOUT_S3_ENDPOINT_URL`. MinIO also wants
+that is not Amazon, `SETOUT_S3_ENDPOINT_URL`. RustFS also wants
 `SETOUT_S3_USE_PATH_STYLE=true`.
 
-When the API reaches MinIO on an internal address that browsers cannot resolve,
+When the API reaches RustFS on an internal address that browsers cannot resolve,
 set `SETOUT_S3_PUBLIC_URL` to the address they can reach. In the compose stack
 this is `http://<host>:9000` by default; change it when Setout is accessed from
 another machine.
@@ -46,6 +46,15 @@ A bucket is not included in the server backup. Back it up separately.
 ## Upgrades
 
 Pull the new image and restart. Migrations run on startup and the log reports when the database was behind. Take a backup first: use a server backup rather than the in-app backup, because only a server backup restores the installation exactly as it was.
+
+### Upgrading from MinIO to RustFS
+
+If your deployment previously used MinIO in the compose stack, upgrading requires **no manual intervention**:
+1. When you run `docker compose up -d`, Setout automatically starts the new `s3` (RustFS) service and mounts your legacy `setout-minio` volume read-only.
+2. On boot, Setout verifies all existing attachments against the database, copies them to RustFS, and validates their SHA-256 checksums.
+3. Check the startup log for:
+   `[Storage Migration] 100% of assets verified in S3/RustFS. Legacy MinIO volume is no longer needed and can be safely removed.`
+4. Once verified, you can safely clean up the old volume: `docker volume rm setout-minio`.
 
 Pin a version rather than tracking `latest`, so that upgrades are deliberate:
 

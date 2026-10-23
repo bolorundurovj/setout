@@ -69,7 +69,7 @@ a category can be assigned later.
 
 Attachments are stored through one interface with two implementations, local disk and
 S3, chosen by `SETOUT_STORAGE_BACKEND`. Files are named after the hash of their
-contents, so the same receipt attached twice is stored once. Any S3-compatible service works: Amazon, MinIO, R2, B2, Spaces.
+contents, so the same receipt attached twice is stored once. Any S3-compatible service works: Amazon, RustFS, R2, B2, Spaces.
 
 ## Migrations
 

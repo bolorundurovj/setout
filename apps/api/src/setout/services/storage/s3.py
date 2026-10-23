@@ -70,6 +70,27 @@ class S3Storage(Storage):
                 use_path_style=use_path_style,
             )
 
+    async def ensure_bucket(self) -> None:
+        """Create the target bucket if it does not already exist."""
+
+        def _check_and_create() -> None:
+            try:
+                self.client.head_bucket(Bucket=self.bucket)
+            except ClientError as e:
+                details: dict[str, Any] = e.response.get("Error", {})
+                code = str(details.get("Code", ""))
+                if code in ("404", "NoSuchBucket", "NotFound") or self._is_missing(e):
+                    try:
+                        self.client.create_bucket(Bucket=self.bucket)
+                    except ClientError as ce:
+                        ce_code = str(ce.response.get("Error", {}).get("Code", ""))
+                        if ce_code not in ("BucketAlreadyOwnedByYou", "BucketAlreadyExists"):
+                            raise
+                else:
+                    raise
+
+        await asyncio.to_thread(_check_and_create)
+
     async def put(self, key: str, data: bytes, *, content_type: str) -> None:
         await asyncio.to_thread(
             self.client.put_object,

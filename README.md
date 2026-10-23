@@ -23,7 +23,7 @@ Setout is a self-hosted web app for tracking construction expenses on personal b
 - Backend: Python, FastAPI, Tortoise ORM (with its built-in migration CLI).
 - Frontend: Angular, consuming a TypeScript SDK generated from the OpenAPI schema.
 - Database: SQLite by default, Postgres optional.
-- Deployment: one container, one port; SQLite by default, or the compose stack with Postgres and MinIO.
+- Deployment: one container, one port; SQLite by default, or the compose stack with Postgres and RustFS (S3).
 
 See the product in action in the [full showcase](docs/showcase.md).
 
@@ -37,7 +37,7 @@ docker compose -f docker/docker-compose.yml up -d
 ```
 
 This pulls the published image, `ghcr.io/bolorundurovj/setout` for amd64 and
-arm64, and starts the app on port 8474 with Postgres for the database and MinIO for attachments. The same image is published to Docker Hub as `bolorundurovj/setout`. To run from a checkout instead:
+arm64, and starts the app on port 8474 with Postgres for the database and RustFS for S3 attachments. The same image is published to Docker Hub as `bolorundurovj/setout`. To run from a checkout instead:
 
 ```bash
 make setup    # install backend and frontend
@@ -94,7 +94,7 @@ These three are shared by the whole installation, not owned by a project, becaus
 | ------------------------------------------------ | --------------------------------------------------- |
 | [Installation](docs/installation.md)             | Docker, bare metal, the first run                   |
 | [Configuration](docs/configuration.md)           | Every environment variable, app and compose         |
-| [Deployment](docs/deployment.md)                 | Postgres, S3 or MinIO, HTTPS, upgrades              |
+| [Deployment](docs/deployment.md)                 | Postgres, S3 or RustFS, HTTPS, upgrades             |
 | [Backup and restore](docs/backup-and-restore.md) | The two kinds of backup, and when each applies      |
 | [Troubleshooting](docs/troubleshooting.md)       | Common failures and their fixes                     |
 | [Architecture](docs/architecture.md)             | Request flow, and why the SDK is generated          |

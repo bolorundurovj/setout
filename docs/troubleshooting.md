@@ -30,7 +30,7 @@ A Postgres dump cannot be loaded into SQLite, or the reverse. Use the in-app bac
 
 ## The port is already taken
 
-The API defaults to 8474; set `SETOUT_PORT` to move it. The compose stack publishes Postgres on 5433 rather than 5432 to avoid clashing with an existing Postgres, and MinIO on 9000 with its console on 9001. All three are
+The API defaults to 8474; set `SETOUT_PORT` to move it. The compose stack publishes Postgres on 5433 rather than 5432 to avoid clashing with an existing Postgres, and RustFS on 9000 with its console on 9001. All three are
 set in the same `.env` file.
 
 ## Sessions are not kept, or sign-in fails over the network
