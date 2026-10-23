@@ -119,3 +119,18 @@ async def archive_attachment(attachment_id: str, user: CurrentUser) -> None:
 )
 async def restore_attachment(attachment_id: str, user: CurrentUser) -> AttachmentRead:
     return await controller.restore(attachment_id)
+
+
+@router.delete(
+    "/attachments/{attachment_id}",
+    operation_id="deleteAttachment",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **NOT_FOUND,
+        status.HTTP_400_BAD_REQUEST: {
+            "description": "Only archived attachments can be deleted permanently"
+        },
+    },
+)
+async def delete_attachment(attachment_id: str, user: CurrentUser, storage: Store) -> None:
+    await controller.delete(attachment_id, storage=storage)

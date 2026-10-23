@@ -127,3 +127,18 @@ async def archive_delivery(delivery_id: str, user: CurrentUser) -> None:
 )
 async def restore_delivery(delivery_id: str, user: CurrentUser) -> DeliveryRead:
     return await controller.restore(delivery_id)
+
+
+@router.delete(
+    "/deliveries/{delivery_id}",
+    operation_id="deleteDelivery",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **NOT_FOUND,
+        status.HTTP_400_BAD_REQUEST: {
+            "description": "Only archived deliveries can be deleted permanently"
+        },
+    },
+)
+async def delete_delivery(delivery_id: str, user: CurrentUser) -> None:
+    await controller.delete(delivery_id)

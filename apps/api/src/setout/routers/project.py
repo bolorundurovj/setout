@@ -82,3 +82,18 @@ async def archive_project(project_id: str, user: CurrentUser) -> None:
 @router.post("/projects/{project_id}/restore", operation_id="restoreProject", responses=NOT_FOUND)
 async def restore_project(project_id: str, user: CurrentUser) -> ProjectRead:
     return await controller.restore(project_id)
+
+
+@router.delete(
+    "/projects/{project_id}",
+    operation_id="deleteProject",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **NOT_FOUND,
+        status.HTTP_400_BAD_REQUEST: {
+            "description": "Only archived projects can be deleted permanently"
+        },
+    },
+)
+async def delete_project(project_id: str, user: CurrentUser, storage: Store) -> None:
+    await controller.delete(project_id, storage=storage)

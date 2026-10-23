@@ -76,6 +76,16 @@ class ItemController:
         prices = await self._price_summaries([item.id])
         return self._read(item, prices.get(item.id, []))
 
+    async def delete(self, item_id: str) -> None:
+        item = await self._item_or_404(item_id, include_archived=True)
+        if item.archived_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only archived items can be deleted permanently",
+            )
+        await Expense.filter(item_id=item.id).update(item_id=None)
+        await item.delete()
+
     async def prices(self, item_id: str) -> ItemPrices:
         item = await self._item_or_404(item_id)
         by_currency: dict[tuple[str, int], list[ItemPricePoint]] = {}

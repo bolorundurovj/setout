@@ -61,6 +61,8 @@ export class ProjectSettingsComponent {
   readonly archiving = signal<string | null>(null);
   readonly lastArchived = signal<CategoryRead | null>(null);
   readonly includeArchived = signal(false);
+  readonly pendingDelete = signal<string | null>(null);
+  readonly deleteConfirmationText = signal('');
 
   readonly statuses: StatusChoice[] = [
     { value: 'active', name: 'Active' },
@@ -216,6 +218,38 @@ export class ProjectSettingsComponent {
       done
         ? `${category.name} restored.`
         : (this.budget.error() ?? 'Could not restore the category.'),
+      done ? 'success' : 'error',
+    );
+  }
+
+  requestDelete(id: string): void {
+    this.pendingDelete.set(id);
+    this.deleteConfirmationText.set('');
+  }
+
+  cancelDelete(): void {
+    this.pendingDelete.set(null);
+    this.deleteConfirmationText.set('');
+  }
+
+  canConfirmDelete(): boolean {
+    return this.deleteConfirmationText().trim() === 'DELETE';
+  }
+
+  async deletePermanently(category: CategoryRead): Promise<void> {
+    if (!this.canConfirmDelete()) {
+      return;
+    }
+    const done = await this.budget.deleteCategory(
+      this.project().id,
+      category.id,
+      this.includeArchived(),
+    );
+    this.cancelDelete();
+    this.toast.show(
+      done
+        ? `${category.name} deleted permanently.`
+        : (this.budget.error() ?? 'Could not delete the category.'),
       done ? 'success' : 'error',
     );
   }

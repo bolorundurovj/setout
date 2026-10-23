@@ -7,6 +7,7 @@ import {
   DeliveryUpdate,
   archiveDelivery,
   createDelivery,
+  deleteDelivery,
   listAllDeliveries,
   listDeliveries,
   receiveDelivery,
@@ -142,6 +143,30 @@ export class DeliveryService {
       this.error.set(detailOf(e) ?? 'Could not restore that delivery.');
       return null;
     }
+  }
+
+  async delete(deliveryId: string): Promise<void> {
+    await this.api.invoke(deleteDelivery, { delivery_id: deliveryId });
+    this.state.update((all) =>
+      Object.fromEntries(
+        Object.entries(all).map(([key, list]) => {
+          const matched = list.rows.find((row) => row.id === deliveryId);
+          if (!matched) {
+            return [key, list];
+          }
+          return [
+            key,
+            {
+              rows: list.rows.filter((row) => row.id !== deliveryId),
+              total: Math.max(0, list.total - 1),
+              outstandingAmount: matched.received_at
+                ? list.outstandingAmount
+                : Math.max(0, list.outstandingAmount - matched.amount),
+            },
+          ];
+        }),
+      ),
+    );
   }
 
   private async load(

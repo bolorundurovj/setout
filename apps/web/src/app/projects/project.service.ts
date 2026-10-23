@@ -8,6 +8,7 @@ import {
   ProjectUpdate,
   archiveProject,
   createProject,
+  deleteProject,
   getProject,
   getProjectSummary,
   listCurrencies,
@@ -156,6 +157,14 @@ export class ProjectService {
   async restore(id: string): Promise<void> {
     const restored = await this.api.invoke(restoreProject, { project_id: id });
     this.projectsState.update((projects) => projects.map((p) => (p.id === id ? restored : p)));
+    await this.loadSummary();
+    void this.counts.load();
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.api.invoke(deleteProject, { project_id: id });
+    this.projectsState.update((projects) => projects.filter((p) => p.id !== id));
+    this.totalState.update((total) => Math.max(0, total - 1));
     await this.loadSummary();
     void this.counts.load();
   }

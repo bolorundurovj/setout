@@ -20,8 +20,28 @@
         @if (!p.archived_at) {
           <app-button variant="secondary" (pressed)="edit()">Edit</app-button>
           <app-button variant="danger" (pressed)="archive()">Archive</app-button>
+        } @else if (pendingDelete()) {
+          <div class="confirm-delete">
+            <span class="t-small danger-text">Type DELETE to confirm:</span>
+            <input
+              class="input-field delete-input"
+              type="text"
+              placeholder="DELETE"
+              [value]="deleteConfirmationText()"
+              (input)="deleteConfirmationText.set(value($event))"
+            />
+            <app-button
+              variant="danger"
+              [disabled]="!canConfirmDelete()"
+              (pressed)="deletePermanently()"
+            >
+              Delete
+            </app-button>
+            <app-button variant="secondary" (pressed)="cancelDelete()">Cancel</app-button>
+          </div>
         } @else {
           <app-button (pressed)="restore()">Restore</app-button>
+          <app-button variant="danger" (pressed)="requestDelete()">Delete</app-button>
         }
       </div>
     </div>

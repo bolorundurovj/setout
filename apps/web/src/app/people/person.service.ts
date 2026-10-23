@@ -7,6 +7,7 @@ import {
   PersonUpdate,
   archivePerson,
   createPerson,
+  deletePerson,
   getPerson,
   getPersonExpenseSummary,
   listPeople,
@@ -132,6 +133,12 @@ export class PersonService {
 
   async restore(personId: string): Promise<void> {
     await this.api.invoke(restorePerson, { person_id: personId });
+    await this.refresh();
+    void this.counts.load();
+  }
+
+  async delete(personId: string): Promise<void> {
+    await this.api.invoke(deletePerson, { person_id: personId });
     await this.refresh();
     void this.counts.load();
   }

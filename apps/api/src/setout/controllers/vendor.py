@@ -76,6 +76,17 @@ class VendorController:
         totals = await self._totals([vendor.id])
         return self._read(vendor, totals.get(vendor.id, []))
 
+    async def delete(self, vendor_id: str) -> None:
+        vendor = await self._vendor_or_404(vendor_id, include_archived=True)
+        if vendor.archived_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only archived vendors can be deleted permanently",
+            )
+        await Expense.filter(vendor_id=vendor.id).update(vendor_id=None)
+        await Agreement.filter(vendor_id=vendor.id).delete()
+        await vendor.delete()
+
     async def expense_summary(self, vendor_id: str) -> VendorExpenseSummary:
         vendor = await self._vendor_or_404(vendor_id, include_archived=True)
         rows: dict[str, VendorProjectExpenseSummary] = {}

@@ -17,6 +17,9 @@ import {
   createLand,
   createLandDocument,
   createLandValuation,
+  deleteLand,
+  deleteLandDocument,
+  deleteLandValuation,
   downloadLandDocument,
   getLand,
   listLandDocuments,
@@ -153,6 +156,12 @@ export class LandService {
     void this.counts.load();
   }
 
+  async delete(landId: string): Promise<void> {
+    await this.api.invoke(deleteLand, { land_id: landId });
+    await this.refresh();
+    void this.counts.load();
+  }
+
   async get(landId: string): Promise<LandRead | null> {
     try {
       return await this.api.invoke(getLand, { land_id: landId });
@@ -204,6 +213,10 @@ export class LandService {
 
   async restoreDocument(documentId: string): Promise<void> {
     await this.api.invoke(restoreLandDocument, { document_id: documentId });
+  }
+
+  async deleteDocument(documentId: string): Promise<void> {
+    await this.api.invoke(deleteLandDocument, { document_id: documentId });
   }
 
   async editDocument(
@@ -263,6 +276,10 @@ export class LandService {
 
   async restoreValuation(valuationId: string): Promise<void> {
     await this.api.invoke(restoreLandValuation, { valuation_id: valuationId });
+  }
+
+  async deleteValuation(valuationId: string): Promise<void> {
+    await this.api.invoke(deleteLandValuation, { valuation_id: valuationId });
   }
 
   /** Reverse geocodes a point; null when the geocoder is disabled or unreachable. */

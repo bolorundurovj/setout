@@ -99,6 +99,21 @@ async def restore_land(land_id: str, user: CurrentUser) -> LandRead:
     return await controller.restore(land_id)
 
 
+@router.delete(
+    "/lands/{land_id}",
+    operation_id="deleteLand",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **NOT_FOUND,
+        status.HTTP_400_BAD_REQUEST: {
+            "description": "Only archived land records can be deleted permanently"
+        },
+    },
+)
+async def delete_land(land_id: str, user: CurrentUser, storage: Store) -> None:
+    await controller.delete(land_id, storage=storage)
+
+
 @router.get("/lands/{land_id}/documents", operation_id="listLandDocuments", responses=NOT_FOUND)
 async def list_land_documents(
     land_id: str,
@@ -209,6 +224,21 @@ async def restore_land_document(document_id: str, user: CurrentUser) -> LandDocu
     return await documents.restore(document_id)
 
 
+@router.delete(
+    "/land-documents/{document_id}",
+    operation_id="deleteLandDocument",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **NOT_FOUND,
+        status.HTTP_400_BAD_REQUEST: {
+            "description": "Only archived land documents can be deleted permanently"
+        },
+    },
+)
+async def delete_land_document(document_id: str, user: CurrentUser, storage: Store) -> None:
+    await documents.delete(document_id, storage=storage)
+
+
 @router.get("/lands/{land_id}/valuations", operation_id="listLandValuations", responses=NOT_FOUND)
 async def list_land_valuations(
     land_id: str,
@@ -270,3 +300,18 @@ async def archive_land_valuation(valuation_id: str, user: CurrentUser) -> None:
 )
 async def restore_land_valuation(valuation_id: str, user: CurrentUser) -> LandValuationRead:
     return await valuations.restore(valuation_id)
+
+
+@router.delete(
+    "/land-valuations/{valuation_id}",
+    operation_id="deleteLandValuation",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **NOT_FOUND,
+        status.HTTP_400_BAD_REQUEST: {
+            "description": "Only archived land valuations can be deleted permanently"
+        },
+    },
+)
+async def delete_land_valuation(valuation_id: str, user: CurrentUser) -> None:
+    await valuations.delete(valuation_id)

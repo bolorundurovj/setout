@@ -98,6 +98,17 @@ class LandValuationController:
                 await land.save()
         return self._read(row, await self._exponents([row]))
 
+    async def delete(self, valuation_id: str) -> None:
+        row = await self._valuation_or_404(valuation_id, include_archived=True)
+        if row.archived_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only archived land valuations can be deleted permanently",
+            )
+        land_id = row.land_id
+        await row.delete()
+        await self._clear_unused_currency(land_id)
+
     async def _has_purchase(self, land_id: str, *, exclude_id: str | None = None) -> bool:
         query = LandValuation.filter(
             land_id=land_id, kind=LandValuationKind.PURCHASE, archived_at__isnull=True

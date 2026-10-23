@@ -8,6 +8,7 @@ import {
   VendorUpdate,
   archiveVendor,
   createVendor,
+  deleteVendor,
   getVendor,
   getVendorAgreements,
   getVendorExpenseSummary,
@@ -134,6 +135,12 @@ export class VendorService {
 
   async restore(vendorId: string): Promise<void> {
     await this.api.invoke(restoreVendor, { vendor_id: vendorId });
+    await this.refresh();
+    void this.counts.load();
+  }
+
+  async delete(vendorId: string): Promise<void> {
+    await this.api.invoke(deleteVendor, { vendor_id: vendorId });
     await this.refresh();
     void this.counts.load();
   }

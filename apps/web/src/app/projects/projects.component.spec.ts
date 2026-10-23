@@ -26,10 +26,12 @@ function project(overrides: Partial<ProjectRead> = {}): ProjectRead {
 
 describe('ProjectsComponent', () => {
   let archived: string[];
+  let deleted: string[];
   let updates: unknown[];
 
   function render(projects: ProjectRead[], openNew = '') {
     archived = [];
+    deleted = [];
     updates = [];
     const service = {
       projects: () => projects,
@@ -47,6 +49,7 @@ describe('ProjectsComponent', () => {
       update: async (...args: unknown[]) => void updates.push(args),
       archive: async (id: string) => void archived.push(id),
       restore: async () => undefined,
+      delete: async (id: string) => void deleted.push(id),
     };
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -168,6 +171,15 @@ describe('ProjectsComponent', () => {
   it('opens the new project form when the add input is set', () => {
     expect(render([project()]).showForm()).toBe(false);
     expect(render([project()], '1').showForm()).toBe(true);
+  });
+
+  it('permanently deletes an archived project when confirmed', async () => {
+    const component = render([project({ id: 'p1', archived_at: '2026-08-16T00:00:00Z' })]);
+    component.requestConfirmation('p1', 'delete');
+    component.deleteConfirmationText.set('DELETE');
+    await component.deletePermanently('p1');
+    expect(deleted).toEqual(['p1']);
+    expect(component.pending()).toBeNull();
   });
 });
 

@@ -65,6 +65,7 @@ describe('VendorDetailComponent', () => {
   let edits: unknown[];
   let archived: string[];
   let restored: string[];
+  let deleted: string[];
   let toasts: { message: string; type: string }[];
   let navigations: unknown[][];
   let outstandingDeliveries: DeliveryRead[];
@@ -75,6 +76,7 @@ describe('VendorDetailComponent', () => {
     edits = [];
     archived = [];
     restored = [];
+    deleted = [];
     toasts = [];
     navigations = [];
     outstandingDeliveries = outstanding;
@@ -89,6 +91,7 @@ describe('VendorDetailComponent', () => {
       edit: async (_id: string, body: unknown) => void edits.push(body),
       archive: async (id: string) => void archived.push(id),
       restore: async (id: string) => void restored.push(id),
+      delete: async (id: string) => void deleted.push(id),
     };
 
     TestBed.resetTestingModule();
@@ -207,6 +210,15 @@ describe('VendorDetailComponent', () => {
 
     expect(archived).toEqual(['v1']);
     expect(restored).toEqual(['v1']);
+  });
+
+  it('permanently deletes an archived vendor and redirects', async () => {
+    const component = await render(vendor({ archived_at: '2026-08-16T00:00:00Z' }));
+    component.deleteConfirmationText.set('DELETE');
+    await component.deletePermanently();
+
+    expect(deleted).toEqual(['v1']);
+    expect(navigations[0][0]).toEqual(['/vendors']);
   });
 
   it('flags a vendor with only a name as incomplete', async () => {

@@ -84,6 +84,21 @@ async def restore_person(person_id: str, user: CurrentUser) -> PersonRead:
     return await controller.restore(person_id)
 
 
+@router.delete(
+    "/people/{person_id}",
+    operation_id="deletePerson",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **NOT_FOUND,
+        status.HTTP_400_BAD_REQUEST: {
+            "description": "Only archived people can be deleted permanently"
+        },
+    },
+)
+async def delete_person(person_id: str, user: CurrentUser) -> None:
+    await controller.delete(person_id)
+
+
 @router.get(
     "/people/{person_id}/expense-summary",
     operation_id="getPersonExpenseSummary",

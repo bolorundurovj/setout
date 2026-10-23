@@ -124,8 +124,28 @@
             <span class="confirm t-small">Archive this project? It can be restored.</span>
             <app-button variant="danger" (pressed)="archive(project.id)">Yes, Archive</app-button>
             <app-button variant="secondary" (pressed)="cancelPending()">Cancel</app-button>
+          } @else if (isPending(project.id, 'delete')) {
+            <span class="confirm danger t-small">Type DELETE to confirm:</span>
+            <input
+              class="input-field delete-input"
+              type="text"
+              placeholder="DELETE"
+              [value]="deleteConfirmationText()"
+              (input)="deleteConfirmationText.set(value($event))"
+            />
+            <app-button
+              variant="danger"
+              [disabled]="!canConfirmDelete()"
+              (pressed)="deletePermanently(project.id)"
+            >
+              Delete
+            </app-button>
+            <app-button variant="secondary" (pressed)="cancelPending()">Cancel</app-button>
           } @else if (project.archived_at) {
             <app-button variant="secondary" (pressed)="restore(project.id)">Restore</app-button>
+            <app-button variant="danger" (pressed)="requestConfirmation(project.id, 'delete')"
+              >Delete</app-button
+            >
           } @else if (project.status === 'closed') {
             <app-button (pressed)="open(project.id)">Open</app-button>
             <app-button variant="secondary" (pressed)="reopen(project.id)">Reopen</app-button>

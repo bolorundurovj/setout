@@ -14,6 +14,8 @@ import {
   archiveAgreement,
   createAdvance,
   createAgreement,
+  deleteAdvance,
+  deleteAgreement,
   listAdvances,
   listAgreements,
   listBalances,
@@ -228,6 +230,16 @@ export class AgreementService {
     }
   }
 
+  async delete(agreementId: string): Promise<void> {
+    await this.api.invoke(deleteAgreement, { agreement_id: agreementId });
+    if (this.includeArchivedState()) {
+      await this.load(this.loadedProjectId());
+      return;
+    }
+    this.agreementState.update((rows) => rows.filter((row) => row.id !== agreementId));
+    this.agreementTotalState.update((total) => Math.max(0, total - 1));
+  }
+
   async createAdvance(projectId: string, body: AdvanceCreate): Promise<AdvanceRead | null> {
     this.saving.set(true);
     this.error.set(null);
@@ -285,5 +297,15 @@ export class AgreementService {
       this.error.set(detailOf(e) ?? 'Could not restore that advance.');
       return null;
     }
+  }
+
+  async deleteAdvance(projectId: string, advanceId: string): Promise<void> {
+    await this.api.invoke(deleteAdvance, { advance_id: advanceId });
+    const currentPage = this.advancePageState();
+    await this.loadAdvances(projectId, currentPage);
+    if (this.advanceState().length === 0 && currentPage > 1) {
+      await this.loadAdvances(projectId, currentPage - 1);
+    }
+    await this.loadBalances(projectId);
   }
 }

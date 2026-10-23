@@ -169,6 +169,20 @@ describe('DeliveryService', () => {
     expect(service.outstanding('p1').rows[0].description).toBe('18 bags of cement');
   });
 
+  it('permanently deletes a delivery and removes it from cached lists', async () => {
+    const service = configure((name) =>
+      name === 'deleteDelivery' ? undefined : page([delivery('a')]),
+    );
+    await service.loadOutstanding('p1');
+    expect(service.outstanding('p1').rows.length).toBe(1);
+
+    await service.delete('a');
+    expect(requests.some((r) => r['call'] === 'deleteDelivery' && r['delivery_id'] === 'a')).toBe(
+      true,
+    );
+    expect(service.outstanding('p1').rows.length).toBe(0);
+  });
+
   it('shows an error when the list cannot be loaded', async () => {
     const service = configure(() => {
       throw new Error('offline');

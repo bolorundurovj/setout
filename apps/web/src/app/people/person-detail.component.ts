@@ -32,6 +32,8 @@ export class PersonDetailComponent {
   readonly person = signal<PersonRead | null>(null);
   readonly expenseSummary = signal<PersonExpenseSummary | null>(null);
   readonly loading = signal(true);
+  readonly pendingDelete = signal(false);
+  readonly deleteConfirmationText = signal('');
 
   readonly notSet = '—';
 
@@ -106,5 +108,32 @@ export class PersonDetailComponent {
     await this.personService.restore(this.id());
     await this.load();
     this.toast.show('Person restored.');
+  }
+
+  requestDelete(): void {
+    this.pendingDelete.set(true);
+    this.deleteConfirmationText.set('');
+  }
+
+  cancelDelete(): void {
+    this.pendingDelete.set(false);
+    this.deleteConfirmationText.set('');
+  }
+
+  canConfirmDelete(): boolean {
+    return this.deleteConfirmationText().trim() === 'DELETE';
+  }
+
+  value(event: Event): string {
+    return (event.target as HTMLInputElement).value;
+  }
+
+  async deletePermanently(): Promise<void> {
+    if (!this.canConfirmDelete()) {
+      return;
+    }
+    await this.personService.delete(this.id());
+    this.toast.show('Person deleted permanently.');
+    void this.router.navigate(['/people']);
   }
 }

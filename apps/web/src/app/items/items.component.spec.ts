@@ -76,6 +76,7 @@ describe('ItemsComponent', () => {
       edit: async () => null,
       archive: async (id: string) => void archived.push(id),
       restore: async () => undefined,
+      delete: async () => undefined,
       prices: async () => null,
       lastPrice: async () => null,
     };

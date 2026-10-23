@@ -13,6 +13,7 @@ import {
   archiveExpense,
   categoriseExpenses,
   createExpense,
+  deleteExpense,
   getProjectExpenseSummary,
   getProjectMonths,
   listExpenses,
@@ -234,6 +235,11 @@ export class ExpenseService {
 
   async restore(projectId: string, expenseId: string): Promise<void> {
     await this.api.invoke(restoreExpense, { expense_id: expenseId });
+    await this.refresh(projectId);
+  }
+
+  async delete(projectId: string, expenseId: string): Promise<void> {
+    await this.api.invoke(deleteExpense, { expense_id: expenseId });
     await this.refresh(projectId);
   }
 

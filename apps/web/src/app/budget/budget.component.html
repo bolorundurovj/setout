@@ -90,13 +90,43 @@
                   </span>
                   <span class="right t-mono muted">{{ money(item.budgeted_amount) }}</span>
                   @if (item.archived_at) {
-                    <button
-                      type="button"
-                      class="link-action t-mono"
-                      (click)="restoreItem(category, item.id)"
-                    >
-                      Restore
-                    </button>
+                    @if (pendingDelete() === item.id) {
+                      <span class="confirm-inline">
+                        <input
+                          class="input-field delete-input"
+                          type="text"
+                          placeholder="DELETE"
+                          [value]="deleteConfirmationText()"
+                          (input)="deleteConfirmationText.set(value($event))"
+                        />
+                        <button
+                          type="button"
+                          class="link-action t-mono danger-link"
+                          [disabled]="!canConfirmDelete()"
+                          (click)="deleteItemPermanently(category, item.id)"
+                        >
+                          Delete
+                        </button>
+                        <button type="button" class="link-action t-mono" (click)="cancelDelete()">
+                          Cancel
+                        </button>
+                      </span>
+                    } @else {
+                      <button
+                        type="button"
+                        class="link-action t-mono"
+                        (click)="restoreItem(category, item.id)"
+                      >
+                        Restore
+                      </button>
+                      <button
+                        type="button"
+                        class="link-action t-mono danger-link"
+                        (click)="requestDelete(item.id)"
+                      >
+                        Delete
+                      </button>
+                    }
                   } @else {
                     <button
                       type="button"

@@ -85,6 +85,21 @@ async def restore_vendor(vendor_id: str, user: CurrentUser) -> VendorRead:
     return await controller.restore(vendor_id)
 
 
+@router.delete(
+    "/vendors/{vendor_id}",
+    operation_id="deleteVendor",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **NOT_FOUND,
+        status.HTTP_400_BAD_REQUEST: {
+            "description": "Only archived vendors can be deleted permanently"
+        },
+    },
+)
+async def delete_vendor(vendor_id: str, user: CurrentUser) -> None:
+    await controller.delete(vendor_id)
+
+
 @router.get(
     "/vendors/{vendor_id}/expense-summary",
     operation_id="getVendorExpenseSummary",

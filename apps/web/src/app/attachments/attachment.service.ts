@@ -5,6 +5,7 @@ import {
   AttachmentRead,
   archiveAttachment,
   createAttachment,
+  deleteAttachment,
   downloadAttachment,
   listAttachments,
   restoreAttachment,
@@ -70,6 +71,14 @@ export class AttachmentService {
 
   async remove(expenseId: string, attachmentId: string): Promise<void> {
     return this.archive(expenseId, attachmentId);
+  }
+
+  async delete(expenseId: string, attachmentId: string): Promise<void> {
+    await this.api.invoke(deleteAttachment, { attachment_id: attachmentId });
+    this.setForExpense(
+      expenseId,
+      this.forExpense(expenseId).filter((row) => row.id !== attachmentId),
+    );
   }
 
   async restore(expenseId: string, attachmentId: string): Promise<AttachmentRead | null> {

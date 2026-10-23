@@ -11,6 +11,8 @@ import {
   archiveCategory,
   createBudgetItem,
   createCategory,
+  deleteBudgetItem,
+  deleteCategory,
   restoreBudgetItem,
   restoreCategory,
   updateBudgetItem,
@@ -125,6 +127,22 @@ export class BudgetService {
     }
   }
 
+  async deleteCategory(
+    projectId: string,
+    categoryId: string,
+    includeArchived = true,
+  ): Promise<boolean> {
+    this.error.set(null);
+    try {
+      await this.api.invoke(deleteCategory, { category_id: categoryId });
+      await this.load(projectId, includeArchived);
+      return true;
+    } catch (e: unknown) {
+      this.error.set(detailOf(e) ?? 'Could not delete the category.');
+      return false;
+    }
+  }
+
   async addItem(
     projectId: string,
     categoryId: string,
@@ -174,6 +192,24 @@ export class BudgetService {
       return true;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not restore that budget item.');
+      return false;
+    }
+  }
+
+  async deleteItem(
+    projectId: string,
+    categoryId: string,
+    itemId: string,
+    includeArchived = true,
+  ): Promise<boolean> {
+    this.error.set(null);
+    try {
+      await this.api.invoke(deleteBudgetItem, { item_id: itemId });
+      await this.loadItems(categoryId, includeArchived);
+      await this.load(projectId);
+      return true;
+    } catch (e: unknown) {
+      this.error.set(detailOf(e) ?? 'Could not delete that budget item.');
       return false;
     }
   }

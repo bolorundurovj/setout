@@ -50,6 +50,8 @@ export class LandDetailComponent {
   readonly land = signal<LandRead | null>(null);
   readonly documents = signal<LandDocumentRead[]>([]);
   readonly loading = signal(true);
+  readonly pendingDelete = signal(false);
+  readonly deleteConfirmationText = signal('');
   readonly kind = signal<LandDocumentKind>('certificate_of_occupancy');
   readonly notes = signal('');
   readonly lastArchived = signal<LandDocumentRead | null>(null);
@@ -293,5 +295,28 @@ export class LandDetailComponent {
     await this.lands.restore(this.id());
     await this.load();
     this.toast.show('Land record restored.');
+  }
+
+  requestDelete(): void {
+    this.pendingDelete.set(true);
+    this.deleteConfirmationText.set('');
+  }
+
+  cancelDelete(): void {
+    this.pendingDelete.set(false);
+    this.deleteConfirmationText.set('');
+  }
+
+  canConfirmDelete(): boolean {
+    return this.deleteConfirmationText().trim() === 'DELETE';
+  }
+
+  async deletePermanently(): Promise<void> {
+    if (!this.canConfirmDelete()) {
+      return;
+    }
+    await this.lands.delete(this.id());
+    this.toast.show('Land record deleted permanently.');
+    void this.router.navigate(['/lands']);
   }
 }

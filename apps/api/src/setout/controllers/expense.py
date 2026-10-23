@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from datetime import UTC, date, datetime
 from typing import Any
 
@@ -9,10 +10,12 @@ from tortoise.functions import Sum
 from tortoise.queryset import QuerySet
 
 from setout.models.agreement import Agreement
+from setout.models.attachment import Attachment
 from setout.models.budget import BudgetItem
 from setout.models.category import Category
 from setout.models.expense import Expense
 from setout.models.item import Item
+from setout.models.land_document import LandDocument
 from setout.models.person import Person
 from setout.models.project import Project
 from setout.models.vendor import Vendor
@@ -28,6 +31,7 @@ from setout.schemas.expense import (
     ProjectExpenseSummary,
     ProjectMonths,
 )
+from setout.services.storage import Storage
 from setout.utils.attachments import counts_for
 from setout.utils.cascade import archive_under_expense, restore_under_expense
 from setout.utils.expenses import derived_amount
@@ -264,6 +268,24 @@ class ExpenseController:
             await expense.save()
             await restore_under_expense(expense.id, archived_at)
         return self._read(expense, (await counts_for([expense.id])).get(expense.id, 0))
+
+    async def delete(self, expense_id: str, storage: Storage | None = None) -> None:
+        expense = await self._expense_or_404(expense_id, include_archived=True)
+        if expense.archived_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only archived expenses can be deleted permanently",
+            )
+        attachments = await Attachment.filter(expense_id=expense.id).all()
+        storage_keys = [att.storage_key for att in attachments]
+        await expense.delete()
+        if storage is not None:
+            for key in set(storage_keys):
+                has_attachment = await Attachment.filter(storage_key=key).exists()
+                has_document = await LandDocument.filter(storage_key=key).exists()
+                if not has_attachment and not has_document:
+                    with suppress(Exception):
+                        await storage.delete(key)
 
     async def expense_summary(self, project_id: str) -> ProjectExpenseSummary:
         project = await self._project_or_404(project_id)

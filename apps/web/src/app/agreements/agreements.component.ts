@@ -33,6 +33,8 @@ export class AgreementsComponent {
   readonly adding = signal(false);
   readonly addingAdvance = signal(false);
   readonly includeArchived = signal(false);
+  readonly pendingDelete = signal<string | null>(null);
+  readonly deleteConfirmationText = signal('');
   readonly personId = signal('');
   readonly advanceAmount = signal('');
   readonly payingAgreementId = signal<string | null>(null);
@@ -277,6 +279,38 @@ export class AgreementsComponent {
       return;
     }
     this.toast.show(`Advance to ${restored.person_name} restored.`);
+  }
+
+  requestDelete(id: string): void {
+    this.pendingDelete.set(id);
+    this.deleteConfirmationText.set('');
+  }
+
+  cancelDelete(): void {
+    this.pendingDelete.set(null);
+    this.deleteConfirmationText.set('');
+  }
+
+  canConfirmDelete(): boolean {
+    return this.deleteConfirmationText().trim() === 'DELETE';
+  }
+
+  async deletePermanently(agreement: AgreementRead): Promise<void> {
+    if (!this.canConfirmDelete()) {
+      return;
+    }
+    await this.agreements.delete(agreement.id);
+    this.cancelDelete();
+    this.toast.show(`Agreement with ${agreement.vendor_name} deleted permanently.`);
+  }
+
+  async deleteAdvancePermanently(advance: AdvanceRead): Promise<void> {
+    if (!this.canConfirmDelete()) {
+      return;
+    }
+    await this.agreements.deleteAdvance(this.project().id, advance.id);
+    this.cancelDelete();
+    this.toast.show(`Advance to ${advance.person_name} deleted permanently.`);
   }
 
   async setIncludeArchived(on: boolean): Promise<void> {

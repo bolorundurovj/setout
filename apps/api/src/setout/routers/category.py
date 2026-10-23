@@ -98,6 +98,21 @@ async def restore_category(category_id: str, user: CurrentUser) -> CategoryRead:
     return await controller.restore(category_id)
 
 
+@router.delete(
+    "/categories/{category_id}",
+    operation_id="deleteCategory",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **NOT_FOUND,
+        status.HTTP_400_BAD_REQUEST: {
+            "description": "Only archived categories can be deleted permanently"
+        },
+    },
+)
+async def delete_category(category_id: str, user: CurrentUser) -> None:
+    await controller.delete(category_id)
+
+
 @router.get(
     "/categories/{category_id}/budget-items",
     operation_id="listBudgetItems",
@@ -149,3 +164,18 @@ async def archive_budget_item(item_id: str, user: CurrentUser) -> None:
 )
 async def restore_budget_item(item_id: str, user: CurrentUser) -> BudgetItemRead:
     return await controller.restore_item(item_id)
+
+
+@router.delete(
+    "/budget-items/{item_id}",
+    operation_id="deleteBudgetItem",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **NOT_FOUND,
+        status.HTTP_400_BAD_REQUEST: {
+            "description": "Only archived budget items can be deleted permanently"
+        },
+    },
+)
+async def delete_budget_item(item_id: str, user: CurrentUser) -> None:
+    await controller.delete_item(item_id)

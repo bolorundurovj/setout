@@ -245,14 +245,43 @@
           <span class="right t-mono muted">{{ expense.spent_on }}</span>
           <span class="row-actions">
             @if (expense.archived_at) {
-              <button
-                type="button"
-                class="link-action"
-                [attr.aria-label]="'Restore ' + expense.description"
-                (click)="restore(expense.id)"
-              >
-                Restore
-              </button>
+              @if (pendingDelete() === expense.id) {
+                <span class="confirm-inline">
+                  <input
+                    class="input-field delete-input"
+                    type="text"
+                    placeholder="DELETE"
+                    [value]="deleteConfirmationText()"
+                    (input)="deleteConfirmationText.set(value($event))"
+                  />
+                  <button
+                    type="button"
+                    class="link-action archive"
+                    [disabled]="!canConfirmDelete()"
+                    (click)="deletePermanently(expense.id)"
+                  >
+                    Delete
+                  </button>
+                  <button type="button" class="link-action" (click)="cancelDelete()">Cancel</button>
+                </span>
+              } @else {
+                <button
+                  type="button"
+                  class="link-action"
+                  [attr.aria-label]="'Restore ' + expense.description"
+                  (click)="restore(expense.id)"
+                >
+                  Restore
+                </button>
+                <button
+                  type="button"
+                  class="link-action archive"
+                  [attr.aria-label]="'Delete ' + expense.description"
+                  (click)="requestDelete(expense.id)"
+                >
+                  Delete
+                </button>
+              }
             } @else {
               <button
                 type="button"

@@ -119,6 +119,15 @@ class DeliveryController:
             await delivery.save()
         return self._read(delivery)
 
+    async def delete(self, delivery_id: str) -> None:
+        delivery = await self._delivery_or_404(delivery_id, include_archived=True)
+        if delivery.archived_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only archived deliveries can be deleted permanently",
+            )
+        await delivery.delete()
+
     def _read(self, delivery: Delivery) -> DeliveryRead:
         expense = delivery.expense
         vendor = expense.vendor

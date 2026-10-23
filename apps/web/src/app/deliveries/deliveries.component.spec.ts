@@ -57,6 +57,7 @@ describe('DeliveriesComponent', () => {
   let markedOutstanding: string[];
   let archived: string[];
   let restored: string[];
+  let deleted: string[];
   let changed: Record<string, unknown>[];
   let pagesAsked: number[];
 
@@ -68,6 +69,7 @@ describe('DeliveriesComponent', () => {
     markedOutstanding = [];
     archived = [];
     restored = [];
+    deleted = [];
     changed = [];
     pagesAsked = [];
     TestBed.resetTestingModule();
@@ -96,6 +98,9 @@ describe('DeliveriesComponent', () => {
             restore: async (id: string) => {
               restored.push(id);
               return delivery({ id });
+            },
+            delete: async (id: string) => {
+              deleted.push(id);
             },
             update: async (id: string, body: Record<string, unknown>) => {
               changed.push({ id, ...body });
@@ -176,6 +181,18 @@ describe('DeliveriesComponent', () => {
     const component = render();
     expect(component.outstandingDetail(delivery())).toContain('expected this week');
     expect(component.outstandingDetail(delivery({ expected: null }))).not.toContain('expected');
+  });
+
+  it('permanently deletes an archived delivery when confirmed', async () => {
+    const component = render(
+      deliveryList([]),
+      deliveryList([delivery({ id: 'd1', archived_at: '2026-08-16T00:00:00Z' })]),
+    );
+    component.pendingDelete.set('d1');
+    component.deleteConfirmationText.set('DELETE');
+    await component.deletePermanently(delivery({ id: 'd1', archived_at: '2026-08-16T00:00:00Z' }));
+    expect(deleted).toEqual(['d1']);
+    expect(component.pendingDelete()).toBeNull();
   });
 
   it('shows a placeholder when the vendor is not recorded', () => {

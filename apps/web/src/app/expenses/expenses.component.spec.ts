@@ -134,6 +134,7 @@ describe('ExpensesComponent', () => {
       },
       archive: async () => undefined,
       restore: async () => undefined,
+      delete: async () => undefined,
     };
 
     const budgetService = {

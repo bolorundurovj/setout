@@ -175,3 +175,18 @@ async def archive_expense(expense_id: str, user: CurrentUser) -> None:
 @router.post("/expenses/{expense_id}/restore", operation_id="restoreExpense", responses=NOT_FOUND)
 async def restore_expense(expense_id: str, user: CurrentUser) -> ExpenseRead:
     return await controller.restore(expense_id)
+
+
+@router.delete(
+    "/expenses/{expense_id}",
+    operation_id="deleteExpense",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **NOT_FOUND,
+        status.HTTP_400_BAD_REQUEST: {
+            "description": "Only archived expenses can be deleted permanently"
+        },
+    },
+)
+async def delete_expense(expense_id: str, user: CurrentUser, storage: Store) -> None:
+    await controller.delete(expense_id, storage=storage)

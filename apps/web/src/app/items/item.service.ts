@@ -9,6 +9,7 @@ import {
   ItemUpdate,
   archiveItem,
   createItem,
+  deleteItem,
   getItemLastPrice,
   getItemPrices,
   listItems,
@@ -132,6 +133,12 @@ export class ItemService {
 
   async restore(itemId: string): Promise<void> {
     await this.api.invoke(restoreItem, { item_id: itemId });
+    await this.refresh();
+    void this.counts.load();
+  }
+
+  async delete(itemId: string): Promise<void> {
+    await this.api.invoke(deleteItem, { item_id: itemId });
     await this.refresh();
     void this.counts.load();
   }

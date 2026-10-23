@@ -29,6 +29,8 @@ export class DeliveriesComponent {
   readonly editDescription = signal('');
   readonly editExpected = signal('');
   readonly lastArchived = signal<DeliveryRead | null>(null);
+  readonly pendingDelete = signal<string | null>(null);
+  readonly deleteConfirmationText = signal('');
 
   readonly outstandingList = computed(() => this.deliveries.outstanding(this.project().id));
   readonly receivedList = computed(() => this.deliveries.received(this.project().id));
@@ -105,6 +107,30 @@ export class DeliveriesComponent {
   outstandingDetail(delivery: DeliveryRead): string {
     const paid = `Paid ${this.paidOn(delivery)}`;
     return delivery.expected ? `${paid} · expected ${delivery.expected}` : paid;
+  }
+
+  requestDelete(id: string): void {
+    this.pendingDelete.set(id);
+    this.deleteConfirmationText.set('');
+  }
+
+  cancelDelete(): void {
+    this.pendingDelete.set(null);
+    this.deleteConfirmationText.set('');
+  }
+
+  canConfirmDelete(): boolean {
+    return this.deleteConfirmationText().trim() === 'DELETE';
+  }
+
+  async deletePermanently(delivery: DeliveryRead): Promise<void> {
+    if (!this.canConfirmDelete()) {
+      return;
+    }
+    await this.deliveries.delete(delivery.id);
+    this.cancelDelete();
+    await this.refresh();
+    this.toast.show(`${delivery.description} deleted permanently.`);
   }
 
   value(event: Event): string {

@@ -163,14 +163,43 @@
           <div class="agreement-actions">
             @if (agreement.archived_at) {
               <span class="t-small hint">Archived. Its payments are unchanged.</span>
-              <button
-                type="button"
-                class="link-action"
-                [attr.aria-label]="'Restore the agreement with ' + agreement.vendor_name"
-                (click)="restore(agreement.id)"
-              >
-                Restore
-              </button>
+              @if (pendingDelete() === agreement.id) {
+                <span class="confirm-inline">
+                  <input
+                    class="input-field delete-input"
+                    type="text"
+                    placeholder="DELETE"
+                    [value]="deleteConfirmationText()"
+                    (input)="deleteConfirmationText.set(value($event))"
+                  />
+                  <button
+                    type="button"
+                    class="link-action archive-action"
+                    [disabled]="!canConfirmDelete()"
+                    (click)="deletePermanently(agreement)"
+                  >
+                    Delete
+                  </button>
+                  <button type="button" class="link-action" (click)="cancelDelete()">Cancel</button>
+                </span>
+              } @else {
+                <button
+                  type="button"
+                  class="link-action"
+                  [attr.aria-label]="'Restore the agreement with ' + agreement.vendor_name"
+                  (click)="restore(agreement.id)"
+                >
+                  Restore
+                </button>
+                <button
+                  type="button"
+                  class="link-action archive-action"
+                  [attr.aria-label]="'Delete the agreement with ' + agreement.vendor_name"
+                  (click)="requestDelete(agreement.id)"
+                >
+                  Delete
+                </button>
+              }
             } @else if (payingAgreementId() === agreement.id) {
               <span class="amount">
                 <span class="amount-prefix t-mono">{{ symbol() }}</span>
@@ -354,14 +383,43 @@
               <span class="right t-mono cell-figure">{{ money(advance.amount) }}</span>
               <span class="right t-mono muted">{{ advance.given_on }}</span>
               <span class="t-small muted">archived</span>
-              <button
-                type="button"
-                class="link-action"
-                [attr.aria-label]="'Restore the advance to ' + advance.person_name"
-                (click)="restoreAdvance(advance.id)"
-              >
-                Restore
-              </button>
+              @if (pendingDelete() === advance.id) {
+                <span class="confirm-inline">
+                  <input
+                    class="input-field delete-input"
+                    type="text"
+                    placeholder="DELETE"
+                    [value]="deleteConfirmationText()"
+                    (input)="deleteConfirmationText.set(value($event))"
+                  />
+                  <button
+                    type="button"
+                    class="link-action archive-action"
+                    [disabled]="!canConfirmDelete()"
+                    (click)="deleteAdvancePermanently(advance)"
+                  >
+                    Delete
+                  </button>
+                  <button type="button" class="link-action" (click)="cancelDelete()">Cancel</button>
+                </span>
+              } @else {
+                <button
+                  type="button"
+                  class="link-action"
+                  [attr.aria-label]="'Restore the advance to ' + advance.person_name"
+                  (click)="restoreAdvance(advance.id)"
+                >
+                  Restore
+                </button>
+                <button
+                  type="button"
+                  class="link-action archive-action"
+                  [attr.aria-label]="'Delete the advance to ' + advance.person_name"
+                  (click)="requestDelete(advance.id)"
+                >
+                  Delete
+                </button>
+              }
             } @else if (editingAdvance() === advance.id) {
               <span class="amount right">
                 <span class="amount-prefix t-mono">{{ symbol() }}</span>

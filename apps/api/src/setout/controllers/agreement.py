@@ -79,6 +79,16 @@ class AgreementController:
         paid = await paid_by_agreement([agreement.id])
         return self._read(agreement, paid.get(agreement.id, 0))
 
+    async def delete(self, agreement_id: str) -> None:
+        agreement = await self._agreement_or_404(agreement_id, include_archived=True)
+        if agreement.archived_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only archived agreements can be deleted permanently",
+            )
+        await Expense.filter(agreement_id=agreement.id).update(agreement_id=None)
+        await agreement.delete()
+
     async def list_advances(
         self, project_id: str, *, include_archived: bool, limit: int, offset: int
     ) -> AdvancePage:
@@ -129,6 +139,15 @@ class AgreementController:
             advance.archived_at = None
             await advance.save()
         return self._advance(advance)
+
+    async def delete_advance(self, advance_id: str) -> None:
+        advance = await self._advance_or_404(advance_id, include_archived=True)
+        if advance.archived_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only archived advances can be deleted permanently",
+            )
+        await advance.delete()
 
     async def balances(self, project_id: str) -> list[PersonBalance]:
         project = await self._project_or_404(project_id)

@@ -28,6 +28,8 @@ export class ItemsComponent {
   readonly search = signal('');
   readonly showForm = signal(false);
   readonly includeArchived = signal(false);
+  readonly pendingDelete = signal<string | null>(null);
+  readonly deleteConfirmationText = signal('');
   readonly name = signal('');
   readonly unit = signal('');
 
@@ -95,6 +97,29 @@ export class ItemsComponent {
   async restore(itemId: string): Promise<void> {
     await this.items.restore(itemId);
     this.toast.show('Item restored.');
+  }
+
+  requestDelete(id: string): void {
+    this.pendingDelete.set(id);
+    this.deleteConfirmationText.set('');
+  }
+
+  cancelDelete(): void {
+    this.pendingDelete.set(null);
+    this.deleteConfirmationText.set('');
+  }
+
+  canConfirmDelete(): boolean {
+    return this.deleteConfirmationText().trim() === 'DELETE';
+  }
+
+  async deletePermanently(itemId: string): Promise<void> {
+    if (!this.canConfirmDelete()) {
+      return;
+    }
+    await this.items.delete(itemId);
+    this.cancelDelete();
+    this.toast.show('Item permanently deleted.');
   }
 
   async setIncludeArchived(on: boolean): Promise<void> {

@@ -78,7 +78,8 @@ export class ProjectsComponent {
     return codes.length === 1 ? `All in ${codes[0]}` : `${codes.length} currencies`;
   });
 
-  readonly pending = signal<{ id: string; action: 'close' | 'archive' } | null>(null);
+  readonly pending = signal<{ id: string; action: 'close' | 'archive' | 'delete' } | null>(null);
+  readonly deleteConfirmationText = signal('');
 
   readonly add = input('');
   readonly showForm = signal(false);
@@ -224,21 +225,37 @@ export class ProjectsComponent {
     return Math.min(100 - this.usedPercent(project), (overspend / project.budgeted_amount) * 100);
   }
 
-  requestConfirmation(id: string, action: 'close' | 'archive'): void {
+  requestConfirmation(id: string, action: 'close' | 'archive' | 'delete'): void {
     this.pending.set({ id, action });
+    this.deleteConfirmationText.set('');
   }
 
   cancelPending(): void {
     this.pending.set(null);
+    this.deleteConfirmationText.set('');
   }
 
-  isPending(id: string, action: 'close' | 'archive'): boolean {
+  isPending(id: string, action: 'close' | 'archive' | 'delete'): boolean {
     const pending = this.pending();
     return pending?.id === id && pending.action === action;
   }
 
+  canConfirmDelete(): boolean {
+    return this.deleteConfirmationText().trim() === 'DELETE';
+  }
+
   value(event: Event): string {
     return (event.target as HTMLInputElement).value;
+  }
+
+  async deletePermanently(id: string): Promise<void> {
+    if (!this.canConfirmDelete()) {
+      return;
+    }
+    await this.projects.delete(id);
+    this.pending.set(null);
+    this.deleteConfirmationText.set('');
+    this.toast.show('Project permanently deleted.');
   }
 
   async close(id: string): Promise<void> {

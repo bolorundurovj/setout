@@ -67,6 +67,8 @@ export class ExpensesComponent {
   readonly editingExpense = signal<ExpenseRead | null>(null);
   readonly assigning = signal(false);
   readonly includeArchived = signal(false);
+  readonly pendingDelete = signal<string | null>(null);
+  readonly deleteConfirmationText = signal('');
   readonly selected = signal<Set<string>>(new Set());
   readonly bulkCategoryId = signal<string>('');
 
@@ -356,6 +358,29 @@ export class ExpensesComponent {
   async restore(expenseId: string): Promise<void> {
     await this.expenses.restore(this.project().id, expenseId);
     this.toast.show('Expense restored.');
+  }
+
+  requestDelete(id: string): void {
+    this.pendingDelete.set(id);
+    this.deleteConfirmationText.set('');
+  }
+
+  cancelDelete(): void {
+    this.pendingDelete.set(null);
+    this.deleteConfirmationText.set('');
+  }
+
+  canConfirmDelete(): boolean {
+    return this.deleteConfirmationText().trim() === 'DELETE';
+  }
+
+  async deletePermanently(expenseId: string): Promise<void> {
+    if (!this.canConfirmDelete()) {
+      return;
+    }
+    await this.expenses.delete(this.project().id, expenseId);
+    this.cancelDelete();
+    this.toast.show('Expense permanently deleted.');
   }
 
   async setIncludeArchived(on: boolean): Promise<void> {

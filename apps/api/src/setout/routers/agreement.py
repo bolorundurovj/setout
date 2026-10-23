@@ -87,6 +87,21 @@ async def restore_agreement(agreement_id: str, user: CurrentUser) -> AgreementRe
     return await controller.restore(agreement_id)
 
 
+@router.delete(
+    "/agreements/{agreement_id}",
+    operation_id="deleteAgreement",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **NOT_FOUND,
+        status.HTTP_400_BAD_REQUEST: {
+            "description": "Only archived agreements can be deleted permanently"
+        },
+    },
+)
+async def delete_agreement(agreement_id: str, user: CurrentUser) -> None:
+    await controller.delete(agreement_id)
+
+
 @router.get("/projects/{project_id}/advances", operation_id="listAdvances", responses=NOT_FOUND)
 async def list_advances(
     project_id: str,
@@ -128,6 +143,21 @@ async def archive_advance(advance_id: str, user: CurrentUser) -> None:
 @router.post("/advances/{advance_id}/restore", operation_id="restoreAdvance", responses=NOT_FOUND)
 async def restore_advance(advance_id: str, user: CurrentUser) -> AdvanceRead:
     return await controller.restore_advance(advance_id)
+
+
+@router.delete(
+    "/advances/{advance_id}",
+    operation_id="deleteAdvance",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **NOT_FOUND,
+        status.HTTP_400_BAD_REQUEST: {
+            "description": "Only archived advances can be deleted permanently"
+        },
+    },
+)
+async def delete_advance(advance_id: str, user: CurrentUser) -> None:
+    await controller.delete_advance(advance_id)
 
 
 @router.get("/projects/{project_id}/balances", operation_id="listBalances", responses=NOT_FOUND)

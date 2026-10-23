@@ -88,7 +88,31 @@
             <span class="delivery-actions">
               <span class="outstanding-amount t-mono">{{ money(delivery.amount) }}</span>
               @if (delivery.archived_at) {
-                <app-button variant="secondary" (pressed)="restore(delivery)">Restore</app-button>
+                @if (pendingDelete() === delivery.id) {
+                  <div class="confirm-delete">
+                    <span class="t-small danger-text">Type DELETE to confirm:</span>
+                    <input
+                      class="input-field delete-input"
+                      type="text"
+                      placeholder="DELETE"
+                      [value]="deleteConfirmationText()"
+                      (input)="deleteConfirmationText.set(value($event))"
+                    />
+                    <app-button
+                      variant="danger"
+                      [disabled]="!canConfirmDelete()"
+                      (pressed)="deletePermanently(delivery)"
+                    >
+                      Delete
+                    </app-button>
+                    <app-button variant="secondary" (pressed)="cancelDelete()">Cancel</app-button>
+                  </div>
+                } @else {
+                  <app-button variant="secondary" (pressed)="restore(delivery)">Restore</app-button>
+                  <app-button variant="danger" (pressed)="requestDelete(delivery.id)"
+                    >Delete</app-button
+                  >
+                }
               } @else {
                 <app-button variant="secondary" (pressed)="startEdit(delivery)">Edit</app-button>
                 <app-button variant="danger" (pressed)="archive(delivery)">Archive</app-button>
@@ -126,7 +150,31 @@
           <span class="delivery-actions">
             <span class="received-amount t-mono">{{ money(delivery.amount) }}</span>
             @if (delivery.archived_at) {
-              <app-button variant="secondary" (pressed)="restore(delivery)">Restore</app-button>
+              @if (pendingDelete() === delivery.id) {
+                <div class="confirm-delete">
+                  <span class="t-small danger-text">Type DELETE to confirm:</span>
+                  <input
+                    class="input-field delete-input"
+                    type="text"
+                    placeholder="DELETE"
+                    [value]="deleteConfirmationText()"
+                    (input)="deleteConfirmationText.set(value($event))"
+                  />
+                  <app-button
+                    variant="danger"
+                    [disabled]="!canConfirmDelete()"
+                    (pressed)="deletePermanently(delivery)"
+                  >
+                    Delete
+                  </app-button>
+                  <app-button variant="secondary" (pressed)="cancelDelete()">Cancel</app-button>
+                </div>
+              } @else {
+                <app-button variant="secondary" (pressed)="restore(delivery)">Restore</app-button>
+                <app-button variant="danger" (pressed)="requestDelete(delivery.id)"
+                  >Delete</app-button
+                >
+              }
             } @else {
               <app-button variant="secondary" (pressed)="markOutstanding(delivery)"
                 >Mark Outstanding</app-button

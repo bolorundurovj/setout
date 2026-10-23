@@ -58,6 +58,7 @@ describe('PersonDetailComponent', () => {
       edit: async (_id: string, body: unknown) => void edits.push(body),
       archive: async (id: string) => void archived.push(id),
       restore: async (id: string) => void restored.push(id),
+      delete: async () => undefined,
     };
 
     TestBed.resetTestingModule();

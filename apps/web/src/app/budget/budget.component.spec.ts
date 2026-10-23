@@ -80,6 +80,7 @@ describe('BudgetComponent', () => {
       addItem: async (...args: unknown[]) => void added.push(args),
       updateItem: async (...args: unknown[]) => void updated.push(args),
       archiveItem: async () => undefined,
+      deleteItem: async () => undefined,
     };
     const toast = { show: (message: string, type = 'success') => toasts.push({ message, type }) };
 

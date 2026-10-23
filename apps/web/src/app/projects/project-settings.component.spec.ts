@@ -101,6 +101,7 @@ describe('ProjectSettingsComponent', () => {
               restored.push(id);
               return categoryResult;
             },
+            deleteCategory: async () => categoryResult,
           },
         },
         {

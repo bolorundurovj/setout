@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from collections import Counter
+from contextlib import suppress
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 
+from setout.models.attachment import Attachment
 from setout.models.currency import Currency
 from setout.models.land import Land
+from setout.models.land_document import LandDocument
 from setout.models.project import Project, ProjectStatus
 from setout.schemas.project import (
     ProjectCreate,
@@ -15,6 +18,7 @@ from setout.schemas.project import (
     ProjectSummary,
     ProjectUpdate,
 )
+from setout.services.storage import Storage
 from setout.utils.budgets import budgeted_by_project, spent_by_project
 from setout.utils.cascade import archive_under_project, restore_under_project
 from setout.utils.projects import require_closed, to_read
@@ -112,6 +116,24 @@ class ProjectController:
         budgeted = await budgeted_by_project([project.id])
         spent = await spent_by_project([project.id])
         return to_read(project, budgeted.get(project.id, 0), spent.get(project.id, 0))
+
+    async def delete(self, project_id: str, storage: Storage | None = None) -> None:
+        project = await self._get_or_404(project_id, include_archived=True)
+        if project.archived_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only archived projects can be deleted permanently",
+            )
+        attachments = await Attachment.filter(expense__project_id=project.id).all()
+        storage_keys = [att.storage_key for att in attachments]
+        await project.delete()
+        if storage is not None:
+            for key in set(storage_keys):
+                has_attachment = await Attachment.filter(storage_key=key).exists()
+                has_document = await LandDocument.filter(storage_key=key).exists()
+                if not has_attachment and not has_document:
+                    with suppress(Exception):
+                        await storage.delete(key)
 
     async def _land_or_422(self, land_id: str | None) -> str | None:
         # Forms send an empty string for no land, which clears the link.

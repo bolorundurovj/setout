@@ -27,6 +27,8 @@ export class BudgetComponent {
   readonly openCategory = signal<string | null>(null);
   readonly newCategoryName = signal('');
   readonly includeArchived = signal(false);
+  readonly pendingDelete = signal<string | null>(null);
+  readonly deleteConfirmationText = signal('');
   private readonly drafts = signal<Record<string, string>>({});
   readonly itemDescription = signal('');
   readonly itemAmount = signal('');
@@ -231,7 +233,41 @@ export class BudgetComponent {
     );
   }
 
+  requestDelete(id: string): void {
+    this.pendingDelete.set(id);
+    this.deleteConfirmationText.set('');
+  }
+
+  cancelDelete(): void {
+    this.pendingDelete.set(null);
+    this.deleteConfirmationText.set('');
+  }
+
+  canConfirmDelete(): boolean {
+    return this.deleteConfirmationText().trim() === 'DELETE';
+  }
+
   value(event: Event): string {
     return (event.target as HTMLInputElement).value;
+  }
+
+  async deleteItemPermanently(category: CategoryRead, itemId: string): Promise<void> {
+    if (!this.canConfirmDelete()) {
+      return;
+    }
+    const done = await this.budget.deleteItem(
+      this.project().id,
+      category.id,
+      itemId,
+      this.includeArchived(),
+    );
+    this.cancelDelete();
+    await this.load();
+    this.toast.show(
+      done
+        ? 'Budget item deleted permanently.'
+        : (this.budget.error() ?? 'Could not delete that budget item.'),
+      done ? 'success' : 'error',
+    );
   }
 }

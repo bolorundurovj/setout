@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -8,6 +9,7 @@ from fastapi import HTTPException, status
 from setout.config import get_settings
 from setout.models.attachment import Attachment
 from setout.models.expense import Expense
+from setout.models.land_document import LandDocument
 from setout.models.project import Project
 from setout.schemas.attachment import AttachmentPage, AttachmentRead
 from setout.services.storage import Storage, checksum_of, key_for
@@ -129,6 +131,22 @@ class AttachmentController:
             row.archived_at = None
             await row.save()
         return AttachmentRead.model_validate(row, from_attributes=True)
+
+    async def delete(self, attachment_id: str, storage: Storage | None = None) -> None:
+        row = await self._attachment_or_404(attachment_id, include_archived=True)
+        if row.archived_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only archived attachments can be deleted permanently",
+            )
+        key = row.storage_key
+        await row.delete()
+        if storage is not None:
+            has_attachment = await Attachment.filter(storage_key=key).exists()
+            has_document = await LandDocument.filter(storage_key=key).exists()
+            if not has_attachment and not has_document:
+                with suppress(Exception):
+                    await storage.delete(key)
 
     def _sanitise_filename(self, filename: str) -> str:
         last = filename.replace("\\", "/").rsplit("/", 1)[-1].strip()

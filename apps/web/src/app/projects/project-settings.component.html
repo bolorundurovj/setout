@@ -130,14 +130,43 @@
               <span class="swatch" [class]="tint(category)"></span>
               <span class="category-name">{{ category.name }}</span>
               <span class="category-count t-mono">archived</span>
-              <button
-                type="button"
-                class="link-action"
-                [attr.aria-label]="'Restore ' + category.name"
-                (click)="restore(category)"
-              >
-                Restore
-              </button>
+              @if (pendingDelete() === category.id) {
+                <span class="confirm-inline">
+                  <input
+                    class="input-field delete-input"
+                    type="text"
+                    placeholder="DELETE"
+                    [value]="deleteConfirmationText()"
+                    (input)="deleteConfirmationText.set(inputValue($event))"
+                  />
+                  <button
+                    type="button"
+                    class="link-action archive-action"
+                    [disabled]="!canConfirmDelete()"
+                    (click)="deletePermanently(category)"
+                  >
+                    Delete
+                  </button>
+                  <button type="button" class="link-action" (click)="cancelDelete()">Cancel</button>
+                </span>
+              } @else {
+                <button
+                  type="button"
+                  class="link-action"
+                  [attr.aria-label]="'Restore ' + category.name"
+                  (click)="restore(category)"
+                >
+                  Restore
+                </button>
+                <button
+                  type="button"
+                  class="link-action archive-action"
+                  [attr.aria-label]="'Delete ' + category.name"
+                  (click)="requestDelete(category.id)"
+                >
+                  Delete
+                </button>
+              }
             } @else if (renaming() === category.id) {
               <input
                 class="input-field rename"

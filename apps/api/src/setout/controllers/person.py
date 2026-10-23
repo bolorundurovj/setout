@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 
+from setout.models.advance import Advance
 from setout.models.expense import Expense
 from setout.models.person import Person
 from setout.schemas.person import (
@@ -71,6 +72,17 @@ class PersonController:
             await person.save()
         totals = await self._totals([person.id])
         return self._read(person, totals.get(person.id, []))
+
+    async def delete(self, person_id: str) -> None:
+        person = await self._person_or_404(person_id, include_archived=True)
+        if person.archived_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only archived people can be deleted permanently",
+            )
+        await Expense.filter(paid_by_id=person.id).update(paid_by_id=None)
+        await Advance.filter(person_id=person.id).delete()
+        await person.delete()
 
     async def expense_summary(self, person_id: str) -> PersonExpenseSummary:
         person = await self._person_or_404(person_id, include_archived=True)

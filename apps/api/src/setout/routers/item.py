@@ -85,6 +85,21 @@ async def restore_item(item_id: str, user: CurrentUser) -> ItemRead:
     return await controller.restore(item_id)
 
 
+@router.delete(
+    "/items/{item_id}",
+    operation_id="deleteItem",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **NOT_FOUND,
+        status.HTTP_400_BAD_REQUEST: {
+            "description": "Only archived items can be deleted permanently"
+        },
+    },
+)
+async def delete_item(item_id: str, user: CurrentUser) -> None:
+    await controller.delete(item_id)
+
+
 @router.get("/items/{item_id}/prices", operation_id="getItemPrices", responses=NOT_FOUND)
 async def get_item_prices(item_id: str, user: CurrentUser) -> ItemPrices:
     return await controller.prices(item_id)

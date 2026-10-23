@@ -46,6 +46,8 @@ export class VendorDetailComponent {
   readonly agreements = signal<VendorAgreement[]>([]);
   readonly outstandingDeliveries = computed(() => this.deliveries.forVendor(this.id()).rows);
   readonly loading = signal(true);
+  readonly pendingDelete = signal(false);
+  readonly deleteConfirmationText = signal('');
 
   readonly notSet = '—';
 
@@ -143,5 +145,32 @@ export class VendorDetailComponent {
     await this.vendorService.restore(this.id());
     await this.load();
     this.toast.show('Vendor restored.');
+  }
+
+  requestDelete(): void {
+    this.pendingDelete.set(true);
+    this.deleteConfirmationText.set('');
+  }
+
+  cancelDelete(): void {
+    this.pendingDelete.set(false);
+    this.deleteConfirmationText.set('');
+  }
+
+  canConfirmDelete(): boolean {
+    return this.deleteConfirmationText().trim() === 'DELETE';
+  }
+
+  value(event: Event): string {
+    return (event.target as HTMLInputElement).value;
+  }
+
+  async deletePermanently(): Promise<void> {
+    if (!this.canConfirmDelete()) {
+      return;
+    }
+    await this.vendorService.delete(this.id());
+    this.toast.show('Vendor deleted permanently.');
+    void this.router.navigate(['/vendors']);
   }
 }

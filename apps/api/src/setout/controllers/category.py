@@ -110,6 +110,17 @@ class CategoryController:
             await restore_under_category(category.id, archived_at)
         return self._find_category(await self.list_categories(category.project_id), category.id)
 
+    async def delete(self, category_id: str) -> None:
+        category = await self._category_or_404(category_id, include_archived=True)
+        if category.archived_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only archived categories can be deleted permanently",
+            )
+        branch = [category.id, *await self._descendant_ids(category)]
+        await Expense.filter(category_id__in=branch).update(category_id=None)
+        await category.delete()
+
     async def list_items(
         self, category_id: str, *, include_archived: bool, limit: int, offset: int
     ) -> BudgetItemPage:
@@ -161,6 +172,15 @@ class CategoryController:
             item.archived_at = None
             await item.save()
         return BudgetItemRead.model_validate(item)
+
+    async def delete_item(self, item_id: str) -> None:
+        item = await self._item_or_404(item_id, include_archived=True)
+        if item.archived_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only archived budget items can be deleted permanently",
+            )
+        await item.delete()
 
     async def _require_no_expenses(self, category: Category) -> None:
         # Archiving a category with expenses would exclude them from every category total

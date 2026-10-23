@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 
 from setout.config import get_settings
+from setout.models.attachment import Attachment
 from setout.models.land import Land
 from setout.models.land_document import LandDocument, LandDocumentKind
 from setout.schemas.land_document import (
@@ -140,6 +142,22 @@ class LandDocumentController:
             row.archived_at = None
             await row.save()
         return LandDocumentRead.model_validate(row, from_attributes=True)
+
+    async def delete(self, document_id: str, storage: Storage | None = None) -> None:
+        row = await self._document_or_404(document_id, include_archived=True)
+        if row.archived_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only archived land documents can be deleted permanently",
+            )
+        key = row.storage_key
+        await row.delete()
+        if storage is not None:
+            has_attachment = await Attachment.filter(storage_key=key).exists()
+            has_document = await LandDocument.filter(storage_key=key).exists()
+            if not has_attachment and not has_document:
+                with suppress(Exception):
+                    await storage.delete(key)
 
     @staticmethod
     def _strip_path(filename: str) -> str:

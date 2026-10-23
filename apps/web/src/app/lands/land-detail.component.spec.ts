@@ -97,6 +97,9 @@ describe('LandDetailComponent', () => {
       },
       archive: async () => undefined,
       restore: async () => undefined,
+      delete: async () => undefined,
+      deleteDocument: async () => undefined,
+      deleteValuation: async () => undefined,
     };
 
     TestBed.resetTestingModule();
