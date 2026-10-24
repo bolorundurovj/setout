@@ -84,8 +84,8 @@ background, so the shape of the land is shown without a connection.
 
 ## The compose stack
 
-These are read by `docker/docker-compose.yml`, not by the application. Put them
-in a `.env` file beside the compose file.
+These are read by `docker/docker-compose.yml`, not by the application. Copy
+`docker/.env.example` to `.env` beside the compose file and adjust.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |

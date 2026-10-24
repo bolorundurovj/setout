@@ -31,7 +31,11 @@ SETOUT_IMAGE_TAG=1.2.3 docker compose -f docker/docker-compose.yml up -d
 
 The compose file also carries a `build:` block, so `docker compose build` builds your own image from the checkout.
 
-Put any of the compose variables in a `.env` file beside the compose file. The defaults exist so that the stack starts with one command. They are not suitable for production: **change `SETOUT_SECRET_KEY` and the S3/RustFS password before exposing this to anyone else.** See [Configuration](configuration.md) for the full
+Two compose files are provided:
+- `docker/docker-compose.yml`: Uses `env_file: .env`. Copy `docker/.env.example` to `docker/.env` and adjust the variables.
+- `docker/docker-compose.embedded.yml`: Self-contained with embedded environment variables and defaults, requiring no `.env` file (`docker compose -f docker/docker-compose.embedded.yml up -d`).
+
+The defaults exist so that the stack starts with one command. They are not suitable for production: **change `SETOUT_SECRET_KEY` and the S3/RustFS password before exposing this to anyone else.** See [Configuration](configuration.md) for the full
 list, and [Deployment](deployment.md) before exposing it.
 
 To run the container against SQLite and local files instead, unset
