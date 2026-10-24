@@ -16,7 +16,7 @@ classifiers = [
 ]
 dependencies = [
     "fastapi==0.141.1",
-    "tortoise-orm==1.1.8",
+    "tortoise-orm==1.1.9",
     "aiosqlite==0.22.1",
     "asyncpg==0.31.0",
     "uvicorn[standard]==0.52.4",
