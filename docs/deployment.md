@@ -53,8 +53,10 @@ If your deployment previously used MinIO in the compose stack, upgrading require
 1. When you run `docker compose up -d`, Setout automatically starts the new `s3` (RustFS) service and mounts your legacy `setout-minio` volume read-only.
 2. On boot, Setout verifies all existing attachments against the database, copies them to RustFS, and validates their SHA-256 checksums.
 3. Check the startup log for:
-   `[Storage Migration] 100% of assets verified in S3/RustFS. Legacy MinIO volume is no longer needed and can be safely removed.`
+   `[Storage Migration] 100% of assets verified (X/X, Y newly migrated). Legacy MinIO storage can now be safely removed.`
 4. Once verified, you can safely clean up the old volume: `docker volume rm setout-minio`.
+
+If your legacy MinIO deployment used inline erasure storage or logs report missing assets, see the dedicated [MinIO to RustFS Migration Guide](storage-migration.md) for compose templates before and after migration as well as troubleshooting tips.
 
 Pin a version rather than tracking `latest`, so that upgrades are deliberate:
 
