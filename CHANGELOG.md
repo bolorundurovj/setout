@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.5.0](https://github.com/bolorundurovj/setout/compare/v2.4.1...v2.5.0) (2026-10-24)
+
+
+### Features
+
+* **docker:** support .env-driven and standalone embedded compose configurations ([15f591f](https://github.com/bolorundurovj/setout/commit/15f591f22a5ce39b199d1d0ee4a93095d3bd28ad))
+
+
+### Documentation
+
+* add MinIO to RustFS storage migration guide and troubleshooting ([1426724](https://github.com/bolorundurovj/setout/commit/1426724df0b62a7501226ded682125bd45a06170))
+
 ## [2.4.1](https://github.com/bolorundurovj/setout/compare/v2.4.0...v2.4.1) (2026-10-24)
 
 
