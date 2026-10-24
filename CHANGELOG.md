@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.4.1](https://github.com/bolorundurovj/setout/compare/v2.4.0...v2.4.1) (2026-10-24)
+
+
+### Build and dependencies
+
+* **deps:** bump vite to 8.3.5 in root resolutions ([7819c89](https://github.com/bolorundurovj/setout/commit/7819c891f9d6de2d3f7c7458bef55c7b4084d358))
+* **deps:** remediate security vulnerabilities across python and node workspaces ([1265d7a](https://github.com/bolorundurovj/setout/commit/1265d7a8e7b7d6cc22c4557641431490222e2575))
+
 ## [2.4.0](https://github.com/bolorundurovj/setout/compare/v2.3.0...v2.4.0) (2026-10-23)
 
 
