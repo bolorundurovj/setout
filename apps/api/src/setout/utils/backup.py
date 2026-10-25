@@ -14,6 +14,7 @@ TABLES: tuple[str, ...] = (
     "state",
     "category_preset",
     "user",
+    "change",
     "land",
     "project",
     "category",

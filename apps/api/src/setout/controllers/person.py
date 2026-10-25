@@ -16,6 +16,7 @@ from setout.schemas.person import (
     PersonRead,
     PersonUpdate,
 )
+from setout.services import changes
 
 NOT_FOUND_PERSON = "Person not found"
 DUPLICATE_NAME = "A person with that name already exists"
@@ -80,8 +81,8 @@ class PersonController:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Only archived people can be deleted permanently",
             )
-        await Expense.filter(paid_by_id=person.id).update(paid_by_id=None)
-        await Advance.filter(person_id=person.id).delete()
+        await changes.recorded_update(Expense.filter(paid_by_id=person.id), paid_by_id=None)
+        await changes.recorded_delete(Advance.filter(person_id=person.id))
         await person.delete()
 
     async def expense_summary(self, person_id: str) -> PersonExpenseSummary:

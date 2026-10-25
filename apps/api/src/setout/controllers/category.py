@@ -20,6 +20,7 @@ from setout.schemas.category import (
     CategoryUpdate,
     ProjectBudget,
 )
+from setout.services import changes
 from setout.utils.cascade import archive_under_category, restore_under_category
 from setout.utils.categories import to_reads
 
@@ -118,7 +119,7 @@ class CategoryController:
                 detail="Only archived categories can be deleted permanently",
             )
         branch = [category.id, *await self._descendant_ids(category)]
-        await Expense.filter(category_id__in=branch).update(category_id=None)
+        await changes.recorded_update(Expense.filter(category_id__in=branch), category_id=None)
         await category.delete()
 
     async def list_items(

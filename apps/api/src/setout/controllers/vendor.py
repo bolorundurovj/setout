@@ -18,6 +18,7 @@ from setout.schemas.vendor import (
     VendorRead,
     VendorUpdate,
 )
+from setout.services import changes
 from setout.utils.balances import paid_by_agreement
 
 NOT_FOUND_VENDOR = "Vendor not found"
@@ -83,8 +84,8 @@ class VendorController:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Only archived vendors can be deleted permanently",
             )
-        await Expense.filter(vendor_id=vendor.id).update(vendor_id=None)
-        await Agreement.filter(vendor_id=vendor.id).delete()
+        await changes.recorded_update(Expense.filter(vendor_id=vendor.id), vendor_id=None)
+        await changes.recorded_delete(Agreement.filter(vendor_id=vendor.id))
         await vendor.delete()
 
     async def expense_summary(self, vendor_id: str) -> VendorExpenseSummary:

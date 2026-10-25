@@ -18,6 +18,7 @@ from setout.schemas.item import (
     ItemRead,
     ItemUpdate,
 )
+from setout.services import changes
 from setout.utils.items import summarise, summarise_series
 
 NOT_FOUND_ITEM = "Item not found"
@@ -83,7 +84,7 @@ class ItemController:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Only archived items can be deleted permanently",
             )
-        await Expense.filter(item_id=item.id).update(item_id=None)
+        await changes.recorded_update(Expense.filter(item_id=item.id), item_id=None)
         await item.delete()
 
     async def prices(self, item_id: str) -> ItemPrices:

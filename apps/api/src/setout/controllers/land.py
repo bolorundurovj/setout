@@ -20,6 +20,7 @@ from setout.schemas.land import (
     LandRead,
     LandUpdate,
 )
+from setout.services import changes
 from setout.services.storage import Storage
 from setout.utils.cascade import archive_under_land, restore_under_land
 from setout.utils.geo import polygon_area_sqm
@@ -127,7 +128,7 @@ class LandController:
             )
         docs = await LandDocument.filter(land_id=land.id).all()
         storage_keys = [doc.storage_key for doc in docs]
-        await Project.filter(land_id=land.id).update(land_id=None)
+        await changes.recorded_update(Project.filter(land_id=land.id), land_id=None)
         await land.delete()
         await delete_unreferenced(storage_keys, storage)
 

@@ -9,6 +9,7 @@ from tortoise.transactions import in_transaction
 from setout import __version__
 from setout.config import get_settings
 from setout.schemas.install import Backup, Install, RestoreRequest, RestoreResult
+from setout.services import changes
 from setout.utils.backup import FORMAT, TABLES, applied_migration, forward, read_all, write_all
 
 
@@ -55,7 +56,8 @@ class InstallController:
 
         try:
             async with in_transaction():
-                written = await write_all(tables)
+                with changes.recording_paused():
+                    written = await write_all(tables)
         except HTTPException:
             raise
         except Exception as exc:  # noqa: BLE001

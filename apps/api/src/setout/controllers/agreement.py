@@ -23,6 +23,7 @@ from setout.schemas.agreement import (
     AgreementUpdate,
     PersonBalance,
 )
+from setout.services import changes
 from setout.services.storage import Storage
 from setout.utils.attachments import counts_for
 from setout.utils.balances import balance_of, paid_by_agreement, person_balances
@@ -99,7 +100,7 @@ class AgreementController:
         storage_keys = await Attachment.filter(agreement_id=agreement.id).values_list(
             "storage_key", flat=True
         )
-        await Expense.filter(agreement_id=agreement.id).update(agreement_id=None)
+        await changes.recorded_update(Expense.filter(agreement_id=agreement.id), agreement_id=None)
         await agreement.delete()
         await delete_unreferenced([str(key) for key in storage_keys], storage)
 

@@ -25,6 +25,7 @@ from setout.schemas.import_sheet import (
     SheetSeen,
     SheetSkipped,
 )
+from setout.services import changes
 from setout.services.sheets.gather import ParsedWorkbook, parse_workbook
 from setout.services.sheets.parsed import ProblemKind
 from setout.services.sheets.values import category_code_for
@@ -38,6 +39,15 @@ class Target:
     name: str
     currency_code: str
     exponent: int
+
+
+IMPORT_COUNTS = {
+    "category_count",
+    "budget_item_count",
+    "expense_count",
+    "vendor_count",
+    "person_count",
+}
 
 
 class ImportController:
@@ -270,7 +280,10 @@ class ImportController:
             )
 
         async with in_transaction():
-            return await self._write(parsed, target, answers)
+            with changes.recording_paused():
+                result = await self._write(parsed, target, answers)
+            await changes.record_import(result.project_id, result.model_dump(include=IMPORT_COUNTS))
+            return result
 
     async def _write(
         self, parsed: ParsedWorkbook, target: Target, answers: Answers

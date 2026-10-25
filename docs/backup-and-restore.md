@@ -27,7 +27,7 @@ Attachments stored in an S3 bucket are not in the server backup. Back the bucket
 
 ## In-app backup
 
-In Settings, under **Server and Backup**, **Download Backup** writes a `.json` file containing every row of your data, and **Restore from Backup** reads one back. It works with either engine and needs no shell access, but it contains rows only: no uploaded files and no sessions, so every device must sign in again after a restore.
+In Settings, under **Server and Backup**, **Download Backup** writes a `.json` file containing every row of your data, including the change history, and **Restore from Backup** reads one back. It works with either engine and needs no shell access, but it contains rows only: no uploaded files and no sessions, so every device must sign in again after a restore.
 
 After you select a file, **Restore Backup** replaces all data on the server with the data in the backup. The rows are inserted into the schema the server is running now. It asks you to confirm when the backup was created by a different version, and rejects a backup containing tables it does not recognise. It runs in one transaction: either every row is written or nothing changes. A backup written by an earlier version, with the field names used before the terminology renames, is still accepted.
 

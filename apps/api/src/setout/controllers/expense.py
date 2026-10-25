@@ -30,6 +30,7 @@ from setout.schemas.expense import (
     ProjectExpenseSummary,
     ProjectMonths,
 )
+from setout.services import changes
 from setout.services.storage import Storage
 from setout.utils.attachments import counts_for
 from setout.utils.cascade import archive_under_expense, restore_under_expense
@@ -139,12 +140,15 @@ class ExpenseController:
     ) -> BulkCategoriseResult:
         await self._project_or_404(project_id)
         await self._categorisable_category(req.category_id, project_id)
-        categorised = await Expense.filter(
-            project_id=project_id,
-            id__in=req.expense_ids,
-            archived_at__isnull=True,
-            category_id__isnull=True,
-        ).update(category_id=req.category_id)
+        categorised = await changes.recorded_update(
+            Expense.filter(
+                project_id=project_id,
+                id__in=req.expense_ids,
+                archived_at__isnull=True,
+                category_id__isnull=True,
+            ),
+            category_id=req.category_id,
+        )
         return BulkCategoriseResult(categorised_count=categorised)
 
     async def _resolve_category(self, project_id: str, req: ExpenseCreate) -> str | None:

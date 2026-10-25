@@ -15,10 +15,12 @@ from setout.models.agreement import Agreement
 from setout.models.attachment import Attachment
 from setout.models.budget import BudgetItem
 from setout.models.category import Category
+from setout.models.change import ChangeAction
 from setout.models.delivery import Delivery
 from setout.models.expense import Expense
 from setout.models.land_document import LandDocument
 from setout.models.land_valuation import LandValuation
+from setout.services import changes
 
 PROJECT_OWNED = (Category, Expense, Delivery, Attachment, Advance, Agreement)
 EXPENSE_OWNED = (Delivery, Attachment)
@@ -96,15 +98,19 @@ async def restore_under_category(category_id: str, archived_at: datetime) -> Non
 async def _mark_archived(
     owned_model: type[Model], archived_at: datetime, **owner_filters: object
 ) -> None:
-    await owned_model.filter(archived_at__isnull=True, **owner_filters).update(
-        archived_at=archived_at
-    )
+    query = owned_model.filter(archived_at__isnull=True, **owner_filters)
+    rows = await query.values()
+    await query.update(archived_at=archived_at)
+    await changes.record_many(owned_model, rows, ChangeAction.ARCHIVE, {"archived_at": archived_at})
 
 
 async def _clear_archived(
     owned_model: type[Model], archived_at: datetime, **owner_filters: object
 ) -> None:
-    await owned_model.filter(archived_at=archived_at, **owner_filters).update(archived_at=None)
+    query = owned_model.filter(archived_at=archived_at, **owner_filters)
+    rows = await query.values()
+    await query.update(archived_at=None)
+    await changes.record_many(owned_model, rows, ChangeAction.RESTORE, {"archived_at": None})
 
 
 async def _delivery_ids_of_expense(expense_id: str) -> list[str]:
