@@ -61,6 +61,8 @@ EXPECTED_OPERATION_IDS = {
     "exportProject",
     "exportProjectCsv",
     "exportProjectReport",
+    "listChanges",
+    "listProjectChanges",
     "importSample",
     "search",
     "getHomeSummary",

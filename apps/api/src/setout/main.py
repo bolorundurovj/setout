@@ -24,6 +24,7 @@ from setout.routers import (
     attachment,
     auth,
     category,
+    change,
     country,
     counts,
     currency,
@@ -123,8 +124,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 def create_app() -> FastAPI:
-    settings = get_settings()
     changes.register()
+    settings = get_settings()
     if settings.secret_key == Settings.model_fields["secret_key"].default:
         logger.warning(
             "SETOUT_SECRET_KEY is still the default, so anyone can forge a session. "
@@ -156,6 +157,7 @@ def create_app() -> FastAPI:
     api.include_router(install.router)
     api.include_router(project.router)
     api.include_router(category.router)
+    api.include_router(change.router)
     api.include_router(expense.router)
     api.include_router(item.router)
     api.include_router(land.router)

@@ -190,3 +190,77 @@ async def test_a_backup_restore_keeps_change_rows_and_adds_none(client: AsyncCli
     assert resp.status_code == 200, resp.text
 
     assert await Change.all().count() == count
+
+
+async def test_list_changes_returns_newest_first_with_linked_names(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    category = await _post(client, f"/projects/{project_id}/categories", {"name": "Foundation"})
+    expense = await _post(
+        client, f"/projects/{project_id}/expenses", {"description": "Cement", "amount": 100}
+    )
+    await client.patch(f"/api/expenses/{expense['id']}", json={"category_id": category["id"]})
+
+    page = (
+        await client.get("/api/changes", params={"entity": "expense", "entity_id": expense["id"]})
+    ).json()
+
+    assert page["total"] == 2
+    latest = page["items"][0]
+    assert latest["action"] == "update"
+    assert latest["entity_name"] == "Cement"
+    assert latest["user_name"] == "Admin"
+    assert latest["fields"] == [{"name": "category_id", "before": None, "after": "Foundation"}]
+
+
+async def test_a_deleted_record_keeps_its_change_history(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    category = await _post(client, f"/projects/{project_id}/categories", {"name": "Foundation"})
+    expense = await _post(
+        client,
+        f"/projects/{project_id}/expenses",
+        {"description": "Cement", "amount": 100, "category_id": category["id"]},
+    )
+    await client.post(f"/api/expenses/{expense['id']}/archive")
+    assert (await client.delete(f"/api/expenses/{expense['id']}")).status_code == 204
+    await client.post(f"/api/categories/{category['id']}/archive")
+    assert (await client.delete(f"/api/categories/{category['id']}")).status_code == 204
+
+    page = (
+        await client.get("/api/changes", params={"entity": "expense", "entity_id": expense["id"]})
+    ).json()
+
+    assert [row["action"] for row in page["items"]] == ["delete", "archive", "create"]
+    assert page["items"][0]["entity_name"] == "Cement"
+    created = {field["name"]: field["after"] for field in page["items"][-1]["fields"]}
+    assert created["category_id"] == "Deleted category"
+
+
+async def test_project_changes_cover_every_record_and_page(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    category = await _post(client, f"/projects/{project_id}/categories", {"name": "Foundation"})
+    await _post(
+        client,
+        f"/categories/{category['id']}/budget-items",
+        {"description": "Blocks", "budgeted_amount": 500},
+    )
+    await _post(
+        client, f"/projects/{project_id}/expenses", {"description": "Cement", "amount": 100}
+    )
+
+    first = (await client.get(f"/api/projects/{project_id}/changes", params={"limit": 2})).json()
+    rest = (await client.get(f"/api/projects/{project_id}/changes", params={"offset": 2})).json()
+
+    assert first["total"] == 4
+    entities = [row["entity"] for row in first["items"] + rest["items"]]
+    assert entities == ["expense", "budget_item", "category", "project"]
+
+
+async def test_unknown_record_type_returns_404(client: AsyncClient) -> None:
+    await _project(client)
+    resp = await client.get("/api/changes", params={"entity": "user", "entity_id": "x"})
+    assert resp.status_code == 404
+
+
+async def test_project_changes_of_an_unknown_project_return_404(client: AsyncClient) -> None:
+    await _project(client)
+    assert (await client.get("/api/projects/nope/changes")).status_code == 404
