@@ -18,6 +18,7 @@ from setout.schemas.auth import (
     SignInRequest,
     UserResponse,
 )
+from setout.services import changes
 from setout.services.auth import (
     delay_for,
     hash_passphrase,
@@ -53,6 +54,7 @@ async def get_current_user(
         )
 
     await _extend_expiry(session, now, response)
+    changes.actor.set(session.user.id)
     return session.user
 
 

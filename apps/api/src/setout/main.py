@@ -43,6 +43,7 @@ from setout.routers import (
     search,
     vendor,
 )
+from setout.services import changes
 from setout.services.storage import S3Storage, auto_migrate_legacy_storage, get_storage
 
 logger = logging.getLogger("setout")
@@ -123,6 +124,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    changes.register()
     if settings.secret_key == Settings.model_fields["secret_key"].default:
         logger.warning(
             "SETOUT_SECRET_KEY is still the default, so anyone can forge a session. "
