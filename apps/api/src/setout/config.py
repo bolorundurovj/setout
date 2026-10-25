@@ -92,9 +92,9 @@ class Settings(BaseSettings):
     legacy_s3_secret_access_key: str = ""
 
     # Maximum attachment size, in bytes.
-    max_attachment_bytes: int = 25 * 1024 * 1024
+    max_attachment_bytes: int = 25_000_000
     # Maximum import size, in bytes. The file is read into memory to be parsed.
-    max_import_bytes: int = 25 * 1024 * 1024
+    max_import_bytes: int = 25_000_000
 
     def allowed_origins(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

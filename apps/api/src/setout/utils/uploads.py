@@ -8,6 +8,6 @@ async def read_capped(file: UploadFile, cap: int) -> bytes:
     if len(data) > cap:
         raise HTTPException(
             status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-            detail=f"That file is larger than the {cap // (1024 * 1024)} MB limit",
+            detail=f"That file is larger than the {cap // 1_000_000} MB limit",
         )
     return data

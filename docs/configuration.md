@@ -32,8 +32,8 @@ and adjust. Local development defaults to `./data`.
 | `SETOUT_S3_USE_PATH_STYLE` | `false` | Turn on for RustFS and other providers that require path-style addressing |
 | `SETOUT_S3_AUTO_CREATE_BUCKET` | `true` | Automatically create the target S3 bucket on boot if it does not exist |
 | `SETOUT_S3_LINK_SECONDS` | `300` | Expiry of presigned bucket URLs, in seconds |
-| `SETOUT_MAX_ATTACHMENT_BYTES` | `26214400` | Largest file that can be attached |
-| `SETOUT_MAX_IMPORT_BYTES` | `26214400` | Largest workbook that can be imported; the file is read into memory |
+| `SETOUT_MAX_ATTACHMENT_BYTES` | `25000000` | Largest file that can be attached |
+| `SETOUT_MAX_IMPORT_BYTES` | `25000000` | Largest workbook that can be imported; the file is read into memory |
 | `SETOUT_MAP_TILE_URL` | OpenStreetMap | Tile template for the map on a land record |
 | `SETOUT_MAP_ATTRIBUTION` | `© OpenStreetMap` | Credit shown on the map |
 | `SETOUT_GEOCODER_URL` | Nominatim | Looks up the address of a pin. Empty disables the check |
