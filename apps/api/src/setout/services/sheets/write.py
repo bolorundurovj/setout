@@ -26,6 +26,7 @@ BUDGET_HEAD = [
     "Material Costs",
     "Fixed Costs",
     "Budget",
+    "Parent Code",
 ]
 VENDOR_HEAD = ["Company Name", "Trade", "Point of Contact", "Phone", "Email", "Notes"]
 EXPENSE_HEAD = [
@@ -40,6 +41,11 @@ EXPENSE_HEAD = [
     "Paid",
     "Date Paid",
     "Notes",
+    "Cost Type",
+    "Quantity",
+    "Unit Rate",
+    "Item",
+    "Unit",
 ]
 OUTSTANDING_HEAD = ["Item", "Vendor", "Qty", "Expected", "Status"]
 PEOPLE_HEAD = ["Person", "Role", "Phone", "Notes"]
@@ -68,6 +74,7 @@ class BudgetCategory:
     code: str
     name: str
     lines: list[BudgetLine] = field(default_factory=list)
+    parent_code: str = ""
 
     @property
     def budgeted_amount(self) -> int:
@@ -84,6 +91,11 @@ class ExpenseRow:
     attachment: str
     paid_by: str
     notes: str
+    cost_type: str = ""
+    quantity: Decimal | None = None
+    unit_rate: int | None = None
+    item: str = ""
+    unit: str = ""
 
 
 @dataclass
@@ -252,6 +264,7 @@ def _budget(sheet: Worksheet, book: ExportWorkbook) -> None:
                 to_major(totals["material"]) if totals["material"] else "",
                 to_major(totals["fixed"]) if totals["fixed"] else "",
                 to_major(category.budgeted_amount),
+                category.parent_code,
             ]
         )
         sheet.cell(row=sheet.max_row, column=1).font = CATEGORY_FONT
@@ -263,7 +276,7 @@ def _budget(sheet: Worksheet, book: ExportWorkbook) -> None:
                 cost_type_cells[COST_COLUMN[line.cost_type]] = to_major(line.budgeted_amount)
             sheet.append([line.code, line.name, *cost_type_cells, to_major(line.budgeted_amount)])
 
-    _widths(sheet, [14, 40, 15, 15, 15, 16])
+    _widths(sheet, [14, 40, 15, 15, 15, 16, 12])
     _format(sheet, money=[2, 3, 4, 5], money_format=_money_format(book))
 
 
@@ -293,24 +306,10 @@ def _vendors(sheet: Worksheet, book: ExportWorkbook) -> None:
 
 def _expenses(sheet: Worksheet, book: ExportWorkbook) -> None:
     _title(sheet, EXPENSES_SHEET, EXPENSE_HEAD)
-    for row in book.expenses:
-        sheet.append(
-            [
-                "",
-                row.vendor,
-                row.code,
-                row.description,
-                row.spent_on,
-                major(row.amount, book.exponent),
-                row.attachment,
-                row.paid_by,
-                "Yes",
-                row.spent_on,
-                row.notes,
-            ]
-        )
-    _widths(sheet, [12, 28, 12, 34, 14, 14, 18, 18, 8, 14, 30])
-    _format(sheet, money=[5], dates=[4, 9], money_format=_money_format(book))
+    for row in expense_rows(book):
+        sheet.append(row)
+    _widths(sheet, [12, 28, 12, 34, 14, 14, 18, 18, 8, 14, 30, 12, 10, 14, 20, 10])
+    _format(sheet, money=[5, 13], dates=[4, 9], money_format=_money_format(book))
 
 
 def _outstanding(sheet: Worksheet, book: ExportWorkbook) -> None:
@@ -378,6 +377,8 @@ INSTRUCTIONS = [
     "",
     "The Budget column is the amount that is imported. To set a cost type, also enter",
     "the amount in the Labour Costs, Material Costs or Fixed Costs column.",
+    "To make a category a subcategory, enter the cost code of its parent category",
+    "in the Parent Code column of the category row.",
     "",
     "Expenses: each row is one expense. The cost code sets the category.",
     "A row with no cost code is imported as uncategorised.",
@@ -536,49 +537,72 @@ def as_csv(rows: list[list[object]]) -> bytes:
     return out.getvalue().encode("utf-8-sig")
 
 
-def budget_csv(filled: bool = False) -> bytes:
-    rows: list[list[object]] = [list(BUDGET_HEAD)]
-    if filled:
-        for category in example_book().categories:
-            rows.append(
-                [category.code, category.name, "", "", "", major(category.budgeted_amount, 2)]
-            )
-            for line in category.lines:
-                cost_type_cells: list[object] = ["", "", ""]
-                if line.cost_type in COST_COLUMN:
-                    cost_type_cells[COST_COLUMN[line.cost_type]] = major(line.budgeted_amount, 2)
-                rows.append(
-                    [line.code, line.name, *cost_type_cells, major(line.budgeted_amount, 2)]
+def budget_rows(book: ExportWorkbook) -> list[list[object]]:
+    rows: list[list[object]] = []
+    for category in book.categories:
+        rows.append(
+            [
+                category.code,
+                category.name,
+                "",
+                "",
+                "",
+                major(category.budgeted_amount, book.exponent),
+                category.parent_code,
+            ]
+        )
+        for line in category.lines:
+            cost_type_cells: list[object] = ["", "", ""]
+            if line.cost_type in COST_COLUMN:
+                cost_type_cells[COST_COLUMN[line.cost_type]] = major(
+                    line.budgeted_amount, book.exponent
                 )
-    return as_csv(rows)
-
-
-def expenses_csv(filled: bool = False) -> bytes:
-    rows: list[list[object]] = [list(EXPENSE_HEAD)]
-    if filled:
-        for row in example_book().expenses:
             rows.append(
-                [
-                    "",
-                    row.vendor,
-                    row.code,
-                    row.description,
-                    row.spent_on,
-                    major(row.amount, 2),
-                    row.attachment,
-                    row.paid_by,
-                    "Yes",
-                    row.spent_on,
-                    row.notes,
-                ]
+                [line.code, line.name, *cost_type_cells, major(line.budgeted_amount, book.exponent)]
             )
-    return as_csv(rows)
+    return rows
 
 
-def filename_for(project_name: str, when: datetime) -> str:
+def expense_rows(book: ExportWorkbook) -> list[list[object]]:
+    return [
+        [
+            "",
+            row.vendor,
+            row.code,
+            row.description,
+            row.spent_on,
+            major(row.amount, book.exponent),
+            row.attachment,
+            row.paid_by,
+            "Yes",
+            row.spent_on,
+            row.notes,
+            row.cost_type,
+            row.quantity,
+            major(row.unit_rate, book.exponent) if row.unit_rate is not None else "",
+            row.item,
+            row.unit,
+        ]
+        for row in book.expenses
+    ]
+
+
+def budget_csv(book: ExportWorkbook | None = None) -> bytes:
+    return as_csv([list(BUDGET_HEAD), *(budget_rows(book) if book else [])])
+
+
+def expenses_csv(book: ExportWorkbook | None = None) -> bytes:
+    return as_csv([list(EXPENSE_HEAD), *(expense_rows(book) if book else [])])
+
+
+def filename_for(
+    project_name: str, when: datetime, *, part: str = "", extension: str = "xlsx"
+) -> str:
     keep = [c if c.isalnum() or c in " -_" else "" for c in project_name]
     stem = "".join(keep).strip().replace(" ", "-").lower() or "project"
-    return f"setout-{stem}-{when:%Y%m%d}.xlsx"
+    if part:
+        stem = f"{stem}-{part}"
+    return f"setout-{stem}-{when:%Y%m%d}.{extension}"
 
 
 SAMPLES: dict[str, tuple[str, str]] = {
@@ -593,7 +617,7 @@ def sample(kind: str) -> bytes:
     if kind == "example":
         return template(filled=True)
     if kind == "budget-csv":
-        return budget_csv(filled=True)
+        return budget_csv(example_book())
     if kind == "spending-csv":
-        return expenses_csv(filled=True)
+        return expenses_csv(example_book())
     return template()

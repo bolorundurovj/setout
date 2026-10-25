@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import HTTPException, status
 
 from setout.models.agreement import Agreement
@@ -13,26 +15,39 @@ from setout.services.sheets import write
 from setout.services.sheets.values import is_category_code
 from setout.utils.balances import paid_by_agreement
 
+CsvSheet = Literal["budget", "expenses"]
+
 
 class ExportController:
     async def workbook(self, project_id: str) -> tuple[str, bytes]:
-        project = await Project.get_or_none(
-            id=project_id, archived_at__isnull=True
-        ).prefetch_related("currency")
-        if project is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-
-        book = write.ExportWorkbook(
-            project_name=project.name,
-            exponent=project.currency.exponent,
-            currency_code=project.currency_id,
-        )
+        project, book = await self._empty_book(project_id)
         codes = await self._budget(project, book)
         await self._expenses(project, book, codes)
         await self._outstanding(project, book)
         await self._agreements(project, book)
         await self._attachments(project, book)
         return project.name, write.build(book)
+
+    async def csv(self, project_id: str, sheet: CsvSheet) -> tuple[str, bytes]:
+        project, book = await self._empty_book(project_id)
+        codes = await self._budget(project, book)
+        if sheet == "budget":
+            return project.name, write.budget_csv(book)
+        await self._expenses(project, book, codes)
+        return project.name, write.expenses_csv(book)
+
+    async def _empty_book(self, project_id: str) -> tuple[Project, write.ExportWorkbook]:
+        project = await Project.get_or_none(
+            id=project_id, archived_at__isnull=True
+        ).prefetch_related("currency")
+        if project is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        book = write.ExportWorkbook(
+            project_name=project.name,
+            exponent=project.currency.exponent,
+            currency_code=project.currency_id,
+        )
+        return project, book
 
     async def _budget(self, project: Project, book: write.ExportWorkbook) -> dict[str, str]:
         categories = await Category.filter(
@@ -65,6 +80,9 @@ class ExportController:
                 for number, item in enumerate(by_category.get(category.id, []), start=1)
             ]
             book.categories.append(write.BudgetCategory(code=code, name=category.name, lines=lines))
+        for category, row in zip(categories, book.categories, strict=True):
+            if category.parent_id:
+                row.parent_code = codes.get(category.parent_id, "")
         return codes
 
     async def _expenses(
@@ -124,6 +142,11 @@ class ExportController:
                     attachment=attachment_names.get(expense.id, ""),
                     paid_by=person.name if person else "",
                     notes=expense.notes or "",
+                    cost_type=expense.cost_type.value.capitalize() if expense.cost_type else "",
+                    quantity=expense.quantity,
+                    unit_rate=expense.unit_rate,
+                    item=item.name if item else "",
+                    unit=(item.unit or "") if item else "",
                 )
             )
 

@@ -243,6 +243,13 @@
     <div class="actions">
       <app-button variant="secondary" (pressed)="importWorkbook()">Import Workbook</app-button>
       <app-button variant="secondary" (pressed)="exportWorkbook()">Export Workbook</app-button>
+      <app-button variant="secondary" (pressed)="exportCsv('budget')"
+        >Export Budget (CSV)</app-button
+      >
+      <app-button variant="secondary" (pressed)="exportCsv('expenses')"
+        >Export Expenses (CSV)</app-button
+      >
+      <app-button variant="secondary" (pressed)="exportReport()">Export Report (PDF)</app-button>
     </div>
 
     <p class="t-small note">
@@ -254,6 +261,12 @@
     <p class="t-small note">
       Export creates a workbook of {{ project().name }} in the import format, so it can be imported
       into Setout again. Attachments are listed by file name and are not included.
+    </p>
+
+    <p class="t-small note">
+      The budget and expenses CSVs are single sheets in the same import format. The report is a PDF
+      of the totals, budget by category and cost type, expenses by month, agreements, advances and
+      outstanding deliveries.
     </p>
   </section>
 </div>

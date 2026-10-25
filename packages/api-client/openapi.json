@@ -8758,6 +8758,80 @@
         }
       }
     },
+    "/api/projects/{project_id}/export.csv": {
+      "get": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Export Project Csv",
+        "description": "Export the project's budget or expenses as CSV in the import format.",
+        "operationId": "exportProjectCsv",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "sheet",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "budget",
+                "expenses"
+              ],
+              "type": "string",
+              "description": "The sheet to export",
+              "title": "Sheet"
+            },
+            "description": "The sheet to export"
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One sheet of the workbook as CSV",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "The file could not be read"
+          }
+        }
+      }
+    },
     "/api/import/sample": {
       "get": {
         "tags": [
@@ -8811,6 +8885,72 @@
           },
           "401": {
             "description": "Not authenticated"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/report.pdf": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Export Project Report",
+        "description": "Export a PDF report of the project's budget, expenses, agreements and deliveries.",
+        "operationId": "exportProjectReport",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The project report",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
           },
           "422": {
             "description": "Validation Error",

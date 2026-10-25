@@ -39,6 +39,7 @@ from setout.routers import (
     map,
     person,
     project,
+    report,
     search,
     vendor,
 )
@@ -163,6 +164,7 @@ def create_app() -> FastAPI:
     api.include_router(agreement.router)
     api.include_router(delivery.router)
     api.include_router(import_sheet.router)
+    api.include_router(report.router)
     api.include_router(attachment.router)
     api.include_router(search.router)
     api.include_router(home.router)

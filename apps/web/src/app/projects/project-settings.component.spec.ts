@@ -129,6 +129,16 @@ describe('ProjectSettingsComponent', () => {
     expect((await ready()).exportUrl()).toBe('/api/projects/p1/export');
   });
 
+  it('builds the CSV export URL for each sheet', async () => {
+    const component = await ready();
+    expect(component.csvUrl('budget')).toBe('/api/projects/p1/export.csv?sheet=budget');
+    expect(component.csvUrl('expenses')).toBe('/api/projects/p1/export.csv?sheet=expenses');
+  });
+
+  it('builds the report URL for this project', async () => {
+    expect((await ready()).reportUrl()).toBe('/api/projects/p1/report.pdf');
+  });
+
   it('opens the import page with this project selected', async () => {
     (await ready()).importWorkbook();
     expect(navigations[0][0]).toEqual(['/import']);

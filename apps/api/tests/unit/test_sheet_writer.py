@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 from datetime import date, datetime
+from decimal import Decimal
 
 import pytest
 from openpyxl import load_workbook
@@ -245,3 +246,41 @@ class TestWhatSetoutWroteReadsBack:
         assert [line.cost_type for line in budgeted.categories[0].lines] == ["fixed", "material"]
         assert [row.amount for row in spend.expenses] == [book.expenses[0].amount]
         assert spend.expenses[0].description == "Roofing sheets"
+
+
+def test_the_csv_filename_names_the_sheet() -> None:
+    assert (
+        write.filename_for("Jacaranda Close", datetime(2026, 8, 19), part="budget", extension="csv")
+        == "setout-jacaranda-close-budget-20260819.csv"
+    )
+
+
+def test_budget_rows_put_each_budget_item_amount_in_its_cost_type_column() -> None:
+    rows = write.budget_rows(a_book())
+
+    assert rows[0][:2] == ["1000", "Administrative Expenses"]
+    beacons = next(row for row in rows if row[0] == "1001")
+    assert beacons == ["1001", "Beacons", "", "", Decimal("1000.00"), Decimal("1000.00")]
+
+
+def test_csv_rows_use_the_currency_exponent() -> None:
+    book = a_book()
+    book.exponent = 0
+    book.categories[0].lines[0].budgeted_amount = 1_000
+
+    beacons = next(row for row in write.budget_rows(book) if row[0] == "1001")
+
+    assert beacons[-1] == Decimal("1000")
+
+
+def test_expenses_csv_starts_with_a_byte_order_mark_and_the_header_row() -> None:
+    data = write.expenses_csv(a_book())
+
+    assert data.startswith(b"\xef\xbb\xbf")
+    lines = data.decode("utf-8-sig").splitlines()
+    assert lines[0] == ",".join(write.EXPENSE_HEAD)
+    assert len(lines) == 1 + len(a_book().expenses)
+
+
+def test_csv_without_a_book_is_the_header_row_only() -> None:
+    assert write.budget_csv().decode("utf-8-sig") == ",".join(write.BUDGET_HEAD) + "\n"

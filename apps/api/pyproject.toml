@@ -29,6 +29,7 @@ dependencies = [
     "boto3==1.43.90",
     "httpx==0.28.1",
     "openpyxl==3.1.5",
+    "reportlab==5.0.1",
 ]
 
 [dependency-groups]
@@ -95,8 +96,12 @@ disallow_untyped_defs = false
 # boto3 ships no type information. Only the S3 backend touches it, and it is
 # kept to the few calls the storage interface needs.
 [[tool.mypy.overrides]]
-module = ["boto3.*", "botocore.*", "openpyxl.*"]
+module = ["boto3.*", "botocore.*", "openpyxl.*", "reportlab.*"]
 ignore_missing_imports = true
+
+# Pillow is installed for reportlab only. Held below 13.0.0, released 2026-10-16, until it is two weeks old.
+[tool.uv]
+constraint-dependencies = ["pillow<13"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

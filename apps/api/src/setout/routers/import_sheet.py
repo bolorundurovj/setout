@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from fastapi.responses import Response
 
 from setout.config import get_settings
-from setout.controllers.export_sheet import ExportController
+from setout.controllers.export_sheet import CsvSheet, ExportController
 from setout.controllers.import_sheet import ImportController
 from setout.models.user import User
 from setout.routers.auth import get_current_user
@@ -112,6 +112,33 @@ async def export_project(project_id: str, user: CurrentUser) -> Response:
     return Response(
         content=data,
         media_type=XLSX_TYPE,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get(
+    "/projects/{project_id}/export.csv",
+    operation_id="exportProjectCsv",
+    responses={
+        **IMPORT_ERRORS,
+        status.HTTP_200_OK: {
+            "description": "One sheet of the workbook as CSV",
+            "content": {"text/csv": {"schema": {"type": "string", "format": "binary"}}},
+        },
+    },
+    response_class=Response,
+)
+async def export_project_csv(
+    project_id: str,
+    user: CurrentUser,
+    sheet: Annotated[CsvSheet, Query(description="The sheet to export")],
+) -> Response:
+    """Export the project's budget or expenses as CSV in the import format."""
+    name, data = await exporter.csv(project_id, sheet)
+    filename = filename_for(name, datetime.now(UTC), part=sheet, extension="csv")
+    return Response(
+        content=data,
+        media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 

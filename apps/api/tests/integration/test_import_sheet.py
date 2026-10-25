@@ -349,6 +349,63 @@ async def test_export_of_unknown_project_returns_404(client: AsyncClient) -> Non
     assert (await client.get("/api/projects/nope/export")).status_code == 404
 
 
+async def test_project_exports_each_sheet_as_csv(client: AsyncClient) -> None:
+    imported = await _imported_project(client)
+
+    for sheet in ("budget", "expenses"):
+        resp = await client.get(
+            f"/api/projects/{imported['project_id']}/export.csv", params={"sheet": sheet}
+        )
+
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("text/csv")
+        assert f"-{sheet}-" in resp.headers["content-disposition"]
+        assert ".csv" in resp.headers["content-disposition"]
+
+
+async def test_csv_export_rejects_an_unknown_sheet(client: AsyncClient) -> None:
+    imported = await _imported_project(client)
+
+    resp = await client.get(
+        f"/api/projects/{imported['project_id']}/export.csv", params={"sheet": "vendors"}
+    )
+
+    assert resp.status_code == 422
+
+
+async def test_csv_export_of_unknown_project_returns_404(client: AsyncClient) -> None:
+    await set_up_admin(client)
+    resp = await client.get("/api/projects/nope/export.csv", params={"sheet": "budget"})
+    assert resp.status_code == 404
+
+
+async def test_csv_export_import_round_trip_keeps_totals_and_descriptions(
+    client: AsyncClient,
+) -> None:
+    imported = await _imported_project(client)
+    project_id = imported["project_id"]
+    before = (await client.get(f"/api/projects/{project_id}/expense-summary")).json()
+
+    budget = (
+        await client.get(f"/api/projects/{project_id}/export.csv", params={"sheet": "budget"})
+    ).content
+    expenses = (
+        await client.get(f"/api/projects/{project_id}/export.csv", params={"sheet": "expenses"})
+    ).content
+    again = await run_import(client, budget, name="Round trip")
+    await run_import(client, expenses, project_id=again["project_id"])
+
+    after = (await client.get(f"/api/projects/{again['project_id']}/expense-summary")).json()
+    assert after["budgeted_amount"] == before["budgeted_amount"]
+    assert after["spent_amount"] == before["spent_amount"]
+    assert again["budget_item_count"] == imported["budget_item_count"]
+    listing = (await client.get(f"/api/projects/{again['project_id']}/expenses")).json()
+    assert [row["description"] for row in listing["items"]] == [
+        "Bright Star Aluminium invoice 3835"
+    ]
+    assert listing["items"][0]["category_id"] is not None
+
+
 async def test_export_import_round_trip_keeps_totals(client: AsyncClient) -> None:
     imported = await _imported_project(client)
     before = (await client.get(f"/api/projects/{imported['project_id']}/expense-summary")).json()

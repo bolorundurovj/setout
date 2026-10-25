@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { Api, exportProject } from '@setout/api-client';
+import { Api, exportProject, exportProjectCsv, exportProjectReport } from '@setout/api-client';
 import type { ProjectRead, ProjectStatus, CategoryRead } from '@setout/api-client';
 import { AttachmentParent } from '../attachments/attachment.service';
 import { AttachmentsComponent } from '../attachments/attachments.component';
@@ -189,11 +189,34 @@ export class ProjectSettingsComponent {
     return `${this.api.rootUrl}${path}`;
   }
 
+  csvUrl(sheet: 'budget' | 'expenses'): string {
+    const path = exportProjectCsv.PATH.replace('{project_id}', this.project().id);
+    return `${this.api.rootUrl}${path}?sheet=${sheet}`;
+  }
+
+  reportUrl(): string {
+    const path = exportProjectReport.PATH.replace('{project_id}', this.project().id);
+    return `${this.api.rootUrl}${path}`;
+  }
+
   exportWorkbook(): void {
+    this.download(this.exportUrl(), 'Workbook download started.');
+  }
+
+  exportCsv(sheet: 'budget' | 'expenses'): void {
+    const name = sheet === 'budget' ? 'Budget' : 'Expenses';
+    this.download(this.csvUrl(sheet), `${name} CSV download started.`);
+  }
+
+  exportReport(): void {
+    this.download(this.reportUrl(), 'Report download started.');
+  }
+
+  private download(url: string, message: string): void {
     const link = document.createElement('a');
-    link.href = this.exportUrl();
+    link.href = url;
     link.click();
-    this.toast.show('Workbook download started.');
+    this.toast.show(message);
   }
 
   importWorkbook(): void {
