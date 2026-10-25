@@ -6,6 +6,7 @@ from setout.models.attachment import Attachment
 from setout.models.budget import BudgetItem
 from setout.models.category import Category
 from setout.models.category_preset import CategoryPreset
+from setout.models.change import Change, ChangeAction
 from setout.models.country import Country, State
 from setout.models.currency import Currency
 from setout.models.delivery import Delivery
@@ -41,6 +42,8 @@ __all__ = [
     "ProjectStatus",
     "Category",
     "CategoryPreset",
+    "Change",
+    "ChangeAction",
     "Session",
     "State",
     "User",
