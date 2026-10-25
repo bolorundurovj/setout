@@ -24,7 +24,10 @@ UNIMPORTED_COLUMNS = {
         "Labour, Material and Fixed Costs: each budget item stores one amount, not a split",
         "Actual Cost, Under/Over and Delta: Setout calculates these from expenses",
     ],
-    SheetKind.EXPENSES: ["Attachment: only the file name is imported, not the file"],
+    SheetKind.EXPENSES: [
+        "Attachment: files are not imported. In a sheet with no Cost Type column, the file"
+        " name is added to the notes",
+    ],
 }
 UNIMPORTED_IF_PRESENT = {
     SheetKind.OUTSTANDING: {"expected": "Expected", "location": "Location"},

@@ -75,6 +75,24 @@ def as_minor(value: object, exponent: int) -> int | None:
     return int((amount * (10**exponent)).quantize(Decimal(1)))
 
 
+def as_quantity(value: object) -> Decimal | None:
+    """Rounded to the three decimal places an expense quantity stores."""
+    if value is None or value == "":
+        return None
+    try:
+        quantity = Decimal(str(value).replace(",", "").strip())
+    except (InvalidOperation, ValueError):
+        return None
+    return quantity.quantize(Decimal("0.001"))
+
+
+COST_TYPES = {"labour": "labour", "labor": "labour", "material": "material", "fixed": "fixed"}
+
+
+def as_cost_type(value: object) -> str | None:
+    return COST_TYPES.get(as_text(value).lower())
+
+
 def as_phone(value: object) -> str:
     if value is None:
         return ""

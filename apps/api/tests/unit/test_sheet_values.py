@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from decimal import Decimal
 
 import pytest
 
 from setout.services.sheets.values import (
     as_bool,
     as_code,
+    as_cost_type,
     as_date,
     as_minor,
     as_phone,
+    as_quantity,
     as_text,
     codes_in,
     from_serial,
@@ -148,3 +151,37 @@ class TestSerialDatesAtTheEdges:
     def test_nothing_sensible_comes_back_as_nothing(self) -> None:
         assert from_serial(0) is None
         assert from_serial(-5) is None
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (10, Decimal("10.000")),
+        ("2.5", Decimal("2.500")),
+        ("1,250.1255", Decimal("1250.126")),
+        ("", None),
+        (None, None),
+        ("ten", None),
+    ],
+)
+def test_as_quantity_rounds_to_three_decimal_places(
+    value: object, expected: Decimal | None
+) -> None:
+    assert as_quantity(value) == expected
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("Labour", "labour"),
+        ("labor", "labour"),
+        (" MATERIAL ", "material"),
+        ("Fixed", "fixed"),
+        ("", None),
+        ("overheads", None),
+    ],
+)
+def test_as_cost_type_reads_display_names_and_the_american_spelling(
+    value: object, expected: str | None
+) -> None:
+    assert as_cost_type(value) == expected

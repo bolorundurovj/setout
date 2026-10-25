@@ -3,7 +3,15 @@ from __future__ import annotations
 from setout.services.sheets.detect import DetectedSheet
 from setout.services.sheets.parsed import ExpenseLine, ParsedExpenses, Problem, ProblemKind
 from setout.services.sheets.read_budget import NO_DESCRIPTION_PLACEHOLDER
-from setout.services.sheets.values import as_bool, as_date, as_minor, as_text, codes_in
+from setout.services.sheets.values import (
+    as_bool,
+    as_cost_type,
+    as_date,
+    as_minor,
+    as_quantity,
+    as_text,
+    codes_in,
+)
 
 
 def read(detected: DetectedSheet, exponent: int) -> ParsedExpenses:
@@ -66,6 +74,11 @@ def read(detected: DetectedSheet, exponent: int) -> ParsedExpenses:
                 paid_by=as_text(_cell(row, at.get("paid by", -1))),
                 paid=paid,
                 notes=_notes(row, at),
+                cost_type=as_cost_type(_cell(row, at.get("cost type", -1))),
+                quantity=as_quantity(_cell(row, at.get("quantity", -1))),
+                unit_rate=as_minor(_cell(row, at.get("unit rate", -1)), exponent),
+                item=as_text(_cell(row, at.get("item", -1))),
+                unit=as_text(_cell(row, at.get("unit", -1))),
             )
         )
     return out
@@ -83,7 +96,8 @@ def _notes(row: list[object], at: dict[str, int]) -> str:
     if notes:
         parts.append(notes)
     attachment = as_text(_cell(row, at.get("attachment", -1)))
-    if attachment:
+    # Only Setout's current format has Cost Type, and there Attachment names files Setout stores.
+    if attachment and "cost type" not in at:
         parts.append(f"Attachment: {attachment}")
     return " · ".join(parts)
 

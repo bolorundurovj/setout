@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 
 from setout.services.sheets import (
@@ -258,3 +260,89 @@ class TestWhetherSomethingArrived:
         assert read_outstanding.is_received("") is False
         assert read_outstanding.is_received("not delivered") is False
         assert read_outstanding.is_received("Not received") is False
+
+
+SETOUT_EXPENSE_HEAD = [
+    *EXPENSE_HEAD,
+    "Description",
+    "Cost Type",
+    "Quantity",
+    "Unit Rate",
+    "Item",
+    "Unit",
+]
+
+
+class TestSetoutColumns:
+    def test_a_category_row_reads_its_parent_code(self) -> None:
+        sheet = found(
+            "Budget",
+            [*BUDGET_HEAD, "Parent Code"],
+            ["1000", "Superstructure", "", "", "", 0, "", ""],
+            ["2000", "Blockwork", "", "", "", 0, "", "1000"],
+        )
+
+        categories = read_budget.read(sheet, exponent=2).categories
+
+        assert [(c.code, c.parent_code) for c in categories] == [("1000", ""), ("2000", "1000")]
+
+    def test_an_expense_reads_cost_type_quantity_unit_rate_and_item(self) -> None:
+        row = [
+            "",
+            "Corner Depot",
+            "2001",
+            "2026-09-10",
+            76500,
+            "",
+            "",
+            "Yes",
+            "",
+            "n",
+            "Cement",
+            "Material",
+            10,
+            7650,
+            "Cement",
+            "bag",
+        ]
+        sheet = found("Expenses", SETOUT_EXPENSE_HEAD, row)
+
+        line = read_expenses.read(sheet, exponent=2).expenses[0]
+
+        assert (line.cost_type, line.quantity, line.unit_rate) == (
+            "material",
+            Decimal("10.000"),
+            765000,
+        )
+        assert (line.item, line.unit) == ("Cement", "bag")
+
+    def test_setout_format_keeps_the_attachment_name_out_of_the_notes(self) -> None:
+        row = [
+            "",
+            "",
+            "2001",
+            "2026-09-10",
+            100,
+            "receipt.jpg",
+            "",
+            "Yes",
+            "",
+            "Paid in cash",
+            "Cement",
+            "",
+            "",
+            "",
+            "",
+            "",
+        ]
+        sheet = found("Expenses", SETOUT_EXPENSE_HEAD, row)
+
+        assert read_expenses.read(sheet, exponent=0).expenses[0].notes == "Paid in cash"
+
+    def test_other_formats_add_the_attachment_name_to_the_notes(self) -> None:
+        row = ["", "", "2001", "2026-09-10", 100, "receipt.jpg", "", "Yes", "", "Paid in cash"]
+        sheet = found("Expenses", EXPENSE_HEAD, row)
+
+        notes = read_expenses.read(sheet, exponent=0).expenses[0].notes
+
+        assert notes == "Paid in cash · Attachment: receipt.jpg"

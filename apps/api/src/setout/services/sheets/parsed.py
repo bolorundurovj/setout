@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
+from decimal import Decimal
 from enum import StrEnum
 
 
@@ -34,6 +35,7 @@ class BudgetedCategory:
     code: str
     name: str
     lines: list[BudgetedLine] = field(default_factory=list)
+    parent_code: str = ""
 
     @property
     def budgeted_amount(self) -> int:
@@ -80,6 +82,11 @@ class ExpenseLine:
     paid_by: str
     paid: bool
     notes: str
+    cost_type: str | None = None
+    quantity: Decimal | None = None
+    unit_rate: int | None = None
+    item: str = ""
+    unit: str = ""
 
 
 @dataclass

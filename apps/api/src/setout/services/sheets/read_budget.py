@@ -19,6 +19,7 @@ def read(detected: DetectedSheet, exponent: int) -> ParsedBudget:
     code_at = detected.columns.get("cost code", 0)
     name_at = detected.columns.get("description", 1)
     budgeted_at = detected.columns.get("budget", 5)
+    parent_at = detected.columns.get("parent code", -1)
     cost_type_columns = {
         "labour": detected.columns.get("labour costs", -1),
         "material": detected.columns.get("material costs", -1),
@@ -36,7 +37,12 @@ def read(detected: DetectedSheet, exponent: int) -> ParsedBudget:
             continue
 
         if is_category_code(code):
-            current = BudgetedCategory(row=number, code=code, name=name or code)
+            current = BudgetedCategory(
+                row=number,
+                code=code,
+                name=name or code,
+                parent_code=as_code(_cell(row, parent_at)),
+            )
             out.categories.append(current)
             continue
 

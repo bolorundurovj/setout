@@ -10,6 +10,7 @@ from setout.models.budget import BudgetItem
 from setout.models.category import Category
 from setout.models.currency import Currency
 from setout.models.expense import Expense
+from setout.models.item import Item
 from setout.models.person import Person
 from setout.models.project import Project
 from setout.models.vendor import Vendor
@@ -280,11 +281,12 @@ class ImportController:
 
         vendors, vendors_created = await self._vendors(parsed)
         people = await self._people(parsed)
+        catalogue = await self._items(parsed)
         categories, category_ids, items, budgeted = await self._import_budget(
             parsed, project, answers
         )
         expenses, spent, skipped = await self._import_expenses(
-            parsed, project, vendors, people, categories, answers
+            parsed, project, vendors, people, catalogue, categories, answers
         )
 
         return ImportResult(
@@ -336,6 +338,19 @@ class ImportController:
                 by_name[payer_name.casefold()] = created.id
         return by_name
 
+    async def _items(self, parsed: ParsedWorkbook) -> dict[str, str]:
+        units = {
+            line.item.strip(): line.unit.strip()
+            for line in parsed.expenses.expenses
+            if line.item.strip()
+        }
+        by_name = {i.name.casefold(): i.id for i in await Item.filter(archived_at__isnull=True)}
+        for name in sorted(units):
+            if name.casefold() not in by_name:
+                created = await Item.create(name=name, unit=units[name] or None)
+                by_name[name.casefold()] = created.id
+        return by_name
+
     async def _import_budget(
         self, parsed: ParsedWorkbook, project: Project, answers: Answers
     ) -> tuple[dict[str, str], set[str], int, int]:
@@ -346,6 +361,7 @@ class ImportController:
             category_ids_by_key.setdefault(known.name.casefold(), known.id)
 
         category_ids: set[str] = set()
+        created_with_parent: list[tuple[Category, str]] = []
         items = 0
         budgeted = 0
         for order, heading in enumerate(parsed.budget.categories):
@@ -360,6 +376,8 @@ class ImportController:
                 )
                 category_id = created.id
                 category_ids_by_key[heading.code] = category_id
+                if heading.parent_code:
+                    created_with_parent.append((created, heading.parent_code))
             category_ids.add(category_id)
 
             for line in heading.lines:
@@ -372,6 +390,13 @@ class ImportController:
                 )
                 items += 1
                 budgeted += line.budgeted_amount
+
+        # Parents are linked after every row is read, since a parent can follow its child.
+        for child, parent_code in created_with_parent:
+            parent_id = category_ids_by_key.get(parent_code)
+            if parent_id and parent_id != child.id:
+                child.parent_id = parent_id
+                await child.save()
         return category_ids_by_key, category_ids, items, budgeted
 
     async def _import_expenses(
@@ -380,6 +405,7 @@ class ImportController:
         project: Project,
         vendors: dict[str, str],
         people: dict[str, str],
+        catalogue: dict[str, str],
         categories: dict[str, str],
         answers: Answers,
     ) -> tuple[int, int, int]:
@@ -416,6 +442,10 @@ class ImportController:
                 description=line.description,
                 amount=line.amount,
                 notes=line.notes or None,
+                cost_type=line.cost_type,
+                quantity=line.quantity,
+                unit_rate=line.unit_rate,
+                item_id=catalogue.get(line.item.casefold()) if line.item else None,
             )
             existing.add(key)
             imported += 1
