@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 import type { AdvanceRead, AgreementRead, ExpenseRead, ProjectRead } from '@setout/api-client';
 import { AttachmentParent } from '../attachments/attachment.service';
 import { AttachmentsComponent } from '../attachments/attachments.component';
+import { ChangeHistoryComponent } from '../changes/change-history.component';
 import { formatAmount, formatAmountInput, formatMoney, parseMoney } from '../budget/money';
 import { ExpenseService } from '../expenses/expense.service';
 import { ToastService } from '../toast.service';
@@ -21,6 +22,7 @@ import { AgreementService } from './agreement.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     AttachmentsComponent,
+    ChangeHistoryComponent,
     ButtonComponent,
     InfiniteScrollDirective,
     PaginationComponent,

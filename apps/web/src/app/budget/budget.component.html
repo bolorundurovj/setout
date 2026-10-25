@@ -89,53 +89,58 @@
                     }
                   </span>
                   <span class="right t-mono muted">{{ money(item.budgeted_amount) }}</span>
-                  @if (item.archived_at) {
-                    @if (pendingDelete() === item.id) {
-                      <span class="confirm-inline">
-                        <input
-                          class="input-field delete-input"
-                          type="text"
-                          placeholder="DELETE"
-                          [value]="deleteConfirmationText()"
-                          (input)="deleteConfirmationText.set(value($event))"
-                        />
+                  <span class="item-actions">
+                    <button type="button" class="link-action t-mono" (click)="showChanges(item)">
+                      Change History
+                    </button>
+                    @if (item.archived_at) {
+                      @if (pendingDelete() === item.id) {
+                        <span class="confirm-inline">
+                          <input
+                            class="input-field delete-input"
+                            type="text"
+                            placeholder="DELETE"
+                            [value]="deleteConfirmationText()"
+                            (input)="deleteConfirmationText.set(value($event))"
+                          />
+                          <button
+                            type="button"
+                            class="link-action t-mono danger-link"
+                            [disabled]="!canConfirmDelete()"
+                            (click)="deleteItemPermanently(category, item.id)"
+                          >
+                            Delete
+                          </button>
+                          <button type="button" class="link-action t-mono" (click)="cancelDelete()">
+                            Cancel
+                          </button>
+                        </span>
+                      } @else {
+                        <button
+                          type="button"
+                          class="link-action t-mono"
+                          (click)="restoreItem(category, item.id)"
+                        >
+                          Restore
+                        </button>
                         <button
                           type="button"
                           class="link-action t-mono danger-link"
-                          [disabled]="!canConfirmDelete()"
-                          (click)="deleteItemPermanently(category, item.id)"
+                          (click)="requestDelete(item.id)"
                         >
                           Delete
                         </button>
-                        <button type="button" class="link-action t-mono" (click)="cancelDelete()">
-                          Cancel
-                        </button>
-                      </span>
+                      }
                     } @else {
                       <button
                         type="button"
                         class="link-action t-mono"
-                        (click)="restoreItem(category, item.id)"
+                        (click)="archiveItem(category, item.id)"
                       >
-                        Restore
-                      </button>
-                      <button
-                        type="button"
-                        class="link-action t-mono danger-link"
-                        (click)="requestDelete(item.id)"
-                      >
-                        Delete
+                        Archive
                       </button>
                     }
-                  } @else {
-                    <button
-                      type="button"
-                      class="link-action t-mono"
-                      (click)="archiveItem(category, item.id)"
-                    >
-                      Archive
-                    </button>
-                  }
+                  </span>
                 </div>
               }
               @if (itemsFor(category.id).length === 0) {
@@ -186,3 +191,17 @@
     </div>
   }
 </div>
+
+<app-drawer
+  [open]="changesFor() !== null"
+  title="Change History"
+  [subtitle]="changesFor()?.description ?? ''"
+  (closeRequested)="changesFor.set(null)"
+>
+  @if (changesFor(); as item) {
+    <app-change-history
+      [target]="{ entity: 'budget_item', id: item.id }"
+      [exponent]="project().currency_exponent"
+    />
+  }
+</app-drawer>

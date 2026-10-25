@@ -10,6 +10,7 @@ import {
 import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
 import type { ExpenseSort, ProjectRead } from '@setout/api-client';
+import { ChangeHistoryComponent } from '../changes/change-history.component';
 import { AgreementsComponent } from '../agreements/agreements.component';
 import { BudgetCompareComponent } from '../compare/budget-compare.component';
 import { ProjectDashboardComponent } from '../dashboard/project-dashboard.component';
@@ -36,6 +37,7 @@ interface Tab {
     RouterLink,
     AgreementsComponent,
     BudgetCompareComponent,
+    ChangeHistoryComponent,
     ProjectDashboardComponent,
     DeliveriesComponent,
     ExpensesComponent,
@@ -85,6 +87,7 @@ export class ProjectDetailComponent {
     { key: 'budget', name: 'Budget' },
     { key: 'agreements', name: 'Agreements' },
     { key: 'deliveries', name: 'Deliveries' },
+    { key: 'changes', name: 'Change History' },
     { key: 'psettings', name: 'Project Settings' },
   ];
 

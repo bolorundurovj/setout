@@ -340,6 +340,13 @@
     />
   </div>
 
+  @if (changeTarget(); as target) {
+    <div class="change-history">
+      <span class="t-micro">Change History</span>
+      <app-change-history [target]="target" [exponent]="project().currency_exponent" />
+    </div>
+  }
+
   <div class="actions">
     <app-button type="submit" size="large" [disabled]="!canSave()" [loading]="expenses.saving()">
       {{ isEditing() ? 'Save Changes' : 'Save Expense' }}

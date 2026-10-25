@@ -308,3 +308,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+.change-history {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

@@ -38,6 +38,10 @@
       <app-agreements [project]="p" />
     } @else if (activeTab() === 'deliveries') {
       <app-deliveries [project]="p" />
+    } @else if (activeTab() === 'changes') {
+      <div class="card">
+        <app-change-history [target]="{ projectId: p.id }" [exponent]="p.currency_exponent" />
+      </div>
     } @else if (activeTab() === 'months') {
       <app-months [project]="p" />
     } @else if (activeTab() === 'psettings') {

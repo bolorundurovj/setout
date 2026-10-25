@@ -4,10 +4,6 @@ Designed but not built. Each was worked through in detail before being written d
 
 Nothing here is a commitment. If you want one of these, open an issue. Requests raise an item's priority.
 
-## Budget revision history
-
-Setout exists to replace a spreadsheet whose budget figures were entered after the money was spent. `BudgetItem` carries a `set_at` field recording when the amount was last set. Updating a budgeted amount overwrites the previous one, so there is no way to show that a budget was raised to match spending rather than the reverse. Keeping every revision is the highest priority item here.
-
 ## Price increase warnings
 
 Setout already stores past prices: item price history is

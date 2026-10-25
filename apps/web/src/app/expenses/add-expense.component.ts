@@ -20,6 +20,8 @@ import type {
 } from '@setout/api-client';
 import { AgreementService } from '../agreements/agreement.service';
 import { AttachmentParent, AttachmentService } from '../attachments/attachment.service';
+import { ChangeHistoryComponent } from '../changes/change-history.component';
+import { ChangeTarget } from '../changes/change.service';
 import { BudgetService } from '../budget/budget.service';
 import { formatMoney, parseMoney } from '../budget/money';
 import { ItemService } from '../items/item.service';
@@ -44,7 +46,7 @@ function isoDay(offsetDays = 0): string {
   selector: 'app-add-expense',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChipGroupComponent],
+  imports: [ButtonComponent, ChangeHistoryComponent, ChipGroupComponent],
   templateUrl: './add-expense.component.html',
   styleUrl: './add-expense.component.scss',
 })
@@ -154,6 +156,11 @@ export class AddExpenseComponent {
     const quantity = this.quantityValue();
     const rate = this.unitRateMinor();
     return quantity === null || rate === null ? null : Math.round(quantity * rate);
+  });
+
+  readonly changeTarget = computed<ChangeTarget | null>(() => {
+    const expense = this.expenseToEdit();
+    return expense ? { entity: 'expense', id: expense.id } : null;
   });
 
   readonly expenseAttachments = computed(() => {

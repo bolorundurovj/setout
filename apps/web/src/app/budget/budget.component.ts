@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type { BudgetItemRead, CostType, ProjectRead, CategoryRead } from '@setout/api-client';
+import { ChangeHistoryComponent } from '../changes/change-history.component';
 import { ButtonComponent } from '../ui/button.component';
+import { DrawerComponent } from '../ui/drawer.component';
 import { Chip, ChipGroupComponent } from '../ui/chip-group.component';
 import { ComboboxComponent } from '../ui/combobox.component';
 import { ToastService } from '../toast.service';
@@ -14,7 +16,15 @@ import { formatAmountInput, formatMoney, parseMoney } from './money';
   selector: 'app-budget',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, ButtonComponent, ChipGroupComponent, ComboboxComponent, ToggleComponent],
+  imports: [
+    FormsModule,
+    ButtonComponent,
+    ChangeHistoryComponent,
+    ChipGroupComponent,
+    ComboboxComponent,
+    DrawerComponent,
+    ToggleComponent,
+  ],
   templateUrl: './budget.component.html',
   styleUrl: './budget.component.scss',
 })
@@ -28,6 +38,7 @@ export class BudgetComponent {
   readonly newCategoryName = signal('');
   readonly includeArchived = signal(false);
   readonly pendingDelete = signal<string | null>(null);
+  readonly changesFor = signal<BudgetItemRead | null>(null);
   readonly deleteConfirmationText = signal('');
   private readonly drafts = signal<Record<string, string>>({});
   readonly itemDescription = signal('');
@@ -118,6 +129,10 @@ export class BudgetComponent {
   money(minor: number): string {
     const project = this.project();
     return formatMoney(minor, project.currency_code, project.currency_exponent);
+  }
+
+  showChanges(item: BudgetItemRead): void {
+    this.changesFor.set(item);
   }
 
   itemsFor(categoryId: string): BudgetItemRead[] {

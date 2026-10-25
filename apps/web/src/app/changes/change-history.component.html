@@ -1,0 +1,29 @@
+<div class="changes">
+  @for (change of list().rows; track change.id) {
+    <div class="change">
+      <div class="head">
+        <span class="t-body">{{ action(change) }}</span>
+        @if (showsRecord()) {
+          <span class="t-small">{{ record(change) }}</span>
+        }
+        <span class="t-small muted">{{ who(change) }} &middot; {{ when(change) }}</span>
+      </div>
+      @for (line of lines(change); track line.label) {
+        <div class="line t-small">
+          <span class="label muted">{{ line.label }}</span>
+          <span class="value t-mono">{{ valueText(line) }}</span>
+        </div>
+      }
+    </div>
+  }
+  @if (list().loading) {
+    <p class="t-small muted">Loading change history…</p>
+  } @else if (changes.error()) {
+    <p class="t-small muted">{{ changes.error() }}</p>
+  } @else if (list().rows.length === 0) {
+    <p class="t-small muted">No changes recorded.</p>
+  }
+  @if (hasMore() && !list().loading) {
+    <button type="button" class="link-action t-mono" (click)="loadMore()">Show More</button>
+  }
+</div>

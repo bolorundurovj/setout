@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 import type { DeliveryRead, ProjectRead } from '@setout/api-client';
 import { AttachmentParent } from '../attachments/attachment.service';
 import { AttachmentsComponent } from '../attachments/attachments.component';
+import { ChangeHistoryComponent } from '../changes/change-history.component';
 import { formatMoney } from '../budget/money';
 import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
@@ -13,7 +14,13 @@ import { DeliveryService } from './delivery.service';
   selector: 'app-deliveries',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AttachmentsComponent, ButtonComponent, PaginationComponent, ToggleComponent],
+  imports: [
+    AttachmentsComponent,
+    ChangeHistoryComponent,
+    ButtonComponent,
+    PaginationComponent,
+    ToggleComponent,
+  ],
   templateUrl: './deliveries.component.html',
   styleUrl: './deliveries.component.scss',
 })

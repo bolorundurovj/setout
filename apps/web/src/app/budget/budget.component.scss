@@ -149,7 +149,7 @@
 
 .item {
   display: grid;
-  grid-template-columns: 1fr 170px 130px;
+  grid-template-columns: 1fr 170px auto;
   align-items: center;
   gap: 10px;
 
@@ -259,3 +259,10 @@
 }
 
 @include rows.stacked-rows;
+
+.item-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}

@@ -140,6 +140,11 @@
 
         @if (editing() === agreement.id && editingParent(); as parent) {
           <app-attachments class="attachments" [parent]="parent" />
+          <app-change-history
+            class="changes"
+            [target]="{ entity: 'agreement', id: parent.id }"
+            [exponent]="project().currency_exponent"
+          />
         }
 
         <div class="payments">
