@@ -227,6 +227,17 @@
   </section>
 
   <section class="card block">
+    <span class="t-micro">Attachments</span>
+
+    <app-attachments [parent]="attachmentParent()" />
+
+    <p class="t-small note">
+      Images and PDFs that belong to {{ project().name }} as a whole, such as a building permit.
+      Attach a receipt to its expense, and a signed contract to its agreement.
+    </p>
+  </section>
+
+  <section class="card block">
     <span class="t-micro">Workbook</span>
 
     <div class="actions">

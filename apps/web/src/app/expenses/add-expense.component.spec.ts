@@ -101,16 +101,16 @@ describe('AddExpenseComponent', () => {
           useValue: {
             error: () => null,
             saving: () => false,
-            forExpense: () => attachments,
+            forParent: () => attachments,
             load: async () => undefined,
             formatSize: (bytes: number) => `${bytes} B`,
             fileUrl: (id: string) => `/api/attachments/${id}/file`,
-            add: async (_projectId: string, expenseId: string, file: File) => {
-              uploads.push({ expenseId, file });
+            add: async (parent: { id: string }, file: File) => {
+              uploads.push({ expenseId: parent.id, file });
               return { id: 'a1', filename: file.name };
             },
-            archive: async (_expenseId: string, id: string) => void archived.push(id),
-            restore: async (_expenseId: string, id: string) => {
+            archive: async (_parent: unknown, id: string) => void archived.push(id),
+            restore: async (_parent: unknown, id: string) => {
               restored.push(id);
               return { id, filename: 'receipt.jpg' };
             },

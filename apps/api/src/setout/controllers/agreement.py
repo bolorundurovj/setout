@@ -7,6 +7,7 @@ from fastapi import HTTPException, status
 
 from setout.models.advance import Advance
 from setout.models.agreement import Agreement
+from setout.models.attachment import Attachment
 from setout.models.expense import Expense
 from setout.models.person import Person
 from setout.models.project import Project
@@ -22,7 +23,11 @@ from setout.schemas.agreement import (
     AgreementUpdate,
     PersonBalance,
 )
+from setout.services.storage import Storage
+from setout.utils.attachments import counts_for
 from setout.utils.balances import balance_of, paid_by_agreement, person_balances
+from setout.utils.cascade import archive_under_agreement, restore_under_agreement
+from setout.utils.uploads import delete_unreferenced
 
 
 class AgreementController:
@@ -36,8 +41,9 @@ class AgreementController:
         total = await query.count()
         rows = await query.offset(offset).limit(limit).prefetch_related("vendor")
         paid = await paid_by_agreement([row.id for row in rows])
+        counts = await counts_for("agreement_id", [row.id for row in rows])
         return AgreementPage(
-            items=[self._read(row, paid.get(row.id, 0)) for row in rows],
+            items=[self._read(row, paid.get(row.id, 0), counts.get(row.id, 0)) for row in rows],
             total=total,
             limit=limit,
             offset=offset,
@@ -50,12 +56,12 @@ class AgreementController:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vendor not found")
         agreement = await Agreement.create(project_id=project_id, **req.model_dump())
         await agreement.fetch_related("vendor")
-        return self._read(agreement, 0)
+        return self._read(agreement, 0, 0)
 
     async def get(self, agreement_id: str) -> AgreementRead:
         agreement = await self._agreement_or_404(agreement_id)
         paid = await paid_by_agreement([agreement.id])
-        return self._read(agreement, paid.get(agreement.id, 0))
+        return await self._read_one(agreement, paid.get(agreement.id, 0))
 
     async def update(self, agreement_id: str, req: AgreementUpdate) -> AgreementRead:
         agreement = await self._agreement_or_404(agreement_id)
@@ -64,30 +70,38 @@ class AgreementController:
             agreement.update_from_dict(changes)
             await agreement.save()
         paid = await paid_by_agreement([agreement.id])
-        return self._read(agreement, paid.get(agreement.id, 0))
+        return await self._read_one(agreement, paid.get(agreement.id, 0))
 
     async def archive(self, agreement_id: str) -> None:
         agreement = await self._agreement_or_404(agreement_id)
-        agreement.archived_at = datetime.now(UTC)
+        archived_at = datetime.now(UTC)
+        agreement.archived_at = archived_at
         await agreement.save()
+        await archive_under_agreement(agreement.id, archived_at)
 
     async def restore(self, agreement_id: str) -> AgreementRead:
         agreement = await self._agreement_or_404(agreement_id, include_archived=True)
         if agreement.archived_at is not None:
+            archived_at = agreement.archived_at
             agreement.archived_at = None
             await agreement.save()
+            await restore_under_agreement(agreement.id, archived_at)
         paid = await paid_by_agreement([agreement.id])
-        return self._read(agreement, paid.get(agreement.id, 0))
+        return await self._read_one(agreement, paid.get(agreement.id, 0))
 
-    async def delete(self, agreement_id: str) -> None:
+    async def delete(self, agreement_id: str, storage: Storage | None = None) -> None:
         agreement = await self._agreement_or_404(agreement_id, include_archived=True)
         if agreement.archived_at is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Only archived agreements can be deleted permanently",
             )
+        storage_keys = await Attachment.filter(agreement_id=agreement.id).values_list(
+            "storage_key", flat=True
+        )
         await Expense.filter(agreement_id=agreement.id).update(agreement_id=None)
         await agreement.delete()
+        await delete_unreferenced([str(key) for key in storage_keys], storage)
 
     async def list_advances(
         self, project_id: str, *, include_archived: bool, limit: int, offset: int
@@ -184,7 +198,11 @@ class AgreementController:
             if advanced.get(person.id) or spent.get(person.id)
         ]
 
-    def _read(self, agreement: Agreement, paid: int) -> AgreementRead:
+    async def _read_one(self, agreement: Agreement, paid: int) -> AgreementRead:
+        counts = await counts_for("agreement_id", [agreement.id])
+        return self._read(agreement, paid, counts.get(agreement.id, 0))
+
+    def _read(self, agreement: Agreement, paid: int, attachment_count: int) -> AgreementRead:
         return AgreementRead(
             id=agreement.id,
             project_id=agreement.project_id,
@@ -195,6 +213,7 @@ class AgreementController:
             paid_amount=paid,
             balance_amount=balance_of(agreement.agreed_amount, paid),
             notes=agreement.notes,
+            attachment_count=attachment_count,
             created_at=agreement.created_at,
             updated_at=agreement.updated_at,
             archived_at=agreement.archived_at,

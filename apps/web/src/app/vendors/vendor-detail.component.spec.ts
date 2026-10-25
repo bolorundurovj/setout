@@ -54,6 +54,7 @@ function outstandingDelivery(overrides: Partial<DeliveryRead> = {}): DeliveryRea
     currency_exponent: 2,
     spent_on: '2026-08-14',
     received_at: null,
+    attachment_count: 0,
     created_at: '2026-08-14T00:00:00Z',
     updated_at: '2026-08-14T00:00:00Z',
     archived_at: null,

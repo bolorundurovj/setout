@@ -10,6 +10,8 @@ import {
 import { Router } from '@angular/router';
 import { Api, exportProject } from '@setout/api-client';
 import type { ProjectRead, ProjectStatus, CategoryRead } from '@setout/api-client';
+import { AttachmentParent } from '../attachments/attachment.service';
+import { AttachmentsComponent } from '../attachments/attachments.component';
 import { BudgetService } from '../budget/budget.service';
 import { currencyFormat } from '../budget/currency-format';
 import { formatMoney } from '../budget/money';
@@ -34,12 +36,17 @@ interface StatusChoice {
   selector: 'app-project-settings',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChipGroupComponent, ToggleComponent],
+  imports: [AttachmentsComponent, ButtonComponent, ChipGroupComponent, ToggleComponent],
   templateUrl: './project-settings.component.html',
   styleUrl: './project-settings.component.scss',
 })
 export class ProjectSettingsComponent {
   readonly project = input.required<ProjectRead>();
+  readonly attachmentParent = computed<AttachmentParent>(() => ({
+    attachedTo: 'project',
+    id: this.project().id,
+    projectId: this.project().id,
+  }));
 
   readonly changed = output<void>();
 

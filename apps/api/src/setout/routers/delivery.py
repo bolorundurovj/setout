@@ -14,6 +14,7 @@ from setout.schemas.delivery import (
     DeliverySort,
     DeliveryUpdate,
 )
+from setout.services.storage import Storage, get_storage
 
 router = APIRouter(
     tags=["deliveries"],
@@ -21,6 +22,7 @@ router = APIRouter(
 )
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+Store = Annotated[Storage, Depends(get_storage)]
 
 controller = DeliveryController()
 
@@ -145,5 +147,5 @@ async def restore_delivery(delivery_id: str, user: CurrentUser) -> DeliveryRead:
         },
     },
 )
-async def delete_delivery(delivery_id: str, user: CurrentUser) -> None:
-    await controller.delete(delivery_id)
+async def delete_delivery(delivery_id: str, user: CurrentUser, storage: Store) -> None:
+    await controller.delete(delivery_id, storage=storage)

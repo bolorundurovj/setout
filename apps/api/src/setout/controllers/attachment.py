@@ -1,28 +1,38 @@
 from __future__ import annotations
 
-from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Any
 
 from fastapi import HTTPException, status
 
-from setout.config import get_settings
+from setout.models.agreement import Agreement
 from setout.models.attachment import Attachment
+from setout.models.delivery import Delivery
 from setout.models.expense import Expense
-from setout.models.land_document import LandDocument
 from setout.models.project import Project
 from setout.schemas.attachment import AttachmentPage, AttachmentRead
-from setout.services.storage import Storage, checksum_of, key_for
+from setout.services.storage import Storage
+from setout.utils.uploads import checked_media_type, delete_unreferenced, store
 
 NOT_FOUND_ATTACHMENT = "Attachment not found"
 
-ALLOWED: dict[str, str] = {
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "image/webp": ".webp",
-    "image/heic": ".heic",
-    "image/heif": ".heif",
-    "application/pdf": ".pdf",
+
+class AttachedTo(StrEnum):
+    PROJECT = "project"
+    EXPENSE = "expense"
+    AGREEMENT = "agreement"
+    DELIVERY = "delivery"
+
+
+Parent = Project | Expense | Agreement | Delivery
+
+PARENTS: dict[AttachedTo, tuple[type[Parent], str]] = {
+    AttachedTo.PROJECT: (Project, "Project not found"),
+    AttachedTo.EXPENSE: (Expense, "Expense not found"),
+    AttachedTo.AGREEMENT: (Agreement, "Agreement not found"),
+    AttachedTo.DELIVERY: (Delivery, "Delivery not found"),
 }
 
 
@@ -35,10 +45,16 @@ class AttachmentFile:
 
 class AttachmentController:
     async def list(
-        self, expense_id: str, *, limit: int, offset: int, include_archived: bool
+        self,
+        attached_to: AttachedTo,
+        parent_id: str,
+        *,
+        limit: int,
+        offset: int,
+        include_archived: bool,
     ) -> AttachmentPage:
-        await self._expense_or_404(expense_id)
-        query = Attachment.filter(expense_id=expense_id)
+        await self._parent_or_404(attached_to, parent_id)
+        query = Attachment.filter(**self._parent_filter(attached_to, parent_id))
         if not include_archived:
             query = query.filter(archived_at__isnull=True)
         total = await query.count()
@@ -53,43 +69,28 @@ class AttachmentController:
     async def create(
         self,
         project_id: str,
-        expense_id: str,
+        attached_to: AttachedTo,
+        parent_id: str,
         *,
         filename: str,
         content_type: str,
         data: bytes,
         storage: Storage,
     ) -> AttachmentRead:
-        await self._project_or_404(project_id)
-        expense = await self._expense_or_404(expense_id)
-        if expense.project_id != project_id:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Expense not found")
-
-        media_type = content_type.split(";")[0].strip().lower()
-        if media_type not in ALLOWED:
+        await self._parent_or_404(AttachedTo.PROJECT, project_id)
+        parent = await self._parent_or_404(attached_to, parent_id)
+        if not isinstance(parent, Project) and parent.project_id != project_id:
             raise HTTPException(
-                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                detail="An attachment must be an image or a PDF",
-            )
-        if not data:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="That file is empty"
-            )
-        max_bytes = get_settings().max_attachment_bytes
-        if len(data) > max_bytes:
-            raise HTTPException(
-                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-                detail=f"That file is larger than the {max_bytes // (1024 * 1024)} MiB limit",
+                status_code=status.HTTP_404_NOT_FOUND, detail=PARENTS[attached_to][1]
             )
 
-        checksum = checksum_of(data)
-        name = self._sanitise_filename(filename) or f"attachment{ALLOWED[media_type]}"
-        key = key_for(checksum, name if "." in name else f"{name}{ALLOWED[media_type]}")
-        if not await storage.exists(key):
-            await storage.put(key, data, content_type=media_type)
+        media_type = checked_media_type(content_type, data, subject="An attachment")
+        name, checksum, key = await store(
+            data, filename, media_type, storage, default_stem="attachment"
+        )
+        parent_fields = {**self._parent_filter(attached_to, parent_id), "project_id": project_id}
         row = await Attachment.create(
-            project_id=project_id,
-            expense_id=expense_id,
+            **parent_fields,
             filename=name,
             content_type=media_type,
             byte_size=len(data),
@@ -141,28 +142,25 @@ class AttachmentController:
             )
         key = row.storage_key
         await row.delete()
-        if storage is not None:
-            has_attachment = await Attachment.filter(storage_key=key).exists()
-            has_document = await LandDocument.filter(storage_key=key).exists()
-            if not has_attachment and not has_document:
-                with suppress(Exception):
-                    await storage.delete(key)
+        await delete_unreferenced([key], storage)
 
-    def _sanitise_filename(self, filename: str) -> str:
-        last = filename.replace("\\", "/").rsplit("/", 1)[-1].strip()
-        return "".join(c for c in last if c.isalnum() or c in " ._-()")[:255].strip()
+    @staticmethod
+    def _parent_filter(attached_to: AttachedTo, parent_id: str) -> dict[str, Any]:
+        if attached_to is AttachedTo.PROJECT:
+            return {
+                "project_id": parent_id,
+                "expense_id": None,
+                "agreement_id": None,
+                "delivery_id": None,
+            }
+        return {f"{attached_to.value}_id": parent_id}
 
-    async def _project_or_404(self, project_id: str) -> Project:
-        project = await Project.get_or_none(id=project_id, archived_at__isnull=True)
-        if project is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-        return project
-
-    async def _expense_or_404(self, expense_id: str) -> Expense:
-        expense = await Expense.get_or_none(id=expense_id, archived_at__isnull=True)
-        if expense is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Expense not found")
-        return expense
+    async def _parent_or_404(self, attached_to: AttachedTo, parent_id: str) -> Parent:
+        model, not_found = PARENTS[attached_to]
+        parent = await model.get_or_none(id=parent_id, archived_at__isnull=True)
+        if parent is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=not_found)
+        return parent
 
     async def _attachment_or_404(
         self, attachment_id: str, *, include_archived: bool = False

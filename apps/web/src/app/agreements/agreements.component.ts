@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import type { AdvanceRead, AgreementRead, ExpenseRead, ProjectRead } from '@setout/api-client';
+import { AttachmentParent } from '../attachments/attachment.service';
+import { AttachmentsComponent } from '../attachments/attachments.component';
 import { formatAmount, formatAmountInput, formatMoney, parseMoney } from '../budget/money';
 import { ExpenseService } from '../expenses/expense.service';
 import { ToastService } from '../toast.service';
@@ -17,7 +19,13 @@ import { AgreementService } from './agreement.service';
   selector: 'app-agreements',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, InfiniteScrollDirective, PaginationComponent, ToggleComponent],
+  imports: [
+    AttachmentsComponent,
+    ButtonComponent,
+    InfiniteScrollDirective,
+    PaginationComponent,
+    ToggleComponent,
+  ],
   templateUrl: './agreements.component.html',
   styleUrl: './agreements.component.scss',
 })
@@ -39,6 +47,10 @@ export class AgreementsComponent {
   readonly advanceAmount = signal('');
   readonly payingAgreementId = signal<string | null>(null);
   readonly editing = signal<string | null>(null);
+  readonly editingParent = computed<AttachmentParent | null>(() => {
+    const id = this.editing();
+    return id ? { attachedTo: 'agreement', id, projectId: this.project().id } : null;
+  });
   readonly editDescription = signal('');
   readonly editAgreed = signal('');
   readonly editingAdvance = signal<string | null>(null);

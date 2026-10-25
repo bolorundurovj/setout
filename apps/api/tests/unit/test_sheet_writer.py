@@ -81,7 +81,7 @@ def a_book() -> write.ExportWorkbook:
         attachments=[
             write.AttachmentRow(
                 filename="receipt.png",
-                expense_description="Roofing sheets",
+                attached_to="Roofing sheets",
                 byte_size=2048,
                 checksum="ab" * 32,
             )

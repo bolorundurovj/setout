@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import json
-from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 
 from fastapi import HTTPException, status
 
-from setout.models.attachment import Attachment
 from setout.models.country import Country, State
 from setout.models.currency import Currency
 from setout.models.land import Land
@@ -25,6 +23,7 @@ from setout.schemas.land import (
 from setout.services.storage import Storage
 from setout.utils.cascade import archive_under_land, restore_under_land
 from setout.utils.geo import polygon_area_sqm
+from setout.utils.uploads import delete_unreferenced
 
 NOT_FOUND_LAND = "Land not found"
 DUPLICATE_NAME = "A land record with that name already exists"
@@ -130,13 +129,7 @@ class LandController:
         storage_keys = [doc.storage_key for doc in docs]
         await Project.filter(land_id=land.id).update(land_id=None)
         await land.delete()
-        if storage is not None:
-            for key in set(storage_keys):
-                has_attachment = await Attachment.filter(storage_key=key).exists()
-                has_document = await LandDocument.filter(storage_key=key).exists()
-                if not has_attachment and not has_document:
-                    with suppress(Exception):
-                        await storage.delete(key)
+        await delete_unreferenced(storage_keys, storage)
 
     async def _one(self, land: Land) -> LandRead:
         ids = [land.id]

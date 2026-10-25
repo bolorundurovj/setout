@@ -132,7 +132,7 @@ class PriceRow:
 @dataclass
 class AttachmentRow:
     filename: str
-    expense_description: str
+    attached_to: str
     byte_size: int
     checksum: str
 
@@ -361,7 +361,7 @@ def _prices(sheet: Worksheet, book: ExportWorkbook) -> None:
 def _attachments(sheet: Worksheet, book: ExportWorkbook) -> None:
     _title(sheet, "Attachments (files are not included in this workbook)", ATTACHMENT_HEAD)
     for row in book.attachments:
-        sheet.append([row.filename, row.expense_description, row.byte_size, row.checksum])
+        sheet.append([row.filename, row.attached_to, row.byte_size, row.checksum])
     _widths(sheet, [30, 34, 16, 66])
 
 
@@ -501,7 +501,7 @@ def example_book(currency_code: str = "NGN") -> ExportWorkbook:
         attachments=[
             AttachmentRow(
                 filename="receipt-11jun.jpg",
-                expense_description="17 bags of cement",
+                attached_to="17 bags of cement",
                 byte_size=248_512,
                 checksum="0" * 64,
             )

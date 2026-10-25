@@ -31,6 +31,7 @@ class AgreementRead(BaseModel):
     paid_amount: int
     balance_amount: int
     notes: str | None
+    attachment_count: int = Field(..., description="Number of attachments")
     created_at: datetime
     updated_at: datetime
     archived_at: datetime | None

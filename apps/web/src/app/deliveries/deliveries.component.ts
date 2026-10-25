@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import type { DeliveryRead, ProjectRead } from '@setout/api-client';
+import { AttachmentParent } from '../attachments/attachment.service';
+import { AttachmentsComponent } from '../attachments/attachments.component';
 import { formatMoney } from '../budget/money';
 import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
@@ -11,7 +13,7 @@ import { DeliveryService } from './delivery.service';
   selector: 'app-deliveries',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, PaginationComponent, ToggleComponent],
+  imports: [AttachmentsComponent, ButtonComponent, PaginationComponent, ToggleComponent],
   templateUrl: './deliveries.component.html',
   styleUrl: './deliveries.component.scss',
 })
@@ -26,6 +28,10 @@ export class DeliveriesComponent {
   readonly includeArchived = signal(false);
 
   readonly editing = signal<string | null>(null);
+  readonly editingParent = computed<AttachmentParent | null>(() => {
+    const id = this.editing();
+    return id ? { attachedTo: 'delivery', id, projectId: this.project().id } : null;
+  });
   readonly editDescription = signal('');
   readonly editExpected = signal('');
   readonly lastArchived = signal<DeliveryRead | null>(null);

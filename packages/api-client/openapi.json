@@ -8825,6 +8825,190 @@
         }
       }
     },
+    "/api/projects/{project_id}/attachments": {
+      "get": {
+        "tags": [
+          "attachments"
+        ],
+        "summary": "List Project Attachments",
+        "operationId": "listProjectAttachments",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "include_archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include archived attachments",
+              "default": false,
+              "title": "Include Archived"
+            },
+            "description": "Include archived attachments"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Rows per page",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Rows per page"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Rows to skip",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Rows to skip"
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "attachments"
+        ],
+        "summary": "Create Project Attachment",
+        "operationId": "createProjectAttachment",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_createProjectAttachment"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentRead"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "413": {
+            "description": "File too large"
+          },
+          "415": {
+            "description": "Not an image or a PDF"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request: the body could not be parsed"
+          }
+        }
+      }
+    },
     "/api/expenses/{expense_id}/attachments": {
       "get": {
         "tags": [
@@ -8977,6 +9161,396 @@
             "multipart/form-data": {
               "schema": {
                 "$ref": "#/components/schemas/Body_createAttachment"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentRead"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "413": {
+            "description": "File too large"
+          },
+          "415": {
+            "description": "Not an image or a PDF"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request: the body could not be parsed"
+          }
+        }
+      }
+    },
+    "/api/agreements/{agreement_id}/attachments": {
+      "get": {
+        "tags": [
+          "attachments"
+        ],
+        "summary": "List Agreement Attachments",
+        "operationId": "listAgreementAttachments",
+        "parameters": [
+          {
+            "name": "agreement_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agreement Id"
+            }
+          },
+          {
+            "name": "include_archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include archived attachments",
+              "default": false,
+              "title": "Include Archived"
+            },
+            "description": "Include archived attachments"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Rows per page",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Rows per page"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Rows to skip",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Rows to skip"
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/agreements/{agreement_id}/attachments": {
+      "post": {
+        "tags": [
+          "attachments"
+        ],
+        "summary": "Create Agreement Attachment",
+        "operationId": "createAgreementAttachment",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "agreement_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agreement Id"
+            }
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_createAgreementAttachment"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentRead"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "413": {
+            "description": "File too large"
+          },
+          "415": {
+            "description": "Not an image or a PDF"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request: the body could not be parsed"
+          }
+        }
+      }
+    },
+    "/api/deliveries/{delivery_id}/attachments": {
+      "get": {
+        "tags": [
+          "attachments"
+        ],
+        "summary": "List Delivery Attachments",
+        "operationId": "listDeliveryAttachments",
+        "parameters": [
+          {
+            "name": "delivery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Delivery Id"
+            }
+          },
+          {
+            "name": "include_archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include archived attachments",
+              "default": false,
+              "title": "Include Archived"
+            },
+            "description": "Include archived attachments"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Rows per page",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Rows per page"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Rows to skip",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Rows to skip"
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/deliveries/{delivery_id}/attachments": {
+      "post": {
+        "tags": [
+          "attachments"
+        ],
+        "summary": "Create Delivery Attachment",
+        "operationId": "createDeliveryAttachment",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "delivery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Delivery Id"
+            }
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_createDeliveryAttachment"
               }
             }
           }
@@ -10056,6 +10630,11 @@
             ],
             "title": "Notes"
           },
+          "attachment_count": {
+            "type": "integer",
+            "title": "Attachment Count",
+            "description": "Number of attachments"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -10090,6 +10669,7 @@
           "paid_amount",
           "balance_amount",
           "notes",
+          "attachment_count",
           "created_at",
           "updated_at",
           "archived_at"
@@ -10181,8 +10761,37 @@
             "title": "Project Id"
           },
           "expense_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Expense Id"
+          },
+          "agreement_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agreement Id"
+          },
+          "delivery_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Id"
           },
           "filename": {
             "type": "string",
@@ -10228,6 +10837,8 @@
           "id",
           "project_id",
           "expense_id",
+          "agreement_id",
+          "delivery_id",
           "filename",
           "content_type",
           "byte_size",
@@ -10329,6 +10940,21 @@
         ],
         "title": "Backup"
       },
+      "Body_createAgreementAttachment": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "An image or a PDF"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_createAgreementAttachment"
+      },
       "Body_createAttachment": {
         "properties": {
           "file": {
@@ -10343,6 +10969,21 @@
           "file"
         ],
         "title": "Body_createAttachment"
+      },
+      "Body_createDeliveryAttachment": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "An image or a PDF"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_createDeliveryAttachment"
       },
       "Body_createLandDocument": {
         "properties": {
@@ -10376,6 +11017,21 @@
           "file"
         ],
         "title": "Body_createLandDocument"
+      },
+      "Body_createProjectAttachment": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "An image or a PDF"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_createProjectAttachment"
       },
       "Body_previewImport": {
         "properties": {
@@ -11309,6 +11965,11 @@
             ],
             "title": "Received At"
           },
+          "attachment_count": {
+            "type": "integer",
+            "title": "Attachment Count",
+            "description": "Number of attachments"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -11346,6 +12007,7 @@
           "currency_exponent",
           "spent_on",
           "received_at",
+          "attachment_count",
           "created_at",
           "updated_at",
           "archived_at"

@@ -19,7 +19,7 @@ import type {
   CategorySuggestion,
 } from '@setout/api-client';
 import { AgreementService } from '../agreements/agreement.service';
-import { AttachmentService } from '../attachments/attachment.service';
+import { AttachmentParent, AttachmentService } from '../attachments/attachment.service';
 import { BudgetService } from '../budget/budget.service';
 import { formatMoney, parseMoney } from '../budget/money';
 import { ItemService } from '../items/item.service';
@@ -158,7 +158,7 @@ export class AddExpenseComponent {
 
   readonly expenseAttachments = computed(() => {
     const expense = this.expenseToEdit();
-    return expense ? this.attachments.forExpense(expense.id) : [];
+    return expense ? this.attachments.forParent(this.parentOf(expense.id)) : [];
   });
 
   readonly fileLabel = computed(() => {
@@ -174,7 +174,7 @@ export class AddExpenseComponent {
       const expense = this.expenseToEdit();
       if (expense) {
         this.prefill(expense);
-        void this.attachments.load(expense.id);
+        void this.attachments.load(this.parentOf(expense.id));
       }
     });
     effect(() => {
@@ -399,6 +399,10 @@ export class AddExpenseComponent {
     this.outstandingDelivery.update((on) => !on);
   }
 
+  private parentOf(expenseId: string): AttachmentParent {
+    return { attachedTo: 'expense', id: expenseId, projectId: this.project().id };
+  }
+
   fileUrl(file: AttachmentRead): string {
     return this.attachments.fileUrl(file.id);
   }
@@ -427,7 +431,7 @@ export class AddExpenseComponent {
       this.selectedFile.set(file);
       return;
     }
-    const added = await this.attachments.add(this.project().id, existing.id, file);
+    const added = await this.attachments.add(this.parentOf(existing.id), file);
     if (!added) {
       this.toast.show(this.attachments.error() ?? 'Could not attach that file.', 'error');
       return;
@@ -440,7 +444,7 @@ export class AddExpenseComponent {
     if (!existing) {
       return;
     }
-    await this.attachments.archive(existing.id, file.id);
+    await this.attachments.archive(this.parentOf(existing.id), file.id);
     this.lastArchived.set(file);
     this.toast.show('Attachment archived. The expense is unchanged.');
   }
@@ -451,7 +455,7 @@ export class AddExpenseComponent {
     if (!existing || !archived) {
       return;
     }
-    const restored = await this.attachments.restore(existing.id, archived.id);
+    const restored = await this.attachments.restore(this.parentOf(existing.id), archived.id);
     this.lastArchived.set(null);
     this.toast.show(
       restored
@@ -498,7 +502,7 @@ export class AddExpenseComponent {
 
     const file = this.selectedFile();
     if (!existing && file) {
-      const added = await this.attachments.add(this.project().id, saved.id, file);
+      const added = await this.attachments.add(this.parentOf(saved.id), file);
       if (!added) {
         this.toast.show(this.attachments.error() ?? 'Could not attach that file.', 'error');
       }

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import Counter
-from contextlib import suppress
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
@@ -9,7 +8,6 @@ from fastapi import HTTPException, status
 from setout.models.attachment import Attachment
 from setout.models.currency import Currency
 from setout.models.land import Land
-from setout.models.land_document import LandDocument
 from setout.models.project import Project, ProjectStatus
 from setout.schemas.project import (
     ProjectCreate,
@@ -22,6 +20,7 @@ from setout.services.storage import Storage
 from setout.utils.budgets import budgeted_by_project, spent_by_project
 from setout.utils.cascade import archive_under_project, restore_under_project
 from setout.utils.projects import require_closed, to_read
+from setout.utils.uploads import delete_unreferenced
 
 
 class ProjectController:
@@ -124,16 +123,10 @@ class ProjectController:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Only archived projects can be deleted permanently",
             )
-        attachments = await Attachment.filter(expense__project_id=project.id).all()
+        attachments = await Attachment.filter(project_id=project.id).all()
         storage_keys = [att.storage_key for att in attachments]
         await project.delete()
-        if storage is not None:
-            for key in set(storage_keys):
-                has_attachment = await Attachment.filter(storage_key=key).exists()
-                has_document = await LandDocument.filter(storage_key=key).exists()
-                if not has_attachment and not has_document:
-                    with suppress(Exception):
-                        await storage.delete(key)
+        await delete_unreferenced(storage_keys, storage)
 
     async def _land_or_422(self, land_id: str | None) -> str | None:
         # Forms send an empty string for no land, which clears the link.

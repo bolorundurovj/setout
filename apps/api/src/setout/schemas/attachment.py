@@ -8,7 +8,9 @@ from pydantic import BaseModel
 class AttachmentRead(BaseModel):
     id: str
     project_id: str
-    expense_id: str
+    expense_id: str | None
+    agreement_id: str | None
+    delivery_id: str | None
     filename: str
     content_type: str
     byte_size: int

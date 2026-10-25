@@ -74,8 +74,10 @@ class ExportController:
             project_id=project.id, archived_at__isnull=True
         ).prefetch_related("vendor", "paid_by", "item")
         attachment_names: dict[str, str] = {}
-        for attachment in await Attachment.filter(project_id=project.id, archived_at__isnull=True):
-            attachment_names.setdefault(attachment.expense_id, attachment.filename)
+        for attachment in await Attachment.filter(
+            project_id=project.id, expense_id__isnull=False, archived_at__isnull=True
+        ):
+            attachment_names.setdefault(str(attachment.expense_id), attachment.filename)
 
         vendors: dict[str, write.VendorRow] = {}
         people: dict[str, write.PersonRow] = {}
@@ -170,15 +172,25 @@ class ExportController:
                     )
                 )
 
+    @staticmethod
+    def _attached_to(row: Attachment) -> str:
+        if row.expense is not None:
+            return row.expense.description
+        if row.agreement is not None:
+            return row.agreement.description
+        if row.delivery is not None:
+            return row.delivery.description
+        return "Project"
+
     async def _attachments(self, project: Project, book: write.ExportWorkbook) -> None:
         rows = await Attachment.filter(
             project_id=project.id, archived_at__isnull=True
-        ).prefetch_related("expense")
+        ).prefetch_related("expense", "agreement", "delivery")
         for row in rows:
             book.attachments.append(
                 write.AttachmentRow(
                     filename=row.filename,
-                    expense_description=row.expense.description,
+                    attached_to=self._attached_to(row),
                     byte_size=row.byte_size,
                     checksum=row.checksum,
                 )

@@ -1,0 +1,37 @@
+<div class="attachments">
+  @for (file of rows(); track file.id) {
+    <div class="attached">
+      <a class="thumb" [href]="fileUrl(file)" target="_blank" rel="noopener">
+        @if (isImage(file)) {
+          <img [src]="fileUrl(file)" [alt]="file.filename" />
+        } @else {
+          <span class="t-mono thumb-kind">PDF</span>
+        }
+      </a>
+      <span class="text">
+        <span class="t-body">{{ file.filename }}</span>
+        <span class="t-small muted">{{ fileNote(file) }}</span>
+        <button type="button" class="action t-mono" (click)="archive(file)">
+          Archive Attachment
+        </button>
+      </span>
+    </div>
+  }
+  @if (lastArchived(); as archived) {
+    <p class="t-small muted">
+      {{ archived.filename }} was archived.
+      <button type="button" class="action t-mono" (click)="restoreLastArchived()">Undo</button>
+    </p>
+  }
+  <button type="button" class="add" [disabled]="attachments.saving()" (click)="openFilePicker()">
+    <span class="t-body">{{ rows().length === 0 ? 'No attachments' : 'Another attachment' }}</span>
+    <span class="t-mono action">Attach Image or PDF</span>
+  </button>
+  <input
+    #fileInput
+    type="file"
+    class="offscreen"
+    accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
+    (change)="onFileSelected($event)"
+  />
+</div>

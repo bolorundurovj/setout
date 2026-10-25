@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 
-from setout.config import get_settings
-from setout.models.attachment import Attachment
 from setout.models.land import Land
 from setout.models.land_document import LandDocument, LandDocumentKind
 from setout.schemas.land_document import (
@@ -15,19 +12,11 @@ from setout.schemas.land_document import (
     LandDocumentRead,
     LandDocumentUpdate,
 )
-from setout.services.storage import Storage, checksum_of, key_for
+from setout.services.storage import Storage
+from setout.utils.uploads import checked_media_type, delete_unreferenced, store
 
 NOT_FOUND_DOCUMENT = "Document not found"
 NOT_FOUND_LAND = "Land not found"
-
-ALLOWED: dict[str, str] = {
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "image/webp": ".webp",
-    "image/heic": ".heic",
-    "image/heif": ".heif",
-    "application/pdf": ".pdf",
-}
 
 
 @dataclass(frozen=True)
@@ -67,28 +56,10 @@ class LandDocumentController:
     ) -> LandDocumentRead:
         await self._land_or_404(land_id)
 
-        media_type = content_type.split(";")[0].strip().lower()
-        if media_type not in ALLOWED:
-            raise HTTPException(
-                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                detail="A land document must be an image or a PDF",
-            )
-        if not data:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="That file is empty"
-            )
-        max_bytes = get_settings().max_attachment_bytes
-        if len(data) > max_bytes:
-            raise HTTPException(
-                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-                detail=f"That file is larger than the {max_bytes // (1024 * 1024)} MiB limit",
-            )
-
-        checksum = checksum_of(data)
-        name = self._strip_path(filename) or f"document{ALLOWED[media_type]}"
-        key = key_for(checksum, name if "." in name else f"{name}{ALLOWED[media_type]}")
-        if not await storage.exists(key):
-            await storage.put(key, data, content_type=media_type)
+        media_type = checked_media_type(content_type, data, subject="A land document")
+        name, checksum, key = await store(
+            data, filename, media_type, storage, default_stem="document"
+        )
         row = await LandDocument.create(
             land_id=land_id,
             kind=kind,
@@ -152,17 +123,7 @@ class LandDocumentController:
             )
         key = row.storage_key
         await row.delete()
-        if storage is not None:
-            has_attachment = await Attachment.filter(storage_key=key).exists()
-            has_document = await LandDocument.filter(storage_key=key).exists()
-            if not has_attachment and not has_document:
-                with suppress(Exception):
-                    await storage.delete(key)
-
-    @staticmethod
-    def _strip_path(filename: str) -> str:
-        # Some browsers send the full client path.
-        return filename.replace("\\", "/").rsplit("/", 1)[-1].strip()
+        await delete_unreferenced([key], storage)
 
     async def _land_or_404(self, land_id: str) -> Land:
         land = await Land.get_or_none(id=land_id, archived_at__isnull=True)

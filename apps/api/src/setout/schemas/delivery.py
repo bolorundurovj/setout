@@ -45,6 +45,7 @@ class DeliveryRead(BaseModel):
     currency_exponent: int
     spent_on: date
     received_at: datetime | None
+    attachment_count: int = Field(..., description="Number of attachments")
     created_at: datetime
     updated_at: datetime
     archived_at: datetime | None

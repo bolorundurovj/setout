@@ -138,6 +138,10 @@
           </div>
         </div>
 
+        @if (editing() === agreement.id && editingParent(); as parent) {
+          <app-attachments class="attachments" [parent]="parent" />
+        }
+
         <div class="payments">
           @for (payment of paymentsFor(agreement.id); track payment.id) {
             <div class="payment">

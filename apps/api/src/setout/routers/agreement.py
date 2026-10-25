@@ -18,6 +18,7 @@ from setout.schemas.agreement import (
     AgreementUpdate,
     PersonBalance,
 )
+from setout.services.storage import Storage, get_storage
 
 router = APIRouter(
     tags=["agreements"],
@@ -25,6 +26,7 @@ router = APIRouter(
 )
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+Store = Annotated[Storage, Depends(get_storage)]
 
 controller = AgreementController()
 
@@ -98,8 +100,8 @@ async def restore_agreement(agreement_id: str, user: CurrentUser) -> AgreementRe
         },
     },
 )
-async def delete_agreement(agreement_id: str, user: CurrentUser) -> None:
-    await controller.delete(agreement_id)
+async def delete_agreement(agreement_id: str, user: CurrentUser, storage: Store) -> None:
+    await controller.delete(agreement_id, storage=storage)
 
 
 @router.get("/projects/{project_id}/advances", operation_id="listAdvances", responses=NOT_FOUND)

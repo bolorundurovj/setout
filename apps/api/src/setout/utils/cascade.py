@@ -22,6 +22,8 @@ from setout.models.land_valuation import LandValuation
 
 PROJECT_OWNED = (Category, Expense, Delivery, Attachment, Advance, Agreement)
 EXPENSE_OWNED = (Delivery, Attachment)
+AGREEMENT_OWNED = (Attachment,)
+DELIVERY_OWNED = (Attachment,)
 LAND_OWNED = (LandDocument, LandValuation)
 
 
@@ -42,11 +44,35 @@ async def restore_under_project(project_id: str, archived_at: datetime) -> None:
 async def archive_under_expense(expense_id: str, archived_at: datetime) -> None:
     for owned_model in EXPENSE_OWNED:
         await _mark_archived(owned_model, archived_at, expense_id=expense_id)
+    for delivery_id in await _delivery_ids_of_expense(expense_id):
+        await archive_under_delivery(delivery_id, archived_at)
 
 
 async def restore_under_expense(expense_id: str, archived_at: datetime) -> None:
     for owned_model in EXPENSE_OWNED:
         await _clear_archived(owned_model, archived_at, expense_id=expense_id)
+    for delivery_id in await _delivery_ids_of_expense(expense_id):
+        await restore_under_delivery(delivery_id, archived_at)
+
+
+async def archive_under_agreement(agreement_id: str, archived_at: datetime) -> None:
+    for owned_model in AGREEMENT_OWNED:
+        await _mark_archived(owned_model, archived_at, agreement_id=agreement_id)
+
+
+async def restore_under_agreement(agreement_id: str, archived_at: datetime) -> None:
+    for owned_model in AGREEMENT_OWNED:
+        await _clear_archived(owned_model, archived_at, agreement_id=agreement_id)
+
+
+async def archive_under_delivery(delivery_id: str, archived_at: datetime) -> None:
+    for owned_model in DELIVERY_OWNED:
+        await _mark_archived(owned_model, archived_at, delivery_id=delivery_id)
+
+
+async def restore_under_delivery(delivery_id: str, archived_at: datetime) -> None:
+    for owned_model in DELIVERY_OWNED:
+        await _clear_archived(owned_model, archived_at, delivery_id=delivery_id)
 
 
 async def archive_under_land(land_id: str, archived_at: datetime) -> None:
@@ -79,6 +105,11 @@ async def _clear_archived(
     owned_model: type[Model], archived_at: datetime, **owner_filters: object
 ) -> None:
     await owned_model.filter(archived_at=archived_at, **owner_filters).update(archived_at=None)
+
+
+async def _delivery_ids_of_expense(expense_id: str) -> list[str]:
+    delivery_ids = await Delivery.filter(expense_id=expense_id).values_list("id", flat=True)
+    return [str(delivery_id) for delivery_id in delivery_ids]
 
 
 async def _category_ids_of_project(project_id: str) -> list[str]:

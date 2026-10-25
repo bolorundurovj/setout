@@ -34,6 +34,7 @@ function agreement(over: Partial<AgreementRead> = {}): AgreementRead {
     paid_amount: 0,
     balance_amount: 22_300_000,
     notes: null,
+    attachment_count: 0,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
     archived_at: null,

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from contextlib import suppress
 from datetime import UTC, date, datetime
 from typing import Any
 
@@ -13,9 +12,9 @@ from setout.models.agreement import Agreement
 from setout.models.attachment import Attachment
 from setout.models.budget import BudgetItem
 from setout.models.category import Category
+from setout.models.delivery import Delivery
 from setout.models.expense import Expense
 from setout.models.item import Item
-from setout.models.land_document import LandDocument
 from setout.models.person import Person
 from setout.models.project import Project
 from setout.models.vendor import Vendor
@@ -36,6 +35,7 @@ from setout.utils.attachments import counts_for
 from setout.utils.cascade import archive_under_expense, restore_under_expense
 from setout.utils.expenses import derived_amount
 from setout.utils.months import month_range, to_months
+from setout.utils.uploads import delete_unreferenced
 
 SORT_ORDERS: dict[ExpenseSort, tuple[str, ...]] = {
     ExpenseSort.RECENT: ("-spent_on", "-created_at"),
@@ -96,7 +96,7 @@ class ExpenseController:
         total = await query.count()
         total_amount = await self._sum_of(query)
         rows = await query.order_by(*SORT_ORDERS[sort]).offset(offset).limit(limit)
-        counts = await counts_for([row.id for row in rows])
+        counts = await counts_for("expense_id", [row.id for row in rows])
         return ExpensePage(
             items=[self._read(row, counts.get(row.id, 0)) for row in rows],
             total=total,
@@ -223,7 +223,7 @@ class ExpenseController:
 
     async def get(self, expense_id: str) -> ExpenseRead:
         expense = await self._expense_or_404(expense_id)
-        counts = await counts_for([expense.id])
+        counts = await counts_for("expense_id", [expense.id])
         return self._read(expense, counts.get(expense.id, 0))
 
     async def update(self, expense_id: str, req: ExpenseUpdate) -> ExpenseRead:
@@ -251,7 +251,8 @@ class ExpenseController:
             elif entered is not None:
                 expense.amount = entered
             await expense.save()
-        return self._read(expense, (await counts_for([expense.id])).get(expense.id, 0))
+        counts = await counts_for("expense_id", [expense.id])
+        return self._read(expense, counts.get(expense.id, 0))
 
     async def archive(self, expense_id: str) -> None:
         expense = await self._expense_or_404(expense_id)
@@ -267,7 +268,8 @@ class ExpenseController:
             expense.archived_at = None
             await expense.save()
             await restore_under_expense(expense.id, archived_at)
-        return self._read(expense, (await counts_for([expense.id])).get(expense.id, 0))
+        counts = await counts_for("expense_id", [expense.id])
+        return self._read(expense, counts.get(expense.id, 0))
 
     async def delete(self, expense_id: str, storage: Storage | None = None) -> None:
         expense = await self._expense_or_404(expense_id, include_archived=True)
@@ -276,16 +278,13 @@ class ExpenseController:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Only archived expenses can be deleted permanently",
             )
-        attachments = await Attachment.filter(expense_id=expense.id).all()
+        delivery_ids = await Delivery.filter(expense_id=expense.id).values_list("id", flat=True)
+        attachments = await Attachment.filter(
+            Q(expense_id=expense.id) | Q(delivery_id__in=list(delivery_ids))
+        ).all()
         storage_keys = [att.storage_key for att in attachments]
         await expense.delete()
-        if storage is not None:
-            for key in set(storage_keys):
-                has_attachment = await Attachment.filter(storage_key=key).exists()
-                has_document = await LandDocument.filter(storage_key=key).exists()
-                if not has_attachment and not has_document:
-                    with suppress(Exception):
-                        await storage.delete(key)
+        await delete_unreferenced(storage_keys, storage)
 
     async def expense_summary(self, project_id: str) -> ProjectExpenseSummary:
         project = await self._project_or_404(project_id)
