@@ -21,7 +21,7 @@ from setout.services.sheets.parsed import (
 
 UNIMPORTED_COLUMNS = {
     SheetKind.BUDGET: [
-        "Labour, Material and Fixed Costs: each budget line stores one amount, not a split",
+        "Labour, Material and Fixed Costs: each budget item stores one amount, not a split",
         "Actual Cost, Under/Over and Delta: Setout calculates these from expenses",
     ],
     SheetKind.EXPENSES: ["Attachment: only the file name is imported, not the file"],
