@@ -318,7 +318,7 @@
   [open]="drawerOpen()"
   [title]="editingExpense() ? 'Edit Expense' : 'New Expense'"
   [subtitle]="project().name"
-  (closed)="closeDrawer()"
+  (closeRequested)="closeDrawer()"
 >
   @if (drawerOpen()) {
     <app-add-expense
