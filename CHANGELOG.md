@@ -1,5 +1,42 @@
 # Changelog
 
+## [2.5.0](https://github.com/bolorundurovj/setout/compare/v2.4.1...v2.5.0) (2026-10-26)
+
+
+### Features
+
+* **attachments:** allow attachments on agreements, deliveries and projects ([92aadf5](https://github.com/bolorundurovj/setout/commit/92aadf5ecafeb25b07d5d6f9521a328718bbf5a4))
+* **change-history:** add migration 0020 for the change table ([45be787](https://github.com/bolorundurovj/setout/commit/45be787ceac0bc2a0538120dec9cbc7327d3b486))
+* **change-history:** add the Change model ([2f0e595](https://github.com/bolorundurovj/setout/commit/2f0e59533d6543a20be4d4c56ce74f3b03716550))
+* **change-history:** add the panels and project tab to the web app ([0e21a2d](https://github.com/bolorundurovj/setout/commit/0e21a2d4e06e28bb83f4b70f1ed5f948644975d3))
+* **change-history:** add the read API ([d5550b0](https://github.com/bolorundurovj/setout/commit/d5550b05f38e6335227ad4e6fb682f6947148014))
+* **change-history:** record bulk updates, cascades and imports ([f6d288d](https://github.com/bolorundurovj/setout/commit/f6d288d36c9548ba31b0040d444c56963adca521))
+* **change-history:** record saves and deletes of tracked records ([322c1fe](https://github.com/bolorundurovj/setout/commit/322c1fea6b2295ed41e7b44de0248b7c094a1df6))
+* **docker:** support .env-driven and standalone embedded compose configurations ([15f591f](https://github.com/bolorundurovj/setout/commit/15f591f22a5ce39b199d1d0ee4a93095d3bd28ad))
+* **export:** add CSV export and a PDF project report ([c3f616d](https://github.com/bolorundurovj/setout/commit/c3f616dd2dc933c422618d73e8f2ed851d3f0ba3))
+* **export:** style the PDF report with the app theme, logo and page numbers ([6b6023e](https://github.com/bolorundurovj/setout/commit/6b6023e874e14510ca56a14e68762ddb938d17d7))
+* **import:** read parent codes, cost types, quantities and items from exports ([7b51b1b](https://github.com/bolorundurovj/setout/commit/7b51b1be29c31835d0486adc9fe9ee202e33ae26))
+
+
+### Bug Fixes
+
+* **api:** use decimal megabytes for upload limits ([4e04f92](https://github.com/bolorundurovj/setout/commit/4e04f924ba13b45719bbda64ac4c352e5551ce12))
+* **import:** replace budget line with budget item in template and report text ([210ee23](https://github.com/bolorundurovj/setout/commit/210ee23a25703292dd8561f8f1404682e082afe9))
+* **web:** close the expense drawer from its close controls ([cefbe0c](https://github.com/bolorundurovj/setout/commit/cefbe0c0fafc99d4d0c3531317c9ca513a4a9e3f))
+* **web:** open the sign-in page after signing out ([a10e7d6](https://github.com/bolorundurovj/setout/commit/a10e7d6ca7de7fce0187c7b5f9e24cd260b00f14))
+
+
+### Documentation
+
+* add MinIO to RustFS storage migration guide and troubleshooting ([1426724](https://github.com/bolorundurovj/setout/commit/1426724df0b62a7501226ded682125bd45a06170))
+
+
+### Build and dependencies
+
+* **api:** add DM Sans and DM Mono for the PDF report ([7dafc68](https://github.com/bolorundurovj/setout/commit/7dafc68d1ef6f655f52fccdf2fd92a5c70f7c407))
+* **ci:** run the Playwright suite in Firefox ([1160d5a](https://github.com/bolorundurovj/setout/commit/1160d5aa5fcea106bac473dfcbf38189116e841a))
+* **web:** add Playwright and the make e2e target ([b2e5a81](https://github.com/bolorundurovj/setout/commit/b2e5a81c3fdd9421d0d6abb8535c3194bbb56bd5))
+
 ## [2.4.1](https://github.com/bolorundurovj/setout/compare/v2.4.0...v2.4.1) (2026-10-24)
 
 
