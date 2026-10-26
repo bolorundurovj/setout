@@ -37,6 +37,46 @@ jobs:
       - name: Check (lint, typecheck, tests, coverage floor, SDK drift)
         run: make check
 
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.9.17"
+          enable-cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: yarn
+          cache-dependency-path: yarn.lock
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install
+        run: make setup
+
+      - name: Install Firefox for Playwright
+        run: cd apps/web && yarn playwright install --with-deps firefox
+
+      - name: End-to-end tests (Firefox)
+        run: make e2e
+
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+          retention-days: 14
+
   integration-postgres:
     runs-on: ubuntu-latest
     services:
