@@ -55,3 +55,9 @@ prototype/
 
 .agents/
 skills-lock.json
+
+# Playwright
+apps/web/playwright-report/
+apps/web/test-results/
+apps/web/e2e/.auth/
+apps/web/e2e/.data/

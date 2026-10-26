@@ -41,7 +41,7 @@ endif
 
 .PHONY: help setup dev api web watch-sdk lint format test test-unit test-int test-contract \
 	sdk migration migrate downgrade seed backup restore reset-passphrase check check-parallel run-check \
-	build docker-build kill clean line-endings require-uv require-yarn require-docker
+	build docker-build e2e kill clean line-endings require-uv require-yarn require-docker
 
 # file is the server backup path for `make restore`, or the recovery text file for `make reset-passphrase`.
 file ?=
@@ -133,6 +133,9 @@ test-int: require-uv ## Integration tests against a real database.
 
 test-contract: require-uv sdk ## Schema and SDK contract tests.
 	cd $(API_DIR) && uv run pytest tests/contract -m contract
+
+e2e: require-uv require-yarn sdk ## Build the web app and run the Playwright suite in Firefox.
+	cd $(WEB_DIR) && yarn e2e:install && yarn build && yarn e2e
 
 sdk: require-uv require-yarn ## Regenerate the API client.
 	$(BASH) scripts/generate_sdk.sh
