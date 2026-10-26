@@ -122,7 +122,9 @@ export class App {
     this.navOpen.set(false);
   }
 
-  signOut(): void {
-    void this.auth.logout();
+  async signOut(): Promise<void> {
+    if (await this.auth.logout()) {
+      await this.router.navigate(['/login']);
+    }
   }
 }
