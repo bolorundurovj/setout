@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import date
 
 import pytest
@@ -70,3 +71,19 @@ def test_render_accepts_markup_characters_and_long_descriptions() -> None:
         ],
     )
     assert report.render(long).startswith(b"%PDF")
+
+
+def test_render_embeds_the_app_fonts() -> None:
+    pdf = report.render(a_report())
+    assert b"DMSans" in pdf
+    assert b"DMMono" in pdf
+
+
+def test_render_spreads_a_long_report_over_numbered_pages() -> None:
+    long = a_report(
+        months=[report.MonthLine(f"2025-{month:02d}", 1_000_00, 1) for month in range(1, 13)] * 6
+    )
+
+    pdf = report.render(long)
+
+    assert len(re.findall(rb"/Type /Page\b", pdf)) > 1
