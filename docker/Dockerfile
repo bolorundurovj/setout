@@ -12,7 +12,7 @@ RUN cd packages/api-client && yarn generate && yarn format
 WORKDIR /build/apps/web
 RUN yarn build
 
-FROM python:3.14-slim-bookworm AS runtime
+FROM python:3.15-slim-bookworm AS runtime
 COPY --from=ghcr.io/astral-sh/uv:0.9.17 /uv /bin/uv
 
 ARG SETOUT_VERSION=dev
