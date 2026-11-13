@@ -1,15 +1,17 @@
 """Shared test fixtures.
 
-Integration and contract tests run against a fresh in-memory SQLite database
-per test, through the real ASGI app, with nothing mocked.
+Integration and contract tests use the real ASGI app and a fresh database per test.
+SQLite is the default; TEST_DATABASE_URL enables isolated PostgreSQL databases.
 """
 
 from __future__ import annotations
 
 import os
+import uuid
 from collections.abc import AsyncIterator
 from pathlib import Path
 
+import asyncpg
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -36,8 +38,15 @@ def _ignore_local_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest_asyncio.fixture
 async def client(tmp_path: Path) -> AsyncIterator[AsyncClient]:
+    database_url = os.environ.get("TEST_DATABASE_URL", "sqlite://:memory:")
+    admin = None
+    database_name = f"setout_test_{uuid.uuid4().hex}"
+    if database_url.startswith("postgres"):
+        admin = await asyncpg.connect(database_url)
+        await admin.execute(f'CREATE DATABASE "{database_name}"')
+        database_url = database_url.rsplit("/", 1)[0] + "/" + database_name
     await Tortoise.init(
-        db_url="sqlite://:memory:",
+        db_url=database_url,
         modules={"models": ["setout.models"]},
     )
     await Tortoise.generate_schemas()
@@ -50,3 +59,6 @@ async def client(tmp_path: Path) -> AsyncIterator[AsyncClient]:
             yield c
     finally:
         await Tortoise.close_connections()
+        if admin is not None:
+            await admin.execute(f'DROP DATABASE "{database_name}"')
+            await admin.close()
