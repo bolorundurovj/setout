@@ -21,7 +21,7 @@ test('New Expense saves, the drawer closes from Close, and Edit saves a new amou
     .first();
   await expect(newExpense).toBeFocused();
   await newExpense.click();
-  await form.getByPlaceholder('What was purchased').fill('17 bags of cement');
+  await form.getByPlaceholder('Cement or blockwork labour').fill('17 bags of cement');
   await form.getByRole('textbox', { name: 'Amount spent' }).fill('76500');
   await form
     .getByRole('group', { name: 'Category' })

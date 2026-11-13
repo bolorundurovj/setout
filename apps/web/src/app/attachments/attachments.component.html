@@ -20,7 +20,7 @@
   @if (lastArchived(); as archived) {
     <p class="t-small muted">
       {{ archived.filename }} was archived.
-      <button type="button" class="action t-mono" (click)="restoreLastArchived()">Undo</button>
+      <button type="button" class="action t-mono" (click)="restoreLastArchived()">Restore</button>
     </p>
   }
   <button type="button" class="add" [disabled]="attachments.saving()" (click)="openFilePicker()">

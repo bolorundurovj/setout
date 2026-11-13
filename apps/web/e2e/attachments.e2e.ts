@@ -18,7 +18,7 @@ test('an attachment uploaded in the expense drawer is listed, archived and resto
 
   await drawer.getByRole('button', { name: 'Archive Attachment' }).click();
   await expect(drawer.getByText('receipt.pdf was archived.')).toBeVisible();
-  await drawer.getByRole('button', { name: 'Undo' }).click();
+  await drawer.getByRole('button', { name: 'Restore' }).click();
   await expect(drawer.getByText('receipt.pdf', { exact: true })).toBeVisible();
 });
 

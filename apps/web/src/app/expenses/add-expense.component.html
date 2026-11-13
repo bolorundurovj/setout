@@ -9,7 +9,9 @@
       [value]="categoryId()"
       (valueChange)="pickCategory($event)"
     />
-    <span class="t-small muted">{{ categoryNote() }}</span>
+    @if (categoryNote()) {
+      <span class="t-small muted">{{ categoryNote() }}</span>
+    }
   </div>
 
   <label class="field">
@@ -19,7 +21,7 @@
       type="text"
       name="description"
       autocomplete="off"
-      placeholder="What was purchased"
+      placeholder="Cement or blockwork labour"
       [value]="description()"
       (input)="description.set(value($event))"
     />
@@ -41,11 +43,10 @@
       [value]="spentOn()"
       (input)="spentOn.set(value($event))"
     />
-    <span class="t-small muted">{{ dateNote() }}</span>
   </div>
 
   <div class="field">
-    <span class="t-micro">Cost Type</span>
+    <span class="t-micro">Cost Type (Optional)</span>
     <app-chip-group
       label="Cost Type"
       [chips]="costTypeChips"
@@ -53,7 +54,6 @@
       [clearable]="true"
       (valueChange)="costType.set($event)"
     />
-    <span class="t-small muted">{{ costTypeNote() }}</span>
   </div>
 
   <div class="field">
@@ -138,12 +138,14 @@
           [value]="newItemUnit()"
           (input)="newItemUnit.set(value($event))"
         />
-        <app-button [disabled]="!newItemName().trim()" (pressed)="addItem()"> Add Item </app-button>
+        <app-button [disabled]="!newItemName().trim()" (pressed)="addItem()">
+          Save Item
+        </app-button>
         <app-button variant="secondary" (pressed)="addingItem.set(false)">Cancel</app-button>
       </div>
       <span class="t-small muted">
-        The unit is the quantity the price refers to. Each expense for the item is added to its
-        price history.
+        Use a unit such as bag, sheet or metre. Expenses assigned to this item build its price
+        history.
       </span>
     } @else {
       <button type="button" class="disclose t-mono" (click)="addingItem.set(true)">
@@ -186,13 +188,11 @@
           (input)="newVendorName.set(value($event))"
         />
         <app-button [disabled]="!newVendorName().trim()" (pressed)="addVendor()"
-          >Add Vendor</app-button
+          >Save Vendor</app-button
         >
         <app-button variant="secondary" (pressed)="addingVendor.set(false)">Cancel</app-button>
       </div>
-      <span class="t-small muted">
-        Only the name is required. Trade and phone number can be added later.
-      </span>
+      <span class="t-small muted"> You can enter trade and phone number later. </span>
     } @else {
       <button type="button" class="disclose t-mono" (click)="addingVendor.set(true)">
         + New Vendor
@@ -223,7 +223,9 @@
       [value]="paidById()"
       (valueChange)="paidById.set($event)"
     />
-    <span class="t-small muted">{{ payerNote() }}</span>
+    @if (payerNote()) {
+      <span class="t-small muted">{{ payerNote() }}</span>
+    }
   </div>
 
   <label class="field">
@@ -277,8 +279,7 @@
           </label>
         </div>
         <p class="t-small muted">
-          The amount is counted as spent now. The item is listed on the vendor's page and the
-          project dashboard until it is marked received.
+          Paid for but not yet received. This amount is included in Spent.
         </p>
       }
     </div>
@@ -308,25 +309,24 @@
         <p class="t-small muted">
           {{ archived.filename }} was archived.
           <button type="button" class="receipt-action t-mono" (click)="restoreLastArchived()">
-            Undo
+            Restore
           </button>
         </p>
       }
       @if (expenseAttachments().length === 0) {
         <button type="button" class="receipt-empty" (click)="openFilePicker()">
-          <span class="t-body">No attachment</span>
-          <span class="t-mono receipt-add">Attach Receipt</span>
+          <span class="t-mono receipt-add">Attach Image or PDF</span>
         </button>
       }
     } @else {
       <button type="button" class="receipt-tile" (click)="openFilePicker()">
         <span class="receipt-thumb blank"></span>
         <span class="receipt-text">
-          <span class="t-body">Receipt</span>
+          <span class="t-body">Attachment</span>
           <span class="t-small muted">{{ fileLabel() }}</span>
         </span>
         @if (selectedFile()) {
-          <span class="receipt-chip t-mono">selected</span>
+          <span class="receipt-chip t-mono">Selected</span>
         }
       </button>
     }
@@ -347,22 +347,33 @@
     </div>
   }
 
+  @if (saveError()) {
+    <p class="banner warn t-small" role="alert">{{ saveError() }}</p>
+  }
+
   <div class="actions">
-    <app-button type="submit" size="large" [disabled]="!canSave()" [loading]="expenses.saving()">
-      {{ isEditing() ? 'Save Changes' : 'Save Expense' }}
+    <app-button
+      type="submit"
+      size="large"
+      [disabled]="!canSave() || submitting()"
+      [loading]="submitting()"
+    >
+      {{ saveError() ? 'Retry Save' : isEditing() ? 'Save Changes' : 'Save Expense' }}
     </app-button>
     @if (!isEditing()) {
       <app-button
         variant="secondary"
         size="large"
-        [disabled]="!canSave()"
-        [loading]="expenses.saving()"
+        [disabled]="!canSave() || submitting()"
+        [loading]="submitting()"
         (pressed)="save(true)"
       >
-        Save and Add Another
+        Save and Create Another
       </app-button>
     }
   </div>
 
-  <p class="t-small muted">{{ saveHint() }}</p>
+  @if (saveHint()) {
+    <p class="t-small muted">{{ saveHint() }}</p>
+  }
 </form>

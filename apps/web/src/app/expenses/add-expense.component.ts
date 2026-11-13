@@ -95,6 +95,9 @@ export class AddExpenseComponent {
 
   private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
   readonly selectedFile = signal<File | null>(null);
+  readonly saveError = signal('');
+  readonly submitting = signal(false);
+  private pendingExpense: ExpenseRead | null = null;
   readonly lastArchived = signal<AttachmentRead | null>(null);
 
   readonly symbol = computed(() => currencySymbol(this.project().currency_code));
@@ -171,9 +174,9 @@ export class AddExpenseComponent {
   readonly fileLabel = computed(() => {
     const file = this.selectedFile();
     if (!file) {
-      return 'No file selected.';
+      return 'Choose an image or a PDF.';
     }
-    return `${file.name} · ${this.attachments.formatSize(file.size)} · stored on your server`;
+    return `${file.name} · ${this.attachments.formatSize(file.size)}`;
   });
 
   constructor() {
@@ -238,32 +241,16 @@ export class AddExpenseComponent {
   }
 
   categoryNote(): string {
-    const category = this.budget.categories().find((s) => s.id === this.categoryId());
-    if (!category) {
-      return 'Saved as Uncategorised. You can assign a category later.';
+    if (!this.categoryId()) {
+      return 'No category selected. You can categorise this expense later.';
     }
-    if (this.categoryId() === this.suggestedCategoryId()) {
-      return `Suggested from past expenses. Counts against the budget for ${category.name}.`;
-    }
-    return `Counts against the budget for ${category.name}.`;
-  }
-
-  dateNote(): string {
-    return this.spentOn() === isoDay()
-      ? 'Today. Change the date when entering older receipts.'
-      : `Dated ${this.spentOn()}. The expense is counted in that month.`;
-  }
-
-  costTypeNote(): string {
-    return this.costType()
-      ? 'Splits the project total by cost type on the dashboard. Select again to clear.'
-      : 'Optional. The expense is included in all totals either way.';
+    return this.categoryId() === this.suggestedCategoryId() ? 'Suggested from past expenses.' : '';
   }
 
   calculationNote(): string {
     const calculated = this.calculatedAmount();
     if (calculated === null) {
-      return 'Enter a quantity and unit rate and the total is calculated.';
+      return 'Quantity × unit rate calculates the amount.';
     }
     return `${this.quantity()} × ${this.money(this.unitRateMinor() ?? 0)} = ${this.money(calculated)}`;
   }
@@ -280,7 +267,7 @@ export class AddExpenseComponent {
 
   payerNote(): string {
     const person = this.people.choices().find((p) => p.id === this.paidById());
-    return person ? `Deducted from the balance of ${person.name}.` : 'Paid by you.';
+    return person ? `Reduces the advance balance for ${person.name} on this project.` : '';
   }
 
   lastPriceWhere(): string {
@@ -305,9 +292,7 @@ export class AddExpenseComponent {
   }
 
   saveHint(): string {
-    return this.canSave()
-      ? `Saves to ${this.project().name}`
-      : 'Description and amount are required.';
+    return this.canSave() ? '' : 'Description and amount are required.';
   }
 
   async pickItem(itemId: string): Promise<void> {
@@ -475,68 +460,89 @@ export class AddExpenseComponent {
   async save(another: boolean): Promise<void> {
     const amount = this.amountMinor();
     // Ignores repeat submits, such as a double tap, while a save is in progress.
-    if (this.expenses.saving() || !this.canSave() || amount === null) {
+    if (this.submitting() || this.expenses.saving() || !this.canSave() || amount === null) {
       return;
     }
-    const calculated = this.calculatedAmount();
-    const body = {
-      description: this.description().trim(),
-      amount: calculated === null ? amount : null,
-      spent_on: this.spentOn() || null,
-      category_id: this.categoryId() || null,
-      item_id: this.itemId() || null,
-      vendor_id: this.vendorId() || null,
-      agreement_id: this.agreementId() || null,
-      paid_by_id: this.paidById() || null,
-      quantity: this.quantityValue(),
-      unit_rate: this.unitRateMinor(),
-      cost_type: (this.costType() as CostType) || null,
-      notes: this.notes().trim() || null,
-    };
+    this.submitting.set(true);
+    try {
+      const calculated = this.calculatedAmount();
+      const body = {
+        description: this.description().trim(),
+        amount: calculated === null ? amount : null,
+        spent_on: this.spentOn() || null,
+        category_id: this.categoryId() || null,
+        item_id: this.itemId() || null,
+        vendor_id: this.vendorId() || null,
+        agreement_id: this.agreementId() || null,
+        paid_by_id: this.paidById() || null,
+        quantity: this.quantityValue(),
+        unit_rate: this.unitRateMinor(),
+        cost_type: (this.costType() as CostType) || null,
+        notes: this.notes().trim() || null,
+      };
 
-    const existing = this.expenseToEdit();
-    const saved = existing
-      ? await this.expenses.update(this.project().id, existing.id, body)
-      : await this.expenses.add(this.project().id, {
-          ...body,
-          auto_categorize: !this.categoryExplicitlyCleared(),
+      this.saveError.set('');
+      const creating = !this.isEditing();
+      const existing = this.expenseToEdit() ?? this.pendingExpense;
+      const saved = existing
+        ? await this.expenses.update(this.project().id, existing.id, body)
+        : await this.expenses.add(this.project().id, {
+            ...body,
+            auto_categorize: !this.categoryExplicitlyCleared(),
+          });
+
+      if (!saved) {
+        this.toast.show(this.expenses.error() ?? 'Could not save that expense.', 'error');
+        return;
+      }
+
+      if (creating) this.pendingExpense = saved;
+      const file = this.selectedFile();
+      if (creating && file) {
+        const added = await this.attachments.add(this.parentOf(saved.id), file);
+        if (!added) {
+          this.saveError.set(
+            'Expense saved. Attachment could not be uploaded. Retry Save to upload it.',
+          );
+          this.saved.emit();
+          return;
+        }
+        this.selectedFile.set(null);
+      }
+
+      if (creating && this.outstandingDelivery()) {
+        const delivery = await this.deliveries.add(this.project().id, {
+          expense_id: saved.id,
+          description: this.deliveryDescription().trim() || null,
+          expected: this.deliveryExpected().trim() || null,
         });
-
-    if (!saved) {
-      this.toast.show(this.expenses.error() ?? 'Could not save that expense.', 'error');
-      return;
-    }
-
-    const file = this.selectedFile();
-    if (!existing && file) {
-      const added = await this.attachments.add(this.parentOf(saved.id), file);
-      if (!added) {
-        this.toast.show(this.attachments.error() ?? 'Could not attach that file.', 'error');
+        if (!delivery) {
+          this.saveError.set(
+            'Expense saved. Outstanding delivery could not be recorded. Retry Save to record it.',
+          );
+          this.saved.emit();
+          return;
+        }
       }
-    }
 
-    if (!existing && this.outstandingDelivery()) {
-      const delivery = await this.deliveries.add(this.project().id, {
-        expense_id: saved.id,
-        description: this.deliveryDescription().trim() || null,
-        expected: this.deliveryExpected().trim() || null,
-      });
-      if (!delivery) {
-        this.toast.show(this.deliveries.error() ?? 'Could not save the delivery.', 'error');
+      this.toast.show(
+        existing ? `${saved.description} updated.` : `${saved.description} recorded.`,
+      );
+      if (creating) {
+        this.reset();
       }
-    }
-
-    this.toast.show(existing ? `${saved.description} updated.` : `${saved.description} recorded.`);
-    if (!existing) {
-      this.reset();
-    }
-    this.saved.emit();
-    if (!another || existing) {
-      this.closed.emit();
+      this.saved.emit();
+      if (!another || !creating) {
+        this.closed.emit();
+      }
+    } finally {
+      this.submitting.set(false);
     }
   }
 
   private reset(): void {
+    this.pendingExpense = null;
+    this.saveError.set('');
     this.description.set('');
     this.amount.set('');
     this.quantity.set('');

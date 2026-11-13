@@ -27,6 +27,61 @@ const project: ProjectRead = {
 };
 
 describe('AddExpenseComponent', () => {
+  it('retains a failed attachment and retries against the saved expense', async () => {
+    const fixture = render();
+    const component = fixture.componentInstance;
+    const close = vi.fn();
+    component.closed.subscribe(close);
+    component.description.set('Cement');
+    component.amount.set('11000');
+    const file = new File(['attachment'], 'cement.jpg', { type: 'image/jpeg' });
+    component.selectedFile.set(file);
+    vi.spyOn(TestBed.inject(AttachmentService), 'add').mockResolvedValueOnce(null);
+
+    await component.save(false);
+
+    expect(saves).toHaveLength(1);
+    expect(component.saveError()).toContain('Expense saved. Attachment could not be uploaded.');
+    expect(component.selectedFile()).toBe(file);
+    expect(close).not.toHaveBeenCalled();
+    fixture.detectChanges();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')?.textContent,
+    ).toContain('Retry Save');
+
+    await component.save(false);
+
+    expect(saves).toHaveLength(1);
+    expect(updates).toHaveLength(1);
+    expect(updates[0][1]).toBe('e1');
+    expect(uploads).toEqual([{ expenseId: 'e1', file }]);
+    expect(component.saveError()).toBe('');
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it('retries an outstanding delivery without uploading the saved attachment again', async () => {
+    const component = render().componentInstance;
+    component.description.set('Cement');
+    component.amount.set('11000');
+    component.selectedFile.set(new File(['attachment'], 'cement.jpg', { type: 'image/jpeg' }));
+    component.outstandingDelivery.set(true);
+    vi.spyOn(TestBed.inject(DeliveryService), 'add').mockResolvedValueOnce(null);
+
+    await component.save(false);
+
+    expect(component.saveError()).toContain('Expense saved. Outstanding delivery');
+    expect(uploads).toHaveLength(1);
+    expect(component.selectedFile()).toBeNull();
+
+    await component.save(false);
+
+    expect(saves).toHaveLength(1);
+    expect(updates).toHaveLength(1);
+    expect(uploads).toHaveLength(1);
+    expect(deliveryCalls).toHaveLength(1);
+    expect(component.saveError()).toBe('');
+  });
+
   let saves: unknown[][];
   let updates: unknown[][];
   let saving: boolean;
@@ -275,7 +330,7 @@ describe('AddExpenseComponent', () => {
 
     component.selectedFile.set(file);
     expect(component.fileLabel()).toContain('receipt_16aug.jpg');
-    expect(component.fileLabel()).toContain('stored on your server');
+    expect(component.fileLabel()).not.toContain('stored');
 
     component.description.set('10 bags of cement');
     component.amount.set('11000');
@@ -286,10 +341,10 @@ describe('AddExpenseComponent', () => {
 
   it('shows a prompt when no file is selected', () => {
     const component = render().componentInstance;
-    expect(component.fileLabel()).toContain('No file selected');
+    expect(component.fileLabel()).toContain('Choose an image or a PDF');
   });
 
-  it('clears the selected file after Save and Add Another', async () => {
+  it('clears the selected file after Save and Create Another', async () => {
     const fixture = render();
     const component = fixture.componentInstance;
     component.selectedFile.set(new File(['x'], 'r.jpg', { type: 'image/jpeg' }));
@@ -298,7 +353,7 @@ describe('AddExpenseComponent', () => {
 
     await component.save(true);
 
-    // Save and Add Another clears the selected file so it is not attached to the next expense.
+    // Save and Create Another clears the selected file so it is not attached to the next expense.
     expect(component.selectedFile()).toBeNull();
   });
 

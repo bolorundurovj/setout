@@ -9,7 +9,7 @@ test('an expense saved with Outstanding Delivery is on the Deliveries tab with i
 
   await page.locator('app-expenses').getByRole('button', { name: 'New Expense' }).first().click();
   const form = page.getByRole('dialog', { name: 'New Expense' });
-  await form.getByPlaceholder('What was purchased').fill('Roofing sheets');
+  await form.getByPlaceholder('Cement or blockwork labour').fill('Roofing sheets');
   await form.getByRole('textbox', { name: 'Amount spent' }).fill('120000');
   await form.getByText('Outstanding Delivery').click();
   await form.getByRole('button', { name: 'Save Expense' }).click();
