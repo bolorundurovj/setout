@@ -1,4 +1,5 @@
 import asyncio
+import threading
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -7,6 +8,7 @@ from httpx import AsyncClient
 from setout.config import get_settings
 from setout.models.currency import Currency
 from setout.models.user import Session, User
+from setout.routers import auth
 from setout.services.auth import read_session_id, sign_session_id
 
 
@@ -20,6 +22,97 @@ def _disable_sign_in_delay(monkeypatch: pytest.MonkeyPatch) -> None:
 async def _setup(client: AsyncClient, passphrase: str = "password123") -> None:
     resp = await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": passphrase})
     assert resp.status_code == 200, resp.text
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "operation,function",
+    [
+        ("setup", "hash_passphrase"),
+        ("sign-in", "verify_passphrase"),
+        ("passphrase", "verify_passphrase"),
+        ("passphrase", "hash_passphrase"),
+    ],
+)
+async def test_bcrypt_does_not_block_unrelated_requests(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch, operation: str, function: str
+) -> None:
+    if operation != "setup":
+        await _setup(client)
+    entered = threading.Event()
+    release = threading.Event()
+    loop_thread = threading.get_ident()
+    worker_threads: list[int] = []
+    original = getattr(auth, function)
+
+    def blocked(*args):
+        worker_threads.append(threading.get_ident())
+        entered.set()
+        if not release.wait(timeout=5):
+            raise TimeoutError("Bcrypt worker was not released")
+        return original(*args)
+
+    monkeypatch.setattr(auth, function, blocked)
+    body = {"name": "Admin", "passphrase": "password123"}
+    if operation == "passphrase":
+        body = {"current_passphrase": "password123", "new_passphrase": "new password123"}
+    request = asyncio.create_task(client.post(f"/api/auth/{operation}", json=body))
+    try:
+        assert await asyncio.to_thread(entered.wait, 3)
+        assert len(worker_threads) == 1
+        assert worker_threads[0] != loop_thread
+        response = await asyncio.wait_for(client.get("/openapi.json"), timeout=1)
+        assert response.status_code == 200
+        assert not request.done()
+    finally:
+        release.set()
+        result = await request
+    assert result.status_code == (204 if operation == "passphrase" else 200)
+
+
+@pytest.mark.integration
+async def test_concurrent_setup_creates_one_account(client: AsyncClient) -> None:
+    responses = await asyncio.gather(
+        *(
+            client.post("/api/auth/setup", json={"name": name, "passphrase": "password123"})
+            for name in ("First", "Second")
+        )
+    )
+    assert sorted(response.status_code for response in responses) == [200, 409]
+    assert await User.all().count() == 1
+    assert await Session.all().count() == 1
+
+
+@pytest.mark.integration
+async def test_concurrent_failures_reach_attempt_limit(client: AsyncClient) -> None:
+    await _setup(client)
+    limit = get_settings().sign_in_max_attempts
+    responses = await asyncio.gather(
+        *(client.post("/api/auth/sign-in", json={"passphrase": "wrong"}) for _ in range(limit + 2))
+    )
+    assert sum(response.status_code == 401 for response in responses) == limit
+    assert sum(response.status_code == 429 for response in responses) == 2
+
+
+@pytest.mark.integration
+async def test_account_name_rejects_null(client: AsyncClient) -> None:
+    await _setup(client)
+    assert (await client.patch("/api/auth/me", json={"name": None})).status_code == 422
+    assert (await client.get("/api/auth/me")).json()["name"] == "Admin"
+
+
+@pytest.mark.integration
+async def test_concurrent_success_and_failure_preserve_account_fields(client: AsyncClient) -> None:
+    await _setup(client)
+    responses = await asyncio.gather(
+        client.post("/api/auth/sign-in", json={"passphrase": "password123"}),
+        client.post("/api/auth/sign-in", json={"passphrase": "wrong"}),
+    )
+    assert [response.status_code for response in responses] == [200, 401]
+    user = await User.first()
+    assert user is not None
+    assert user.name == "Admin"
+    assert user.failed_sign_ins in (0, 1)
 
 
 async def _fail_sign_in(client: AsyncClient, times: int = 1) -> int:

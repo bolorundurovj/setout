@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import secrets
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from starlette.concurrency import run_in_threadpool
+from tortoise.transactions import in_transaction
 
 from setout.config import get_settings
 from setout.models.currency import Currency
@@ -30,6 +33,25 @@ from setout.services.auth import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 SESSION_COOKIE_NAME = "setout_session"
+
+
+async def serialise_authentication() -> AsyncIterator[None]:
+    error: HTTPException | None = None
+    async with in_transaction() as connection:
+        if connection.capabilities.dialect == "postgres":
+            await connection.execute_query("SELECT pg_advisory_xact_lock(8474)")
+        else:
+            # Acquire SQLite's write lock before reading authentication state.
+            await connection.execute_query(
+                'UPDATE "user" SET failed_sign_ins = failed_sign_ins WHERE 1 = 0'
+            )
+        try:
+            yield
+        except HTTPException as exc:
+            # Failed attempts must commit their counters before returning an error.
+            error = exc
+    if error is not None:
+        raise error
 
 
 async def get_current_user(
@@ -86,6 +108,8 @@ async def update_account(
     req: AccountUpdate, user: Annotated[User, Depends(get_current_user)]
 ) -> UserResponse:
     changes = req.model_dump(exclude_unset=True)
+    if "name" in changes and changes["name"] is None:
+        raise HTTPException(status_code=422, detail="Account name cannot be null")
     currency_code = changes.get("base_currency")
     if currency_code:
         currency_code = currency_code.upper()
@@ -103,6 +127,7 @@ async def update_account(
 
 @router.post(
     "/passphrase",
+    dependencies=[Depends(serialise_authentication)],
     operation_id="changePassphrase",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
@@ -116,11 +141,11 @@ async def change_passphrase(
     user: Annotated[User, Depends(get_current_user)],
     setout_session: Annotated[str | None, Cookie()] = None,
 ) -> None:
-    if not verify_passphrase(req.current_passphrase, user.passphrase_hash):
+    if not await run_in_threadpool(verify_passphrase, req.current_passphrase, user.passphrase_hash):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="The current passphrase is incorrect"
         )
-    user.passphrase_hash = hash_passphrase(req.new_passphrase)
+    user.passphrase_hash = await run_in_threadpool(hash_passphrase, req.new_passphrase)
     await user.save()
     # Ends every other session; the session that made the change is kept.
     current_session_id = read_session_id(setout_session or "")
@@ -173,6 +198,7 @@ async def get_auth_status(
 
 @router.post(
     "/setup",
+    dependencies=[Depends(serialise_authentication)],
     operation_id="setupAdmin",
     responses={status.HTTP_409_CONFLICT: {"description": "This server is already set up"}},
 )
@@ -182,7 +208,7 @@ async def setup_admin(req: SetupRequest, response: Response) -> UserResponse:
             status_code=status.HTTP_409_CONFLICT, detail="This server is already set up"
         )
 
-    hashed = hash_passphrase(req.passphrase)
+    hashed = await run_in_threadpool(hash_passphrase, req.passphrase)
     user = await User.create(name=req.name, email=req.email, passphrase_hash=hashed)
 
     session_id = secrets.token_urlsafe(32)
@@ -195,6 +221,7 @@ async def setup_admin(req: SetupRequest, response: Response) -> UserResponse:
 
 @router.post(
     "/sign-in",
+    dependencies=[Depends(serialise_authentication)],
     operation_id="signIn",
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": "Invalid credentials"},
@@ -224,7 +251,7 @@ async def sign_in(req: SignInRequest, response: Response) -> UserResponse:
     if wait:
         await asyncio.sleep(wait)
 
-    if not verify_passphrase(req.passphrase, user.passphrase_hash):
+    if not await run_in_threadpool(verify_passphrase, req.passphrase, user.passphrase_hash):
         user.failed_sign_ins = failures + 1
         user.last_failed_at = now
         await user.save()
