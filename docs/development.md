@@ -62,11 +62,16 @@ Write tests with the feature, not after it.
 | Layer | Lives in | Runs against |
 | --- | --- | --- |
 | Unit | `apps/api/tests/unit` | Functions in isolation: balances, budgets, item prices, sheet readers |
-| Integration | `apps/api/tests/integration` | The real ASGI app on a fresh in-memory SQLite database per test, nothing mocked |
+| Integration | `apps/api/tests/integration` | The real ASGI app on a fresh SQLite or PostgreSQL database per test |
 | Contract | `apps/api/tests/contract` | The published schema: operation ids stay stable, and the API matches its documentation |
 
 Frontend specs sit beside the code they cover and run on Vitest through the
 Angular CLI.
+
+Integration tests use in-memory SQLite by default. To use PostgreSQL, set
+`TEST_DATABASE_URL` to a dedicated test instance and run `make test-int`. Each
+test creates and drops its own database, so the account needs permission to
+create databases. Do not point this variable at a production instance.
 
 ## Changing the schema
 
@@ -150,3 +155,18 @@ things clearly instead of narrating the code.
 
 Commit messages are short: a subject line is usually the whole message, with a
 body only when the change cannot be understood without one.
+
+## Implementation constraints
+
+Authentication transactions serialise setup, sign-in and passphrase changes.
+SQLite blocks other writes during these transactions, including sign-in delays.
+Failed sign-in counters must commit even when authentication returns an error.
+Keep bcrypt work in the bounded worker thread pool to avoid blocking the event loop.
+
+Local attachment storage requires a filesystem with hard-link support. Publication
+must retain existing content-addressed attachments when concurrent uploads use
+the same key.
+
+Attachments and outstanding deliveries can fail after the expense is saved.
+Retries must reuse that expense and skip attachments already uploaded. Block
+repeat submissions until the complete save attempt finishes.
