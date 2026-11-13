@@ -8,7 +8,7 @@ test('first-run setup creates the account and signs in', async ({ page }) => {
   const passphrases = page.getByPlaceholder('••••••••••');
   await passphrases.nth(0).fill(ADMIN.passphrase);
   await passphrases.nth(1).fill(ADMIN.passphrase);
-  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Create Account' }).click();
 
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

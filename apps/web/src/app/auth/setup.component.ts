@@ -14,8 +14,8 @@ import { ToastService } from '../toast.service';
     <div class="setup-container">
       <div class="setup-box">
         <div class="header">
-          <div class="t-display">Welcome to Setout</div>
-          <div class="t-body" style="color: var(--ink-2)">Set up your private server.</div>
+          <div class="t-display">Set Up Setout</div>
+          <div class="t-body" style="color: var(--ink-2)">Create your account.</div>
         </div>
 
         <div class="form-section">
@@ -54,8 +54,7 @@ import { ToastService } from '../toast.service';
           </div>
 
           <div class="info-box t-small">
-            Setup stores a session cookie on this device. The cookie is not used for tracking. Use
-            this passphrase to sign in on other devices.
+            Use at least 8 characters. Use this passphrase to sign in on other devices.
           </div>
         </div>
         <app-button
@@ -65,7 +64,7 @@ import { ToastService } from '../toast.service';
           [loading]="authService.loading()"
           (pressed)="onSubmit()"
         >
-          {{ authService.loading() ? 'Setting up…' : 'Continue' }}
+          {{ authService.loading() ? 'Setting up…' : 'Create Account' }}
         </app-button>
 
         @if (authService.error()) {
@@ -79,7 +78,7 @@ import { ToastService } from '../toast.service';
 
         <div class="footer">
           <div class="t-small">
-            Server already set up?
+            Already have an account?
             <a routerLink="/login" class="link">Sign in</a>
           </div>
         </div>
@@ -186,7 +185,7 @@ export class SetupComponent {
       this.passphrase(),
     );
     if (success) {
-      this.toast.show('Server set up.');
+      this.toast.show('Account created.');
       await this.router.navigate(['/']);
     }
   }

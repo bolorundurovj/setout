@@ -1,13 +1,6 @@
-<app-topbar title="Settings" subtitle="This server" />
+<app-topbar title="Settings" />
 
 <div class="page">
-  <div class="intro">
-    <p class="prose">
-      Settings for this server. Settings for a single project, such as its currency and categories,
-      are in Project Settings.
-    </p>
-  </div>
-
   <section class="card block">
     <span class="t-micro">Appearance</span>
     <app-chip-group
@@ -21,11 +14,11 @@
 
   @if (currencyChips().length) {
     <section class="card block">
-      <span class="t-micro">Default Currency</span>
+      <span class="t-micro">Home Currency</span>
       <app-chip-group
         [chips]="currencyChips()"
         [value]="defaultCurrency()"
-        label="Default currency"
+        label="Home currency"
         (valueChange)="selectDefaultCurrency($event)"
       />
       <p class="t-small note">{{ currencyNote() }}</p>
@@ -35,7 +28,6 @@
   <section class="card block">
     <div class="block-head">
       <span class="t-micro">Account and Sign In</span>
-      <span class="t-mono aside">On this server</span>
     </div>
 
     <div class="fields">
@@ -45,7 +37,7 @@
           class="input-field"
           type="text"
           autocomplete="off"
-          placeholder="Your name or device name"
+          placeholder="Your name"
           [value]="name()"
           (input)="name.set(inputValue($event))"
           (keyup.enter)="saveName()"
@@ -77,7 +69,7 @@
       <div class="passphrase">
         <div class="fields three">
           <label class="field">
-            <span class="t-micro">Current passphrase</span>
+            <span class="t-micro">Current Passphrase</span>
             <input
               class="input-field"
               type="password"
@@ -87,7 +79,7 @@
             />
           </label>
           <label class="field">
-            <span class="t-micro">New passphrase</span>
+            <span class="t-micro">New Passphrase</span>
             <input
               class="input-field"
               type="password"
@@ -97,7 +89,7 @@
             />
           </label>
           <label class="field">
-            <span class="t-micro">Confirm new passphrase</span>
+            <span class="t-micro">Confirm New Passphrase</span>
             <input
               class="input-field"
               type="password"
@@ -128,11 +120,6 @@
         </div>
       </div>
     }
-
-    <p class="t-small note">
-      This server uses one passphrase for sign-in. Setout does not store accounts elsewhere or use
-      third-party sign-in.
-    </p>
   </section>
 
   <section class="card block">
@@ -142,9 +129,8 @@
     </div>
 
     <p class="prose">
-      A backup is one file that contains your data: every project, expense, person, vendor and land
-      record. Attachments and land documents are not included. Store backups on a different machine
-      from this server.
+      Download your Setout data. Attachments and land documents are not included. Store backups on a
+      different machine from this server.
     </p>
 
     <div class="strip">
@@ -176,8 +162,8 @@
         <span class="t-small danger-file">{{ selectedBackupRowCount() }}</span>
 
         <p class="danger-body">
-          Restoring replaces all data on this server with the data in this backup. Changes made
-          since the backup was created are lost, including changes made in this session.
+          Replace current data with this backup? Changes made since the backup was created will be
+          lost. Restoring signs out all devices.
         </p>
 
         @if (versionWarning()) {
@@ -196,10 +182,5 @@
         </div>
       </div>
     }
-
-    <p class="t-small note">
-      A backup is a JSON file that includes the Setout version and schema version that created it.
-      Restoring signs out all devices, because accounts are also restored from the backup.
-    </p>
   </section>
 </div>

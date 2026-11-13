@@ -26,7 +26,7 @@
   @if (personService.people().length === 0) {
     <div class="card">
       <p class="t-body">{{ search() ? 'No people match the search.' : 'No people yet.' }}</p>
-      <p class="t-small">Add each person, then select them as the payer on an expense.</p>
+      <p class="t-small">Create a person, then select them under Paid By on an expense.</p>
     </div>
   } @else {
     <div class="table">

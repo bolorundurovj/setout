@@ -8,7 +8,7 @@ test('adding a category and a budget item updates the Budgeted Total', async ({
   await openProjectTab(page, project.id, 'Budget');
 
   await page.locator('app-combobox input').fill('Foundation');
-  await page.getByRole('button', { name: 'Add Category' }).click();
+  await page.getByRole('button', { name: 'Save Category' }).click();
   await page.getByRole('button', { name: 'Foundation' }).click();
 
   await page.getByPlaceholder('Item description').fill('Blocks');

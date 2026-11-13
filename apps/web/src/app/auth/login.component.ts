@@ -5,7 +5,6 @@ import { Router, RouterModule } from '@angular/router';
 import { AuthService } from './auth.service';
 import { ButtonComponent } from '../ui/button.component';
 import { LogoComponent } from '../ui/logo.component';
-import { ToastService } from '../toast.service';
 
 @Component({
   selector: 'app-login',
@@ -18,7 +17,7 @@ import { ToastService } from '../toast.service';
           <app-logo [size]="44" />
           <div class="header-text">
             <div class="t-display">Setout</div>
-            <div class="t-small">Sign in on this device</div>
+            <div class="t-small">Sign In</div>
           </div>
         </div>
 
@@ -51,10 +50,7 @@ import { ToastService } from '../toast.service';
 
         <div class="footer">
           <div class="t-small">
-            Server not set up yet? <a routerLink="/setup" class="link">Set up the server</a>
-          </div>
-          <div class="t-small" style="color: var(--ink-3)">
-            Single-user server. One passphrase, no separate accounts or roles.
+            First time using Setout? <a routerLink="/setup" class="link">Set Up Setout</a>
           </div>
         </div>
       </div>
@@ -122,13 +118,10 @@ export class LoginComponent {
   authService = inject(AuthService);
   router = inject(Router);
 
-  toast = inject(ToastService);
-
   async onSubmit() {
     if (!this.passphrase()) return;
     const success = await this.authService.signIn(this.passphrase());
     if (success) {
-      this.toast.show('Signed in.');
       await this.router.navigate(['/']);
     }
   }

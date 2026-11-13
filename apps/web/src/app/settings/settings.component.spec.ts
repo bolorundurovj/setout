@@ -196,7 +196,7 @@ describe('SettingsComponent', () => {
 
   it('describes the appearance setting when following the system', async () => {
     const component = await ready();
-    expect(component.appearanceNote()).toContain('Theme follows the system setting');
+    expect(component.appearanceNote()).toContain('Follows your device setting');
     expect(component.appearanceNote()).toContain('dark');
   });
 
@@ -372,7 +372,7 @@ describe('SettingsComponent', () => {
     expect(component.currencyChips().map((chip) => chip.value)).toEqual(['NGN', 'USD']);
     expect(component.currencyChips()[0].label).toBe('NGN Nigerian naira');
     expect(component.defaultCurrency()).toBe('');
-    expect(component.currencyNote()).toContain('first currency found');
+    expect(component.currencyNote()).toContain('shown first on Home');
   });
 
   it('saves the selected default currency and confirms it', async () => {
@@ -388,7 +388,7 @@ describe('SettingsComponent', () => {
     const component = render(install(), 'Could not save the account name.', 'NGN');
 
     expect(component.defaultCurrency()).toBe('NGN');
-    expect(component.currencyNote()).toContain('Home shows NGN');
+    expect(component.currencyNote()).toContain('NGN is shown first on Home');
   });
 
   it('shows an error when the default currency fails to save', async () => {

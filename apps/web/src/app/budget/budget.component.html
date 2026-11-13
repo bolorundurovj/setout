@@ -25,14 +25,14 @@
       (submitted)="addCategory()"
     />
     <app-button [disabled]="!newCategoryName().trim()" (pressed)="addCategory()"
-      >Add Category</app-button
+      >Save Category</app-button
     >
   </div>
 
   @if (budget.categories().length === 0) {
     <div class="card">
       <p class="t-body">No categories yet.</p>
-      <p class="t-small">Add the parts of the project you want to budget and track.</p>
+      <p class="t-small">Create categories for the parts of the project you want to track.</p>
     </div>
   } @else {
     <div class="table">

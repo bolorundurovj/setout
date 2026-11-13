@@ -1,5 +1,17 @@
 import { api, expect, openProjectTab, test } from './fixtures';
 
+test('Settings identifies the Home currency and keeps backup exclusions visible', async ({
+  page,
+}) => {
+  await page.goto('/settings');
+  await expect(page.getByText('Home Currency', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Attachments and land documents are not included.', { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByText('This server', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Default Currency', { exact: true })).toHaveCount(0);
+});
+
 test('an attachment failure keeps the saved expense open for retry without duplication', async ({
   page,
   request,

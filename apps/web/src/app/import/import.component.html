@@ -6,9 +6,8 @@
   <div class="intro">
     <h1 class="t-heading">Import an Existing Spreadsheet</h1>
     <p class="prose">
-      The whole workbook is read at once and each sheet is recognised by its headings. Budget
-      amounts come only from a budget sheet and expenses only from an expenses sheet, so an expenses
-      sheet cannot change the budget.
+      Choose a workbook or CSV file to preview the import. Expense sheets do not change budgeted
+      amounts.
     </p>
   </div>
 
@@ -70,9 +69,7 @@
       </div>
 
       @if (isNewProject()) {
-        <p class="t-small note">
-          Spreadsheets do not store a currency, so select one for the new project.
-        </p>
+        <p class="t-small note">Select the currency for the new project.</p>
       } @else {
         <p class="t-small note">
           Rows already in this project, matched by date, amount and description, are recognised so a
@@ -128,7 +125,7 @@
         <app-button [disabled]="!canPreview()" [loading]="importer.busy()" (pressed)="preview()">
           Preview Import
         </app-button>
-        <span class="t-small muted">No data is saved until you review the contents.</span>
+        <span class="t-small muted">No data is saved until you select Import.</span>
       </div>
     </section>
   }
@@ -141,7 +138,8 @@
           <span class="t-micro">Budgeted</span>
           <span class="count-value t-mono">{{ money(report.budgeted_amount) }}</span>
           <span class="t-small muted">
-            {{ report.budgeted_lines }} lines across {{ report.categories.length }} categories
+            {{ report.budgeted_lines }} budget items across
+            {{ report.categories.length }} categories
           </span>
         </div>
         <div class="count">
@@ -184,7 +182,7 @@
               </span>
               <span class="t-small muted">{{ categoryMatch(category.matched_to) }}</span>
               <span class="t-mono figure">{{ money(category.budgeted_amount) }}</span>
-              <span class="t-small muted">{{ category.lines }} lines</span>
+              <span class="t-small muted">{{ category.lines }} budget items</span>
             </div>
           }
         </div>
@@ -193,7 +191,7 @@
 
     @if (report.decisions.length > 0) {
       <section class="card block">
-        <span class="t-micro">Rows That Need Attention</span>
+        <span class="t-micro">Import Checks</span>
         @for (decision of report.decisions; track decision.kind) {
           <div class="decision" [class.blocking]="decision.blocking">
             <span class="decision-text">
@@ -212,7 +210,7 @@
               />
               <span class="t-small muted">{{ consequenceFor(decision) }}</span>
             } @else {
-              <span class="t-small muted">No action required. Listed for information.</span>
+              <span class="t-small muted">No action required.</span>
             }
           </div>
         }
@@ -244,9 +242,7 @@
     @if (report.left_behind.length > 0) {
       <section class="card block">
         <span class="t-micro">Columns Not Imported</span>
-        <p class="t-small note">
-          {{ report.left_behind.join(', ') }}. All other columns are imported.
-        </p>
+        <p class="t-small note">{{ report.left_behind.join(', ') }}.</p>
       </section>
     }
 
@@ -277,7 +273,8 @@
           <span class="t-micro">Budgeted</span>
           <span class="count-value t-mono">{{ money(result.budgeted_amount) }}</span>
           <span class="t-small muted">
-            {{ result.budget_item_count }} lines across {{ result.category_count }} categories
+            {{ result.budget_item_count }} budget items across
+            {{ result.category_count }} categories
           </span>
         </div>
         <div class="count">

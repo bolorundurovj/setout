@@ -62,7 +62,7 @@ describe('LoginComponent', () => {
 
     expect(attempts).toEqual(['a passphrase']);
     expect(navigations[0][0]).toEqual(['/']);
-    expect(toasts[0]).toContain('Signed in');
+    expect(toasts).toEqual([]);
   });
 
   it('does not navigate when sign-in fails', async () => {

@@ -77,7 +77,7 @@ export class DashboardComponent {
       return '';
     }
     if (!summary.project_count) {
-      return 'No projects yet. Create a project with a name, currency and categories.';
+      return '';
     }
     const count = summary.project_count;
     const projects = `${count} ${count === 1 ? 'project' : 'projects'}`;

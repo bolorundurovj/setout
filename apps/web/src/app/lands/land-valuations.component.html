@@ -30,7 +30,7 @@
 @if (lastArchived(); as archived) {
   <p class="t-small muted">
     {{ label(archived) }} of {{ amountLabel(archived) }} was archived.
-    <button type="button" class="link t-mono" (click)="restoreLastArchived()">Undo</button>
+    <button type="button" class="link t-mono" (click)="restoreLastArchived()">Restore</button>
   </p>
 }
 

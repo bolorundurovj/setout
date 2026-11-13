@@ -60,9 +60,9 @@ export class SettingsComponent {
 
   readonly appearanceNote = computed(() => {
     if (this.theme.followsSystem()) {
-      return `Theme follows the system setting, currently ${this.theme.theme()}.`;
+      return `Follows your device setting, currently ${this.theme.theme()}.`;
     }
-    return `Theme set to ${this.theme.choice()} on this device.`;
+    return `Saved on this device.`;
   });
 
   readonly versionChanged = computed(() => {
@@ -121,9 +121,9 @@ export class SettingsComponent {
   readonly currencyNote = computed(() => {
     const code = this.defaultCurrency();
     if (!code) {
-      return 'Home shows the first currency found. Select a default currency.';
+      return 'Select the currency shown first on Home.';
     }
-    return `Home shows ${code}. Projects in other currencies are totalled separately.`;
+    return `${code} is shown first on Home. Other currencies remain separate.`;
   });
 
   constructor() {

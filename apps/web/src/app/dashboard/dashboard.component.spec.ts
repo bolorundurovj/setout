@@ -306,7 +306,7 @@ describe('DashboardComponent', () => {
       }),
     });
 
-    expect(component.summaryLine()).toContain('No projects yet');
+    expect(component.summaryLine()).toBe('');
     expect(component.currencyNote()).toBe('');
   });
 });
