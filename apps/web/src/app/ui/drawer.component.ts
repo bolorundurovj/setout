@@ -1,69 +1,75 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  afterRenderEffect,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
 
 @Component({
   selector: 'app-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (open()) {
-      <button
-        type="button"
-        class="backdrop"
-        aria-label="Close"
-        (click)="closeRequested.emit()"
-      ></button>
-      <aside
-        class="panel"
-        role="dialog"
-        aria-modal="true"
-        [attr.aria-label]="title()"
-        (keyup.escape)="closeRequested.emit()"
-      >
-        <header class="panel-head">
-          <div class="titles">
-            <h2 class="t-heading">{{ title() }}</h2>
-            @if (subtitle()) {
-              <p class="t-small">{{ subtitle() }}</p>
-            }
-          </div>
-          <button
-            type="button"
-            class="close t-mono"
-            aria-label="Close"
-            (click)="closeRequested.emit()"
-          >
-            Close
-          </button>
-        </header>
-        <div class="panel-body">
-          <ng-content />
+    <dialog
+      #panel
+      class="panel"
+      tabindex="-1"
+      [attr.aria-label]="title()"
+      (cancel)="onCancel($event)"
+      (click)="onBackdrop($event)"
+      (keydown.escape)="onCancel($event)"
+    >
+      <header class="panel-head">
+        <div class="titles">
+          <h2 class="t-heading">{{ title() }}</h2>
+          @if (subtitle()) {
+            <p class="t-small">{{ subtitle() }}</p>
+          }
         </div>
-      </aside>
-    }
+        <button
+          type="button"
+          class="close t-mono"
+          aria-label="Close"
+          (click)="closeRequested.emit()"
+        >
+          Close
+        </button>
+      </header>
+      <div class="panel-body">
+        <ng-content />
+      </div>
+    </dialog>
   `,
   styles: [
     `
-      .backdrop {
-        position: fixed;
-        inset: 0;
-        background: rgb(0 0 0 / 35%);
-        border: none;
-        padding: 0;
-        cursor: pointer;
-        z-index: 40;
-      }
-
       .panel {
         position: fixed;
+        margin: 0 0 0 auto;
+        padding: 0;
+        max-height: 100vh;
+        height: 100vh;
+        max-width: 100vw;
+        color: var(--ink);
         top: 0;
         right: 0;
         bottom: 0;
         width: min(560px, 100vw);
-        display: flex;
+        display: none;
         flex-direction: column;
         background: var(--surface);
+        border: 0;
         border-left: 1.5px solid var(--rule);
         z-index: 41;
+      }
+
+      .panel[open] {
+        display: flex;
+      }
+      .panel::backdrop {
+        background: rgb(0 0 0 / 35%);
       }
 
       .panel-head {
@@ -122,6 +128,33 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
   ],
 })
 export class DrawerComponent {
+  private readonly panel = viewChild.required<ElementRef<HTMLDialogElement>>('panel');
+
+  constructor() {
+    afterRenderEffect(() => {
+      const panel = this.panel().nativeElement;
+      if (this.open() && !panel.open) panel.showModal();
+      if (!this.open() && panel.open) panel.close();
+    });
+  }
+
+  onCancel(event: Event): void {
+    event.preventDefault();
+    this.closeRequested.emit();
+  }
+
+  onBackdrop(event: MouseEvent): void {
+    if (event.target !== this.panel().nativeElement) return;
+    const bounds = this.panel().nativeElement.getBoundingClientRect();
+    if (
+      event.clientX < bounds.left ||
+      event.clientX > bounds.right ||
+      event.clientY < bounds.top ||
+      event.clientY > bounds.bottom
+    )
+      this.closeRequested.emit();
+  }
+
   readonly open = input(false);
   readonly title = input('');
   readonly subtitle = input('');

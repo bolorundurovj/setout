@@ -60,3 +60,11 @@ Object.defineProperty(globalThis, 'IntersectionObserver', {
   writable: true,
   value: TestIntersectionObserver,
 });
+
+// jsdom does not implement native dialog methods or browser focus containment.
+HTMLDialogElement.prototype.showModal = function (): void {
+  this.setAttribute('open', '');
+};
+HTMLDialogElement.prototype.close = function (): void {
+  this.removeAttribute('open');
+};

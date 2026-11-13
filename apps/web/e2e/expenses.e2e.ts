@@ -10,6 +10,17 @@ test('New Expense saves, the drawer closes from Close, and Edit saves a new amou
 
   await page.locator('app-expenses').getByRole('button', { name: 'New Expense' }).first().click();
   const form = page.getByRole('dialog', { name: 'New Expense' });
+  await expect(form.getByRole('button', { name: 'Close' })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(form.locator(':focus')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await expect(form).toBeHidden();
+  const newExpense = page
+    .locator('app-expenses')
+    .getByRole('button', { name: 'New Expense' })
+    .first();
+  await expect(newExpense).toBeFocused();
+  await newExpense.click();
   await form.getByPlaceholder('What was purchased').fill('17 bags of cement');
   await form.getByRole('textbox', { name: 'Amount spent' }).fill('76500');
   await form
