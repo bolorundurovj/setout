@@ -221,7 +221,7 @@ describe('ProjectDetailComponent', () => {
     TestBed.inject(Router).navigate = async () => true;
     component.selectTab('agreements');
     fixture.detectChanges();
-    expect(title.getTitle()).toBe('Jacaranda Close, Ewuru · Agreements · Setout');
+    expect(title.getTitle()).toBe('Jacaranda Close, Ewuru · Agreements and Advances · Setout');
   });
 
   it('opens the selected category in the Budget vs Spent tab', () => {

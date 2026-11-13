@@ -2,10 +2,7 @@
   <div class="intro">
     <div class="intro-text">
       <h2 class="t-heading">Agreements</h2>
-      <p class="prose">
-        What a vendor agreed to do for a fixed price. The Paid and Balance amounts are calculated
-        from the expenses assigned to each agreement, so a part payment is recorded once.
-      </p>
+      <p class="prose">Track agreed amounts and the expenses assigned to each agreement.</p>
     </div>
     <div class="intro-actions">
       <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
@@ -74,9 +71,7 @@
   @if (agreements.agreements().length === 0) {
     <div class="card">
       <p class="t-body">No agreements yet.</p>
-      <p class="t-small">
-        Record what a vendor agreed to do for a fixed price, then assign each payment to it.
-      </p>
+      <p class="t-small">Create an agreement, then assign its expenses.</p>
     </div>
   } @else {
     @for (agreement of agreements.agreements(); track agreement.id) {
@@ -147,23 +142,23 @@
           />
         }
 
-        <div class="payments">
-          @for (payment of paymentsFor(agreement.id); track payment.id) {
-            <div class="payment">
-              <span class="t-mono date">{{ formatDate(payment.spent_on) }}</span>
-              <span class="t-small description">{{ payment.description }}</span>
-              <span class="t-mono paid">{{ formatAmount(payment.amount) }}</span>
+        <div class="agreement-expenses">
+          @for (expense of expensesFor(agreement.id); track expense.id) {
+            <div class="expense">
+              <span class="t-mono date">{{ formatDate(expense.spent_on) }}</span>
+              <span class="t-small description">{{ expense.description }}</span>
+              <span class="t-mono paid">{{ formatAmount(expense.amount) }}</span>
             </div>
           }
-          @if (paymentsFor(agreement.id).length === 0) {
-            <div class="payment">
+          @if (expensesFor(agreement.id).length === 0) {
+            <div class="expense">
               <span></span>
-              <span class="t-small description">No payments yet.</span>
+              <span class="t-small description">No expenses assigned to this agreement.</span>
               <span></span>
             </div>
           }
 
-          <div class="payment balance-row">
+          <div class="expense balance-row">
             <span></span>
             <span class="balance-label">Balance</span>
             <span class="t-mono paid balance">{{ formatAmount(agreement.balance_amount) }}</span>
@@ -171,7 +166,7 @@
 
           <div class="agreement-actions">
             @if (agreement.archived_at) {
-              <span class="t-small hint">Archived. Its payments are unchanged.</span>
+              <span class="t-small hint">Archived. Its expenses are unchanged.</span>
               @if (pendingDelete() === agreement.id) {
                 <span class="confirm-inline">
                   <input
@@ -209,28 +204,28 @@
                   Delete
                 </button>
               }
-            } @else if (payingAgreementId() === agreement.id) {
+            } @else if (expenseAgreementId() === agreement.id) {
               <span class="amount">
                 <span class="amount-prefix t-mono">{{ symbol() }}</span>
                 <input
                   class="amount-input t-mono"
                   inputmode="decimal"
                   aria-label="Amount paid"
-                  [value]="paymentAmount()"
-                  (input)="paymentAmount.set(value($event))"
-                  (keyup.enter)="savePayment(agreement)"
+                  [value]="expenseAmount()"
+                  (input)="expenseAmount.set(value($event))"
+                  (keyup.enter)="saveExpense(agreement)"
                 />
               </span>
               <app-button
-                [disabled]="!canPay()"
+                [disabled]="!canSaveExpense()"
                 [loading]="agreements.saving()"
-                (pressed)="savePayment(agreement)"
+                (pressed)="saveExpense(agreement)"
               >
-                Save Payment
+                Save Expense
               </app-button>
-              <app-button variant="secondary" (pressed)="cancelPayment()">Cancel</app-button>
+              <app-button variant="secondary" (pressed)="cancelExpense()">Cancel</app-button>
             } @else {
-              <app-button (pressed)="startPayment(agreement.id)">Record a Payment</app-button>
+              <app-button (pressed)="startExpense(agreement.id)">New Expense</app-button>
               <button
                 type="button"
                 class="link-action"
@@ -239,9 +234,7 @@
               >
                 Edit
               </button>
-              <span class="t-small hint">
-                A payment creates one expense on this project and one entry here.
-              </span>
+              <span class="t-small hint"> Saves an expense assigned to this agreement. </span>
               <button
                 type="button"
                 class="link-action archive-action"
@@ -274,9 +267,8 @@
       <div class="intro-text">
         <h2 class="t-heading">Advances</h2>
         <p class="prose">
-          Money given to a person before they spend it. The balance is the advance less the amount
-          spent: a positive balance is unspent money the person holds, a negative balance is owed to
-          them.
+          Balance = advances − expenses paid by this person. Positive: they hold unspent money.
+          Negative: you owe them.
         </p>
       </div>
       @if (!addingAdvance()) {
@@ -332,7 +324,7 @@
     @if (agreements.balances().length === 0) {
       <div class="card">
         <p class="t-body">No advances yet.</p>
-        <p class="t-small">Issue an advance, or record who paid for an expense.</p>
+        <p class="t-small">Record an advance, or select Paid By when recording an expense.</p>
       </div>
     } @else {
       <div class="table">

@@ -33,7 +33,7 @@ test('an attachment uploaded in the agreement edit form is listed there', async 
     description: 'Block work',
     agreed_amount: 300_000_00,
   });
-  await openProjectTab(page, project.id, 'Agreements');
+  await openProjectTab(page, project.id, 'Agreements and Advances');
 
   await page.getByRole('button', { name: `Edit the agreement with ${vendor['name']}` }).click();
   const attachments = page.locator('app-attachments');

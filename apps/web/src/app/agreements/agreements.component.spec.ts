@@ -45,17 +45,17 @@ function agreement(over: Partial<AgreementRead> = {}): AgreementRead {
 describe('AgreementsComponent', () => {
   let created: unknown[][];
   let advances: unknown[][];
-  let payments: unknown[][];
+  let agreementExpenses: unknown[][];
 
   function render(rows: AgreementRead[] = [], balances: unknown[] = []) {
     created = [];
     advances = [];
-    payments = [];
+    agreementExpenses = [];
     const service = {
       agreements: () => rows,
       advances: () => [],
       balances: () => balances,
-      payments: () => ({}),
+      agreementExpenses: () => ({}),
       agreementTotal: () => rows.length,
       advanceTotal: () => 0,
       advancePage: () => 1,
@@ -92,8 +92,8 @@ describe('AgreementsComponent', () => {
     const expenses = {
       error: () => null,
       add: async (...args: unknown[]) => {
-        payments.push(args);
-        return { id: 'e1', description: 'Part payment' };
+        agreementExpenses.push(args);
+        return { id: 'e1', description: agreement().description };
       },
     };
 
@@ -173,27 +173,27 @@ describe('AgreementsComponent', () => {
     expect(advances[0][1]).toEqual({ person_id: 'pe1', amount: 10_000_000 });
   });
 
-  it('records a payment as an expense against the agreement', async () => {
+  it('records an expense assigned to the agreement', async () => {
     const component = render([agreement()]);
-    component.startPayment('a1');
-    component.paymentAmount.set('70000');
-    expect(component.canPay()).toBe(true);
+    component.startExpense('a1');
+    component.expenseAmount.set('70000');
+    expect(component.canSaveExpense()).toBe(true);
 
-    await component.savePayment(agreement());
+    await component.saveExpense(agreement());
 
-    expect(payments.length).toBe(1);
-    const body = payments[0][1] as Record<string, unknown>;
+    expect(agreementExpenses.length).toBe(1);
+    const body = agreementExpenses[0][1] as Record<string, unknown>;
     expect(body['agreement_id']).toBe('a1');
     expect(body['amount']).toBe(7_000_000);
     expect(body['vendor_id']).toBe('v1');
   });
 
-  it('rejects a blank or zero payment', () => {
+  it('rejects a blank or zero expense', () => {
     const component = render([agreement()]);
-    component.startPayment('a1');
-    expect(component.canPay()).toBe(false);
-    component.paymentAmount.set('0');
-    expect(component.canPay()).toBe(false);
+    component.startExpense('a1');
+    expect(component.canSaveExpense()).toBe(false);
+    component.expenseAmount.set('0');
+    expect(component.canSaveExpense()).toBe(false);
   });
 
   it('formats amounts without the currency symbol', () => {

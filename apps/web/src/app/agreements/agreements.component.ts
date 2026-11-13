@@ -47,7 +47,7 @@ export class AgreementsComponent {
   readonly deleteConfirmationText = signal('');
   readonly personId = signal('');
   readonly advanceAmount = signal('');
-  readonly payingAgreementId = signal<string | null>(null);
+  readonly expenseAgreementId = signal<string | null>(null);
   readonly editing = signal<string | null>(null);
   readonly editingParent = computed<AttachmentParent | null>(() => {
     const id = this.editing();
@@ -57,7 +57,7 @@ export class AgreementsComponent {
   readonly editAgreed = signal('');
   readonly editingAdvance = signal<string | null>(null);
   readonly editAdvanceAmount = signal('');
-  readonly paymentAmount = signal('');
+  readonly expenseAmount = signal('');
   readonly vendorId = signal('');
   readonly description = signal('');
   readonly agreedAmount = signal('');
@@ -89,8 +89,8 @@ export class AgreementsComponent {
     return (event.target as HTMLInputElement | HTMLSelectElement).value;
   }
 
-  paymentsFor(agreementId: string): ExpenseRead[] {
-    return this.agreements.payments()[agreementId] ?? [];
+  expensesFor(agreementId: string): ExpenseRead[] {
+    return this.agreements.agreementExpenses()[agreementId] ?? [];
   }
 
   /** Omits the currency symbol because the column header shows it. */
@@ -165,41 +165,41 @@ export class AgreementsComponent {
     this.toast.show(`Advance to ${changed.person_name} updated to ${this.money(changed.amount)}.`);
   }
 
-  startPayment(agreementId: string): void {
-    this.payingAgreementId.set(agreementId);
-    this.paymentAmount.set('');
+  startExpense(agreementId: string): void {
+    this.expenseAgreementId.set(agreementId);
+    this.expenseAmount.set('');
   }
 
-  cancelPayment(): void {
-    this.payingAgreementId.set(null);
-    this.paymentAmount.set('');
+  cancelExpense(): void {
+    this.expenseAgreementId.set(null);
+    this.expenseAmount.set('');
   }
 
-  canPay(): boolean {
-    const amount = parseMoney(this.paymentAmount(), this.project().currency_exponent);
+  canSaveExpense(): boolean {
+    const amount = parseMoney(this.expenseAmount(), this.project().currency_exponent);
     return amount !== null && amount > 0;
   }
 
   /** Recorded as an expense linked to the agreement, so the server recalculates paid_amount. */
-  async savePayment(agreement: AgreementRead): Promise<void> {
-    const amount = parseMoney(this.paymentAmount(), this.project().currency_exponent);
-    if (!this.canPay() || amount === null) {
+  async saveExpense(agreement: AgreementRead): Promise<void> {
+    const amount = parseMoney(this.expenseAmount(), this.project().currency_exponent);
+    if (!this.canSaveExpense() || amount === null) {
       return;
     }
     const created = await this.expenses.add(this.project().id, {
-      description: 'Part payment',
+      description: agreement.description,
       amount,
       agreement_id: agreement.id,
       vendor_id: agreement.vendor_id,
       cost_type: 'labour',
     });
     if (!created) {
-      this.toast.show(this.expenses.error() ?? 'Could not record the payment.', 'error');
+      this.toast.show(this.expenses.error() ?? 'Could not save the expense.', 'error');
       return;
     }
-    this.cancelPayment();
+    this.cancelExpense();
     await this.agreements.loadAll(this.project().id);
-    this.toast.show(`${this.money(amount)} paid to ${agreement.vendor_name}.`);
+    this.toast.show(`Expense of ${this.money(amount)} recorded for ${agreement.vendor_name}.`);
   }
 
   money(minor: number): string {
@@ -273,7 +273,7 @@ export class AgreementsComponent {
       amount,
     });
     if (created) {
-      this.toast.show(`Advance of ${this.money(amount)} issued to ${created.person_name}.`);
+      this.toast.show(`Advance of ${this.money(amount)} recorded for ${created.person_name}.`);
       this.advanceAmount.set('');
       this.addingAdvance.set(false);
     } else {
@@ -331,7 +331,7 @@ export class AgreementsComponent {
     this.includeArchived.set(on);
     this.cancelEdit();
     this.cancelEditAdvance();
-    this.cancelPayment();
+    this.cancelExpense();
     await this.agreements.loadAll(this.project().id, on);
     await this.agreements.loadAdvances(this.project().id);
   }

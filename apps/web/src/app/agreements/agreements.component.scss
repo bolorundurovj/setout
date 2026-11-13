@@ -161,11 +161,11 @@
   background: var(--ink-2);
 }
 
-.payments {
+.agreement-expenses {
   border-top: 1px solid var(--hairline);
 }
 
-.payment {
+.expense {
   display: grid;
   grid-template-columns: 130px 1fr 150px;
   align-items: center;
@@ -189,7 +189,7 @@
   color: var(--ink);
 }
 
-.payment.balance-row {
+.expense.balance-row {
   padding: 13px 18px;
   background: var(--field);
   border-bottom: none;
@@ -202,7 +202,7 @@
   color: var(--ink);
 }
 
-.payment.balance-row .paid {
+.expense.balance-row .paid {
   font-weight: 500;
 }
 

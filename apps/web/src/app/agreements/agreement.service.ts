@@ -36,7 +36,7 @@ export class AgreementService {
   private readonly agreementState = signal<AgreementRead[]>([]);
   private readonly advanceState = signal<AdvanceRead[]>([]);
   private readonly balanceState = signal<PersonBalance[]>([]);
-  private readonly paymentState = signal<Record<string, ExpenseRead[]>>({});
+  private readonly expenseState = signal<Record<string, ExpenseRead[]>>({});
   private readonly agreementTotalState = signal(0);
   private readonly advanceTotalState = signal(0);
   private readonly advancePageState = signal(1);
@@ -46,7 +46,7 @@ export class AgreementService {
   readonly agreements = this.agreementState.asReadonly();
   readonly advances = this.advanceState.asReadonly();
   readonly balances = this.balanceState.asReadonly();
-  readonly payments = this.paymentState.asReadonly();
+  readonly agreementExpenses = this.expenseState.asReadonly();
   readonly agreementTotal = this.agreementTotalState.asReadonly();
   readonly advanceTotal = this.advanceTotalState.asReadonly();
   readonly advancePage = this.advancePageState.asReadonly();
@@ -62,7 +62,7 @@ export class AgreementService {
     this.agreementState.set([]);
     this.advanceState.set([]);
     this.balanceState.set([]);
-    this.paymentState.set({});
+    this.expenseState.set({});
     this.agreementTotalState.set(0);
     this.advanceTotalState.set(0);
     this.advancePageState.set(1);
@@ -107,10 +107,10 @@ export class AgreementService {
     });
     this.agreementState.update((rows) => [...rows, ...page.items]);
     this.agreementTotalState.set(page.total);
-    await this.loadPayments(projectId);
+    await this.loadAgreementExpenses(projectId);
   }
 
-  async loadPayments(projectId: string): Promise<void> {
+  async loadAgreementExpenses(projectId: string): Promise<void> {
     this.resetForProject(projectId);
     const byAgreement: Record<string, ExpenseRead[]> = {};
     try {
@@ -132,16 +132,16 @@ export class AgreementService {
         }
       }
     } catch {
-      this.error.set('Could not load payments.');
+      this.error.set('Could not load agreement expenses.');
     }
-    this.paymentState.set(byAgreement);
+    this.expenseState.set(byAgreement);
   }
 
   async loadAll(projectId: string, includeArchived = false): Promise<void> {
     this.resetForProject(projectId);
     this.includeArchivedState.set(includeArchived);
     await this.load(projectId);
-    await this.loadPayments(projectId);
+    await this.loadAgreementExpenses(projectId);
   }
 
   async loadAdvances(projectId: string, page = 1): Promise<void> {

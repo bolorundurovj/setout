@@ -88,7 +88,7 @@ describe('AgreementService', () => {
     expect(calls('listAgreements').length).toBe(1);
   });
 
-  it('loads payments in one request and groups them by agreement', async () => {
+  it('loads agreement expenses in one request and groups them by agreement', async () => {
     const service = configure((name) =>
       name === 'listAgreements'
         ? page([agreement('a1'), agreement('a2')])
@@ -102,11 +102,11 @@ describe('AgreementService', () => {
     await service.loadAll('p1');
 
     expect(calls('listExpenses').length).toBe(1);
-    expect(service.payments()['a1'].map((row) => row.id)).toEqual(['e1', 'e3']);
-    expect(service.payments()['a2'].map((row) => row.id)).toEqual(['e2']);
+    expect(service.agreementExpenses()['a1'].map((row) => row.id)).toEqual(['e1', 'e3']);
+    expect(service.agreementExpenses()['a2'].map((row) => row.id)).toEqual(['e2']);
   });
 
-  it('pages through payments until the total is reached', async () => {
+  it('pages through agreement expenses until the total is reached', async () => {
     const rows = Array.from({ length: 120 }, (_, index) => ({
       id: `e${index}`,
       agreement_id: 'a1',
@@ -123,18 +123,18 @@ describe('AgreementService', () => {
     await service.loadAll('p1');
 
     expect(calls('listExpenses').length).toBe(2);
-    expect(service.payments()['a1'].length).toBe(120);
+    expect(service.agreementExpenses()['a1'].length).toBe(120);
   });
 
-  it('sets an error when loading payments fails', async () => {
+  it('sets an error when loading agreement expenses fails', async () => {
     const service = configure((name) =>
       name === 'listExpenses' ? new Error('offline') : page([agreement('a1')]),
     );
 
     await service.loadAll('p1');
 
-    expect(service.error()).toBe('Could not load payments.');
-    expect(service.payments()['a1']).toBeUndefined();
+    expect(service.error()).toBe('Could not load agreement expenses.');
+    expect(service.agreementExpenses()['a1']).toBeUndefined();
   });
 
   it('prepends a created agreement and increments the total', async () => {
@@ -277,13 +277,13 @@ describe('AgreementService', () => {
     );
     await service.loadAll('p1');
     expect(service.agreements().length).toBe(1);
-    expect(Object.keys(service.payments())).toEqual(['a1']);
+    expect(Object.keys(service.agreementExpenses())).toEqual(['a1']);
 
     rows = [];
     await service.load('p2');
 
     expect(service.agreements()).toEqual([]);
-    expect(service.payments()).toEqual({});
+    expect(service.agreementExpenses()).toEqual({});
     expect(service.agreementTotal()).toBe(0);
   });
 
@@ -298,7 +298,7 @@ describe('AgreementService', () => {
     await service.loadBalances('p1');
 
     expect(service.agreements().length).toBe(1);
-    expect(service.payments()['a1'].length).toBe(1);
+    expect(service.agreementExpenses()['a1'].length).toBe(1);
   });
 
   it('replaces an updated agreement in place', async () => {
