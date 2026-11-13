@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import tempfile
+from contextlib import suppress
 from pathlib import Path
 
 from setout.services.storage.base import Storage
@@ -24,9 +26,20 @@ class LocalStorage(Storage):
 
     def _write(self, path: Path, data: bytes) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        scratch = path.with_name(f"{path.name}.part")
-        scratch.write_bytes(data)
-        scratch.replace(path)
+        with tempfile.NamedTemporaryFile(dir=path.parent, suffix=".part", delete=False) as stream:
+            scratch = Path(stream.name)
+            try:
+                stream.write(data)
+            except BaseException:
+                stream.close()
+                scratch.unlink(missing_ok=True)
+                raise
+        try:
+            # Content-addressed keys are immutable; publish without replacing another writer.
+            with suppress(FileExistsError):
+                path.hardlink_to(scratch)
+        finally:
+            scratch.unlink(missing_ok=True)
 
     def _path(self, key: str) -> Path:
         path = (self.root / key).resolve()

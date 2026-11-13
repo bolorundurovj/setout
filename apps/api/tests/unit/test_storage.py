@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
 from pathlib import Path
 
@@ -18,6 +19,17 @@ from setout.services.storage.migrate import (
 from setout.services.storage.s3 import S3Storage
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.mark.asyncio
+async def test_concurrent_writes_publish_identical_bytes(tmp_path: Path) -> None:
+    storage = LocalStorage(tmp_path)
+    data = b"attachment" * 10000
+    await asyncio.gather(
+        *(storage.put("same.pdf", data, content_type="application/pdf") for _ in range(12))
+    )
+    assert await storage.get("same.pdf") == data
+    assert not list(tmp_path.glob("*.part"))
 
 
 def test_the_name_of_a_file_is_the_hash_of_what_is_inside_it() -> None:

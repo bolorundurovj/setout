@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -5,6 +6,7 @@ from httpx import AsyncClient
 
 from setout.currencies import CURRENCIES
 from setout.models.currency import Currency
+from setout.services.storage.local import LocalStorage
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
@@ -91,6 +93,39 @@ async def test_identical_uploads_share_one_stored_file(client: AsyncClient) -> N
     assert one["checksum"] == two["checksum"]
     both = await client.get(f"/api/attachments/{two['id']}/file")
     assert both.content == JPEG_BYTES
+
+
+async def test_concurrent_uploads_are_downloadable_from_each_expense(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project_id = await _project(client)
+    expenses = [await _expense(client, project_id, description=f"Expense {i}") for i in range(8)]
+    ready = asyncio.Event()
+    arrivals = 0
+    original = LocalStorage.exists
+
+    async def simultaneous_exists(storage: LocalStorage, key: str) -> bool:
+        nonlocal arrivals
+        exists = await original(storage, key)
+        arrivals += 1
+        if arrivals == len(expenses):
+            ready.set()
+        await asyncio.wait_for(ready.wait(), timeout=5)
+        return exists
+
+    monkeypatch.setattr(LocalStorage, "exists", simultaneous_exists)
+    uploads = await asyncio.gather(
+        *(_attach(client, project_id, expense["id"]) for expense in expenses)
+    )
+    assert all(code == 201 for code, _ in uploads)
+    assert len({attachment["id"] for _, attachment in uploads}) == len(expenses)
+    assert len({attachment["checksum"] for _, attachment in uploads}) == 1
+    for expense, (_, attachment) in zip(expenses, uploads, strict=True):
+        listing = (await client.get(f"/api/expenses/{expense['id']}/attachments")).json()
+        assert [row["id"] for row in listing["items"]] == [attachment["id"]]
+        response = await client.get(f"/api/attachments/{attachment['id']}/file")
+        assert response.status_code == 200
+        assert response.content == JPEG_BYTES
 
 
 async def test_spreadsheet_upload_is_rejected_with_415(client: AsyncClient) -> None:
