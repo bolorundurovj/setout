@@ -56,7 +56,23 @@ describe('AddExpenseComponent', () => {
     expect(updates[0][1]).toBe('e1');
     expect(uploads).toEqual([{ expenseId: 'e1', file }]);
     expect(component.saveError()).toBe('');
+    expect(toastMessages).toContain('Cement recorded.');
+    expect(toastMessages).not.toContain('Cement updated.');
     expect(close).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the category assigned by the first save when retrying', async () => {
+    const component = render().componentInstance;
+    component.description.set('Cement');
+    component.amount.set('11000');
+    component.selectedFile.set(new File(['attachment'], 'cement.jpg', { type: 'image/jpeg' }));
+    vi.spyOn(TestBed.inject(AttachmentService), 'add').mockResolvedValueOnce(null);
+
+    await component.save(false);
+    await component.save(false);
+
+    expect(saves).toHaveLength(1);
+    expect(updates[0][2]).toEqual(expect.objectContaining({ category_id: 's1' }));
   });
 
   it('retries an outstanding delivery without uploading the saved attachment again', async () => {
@@ -90,6 +106,7 @@ describe('AddExpenseComponent', () => {
   let archived: string[];
   let restored: string[];
   let attachments: unknown[];
+  let toastMessages: string[];
 
   function render(expenseToEdit: unknown = null, existingAttachments: unknown[] = []) {
     saves = [];
@@ -99,6 +116,7 @@ describe('AddExpenseComponent', () => {
     archived = [];
     restored = [];
     attachments = existingAttachments;
+    toastMessages = [];
     saving = false;
     const expenses = {
       expenses: () => [],
@@ -112,11 +130,11 @@ describe('AddExpenseComponent', () => {
       suggestCategory: async () => ({ category_id: 's1', reason: 'Past expenses for this item' }),
       add: async (...args: unknown[]) => {
         saves.push(args);
-        return { id: 'e1', description: 'Cement' };
+        return { id: 'e1', description: 'Cement', category_id: 's1' };
       },
       update: async (...args: unknown[]) => {
         updates.push(args);
-        return { id: 'e1', description: 'Cement' };
+        return { id: 'e1', description: 'Cement', category_id: 's1' };
       },
     };
     const empty = {
@@ -175,7 +193,10 @@ describe('AddExpenseComponent', () => {
         { provide: ItemService, useValue: empty },
         { provide: VendorService, useValue: empty },
         { provide: PersonService, useValue: empty },
-        { provide: ToastService, useValue: { show: () => undefined } },
+        {
+          provide: ToastService,
+          useValue: { show: (message: string) => toastMessages.push(message) },
+        },
       ],
     });
     const fixture = TestBed.createComponent(AddExpenseComponent);

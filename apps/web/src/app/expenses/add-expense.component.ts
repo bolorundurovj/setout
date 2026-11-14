@@ -470,7 +470,11 @@ export class AddExpenseComponent {
         description: this.description().trim(),
         amount: calculated === null ? amount : null,
         spent_on: this.spentOn() || null,
-        category_id: this.categoryId() || null,
+        category_id:
+          this.categoryId() ||
+          (this.pendingExpense && !this.categoryExplicitlyCleared()
+            ? this.pendingExpense.category_id
+            : null),
         item_id: this.itemId() || null,
         vendor_id: this.vendorId() || null,
         agreement_id: this.agreementId() || null,
@@ -526,7 +530,7 @@ export class AddExpenseComponent {
       }
 
       this.toast.show(
-        existing ? `${saved.description} updated.` : `${saved.description} recorded.`,
+        creating ? `${saved.description} recorded.` : `${saved.description} updated.`,
       );
       if (creating) {
         this.reset();
