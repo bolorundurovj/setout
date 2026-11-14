@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import pytest
+from fastapi.routing import APIRoute
 from httpx import AsyncClient
 
 from setout.config import get_settings
 from setout.main import create_app
+from setout.routers.auth import router as auth_router
 
 pytestmark = pytest.mark.contract
 
@@ -22,6 +24,18 @@ def test_authentication_operations_preserve_response_contract(path, method, oper
     endpoint = create_app().openapi()["paths"][path][method]
     assert endpoint["operationId"] == operation
     assert statuses <= endpoint["responses"].keys()
+
+
+@pytest.mark.parametrize("path", ["/setup", "/passphrase"])
+def test_authentication_transactions_finish_before_responses(path: str) -> None:
+    route = next(
+        route
+        for route in auth_router.routes
+        if isinstance(route, APIRoute) and route.path == f"/auth{path}"
+    )
+
+    assert route.dependencies
+    assert all(dependency.scope == "function" for dependency in route.dependencies)
 
 
 async def test_null_name_returns_documented_validation_status(client: AsyncClient) -> None:

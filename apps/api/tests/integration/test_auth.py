@@ -379,6 +379,33 @@ async def test_sign_in_delay_doubles_per_failure(
     assert waited == [1.0, 2.0, 4.0]
 
 
+@pytest.mark.integration
+async def test_sign_in_delay_does_not_hold_the_authentication_lock(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _setup(client)
+    await _fail_sign_in(client, get_settings().sign_in_free_attempts)
+    monkeypatch.setenv("SETOUT_SIGN_IN_DELAY_SECONDS", "1")
+    get_settings.cache_clear()
+    sleeping = asyncio.Event()
+    release = asyncio.Event()
+
+    async def hold_delay(_seconds: float) -> None:
+        sleeping.set()
+        await release.wait()
+
+    monkeypatch.setattr(auth.asyncio, "sleep", hold_delay)
+    sign_in = asyncio.create_task(client.post("/api/auth/sign-in", json={"passphrase": "wrong"}))
+    try:
+        await asyncio.wait_for(sleeping.wait(), timeout=1)
+        signed_out = await asyncio.wait_for(client.post("/api/auth/sign-out"), timeout=1)
+        assert signed_out.status_code == 204
+        assert not sign_in.done()
+    finally:
+        release.set()
+    assert (await sign_in).status_code == 401
+
+
 @pytest.mark.asyncio
 @pytest.mark.integration
 async def test_successful_sign_in_resets_failure_count(

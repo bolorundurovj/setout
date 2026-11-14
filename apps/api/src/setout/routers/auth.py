@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import secrets
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
@@ -35,7 +36,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 SESSION_COOKIE_NAME = "setout_session"
 
 
-async def serialise_authentication() -> AsyncIterator[None]:
+@asynccontextmanager
+async def authentication_transaction() -> AsyncIterator[None]:
     error: HTTPException | None = None
     async with in_transaction() as connection:
         if connection.capabilities.dialect == "postgres":
@@ -52,6 +54,11 @@ async def serialise_authentication() -> AsyncIterator[None]:
             error = exc
     if error is not None:
         raise error
+
+
+async def serialise_authentication() -> AsyncIterator[None]:
+    async with authentication_transaction():
+        yield
 
 
 async def get_current_user(
@@ -127,7 +134,7 @@ async def update_account(
 
 @router.post(
     "/passphrase",
-    dependencies=[Depends(serialise_authentication)],
+    dependencies=[Depends(serialise_authentication, scope="function")],
     operation_id="changePassphrase",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
@@ -198,7 +205,7 @@ async def get_auth_status(
 
 @router.post(
     "/setup",
-    dependencies=[Depends(serialise_authentication)],
+    dependencies=[Depends(serialise_authentication, scope="function")],
     operation_id="setupAdmin",
     responses={status.HTTP_409_CONFLICT: {"description": "This server is already set up"}},
 )
@@ -221,7 +228,6 @@ async def setup_admin(req: SetupRequest, response: Response) -> UserResponse:
 
 @router.post(
     "/sign-in",
-    dependencies=[Depends(serialise_authentication)],
     operation_id="signIn",
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": "Invalid credentials"},
@@ -232,46 +238,70 @@ async def setup_admin(req: SetupRequest, response: Response) -> UserResponse:
 )
 async def sign_in(req: SignInRequest, response: Response) -> UserResponse:
     settings = get_settings()
-    user = await User.first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-        )
+    while True:
+        user = await User.first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials",
+            )
 
-    now = datetime.now(UTC)
-    failures = _recent_failure_count(user, now, settings.sign_in_retry_after_seconds)
-    wait = delay_for(failures, settings)
-    if wait is None:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many failed sign-in attempts. Try again later",
-            headers={"Retry-After": str(settings.sign_in_retry_after_seconds)},
-        )
-    if wait:
-        await asyncio.sleep(wait)
+        now = datetime.now(UTC)
+        checked_failures = _recent_failure_count(user, now, settings.sign_in_retry_after_seconds)
+        wait = delay_for(checked_failures, settings)
+        if wait is None:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many failed sign-in attempts. Try again later",
+                headers={"Retry-After": str(settings.sign_in_retry_after_seconds)},
+            )
+        if wait:
+            await asyncio.sleep(wait)
 
-    if not await run_in_threadpool(verify_passphrase, req.passphrase, user.passphrase_hash):
-        user.failed_sign_ins = failures + 1
-        user.last_failed_at = now
-        await user.save()
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-        )
+        retry = False
+        result: UserResponse | None = None
+        async with authentication_transaction():
+            user = await User.first()
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid credentials",
+                )
+            now = datetime.now(UTC)
+            failures = _recent_failure_count(user, now, settings.sign_in_retry_after_seconds)
+            wait = delay_for(failures, settings)
+            if wait is None:
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Too many failed sign-in attempts. Try again later",
+                    headers={"Retry-After": str(settings.sign_in_retry_after_seconds)},
+                )
+            if wait and failures > checked_failures:
+                retry = True
+            elif not await run_in_threadpool(
+                verify_passphrase, req.passphrase, user.passphrase_hash
+            ):
+                user.failed_sign_ins = failures + 1
+                user.last_failed_at = now
+                await user.save()
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid credentials",
+                )
+            else:
+                if user.failed_sign_ins:
+                    user.failed_sign_ins = 0
+                    user.last_failed_at = None
+                    await user.save()
 
-    if user.failed_sign_ins:
-        user.failed_sign_ins = 0
-        user.last_failed_at = None
-        await user.save()
-
-    await Session.filter(expires_at__lte=now).delete()
-
-    session_id = secrets.token_urlsafe(32)
-    await Session.create(id=session_id, user=user, expires_at=now + session_window())
-
-    set_session_cookie(response, session_id)
-    return UserResponse.model_validate(user)
+                await Session.filter(expires_at__lte=now).delete()
+                session_id = secrets.token_urlsafe(32)
+                await Session.create(id=session_id, user=user, expires_at=now + session_window())
+                set_session_cookie(response, session_id)
+                result = UserResponse.model_validate(user)
+        if not retry:
+            assert result is not None
+            return result
 
 
 def _recent_failure_count(user: User, now: datetime, window_seconds: int) -> int:
