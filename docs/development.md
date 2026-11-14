@@ -158,14 +158,18 @@ body only when the change cannot be understood without one.
 
 ## Implementation constraints
 
-Authentication transactions serialise setup, sign-in and passphrase changes.
-SQLite blocks other writes during these transactions, including sign-in delays.
-Failed sign-in counters must commit even when authentication returns an error.
-Keep bcrypt work in the bounded worker thread pool to avoid blocking the event loop.
+Authentication transactions serialise setup, sign-in and passphrase changes,
+and commit before their responses are sent. Sign-in backoff runs outside the
+transaction; recheck the failure count after acquiring the lock. SQLite blocks
+other writes during authentication transactions. Failed sign-in counters must
+commit even when authentication returns an error. Keep bcrypt work in the
+bounded worker thread pool to avoid blocking the event loop.
 
-Local attachment storage requires a filesystem with hard-link support. Publication
-must retain existing content-addressed attachments when concurrent uploads use
-the same key.
+Local attachment storage publishes completed files atomically. It uses hard
+links where supported and atomic replacement otherwise. Content-addressed keys
+must retain their bytes when concurrent uploads use the same key. Attachment
+file permissions follow the process umask so backup processes can read files
+when the deployment permits it.
 
 Attachments and outstanding deliveries can fail after the expense is saved.
 Retries must reuse that expense and skip attachments already uploaded. Block
