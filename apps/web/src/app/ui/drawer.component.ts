@@ -19,6 +19,7 @@ import {
       tabindex="-1"
       [attr.aria-label]="title()"
       (cancel)="onCancel($event)"
+      (close)="onDialogClose()"
       (click)="onBackdrop($event)"
       (keydown.escape)="onCancel($event)"
     >
@@ -141,6 +142,10 @@ export class DrawerComponent {
   onCancel(event: Event): void {
     event.preventDefault();
     this.closeRequested.emit();
+  }
+
+  onDialogClose(): void {
+    if (this.open()) this.closeRequested.emit();
   }
 
   onBackdrop(event: MouseEvent): void {

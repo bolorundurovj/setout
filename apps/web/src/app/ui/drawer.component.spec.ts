@@ -37,4 +37,38 @@ describe('DrawerComponent', () => {
     fixture.detectChanges();
     expect(close).toHaveBeenCalledOnce();
   });
+
+  it('requests closure when the browser closes an open dialog', async () => {
+    const { fixture, dialog } = await render();
+    const show = vi.spyOn(dialog, 'showModal').mockImplementation(() => {
+      dialog.setAttribute('open', '');
+    });
+    fixture.componentRef.setInput('open', true);
+    fixture.detectChanges();
+    expect(show).toHaveBeenCalledOnce();
+
+    const close = vi.fn();
+    fixture.componentInstance.closeRequested.subscribe(close);
+    dialog.dispatchEvent(new Event('close'));
+
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it('does not request closure after the parent closes the dialog', async () => {
+    const { fixture, dialog } = await render();
+    const closeDialog = vi.spyOn(dialog, 'close').mockImplementation(() => {
+      dialog.removeAttribute('open');
+    });
+    fixture.componentRef.setInput('open', true);
+    fixture.detectChanges();
+    const close = vi.fn();
+    fixture.componentInstance.closeRequested.subscribe(close);
+
+    fixture.componentRef.setInput('open', false);
+    fixture.detectChanges();
+    dialog.dispatchEvent(new Event('close'));
+
+    expect(closeDialog).toHaveBeenCalledOnce();
+    expect(close).not.toHaveBeenCalled();
+  });
 });
