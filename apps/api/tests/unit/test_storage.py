@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import errno
 import io
+import os
+import stat
 from pathlib import Path
 
 import pytest
@@ -85,6 +88,38 @@ class TestLocalStorage:
         await store.put(key, b"a receipt", content_type="image/jpeg")
 
         assert list(tmp_path.rglob("*.part")) == []
+
+    @pytest.mark.parametrize("error_code", [errno.EPERM, errno.EINVAL])
+    async def test_it_publishes_atomically_when_hard_links_are_unavailable(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, error_code: int
+    ) -> None:
+        store = LocalStorage(tmp_path)
+        key = key_for(checksum_of(b"a receipt"), "receipt.jpg")
+
+        def no_hard_links(_path: Path, _target: Path) -> None:
+            raise OSError(error_code, "hard links are not supported")
+
+        monkeypatch.setattr(Path, "hardlink_to", no_hard_links)
+        await asyncio.gather(
+            *(store.put(key, b"a receipt", content_type="image/jpeg") for _ in range(4))
+        )
+
+        assert await store.get(key) == b"a receipt"
+        assert list(tmp_path.rglob("*.part")) == []
+
+    @pytest.mark.skipif(os.name == "nt", reason="POSIX mode bits are not available on Windows")
+    async def test_attachment_permissions_follow_the_process_umask(self, tmp_path: Path) -> None:
+        reference = tmp_path / "reference"
+        descriptor = os.open(reference, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o666)
+        os.close(descriptor)
+        store = LocalStorage(tmp_path)
+        key = key_for(checksum_of(b"a receipt"), "receipt.jpg")
+
+        await store.put(key, b"a receipt", content_type="image/jpeg")
+
+        assert stat.S_IMODE((tmp_path / key).stat().st_mode) == stat.S_IMODE(
+            reference.stat().st_mode
+        )
 
     async def test_a_file_that_is_not_there_says_so_rather_than_answering_nothing(
         self, tmp_path: Path
