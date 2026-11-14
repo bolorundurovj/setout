@@ -1,5 +1,55 @@
 # Changelog
 
+## [2.5.0](https://github.com/bolorundurovj/setout/compare/v2.4.1...v2.5.0) (2026-11-14)
+
+
+### Features
+
+* **attachments:** allow attachments on agreements, deliveries and projects ([92aadf5](https://github.com/bolorundurovj/setout/commit/92aadf5ecafeb25b07d5d6f9521a328718bbf5a4))
+* **change-history:** add migration 0020 for the change table ([45be787](https://github.com/bolorundurovj/setout/commit/45be787ceac0bc2a0538120dec9cbc7327d3b486))
+* **change-history:** add the Change model ([2f0e595](https://github.com/bolorundurovj/setout/commit/2f0e59533d6543a20be4d4c56ce74f3b03716550))
+* **change-history:** add the panels and project tab to the web app ([0e21a2d](https://github.com/bolorundurovj/setout/commit/0e21a2d4e06e28bb83f4b70f1ed5f948644975d3))
+* **change-history:** add the read API ([d5550b0](https://github.com/bolorundurovj/setout/commit/d5550b05f38e6335227ad4e6fb682f6947148014))
+* **change-history:** record bulk updates, cascades and imports ([f6d288d](https://github.com/bolorundurovj/setout/commit/f6d288d36c9548ba31b0040d444c56963adca521))
+* **change-history:** record saves and deletes of tracked records ([322c1fe](https://github.com/bolorundurovj/setout/commit/322c1fea6b2295ed41e7b44de0248b7c094a1df6))
+* **docker:** support .env-driven and standalone embedded compose configurations ([15f591f](https://github.com/bolorundurovj/setout/commit/15f591f22a5ce39b199d1d0ee4a93095d3bd28ad))
+* **export:** add CSV export and a PDF project report ([c3f616d](https://github.com/bolorundurovj/setout/commit/c3f616dd2dc933c422618d73e8f2ed851d3f0ba3))
+* **export:** style the PDF report with the app theme, logo and page numbers ([6b6023e](https://github.com/bolorundurovj/setout/commit/6b6023e874e14510ca56a14e68762ddb938d17d7))
+* **import:** read parent codes, cost types, quantities and items from exports ([7b51b1b](https://github.com/bolorundurovj/setout/commit/7b51b1be29c31835d0486adc9fe9ee202e33ae26))
+
+
+### Bug Fixes
+
+* **agreements:** use expense terminology and identify advances in navigation ([6b90561](https://github.com/bolorundurovj/setout/commit/6b9056132084676aa3ef3d4bf083580023b73d8f))
+* **api:** use decimal megabytes for upload limits ([4e04f92](https://github.com/bolorundurovj/setout/commit/4e04f924ba13b45719bbda64ac4c352e5551ce12))
+* **auth:** commit authentication transactions before responses ([f776e55](https://github.com/bolorundurovj/setout/commit/f776e551927439a71f3314b4a1c4fea601a4323f))
+* **auth:** serialise authentication and offload passphrase hashing ([59e3996](https://github.com/bolorundurovj/setout/commit/59e399678207cecce23a72352ad48f96ce5a1f34))
+* **expenses:** clarify entry copy and retain incomplete saves for retry ([7a65065](https://github.com/bolorundurovj/setout/commit/7a65065e91e09431d7c447d9495c2d7ff8e1550e))
+* **expenses:** preserve category and recorded status on retry ([5993230](https://github.com/bolorundurovj/setout/commit/599323083f9245fc8d3ba4a145362090448e2f27))
+* **import:** replace budget line with budget item in template and report text ([210ee23](https://github.com/bolorundurovj/setout/commit/210ee23a25703292dd8561f8f1404682e082afe9))
+* **storage:** publish concurrent attachment writes without replacement ([27dfbdd](https://github.com/bolorundurovj/setout/commit/27dfbdd0ad84e2f56f9ff63b28b15291cfa5a222))
+* **storage:** support filesystems without hard links ([a2ed34a](https://github.com/bolorundurovj/setout/commit/a2ed34a56accd5b9ffbabe5170d952840a66a183))
+* **web:** clarify settings scope and shorten product guidance ([f8f636c](https://github.com/bolorundurovj/setout/commit/f8f636cef2e25e3090ea86c7f4d2b6dc1dfbea0c))
+* **web:** close the expense drawer from its close controls ([cefbe0c](https://github.com/bolorundurovj/setout/commit/cefbe0c0fafc99d4d0c3531317c9ca513a4a9e3f))
+* **web:** manage drawer focus with a native modal dialog ([28e90ea](https://github.com/bolorundurovj/setout/commit/28e90ea6d5534ad58cafdaa9f9d0a4b86f68bcd0))
+* **web:** open the sign-in page after signing out ([a10e7d6](https://github.com/bolorundurovj/setout/commit/a10e7d6ca7de7fce0187c7b5f9e24cd260b00f14))
+* **web:** sync drawer state with native dialog closure ([855a9ed](https://github.com/bolorundurovj/setout/commit/855a9ed8d039c2104d30ec28d5578eee890e1b6a))
+
+
+### Documentation
+
+* add MinIO to RustFS storage migration guide and troubleshooting ([1426724](https://github.com/bolorundurovj/setout/commit/1426724df0b62a7501226ded682125bd45a06170))
+* describe PostgreSQL tests and implementation constraints ([e590866](https://github.com/bolorundurovj/setout/commit/e590866ace20d9bb42417fc3f3ab64720efcc541))
+* update authentication and storage constraints ([4e29f63](https://github.com/bolorundurovj/setout/commit/4e29f63a497a46a911c105dfb0dbb1b54c27e4cf))
+
+
+### Build and dependencies
+
+* **api:** add DM Sans and DM Mono for the PDF report ([7dafc68](https://github.com/bolorundurovj/setout/commit/7dafc68d1ef6f655f52fccdf2fd92a5c70f7c407))
+* **ci:** run the Playwright suite in Firefox ([1160d5a](https://github.com/bolorundurovj/setout/commit/1160d5aa5fcea106bac473dfcbf38189116e841a))
+* **deps:** bump dnspython ([#129](https://github.com/bolorundurovj/setout/issues/129)) ([ae12411](https://github.com/bolorundurovj/setout/commit/ae124119178d8b73b79a9a5a0270fa749b052f9a))
+* **web:** add Playwright and the make e2e target ([b2e5a81](https://github.com/bolorundurovj/setout/commit/b2e5a81c3fdd9421d0d6abb8535c3194bbb56bd5))
+
 ## [2.4.1](https://github.com/bolorundurovj/setout/compare/v2.4.0...v2.4.1) (2026-10-24)
 
 
