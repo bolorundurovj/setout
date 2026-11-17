@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.1](https://github.com/bolorundurovj/setout/compare/v2.5.0...v2.5.1) (2026-11-17)
+
+
+### Build and dependencies
+
+* **deps:** bump dnspython ([#140](https://github.com/bolorundurovj/setout/issues/140)) ([a43fb10](https://github.com/bolorundurovj/setout/commit/a43fb10a87fea8b42ccd4d6ce5bf680241267fe7))
+
 ## [2.5.0](https://github.com/bolorundurovj/setout/compare/v2.4.1...v2.5.0) (2026-11-14)
 
 
