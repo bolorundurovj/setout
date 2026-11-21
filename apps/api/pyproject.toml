@@ -25,7 +25,7 @@ dependencies = [
     "tzdata==2026.3",
     "bcrypt==5.0.0",
     "email-validator==2.3.0",
-    "python-multipart==0.0.32",
+    "python-multipart==0.0.34",
     "boto3==1.43.90",
     "httpx==0.28.1",
     "openpyxl==3.1.5",
