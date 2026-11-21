@@ -24,7 +24,7 @@ dependencies = [
     "pydantic-settings==2.15.0",
     "tzdata==2026.3",
     "bcrypt==5.0.0",
-    "email-validator==2.3.0",
+    "email-validator==2.4.0",
     "python-multipart==0.0.32",
     "boto3==1.43.90",
     "httpx==0.28.1",
