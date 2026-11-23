@@ -278,6 +278,7 @@ async def test_a_backup_naming_a_column_the_table_lacks_is_refused(client: Async
     copy["tables"]["vendor"] = [
         {"id": "v1", "name": "A vendor", 'sneaky") ; DROP TABLE vendor; --': "x"}
     ]
+    copy["row_counts"]["vendor"] = 1
 
     resp = await client.post("/api/install/restore", json={"backup": copy})
 
@@ -350,3 +351,79 @@ async def test_a_backup_listing_a_child_before_its_parent_still_restores(
     assert signed_in.status_code == 200, signed_in.text
 
     assert await _hierarchy(client, project_id) == before
+
+
+async def _project_count(client: AsyncClient) -> int:
+    return (await client.get("/api/projects")).json()["total"]
+
+
+async def test_a_backup_of_format_zero_is_refused(client: AsyncClient) -> None:
+    await _signed_in(client)
+    await _project(client)
+    backup = await _export(client)
+    backup["format"] = 0
+
+    resp = await _restore(client, backup, accept=True)
+
+    assert resp.status_code == 422
+    assert await _project_count(client) == 1
+
+
+async def test_a_backup_missing_a_table_is_refused_and_nothing_is_deleted(
+    client: AsyncClient,
+) -> None:
+    await _signed_in(client)
+    await _project(client)
+    backup = await _export(client)
+    del backup["tables"]["project"]
+    del backup["row_counts"]["project"]
+
+    resp = await _restore(client, backup)
+
+    assert resp.status_code == 422
+    assert "missing the project table" in resp.json()["detail"]
+    assert await _project_count(client) == 1
+
+
+async def test_a_backup_whose_counts_do_not_match_its_rows_is_refused(
+    client: AsyncClient,
+) -> None:
+    await _signed_in(client)
+    await _project(client)
+    await _project(client, name="Owode Bungalow")
+    backup = await _export(client)
+    backup["tables"]["project"].pop()
+
+    resp = await _restore(client, backup)
+
+    assert resp.status_code == 422
+    assert "project lists 2 rows but contains 1" in resp.json()["detail"]
+    assert await _project_count(client) == 2
+
+
+async def test_a_backup_without_exactly_one_account_is_refused(client: AsyncClient) -> None:
+    await _signed_in(client)
+    await _project(client)
+    backup = await _export(client)
+    backup["tables"]["user"] = []
+    backup["row_counts"]["user"] = 0
+
+    resp = await _restore(client, backup)
+
+    assert resp.status_code == 422
+    assert "exactly one account" in resp.json()["detail"]
+    assert await _project_count(client) == 1
+
+
+async def test_an_older_backup_can_omit_tables_added_after_it(client: AsyncClient) -> None:
+    await _signed_in(client)
+    await _project(client)
+    backup = await _export(client)
+    backup["migration"] = "0009_lands"
+    for table in ("country", "state", "land_valuation", "change"):
+        del backup["tables"][table]
+        del backup["row_counts"][table]
+
+    resp = await _restore(client, backup, accept=True)
+
+    assert resp.status_code == 200, resp.text

@@ -20,7 +20,7 @@ class Install(BaseModel):
 
 class Backup(BaseModel):
     format: int = Field(
-        ..., description="The backup format version. Incremented when the format changes"
+        ..., ge=1, description="The backup format version. Incremented when the format changes"
     )
     app_version: str = Field(..., description="The Setout version that created the backup")
     migration: str | None = Field(

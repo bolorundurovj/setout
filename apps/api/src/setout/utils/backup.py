@@ -36,6 +36,31 @@ TABLES: tuple[str, ...] = (
     "land_valuation",
 )
 
+# The migration number that created each table, so a backup from an older schema only
+# needs the tables that existed then.
+TABLE_SINCE: dict[str, int] = {
+    "currency": 1,
+    "category_preset": 1,
+    "user": 2,
+    "project": 3,
+    "category": 4,
+    "budget_item": 4,
+    "item": 5,
+    "person": 5,
+    "vendor": 5,
+    "expense": 5,
+    "advance": 6,
+    "agreement": 6,
+    "delivery": 7,
+    "attachment": 8,
+    "land": 9,
+    "land_document": 9,
+    "country": 11,
+    "state": 11,
+    "land_valuation": 12,
+    "change": 20,
+}
+
 # Self-referencing tables and the column that holds the parent.
 SELF_REFERENCES: dict[str, str] = {"category": "parent_id"}
 
@@ -98,6 +123,22 @@ def forward(tables: Rows, format: int) -> Rows:
     for target in range(format + 1, FORMAT + 1):
         tables = _upgrade(tables, UPGRADES[target])
     return tables
+
+
+def forward_counts(counts: dict[str, int], format: int) -> dict[str, int]:
+    """Rename the tables in an older backup's row counts to their current names."""
+    for target in range(format + 1, FORMAT + 1):
+        renames = UPGRADES[target].tables
+        counts = {renames.get(name, name): count for name, count in counts.items()}
+    return counts
+
+
+def required_tables(migration: str | None) -> set[str]:
+    """The tables a backup taken at this migration must contain."""
+    number = migration.split("_", 1)[0] if migration else ""
+    if not number.isdigit():
+        return set(TABLES)
+    return {table for table in TABLES if TABLE_SINCE[table] <= int(number)}
 
 
 def to_json_value(value: Any) -> Any:

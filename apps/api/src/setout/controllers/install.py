@@ -10,7 +10,17 @@ from setout import __version__
 from setout.config import get_settings
 from setout.schemas.install import Backup, Install, RestoreRequest, RestoreResult
 from setout.services import changes
-from setout.utils.backup import FORMAT, TABLES, applied_migration, forward, read_all, write_all
+from setout.utils.backup import (
+    FORMAT,
+    TABLES,
+    Rows,
+    applied_migration,
+    forward,
+    forward_counts,
+    read_all,
+    required_tables,
+    write_all,
+)
 
 
 class InstallController:
@@ -52,6 +62,7 @@ class InstallController:
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"The backup has tables Setout does not recognise: {', '.join(unknown)}",
             )
+        self._require_complete(backup, tables)
         await self._require_matching_version(backup, req.accept_version_change)
 
         try:
@@ -70,6 +81,35 @@ class InstallController:
             ) from exc
 
         return RestoreResult(row_counts=written, signed_out=True)
+
+    def _require_complete(self, backup: Backup, tables: Rows) -> None:
+        """Refuse a backup that is missing tables or rows before anything is deleted."""
+        missing = sorted(required_tables(backup.migration) - set(tables))
+        if missing:
+            noun = "table" if len(missing) == 1 else "tables"
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=(
+                    f"Your data was not changed: the backup is missing the "
+                    f"{', '.join(missing)} {noun}"
+                ),
+            )
+        counts = forward_counts(dict(backup.row_counts), backup.format)
+        wrong = [
+            f"{table} lists {counts.get(table, 0)} rows but contains {len(rows)}"
+            for table, rows in sorted(tables.items())
+            if counts.get(table, 0) != len(rows)
+        ]
+        if wrong:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=f"Your data was not changed: the backup is incomplete ({'; '.join(wrong)})",
+            )
+        if len(tables.get("user") or []) != 1:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Your data was not changed: a backup must contain exactly one account",
+            )
 
     async def _require_matching_version(self, backup: Backup, accepted: bool) -> None:
         if accepted:
