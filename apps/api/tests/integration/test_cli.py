@@ -128,3 +128,30 @@ async def test_reset_passphrase_with_generate_replaces_hash(client: AsyncClient)
 
     reloaded = await User.get(id=user.id)
     assert verify_passphrase("old-passphrase-123", reloaded.passphrase_hash) is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_reset_passphrase_refuses_a_passphrase_over_72_bytes(client: AsyncClient) -> None:
+    user = await User.create(name="Admin", passphrase_hash=hash_passphrase("old-passphrase-123"))
+
+    exit_code = await cli.reset_passphrase(passphrase="é" * 36 + "a")
+
+    assert exit_code == 1
+    reloaded = await User.get(id=user.id)
+    assert verify_passphrase("old-passphrase-123", reloaded.passphrase_hash) is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_a_recovery_file_with_a_passphrase_over_72_bytes_is_ignored(
+    client: AsyncClient, tmp_path: Path
+) -> None:
+    user = await User.create(name="Admin", passphrase_hash=hash_passphrase("old-passphrase-123"))
+    recovery_file = tmp_path / "reset-passphrase.txt"
+    recovery_file.write_text("é" * 36 + "a", encoding="utf-8")
+
+    assert await cli.consume_recovery_file(recovery_file) is False
+
+    reloaded = await User.get(id=user.id)
+    assert verify_passphrase("old-passphrase-123", reloaded.passphrase_hash) is True

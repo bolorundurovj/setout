@@ -13,7 +13,7 @@ from tortoise import Tortoise
 from setout.config import get_settings
 from setout.db import close_db, init_db
 from setout.models.user import Session, User
-from setout.services.auth import hash_passphrase
+from setout.services.auth import PASSPHRASE_TOO_LONG, hash_passphrase, passphrase_too_long
 
 logger = logging.getLogger("setout.cli")
 
@@ -101,6 +101,9 @@ async def consume_recovery_file(custom_path: str | Path | None = None) -> bool:
             MIN_PASSPHRASE_LENGTH,
         )
         return False
+    if passphrase_too_long(new_passphrase):
+        logger.error("Passphrase in recovery file %s: %s", file_path, PASSPHRASE_TOO_LONG)
+        return False
 
     manage_db = not getattr(Tortoise, "_inited", False)
     if manage_db:
@@ -167,6 +170,9 @@ async def reset_passphrase(
             f"Error: Passphrase must be at least {MIN_PASSPHRASE_LENGTH} characters long.",
             file=sys.stderr,
         )
+        return 1
+    if passphrase_too_long(new_passphrase):
+        print(f"Error: {PASSPHRASE_TOO_LONG}", file=sys.stderr)
         return 1
 
     manage_db = not getattr(Tortoise, "_inited", False)

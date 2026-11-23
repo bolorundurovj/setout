@@ -486,3 +486,42 @@ async def test_fresh_session_is_not_extended(client: AsyncClient) -> None:
     assert "set-cookie" not in resp.headers
 
     assert (await Session.get(id=session.id)).expires_at == before
+
+
+# 37 characters but 73 bytes: each "é" takes two bytes in UTF-8.
+TOO_LONG = "é" * 36 + "a"
+LONGEST = "é" * 36
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_setup_refuses_a_passphrase_over_72_bytes(client: AsyncClient) -> None:
+    resp = await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": TOO_LONG})
+
+    assert resp.status_code == 422
+    assert "up to 72 bytes" in resp.text
+    assert await User.all().count() == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_setup_accepts_a_passphrase_of_exactly_72_bytes(client: AsyncClient) -> None:
+    await _setup(client, LONGEST)
+
+    await client.post("/api/auth/sign-out")
+    back = await client.post("/api/auth/sign-in", json={"passphrase": LONGEST})
+    assert back.status_code == 200
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_a_new_passphrase_over_72_bytes_is_refused(client: AsyncClient) -> None:
+    await _setup(client)
+
+    resp = await client.post(
+        "/api/auth/passphrase",
+        json={"current_passphrase": "password123", "new_passphrase": TOO_LONG},
+    )
+
+    assert resp.status_code == 422
+    assert "up to 72 bytes" in resp.text

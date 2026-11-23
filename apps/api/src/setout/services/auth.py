@@ -7,8 +7,26 @@ import bcrypt
 
 from setout.config import Settings, get_settings
 
+# bcrypt reads at most 72 bytes and raises on anything longer.
+MAX_PASSPHRASE_BYTES = 72
+PASSPHRASE_TOO_LONG = (
+    f"The passphrase is too long. It can be up to {MAX_PASSPHRASE_BYTES} bytes, which is fewer "
+    "characters if it uses accented letters or non-Latin scripts."
+)
+
+
+class PassphraseTooLong(ValueError):
+    def __init__(self) -> None:
+        super().__init__(PASSPHRASE_TOO_LONG)
+
+
+def passphrase_too_long(passphrase: str) -> bool:
+    return len(passphrase.encode("utf-8")) > MAX_PASSPHRASE_BYTES
+
 
 def hash_passphrase(passphrase: str) -> str:
+    if passphrase_too_long(passphrase):
+        raise PassphraseTooLong()
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(passphrase.encode("utf-8"), salt).decode("utf-8")
 

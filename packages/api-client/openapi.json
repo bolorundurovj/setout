@@ -15546,8 +15546,10 @@
           },
           "new_passphrase": {
             "type": "string",
+            "maxLength": 72,
             "minLength": 8,
-            "title": "New Passphrase"
+            "title": "New Passphrase",
+            "description": "At least 8 characters, and at most 72 bytes in UTF-8"
           }
         },
         "type": "object",
@@ -16504,8 +16506,10 @@
           },
           "passphrase": {
             "type": "string",
+            "maxLength": 72,
             "minLength": 8,
-            "title": "Passphrase"
+            "title": "Passphrase",
+            "description": "At least 8 characters, and at most 72 bytes in UTF-8"
           }
         },
         "type": "object",

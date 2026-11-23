@@ -1,10 +1,31 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from typing import Annotated
+
+from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
+
+from setout.services.auth import MAX_PASSPHRASE_BYTES, PASSPHRASE_TOO_LONG, passphrase_too_long
+
+
+def _fits_bcrypt(passphrase: str) -> str:
+    if passphrase_too_long(passphrase):
+        raise ValueError(PASSPHRASE_TOO_LONG)
+    return passphrase
+
+
+NewPassphrase = Annotated[
+    str,
+    Field(
+        min_length=8,
+        max_length=MAX_PASSPHRASE_BYTES,
+        description=f"At least 8 characters, and at most {MAX_PASSPHRASE_BYTES} bytes in UTF-8",
+    ),
+    AfterValidator(_fits_bcrypt),
+]
 
 
 class SetupRequest(BaseModel):
     name: str = Field(..., description="The local account name")
     email: EmailStr | None = Field(None, description="Optional. Only used to identify the account")
-    passphrase: str = Field(..., min_length=8)
+    passphrase: NewPassphrase
 
 
 class SignInRequest(BaseModel):
@@ -21,7 +42,7 @@ class AccountUpdate(BaseModel):
 
 class PassphraseChange(BaseModel):
     current_passphrase: str = Field(..., description="The current passphrase")
-    new_passphrase: str = Field(..., min_length=8)
+    new_passphrase: NewPassphrase
 
 
 class UserResponse(BaseModel):

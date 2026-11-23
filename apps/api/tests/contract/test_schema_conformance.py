@@ -20,6 +20,7 @@ import pytest
 import schemathesis
 import uvicorn
 from hypothesis import HealthCheck, settings
+from schemathesis.specs.openapi.checks import positive_data_acceptance
 
 from setout import db as db_module
 from setout.config import get_settings
@@ -77,6 +78,8 @@ def app_schema(
 
 schema = schemathesis.pytest.from_fixture("app_schema")
 
+BYTE_LIMITED_OPERATIONS = {("POST", "/api/auth/setup"), ("POST", "/api/auth/passphrase")}
+
 
 @schema.parametrize()
 @settings(
@@ -88,4 +91,9 @@ schema = schemathesis.pytest.from_fixture("app_schema")
     ],
 )
 def test_api_conforms_to_schema(case: schemathesis.Case) -> None:
-    case.call_and_validate()
+    # JSON Schema cannot express a UTF-8 byte limit, so a passphrase that fits maxLength
+    # can still be refused for being over bcrypt's 72 bytes.
+    if (case.method, case.path) in BYTE_LIMITED_OPERATIONS:
+        case.call_and_validate(excluded_checks=[positive_data_acceptance])
+    else:
+        case.call_and_validate()
