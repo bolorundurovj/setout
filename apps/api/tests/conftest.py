@@ -49,6 +49,11 @@ async def client(tmp_path: Path) -> AsyncIterator[AsyncClient]:
         db_url=database_url,
         modules={"models": ["setout.models"]},
     )
+    expected_dialect = os.environ.get("CI_EXPECT_DIALECT")
+    dialect = Tortoise.get_connection("default").capabilities.dialect
+    if expected_dialect and dialect != expected_dialect:
+        await Tortoise.close_connections()
+        pytest.fail(f"Expected a {expected_dialect} database, but connected to {dialect}.")
     await Tortoise.generate_schemas()
     app = create_app()
     # Real LocalStorage under tmp_path, so the production write path is exercised.

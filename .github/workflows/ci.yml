@@ -94,7 +94,8 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      SETOUT_DATABASE_URL: postgres://setout:setout@localhost:5432/setout
+      TEST_DATABASE_URL: postgres://setout:setout@localhost:5432/setout
+      CI_EXPECT_DIALECT: postgres
     steps:
       - uses: actions/checkout@v7
 
