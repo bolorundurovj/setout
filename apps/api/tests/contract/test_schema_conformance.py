@@ -17,10 +17,13 @@ from pathlib import Path
 
 import httpx
 import pytest
+import requests
 import schemathesis
 import uvicorn
 from hypothesis import HealthCheck, settings
+from requests.adapters import HTTPAdapter
 from schemathesis.specs.openapi.checks import positive_data_acceptance
+from urllib3.util.retry import Retry
 
 from setout import db as db_module
 from setout.config import get_settings
@@ -78,6 +81,23 @@ def app_schema(
 
 schema = schemathesis.pytest.from_fixture("app_schema")
 
+
+def _session() -> requests.Session:
+    """One pooled connection for every call, with retries only for opening a connection.
+
+    Without a session each generated request opened a new connection, and over a full run
+    one was occasionally refused. Reusing a connection avoids most of that churn. Retrying a
+    refused connect cannot hide an app fault: the request never reached the app, and nothing
+    already sent is resent. Responses are checked as before.
+    """
+    session = requests.Session()
+    retries = Retry(total=None, connect=3, read=0, status=0, other=0, backoff_factor=0.2)
+    session.mount("http://", HTTPAdapter(max_retries=retries))
+    return session
+
+
+SESSION = _session()
+
 BYTE_LIMITED_OPERATIONS = {("POST", "/api/auth/setup"), ("POST", "/api/auth/passphrase")}
 
 
@@ -94,6 +114,6 @@ def test_api_conforms_to_schema(case: schemathesis.Case) -> None:
     # JSON Schema cannot express a UTF-8 byte limit, so a passphrase that fits maxLength
     # can still be refused for being over bcrypt's 72 bytes.
     if (case.method, case.path) in BYTE_LIMITED_OPERATIONS:
-        case.call_and_validate(excluded_checks=[positive_data_acceptance])
+        case.call_and_validate(session=SESSION, excluded_checks=[positive_data_acceptance])
     else:
-        case.call_and_validate()
+        case.call_and_validate(session=SESSION)
