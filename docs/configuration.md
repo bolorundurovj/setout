@@ -89,7 +89,8 @@ These are read by `docker/docker-compose.yml`, not by the application. Copy
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `SETOUT_PORT` | `8474` | Port the app is published on |
+| `SETOUT_PORT` | `8474` | Host port the app is published on. The container always listens on 8474 |
+| `SETOUT_FORWARDED_ALLOW_IPS` | `127.0.0.1` | Comma-separated addresses of reverse proxies whose `X-Forwarded-*` headers are trusted |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `setout` | Database credentials |
 | `STORAGE_ACCESS_KEY` / `MINIO_ROOT_USER` | `setout` | S3 / RustFS access key |
 | `STORAGE_SECRET_KEY` / `MINIO_ROOT_PASSWORD` | `setout-secret` | S3 / RustFS secret key |

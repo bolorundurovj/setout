@@ -28,7 +28,7 @@ LABEL org.opencontainers.image.title="Setout" \
 ENV PYTHONUNBUFFERED=1 \
 	UV_COMPILE_BYTECODE=1 \
 	UV_LINK_MODE=copy \
-	SETOUT_PORT=8474 \
+	PATH="/app/api/.venv/bin:$PATH" \
 	SETOUT_DATA_DIR=/var/lib/setout \
 	SETOUT_STATIC_DIR=/app/web
 
@@ -46,7 +46,12 @@ RUN useradd --system --create-home --uid 10001 setout \
 USER setout
 
 VOLUME ["/var/lib/setout"]
+# The container always listens on 8474. SETOUT_PORT in docker/.env only picks the host port.
 EXPOSE 8474
 
-# The app applies migrations at startup in its lifespan handler.
-CMD ["sh", "-c", "uv run uvicorn setout.main:app --host 0.0.0.0 --port ${SETOUT_PORT}"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+	CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8474/healthz', timeout=4)"]
+
+# The app applies migrations at startup in its lifespan handler. exec makes uvicorn PID 1,
+# so docker stop's SIGTERM reaches it and it shuts down cleanly.
+CMD ["sh", "-c", "exec uvicorn setout.main:app --host 0.0.0.0 --port 8474 --proxy-headers --forwarded-allow-ips \"${SETOUT_FORWARDED_ALLOW_IPS:-127.0.0.1}\""]
