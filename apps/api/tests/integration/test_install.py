@@ -284,3 +284,69 @@ async def test_a_backup_naming_a_column_the_table_lacks_is_refused(client: Async
     assert resp.status_code == 422
     assert "no column" in resp.json()["detail"]
     assert (await client.get("/api/vendors")).status_code == 200
+
+
+async def _hierarchy(client: AsyncClient, project_id: str) -> dict[str, str | None]:
+    names = {}
+    rows = (await client.get(f"/api/projects/{project_id}/categories")).json()
+    for row in rows:
+        names[row["id"]] = row["name"]
+    return {row["name"]: names.get(row["parent_id"]) for row in rows}
+
+
+async def _child_created_before_its_parent(client: AsyncClient) -> str:
+    project = await _project(client)
+    url = f"/api/projects/{project['id']}/categories"
+    child = (await client.post(url, json={"name": "Blockwork"})).json()
+    parent = (await client.post(url, json={"name": "Structure"})).json()
+    moved = await client.patch(f"/api/categories/{child['id']}", json={"parent_id": parent["id"]})
+    assert moved.status_code == 200, moved.text
+    return project["id"]
+
+
+async def test_a_category_made_before_its_parent_survives_a_round_trip(
+    client: AsyncClient,
+) -> None:
+    await _signed_in(client)
+    project_id = await _child_created_before_its_parent(client)
+    before = await _hierarchy(client, project_id)
+    backup = await _export(client)
+
+    resp = await _restore(client, backup)
+    assert resp.status_code == 200, resp.text
+    signed_in = await client.post("/api/auth/sign-in", json={"passphrase": "password123"})
+    assert signed_in.status_code == 200, signed_in.text
+
+    assert await _hierarchy(client, project_id) == before
+    assert before["Blockwork"] == "Structure"
+
+
+async def test_an_export_lists_parent_categories_before_their_children(
+    client: AsyncClient,
+) -> None:
+    await _signed_in(client)
+    await _child_created_before_its_parent(client)
+
+    rows = (await _export(client))["tables"]["category"]
+
+    position = {row["id"]: index for index, row in enumerate(rows)}
+    for row in rows:
+        if row["parent_id"]:
+            assert position[row["parent_id"]] < position[row["id"]]
+
+
+async def test_a_backup_listing_a_child_before_its_parent_still_restores(
+    client: AsyncClient,
+) -> None:
+    await _signed_in(client)
+    project_id = await _child_created_before_its_parent(client)
+    before = await _hierarchy(client, project_id)
+    backup = await _export(client)
+    backup["tables"]["category"].sort(key=lambda row: row["parent_id"] is None)
+
+    resp = await _restore(client, backup)
+    assert resp.status_code == 200, resp.text
+    signed_in = await client.post("/api/auth/sign-in", json={"passphrase": "password123"})
+    assert signed_in.status_code == 200, signed_in.text
+
+    assert await _hierarchy(client, project_id) == before

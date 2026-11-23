@@ -36,6 +36,9 @@ TABLES: tuple[str, ...] = (
     "land_valuation",
 )
 
+# Self-referencing tables and the column that holds the parent.
+SELF_REFERENCES: dict[str, str] = {"category": "parent_id"}
+
 # Sessions are excluded: they belong to the browsers signed in at export time.
 EXCLUDED_TABLES: tuple[str, ...] = ("session", "tortoise_migrations")
 
@@ -118,12 +121,33 @@ async def applied_migration() -> str | None:
     return str(rows[0]["name"]) if rows else None
 
 
+def parents_first(rows: list[dict[str, Any]], parent_column: str) -> list[dict[str, Any]]:
+    """Order rows so each parent comes before its children. Rows in a cycle keep their order."""
+    by_id = {row["id"]: row for row in rows}
+    ordered: list[dict[str, Any]] = []
+    placed: set[Any] = set()
+    for row in rows:
+        chain: list[dict[str, Any]] = []
+        in_chain: set[Any] = set()
+        current: dict[str, Any] | None = row
+        while current is not None and current["id"] not in placed | in_chain:
+            chain.append(current)
+            in_chain.add(current["id"])
+            current = by_id.get(current.get(parent_column))
+        for ancestor in reversed(chain):
+            placed.add(ancestor["id"])
+            ordered.append(ancestor)
+    return ordered
+
+
 async def read_all() -> dict[str, list[dict[str, Any]]]:
     conn = Tortoise.get_connection("default")
     tables: dict[str, list[dict[str, Any]]] = {}
     for table in TABLES:
         rows = await conn.execute_query_dict(f'SELECT * FROM "{table}"')
         tables[table] = [{key: to_json_value(value) for key, value in row.items()} for row in rows]
+        if table in SELF_REFERENCES:
+            tables[table] = parents_first(tables[table], SELF_REFERENCES[table])
     return tables
 
 
@@ -166,6 +190,8 @@ async def write_all(tables: dict[str, list[dict[str, Any]]]) -> dict[str, int]:
         rows = tables.get(table) or []
         written[table] = len(rows)
         fields = fields_of(table)
+        parent_column = SELF_REFERENCES.get(table)
+        links: list[list[Any]] = []
         prepared: list[tuple[tuple[str, ...], list[Any]]] = []
         for row in rows:
             if table == "delivery" and "expected" in row and row["expected"] is not None:
@@ -181,6 +207,11 @@ async def write_all(tables: dict[str, list[dict[str, Any]]]) -> dict[str, int]:
                 to_db_value(fields[column], row[column]) if convert else row[column]
                 for column in columns
             ]
+            # Parents are set after all rows are inserted, so row order in a backup does not matter.
+            if parent_column in columns and row[parent_column] is not None:
+                index = columns.index(parent_column)
+                links.append([values[index], row["id"]])
+                values[index] = None
             prepared.append((columns, values))
 
         # Consecutive rows with the same columns go in one batch, so insert order is kept.
@@ -190,5 +221,10 @@ async def write_all(tables: dict[str, list[dict[str, Any]]]) -> dict[str, int]:
             await conn.execute_many(
                 bound(f'INSERT INTO "{table}" ({names}) VALUES ({placeholders})', conn),
                 [values for _, values in batch],
+            )
+        if links:
+            await conn.execute_many(
+                bound(f'UPDATE "{table}" SET "{parent_column}" = ? WHERE "id" = ?', conn),
+                links,
             )
     return written
