@@ -40,7 +40,7 @@ PYTEST_PARALLEL := -n $(PYTEST_WORKERS) --dist loadfile
 endif
 
 .PHONY: help setup dev api web watch-sdk lint format test test-unit test-int test-contract \
-	sdk migration migrate downgrade seed backup restore reset-passphrase check check-parallel run-check \
+	sdk sdk-check migration migrate downgrade seed backup restore reset-passphrase check check-parallel run-check \
 	build docker-build e2e kill clean line-endings require-uv require-yarn require-docker
 
 # file is the server backup path for `make restore`, or the recovery text file for `make reset-passphrase`.
@@ -139,6 +139,9 @@ e2e: require-uv require-yarn sdk ## Build the web app and run the Playwright sui
 
 sdk: require-uv require-yarn ## Regenerate the API client.
 	$(BASH) scripts/generate_sdk.sh
+
+sdk-check: sdk ## Fail when the committed OpenAPI schema differs from the API.
+	git diff --exit-code -- $(SDK_DIR)/openapi.json
 
 migration: require-uv ## tortoise makemigrations, accepting an optional name.
 	cd $(API_DIR) && uv run tortoise makemigrations $(if $(name),-n $(name),)

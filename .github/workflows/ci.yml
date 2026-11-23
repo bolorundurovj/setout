@@ -34,8 +34,11 @@ jobs:
       - name: Install
         run: make setup
 
-      - name: Check (lint, typecheck, tests, coverage floor, SDK drift)
+      - name: Check (lint, typecheck, tests, coverage floor)
         run: make check
+
+      - name: SDK drift
+        run: make sdk-check
 
   e2e:
     runs-on: ubuntu-latest
