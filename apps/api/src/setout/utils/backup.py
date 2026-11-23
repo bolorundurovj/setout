@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
+from itertools import groupby
 from typing import Any
 
 from tortoise import Tortoise
+from tortoise.fields import DateField, DatetimeField, DecimalField, Field, JSONField
+
+from setout.utils.placeholders import bound
 
 # Parents before children: a restore inserts in this order and deletes in reverse.
 TABLES: tuple[str, ...] = (
@@ -122,16 +127,37 @@ async def read_all() -> dict[str, list[dict[str, Any]]]:
     return tables
 
 
-def columns_of(table: str) -> set[str]:
+def fields_of(table: str) -> dict[str, Field[Any]]:
+    """The model field behind each column of a table, keyed by column name."""
     for model in Tortoise.apps.get_models_iterable():
         if model._meta.db_table == table:
-            return set(model._meta.fields_db_projection.values())
-    return set()
+            meta = model._meta
+            return {
+                column: meta.fields_map[name] for name, column in meta.fields_db_projection.items()
+            }
+    return {}
+
+
+def to_db_value(field: Field[Any], value: Any) -> Any:
+    """Turn a JSON backup value back into the type asyncpg expects for the column."""
+    if value is None:
+        return None
+    if isinstance(field, DatetimeField):
+        moment = value if isinstance(value, datetime) else datetime.fromisoformat(str(value))
+        return moment if moment.tzinfo else moment.replace(tzinfo=UTC)
+    if isinstance(field, DateField):
+        return value if isinstance(value, date) else date.fromisoformat(str(value))
+    if isinstance(field, DecimalField):
+        return Decimal(str(value))
+    if isinstance(field, JSONField):
+        return value if isinstance(value, str) else json.dumps(value)
+    return value
 
 
 async def write_all(tables: dict[str, list[dict[str, Any]]]) -> dict[str, int]:
     """Replace every row in the database with the given rows. Call in a transaction."""
     conn = Tortoise.get_connection("default")
+    convert = conn.capabilities.dialect != "sqlite"
     for table in reversed(TABLES + EXCLUDED_TABLES[:1]):
         await conn.execute_query(f'DELETE FROM "{table}"')
 
@@ -139,21 +165,30 @@ async def write_all(tables: dict[str, list[dict[str, Any]]]) -> dict[str, int]:
     for table in TABLES:
         rows = tables.get(table) or []
         written[table] = len(rows)
-        known = columns_of(table)
+        fields = fields_of(table)
+        prepared: list[tuple[tuple[str, ...], list[Any]]] = []
         for row in rows:
             if table == "delivery" and "expected" in row and row["expected"] is not None:
                 try:
                     date.fromisoformat(str(row["expected"]))
                 except ValueError:
                     row["expected"] = None
-            columns = list(row.keys())
-            unknown_columns = [column for column in columns if column not in known]
+            columns = tuple(row.keys())
+            unknown_columns = [column for column in columns if column not in fields]
             if unknown_columns:
                 raise ValueError(f"{table} has no column {unknown_columns[0]}")
+            values = [
+                to_db_value(fields[column], row[column]) if convert else row[column]
+                for column in columns
+            ]
+            prepared.append((columns, values))
+
+        # Consecutive rows with the same columns go in one batch, so insert order is kept.
+        for columns, batch in groupby(prepared, key=lambda item: item[0]):
             placeholders = ", ".join("?" for _ in columns)
             names = ", ".join(f'"{column}"' for column in columns)
-            await conn.execute_query(
-                f'INSERT INTO "{table}" ({names}) VALUES ({placeholders})',
-                [row[column] for column in columns],
+            await conn.execute_many(
+                bound(f'INSERT INTO "{table}" ({names}) VALUES ({placeholders})', conn),
+                [values for _, values in batch],
             )
     return written
