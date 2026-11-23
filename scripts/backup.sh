@@ -4,10 +4,16 @@
 # Usage: backup.sh [out-dir]
 #
 # Supports SQLite and Postgres. SQLite is copied from the data directory;
-# Postgres is dumped with pg_dump.
+# Postgres is dumped with pg_dump. Settings come from the environment, then the
+# repository .env, as they do for the app.
 set -euo pipefail
+# Backups hold the passphrase hash and every record, so only the owner may read them.
+umask 077
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/lib.sh
+. "$ROOT_DIR/scripts/lib.sh"
+load_env "$ROOT_DIR"
 DATA_DIR="${SETOUT_DATA_DIR:-$ROOT_DIR/apps/api/data}"
 OUT_DIR="${1:-$ROOT_DIR/backups}"
 DB_URL="${SETOUT_DATABASE_URL:-}"
@@ -37,16 +43,9 @@ if [ "$ENGINE" = "sqlite" ]; then
 		exit 1
 	fi
 	DB_PATH="$(cd "$(dirname "$DB_PATH")" && pwd)/$(basename "$DB_PATH")"
-	# .backup includes the write-ahead log, which a plain copy of a running database
-	# does not. It runs in the staging directory because native sqlite3 on Windows
-	# cannot read a path in the output name.
-	if command -v sqlite3 >/dev/null 2>&1; then
-		(cd "$STAGE" && sqlite3 "$DB_PATH" ".backup 'database.sqlite3'")
-	else
-		echo "Note: sqlite3 not found, copying the file directly."
-		echo "      Stop the app first, or the copy may contain a partially written page."
-		cp "$DB_PATH" "$STAGE/database.sqlite3"
-	fi
+	snapshot_sqlite "$DB_PATH" "$STAGE/database.sqlite3"
+	DB_NAME="$(basename "$DB_PATH")"
+	EXCLUDES=(--exclude="./$DB_NAME" --exclude="./$DB_NAME-wal" --exclude="./$DB_NAME-shm")
 else
 	if ! command -v pg_dump >/dev/null 2>&1; then
 		echo "Error: pg_dump not found, and SETOUT_DATABASE_URL points at Postgres."
@@ -55,15 +54,12 @@ else
 		exit 1
 	fi
 	pg_dump --format=custom --file="$STAGE/database.dump" "$DB_URL"
+	EXCLUDES=()
 fi
 
 mkdir -p "$STAGE/files"
 if [ -d "$DATA_DIR" ]; then
-	tar -cf - -C "$DATA_DIR" \
-		--exclude='./setout.sqlite3' \
-		--exclude='./setout.sqlite3-wal' \
-		--exclude='./setout.sqlite3-shm' \
-		. | tar -xf - -C "$STAGE/files"
+	tar -cf - -C "$DATA_DIR" "${EXCLUDES[@]}" . | tar -xf - -C "$STAGE/files"
 fi
 
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"

@@ -159,7 +159,7 @@ backup: ## Write the database and uploaded files into one dated server backup fi
 	$(BASH) scripts/backup.sh
 
 restore: ## Restore a server backup after confirmation. Pass file=<backup>.
-	$(BASH) scripts/restore.sh $(file)
+	$(BASH) scripts/restore.sh "$(file)"
 
 reset-passphrase: require-uv ## Reset the admin passphrase (prompts or reads reset-passphrase.txt). Pass file=<txt>.
 	cd $(API_DIR) && uv run python -m setout.cli reset-passphrase $(if $(file),--file "$(file)",)
