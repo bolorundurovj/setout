@@ -116,14 +116,16 @@ def _sorted(tables: dict[str, list[dict[str, Any]]]) -> dict[str, list[dict[str,
 
 async def test_a_backup_of_every_table_restores_exactly(client: AsyncClient) -> None:
     await _seed_every_table(client)
-    export = await client.get("/api/install/export")
+    export = await client.post("/api/install/export", json={"passphrase": "password123"})
     assert export.status_code == 200, export.text
     backup = export.json()
     assert [table for table in TABLES if not backup["tables"][table]] == []
     before = _sorted(await read_all())
 
     await Project.create(name="Added after the backup", currency_id="NGN")
-    resp = await client.post("/api/install/restore", json={"backup": backup})
+    resp = await client.post(
+        "/api/install/restore", json={"passphrase": "password123", "backup": backup}
+    )
     assert resp.status_code == 200, resp.text
 
     after = _sorted(await read_all())

@@ -37,25 +37,29 @@ export class InstallService {
     }
   }
 
-  async export(): Promise<Backup | null> {
+  async export(passphrase: string): Promise<Backup | null> {
     this.exporting.set(true);
     this.error.set(null);
     try {
-      return await this.api.invoke(exportBackup);
-    } catch {
-      this.error.set('Could not create the backup.');
+      return await this.api.invoke(exportBackup, { body: { passphrase } });
+    } catch (e: unknown) {
+      this.error.set(detailOf(e) ?? 'Could not create the backup.');
       return null;
     } finally {
       this.exporting.set(false);
     }
   }
 
-  async restore(backup: Backup, acceptVersionChange: boolean): Promise<RestoreResult | null> {
+  async restore(
+    backup: Backup,
+    acceptVersionChange: boolean,
+    passphrase: string,
+  ): Promise<RestoreResult | null> {
     this.restoring.set(true);
     this.error.set(null);
     try {
       return await this.api.invoke(restoreBackup, {
-        body: { backup, accept_version_change: acceptVersionChange },
+        body: { passphrase, backup, accept_version_change: acceptVersionChange },
       });
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not restore the backup.');

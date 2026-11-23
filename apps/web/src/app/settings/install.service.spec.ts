@@ -46,26 +46,31 @@ describe('InstallService', () => {
   it('returns the exported backup', async () => {
     const service = configure(() => backup);
 
-    const exported = await service.export();
+    const exported = await service.export('password123');
 
     expect(exported).toEqual(backup);
+    expect(calls[0]['body']).toEqual({ passphrase: 'password123' });
     expect(service.exporting()).toBe(false);
   });
 
   it('sets an error when the export fails', async () => {
     const service = configure(() => new Error('offline'));
 
-    expect(await service.export()).toBeNull();
+    expect(await service.export('password123')).toBeNull();
     expect(service.error()).toBe('Could not create the backup.');
   });
 
   it('passes accept_version_change to the restore', async () => {
     const service = configure(() => ({ tables: {}, row_counts: {} }));
 
-    await service.restore(backup as never, true);
+    await service.restore(backup as never, true, 'password123');
 
     expect(calls[0]['call']).toBe('restoreBackup');
-    expect(calls[0]['body']).toEqual({ backup, accept_version_change: true });
+    expect(calls[0]['body']).toEqual({
+      passphrase: 'password123',
+      backup,
+      accept_version_change: true,
+    });
     expect(service.restoring()).toBe(false);
   });
 
@@ -76,7 +81,7 @@ describe('InstallService', () => {
       }),
     );
 
-    expect(await service.restore(backup as never, false)).toBeNull();
+    expect(await service.restore(backup as never, false, 'password123')).toBeNull();
     expect(service.error()).toBe('The backup contains unknown tables');
   });
 });

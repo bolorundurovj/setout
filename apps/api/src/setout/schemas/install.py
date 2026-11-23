@@ -31,7 +31,12 @@ class Backup(BaseModel):
     tables: Rows
 
 
+class ExportRequest(BaseModel):
+    passphrase: str = Field(..., description="The current passphrase, asked again before export")
+
+
 class RestoreRequest(BaseModel):
+    passphrase: str = Field(..., description="The current passphrase, asked again before restore")
     backup: Backup
     accept_version_change: bool = Field(
         False,

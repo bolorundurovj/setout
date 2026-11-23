@@ -226,7 +226,7 @@ async def test_backup_includes_attachments(client: AsyncClient) -> None:
     expense = await _expense(client, project_id)
     await _attach(client, project_id, expense["id"])
 
-    backup = (await client.get("/api/install/export")).json()
+    backup = (await client.post("/api/install/export", json={"passphrase": "password123"})).json()
 
     assert backup["row_counts"]["attachment"] == 1
 

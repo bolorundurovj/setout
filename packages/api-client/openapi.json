@@ -676,7 +676,7 @@
       }
     },
     "/api/install/export": {
-      "get": {
+      "post": {
         "tags": [
           "install"
         ],
@@ -700,6 +700,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -714,6 +724,9 @@
           "401": {
             "description": "Not authenticated"
           },
+          "403": {
+            "description": "The passphrase is incorrect"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -723,6 +736,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request: the body could not be parsed"
           }
         }
       }
@@ -775,6 +791,9 @@
           },
           "401": {
             "description": "Not authenticated"
+          },
+          "403": {
+            "description": "The passphrase is incorrect"
           },
           "409": {
             "description": "The backup is from a different Setout version or schema, or another restore is in progress"
@@ -13065,6 +13084,20 @@
         "type": "object",
         "title": "ExpenseUpdate"
       },
+      "ExportRequest": {
+        "properties": {
+          "passphrase": {
+            "type": "string",
+            "title": "Passphrase",
+            "description": "The current passphrase, asked again before export"
+          }
+        },
+        "type": "object",
+        "required": [
+          "passphrase"
+        ],
+        "title": "ExportRequest"
+      },
       "GeocodedPlace": {
         "properties": {
           "address": {
@@ -16371,6 +16404,11 @@
       },
       "RestoreRequest": {
         "properties": {
+          "passphrase": {
+            "type": "string",
+            "title": "Passphrase",
+            "description": "The current passphrase, asked again before restore"
+          },
           "backup": {
             "$ref": "#/components/schemas/Backup"
           },
@@ -16383,6 +16421,7 @@
         },
         "type": "object",
         "required": [
+          "passphrase",
           "backup"
         ],
         "title": "RestoreRequest"

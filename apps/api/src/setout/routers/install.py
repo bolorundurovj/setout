@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from starlette.concurrency import run_in_threadpool
 
 from setout.controllers.install import InstallController
 from setout.models.user import User
 from setout.routers.auth import clear_session_cookie, get_current_user
-from setout.schemas.install import Backup, Install, RestoreRequest, RestoreResult
+from setout.schemas.install import Backup, ExportRequest, Install, RestoreRequest, RestoreResult
+from setout.services.auth import verify_passphrase
 
 router = APIRouter(
     prefix="/install",
@@ -19,14 +21,27 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 controller = InstallController()
 
+WRONG_PASSPHRASE: dict[int | str, dict[str, Any]] = {
+    status.HTTP_403_FORBIDDEN: {"description": "The passphrase is incorrect"}
+}
+
+
+async def _require_passphrase(passphrase: str, user: User) -> None:
+    """A backup holds every record and the passphrase hash, so the passphrase is asked again."""
+    if not await run_in_threadpool(verify_passphrase, passphrase, user.passphrase_hash):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="The passphrase is incorrect"
+        )
+
 
 @router.get("", operation_id="getInstall")
 async def get_install(user: CurrentUser) -> Install:
     return await controller.info()
 
 
-@router.get("/export", operation_id="exportBackup")
-async def export_backup(user: CurrentUser) -> Backup:
+@router.post("/export", operation_id="exportBackup", responses=WRONG_PASSPHRASE)
+async def export_backup(req: ExportRequest, user: CurrentUser) -> Backup:
+    await _require_passphrase(req.passphrase, user)
     return await controller.export()
 
 
@@ -34,6 +49,7 @@ async def export_backup(user: CurrentUser) -> Backup:
     "/restore",
     operation_id="restoreBackup",
     responses={
+        **WRONG_PASSPHRASE,
         status.HTTP_409_CONFLICT: {
             "description": (
                 "The backup is from a different Setout version or schema, "
@@ -51,6 +67,7 @@ async def export_backup(user: CurrentUser) -> Backup:
 async def restore_backup(
     req: RestoreRequest, user: CurrentUser, response: Response
 ) -> RestoreResult:
+    await _require_passphrase(req.passphrase, user)
     result = await controller.restore(req)
     clear_session_cookie(response)
     return result

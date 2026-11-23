@@ -230,7 +230,7 @@ async def test_backup_includes_deliveries(client: AsyncClient) -> None:
     expense = await _expense(client, project_id)
     await _delivery(client, project_id, expense_id=expense["id"])
 
-    backup = (await client.get("/api/install/export")).json()
+    backup = (await client.post("/api/install/export", json={"passphrase": "password123"})).json()
     assert backup["row_counts"]["delivery"] == 1
 
 

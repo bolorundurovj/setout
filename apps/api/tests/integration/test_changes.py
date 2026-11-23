@@ -180,12 +180,13 @@ async def test_a_backup_restore_keeps_change_rows_and_adds_none(client: AsyncCli
     await _post(
         client, f"/projects/{project_id}/expenses", {"description": "Cement", "amount": 100}
     )
-    backup = (await client.get("/api/install/export")).json()
+    backup = (await client.post("/api/install/export", json={"passphrase": "password123"})).json()
     count = await Change.all().count()
     assert backup["row_counts"]["change"] == count
 
     resp = await client.post(
-        "/api/install/restore", json={"backup": backup, "accept_version_change": True}
+        "/api/install/restore",
+        json={"passphrase": "password123", "backup": backup, "accept_version_change": True},
     )
     assert resp.status_code == 200, resp.text
 

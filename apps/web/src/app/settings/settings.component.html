@@ -138,9 +138,28 @@
       <span class="t-small aside">{{ dataSize() }} &middot; {{ lastChanged() }}</span>
     </div>
 
+    <label class="field backup-passphrase">
+      <span class="t-micro">Passphrase</span>
+      <input
+        class="input-field"
+        type="password"
+        autocomplete="current-password"
+        aria-describedby="backup-passphrase-note"
+        [value]="backupPassphrase()"
+        (input)="backupPassphrase.set(inputValue($event))"
+      />
+      <span id="backup-passphrase-note" class="t-small aside">
+        Enter it again to download or restore a backup, because a backup holds every record.
+      </span>
+    </label>
+
     @if (!selectedBackup()) {
       <div class="actions">
-        <app-button [loading]="installService.exporting()" (pressed)="downloadBackup()">
+        <app-button
+          [disabled]="!backupPassphrase()"
+          [loading]="installService.exporting()"
+          (pressed)="downloadBackup()"
+        >
           Download Backup
         </app-button>
         <app-button variant="secondary" [loading]="readingFile()" (pressed)="chooseFile()">

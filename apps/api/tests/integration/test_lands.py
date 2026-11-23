@@ -191,7 +191,7 @@ async def test_the_record_export_carries_land(client: AsyncClient) -> None:
     await _setup(client)
     await _land(client, "Ewuru plot")
 
-    resp = await client.get("/api/install/export")
+    resp = await client.post("/api/install/export", json={"passphrase": "password123"})
     assert resp.json()["row_counts"]["land"] == 1
 
 
@@ -201,12 +201,13 @@ async def test_a_restore_puts_the_land_back_under_its_project(client: AsyncClien
     await _setup(client)
     land = await _land(client, "Ewuru plot", city="Ewuru")
     await _project(client, "The house", land_id=land["id"])
-    backup = (await client.get("/api/install/export")).json()
+    backup = (await client.post("/api/install/export", json={"passphrase": "password123"})).json()
 
     await client.post(f"/api/lands/{land['id']}/archive")
 
     resp = await client.post(
-        "/api/install/restore", json={"backup": backup, "accept_version_change": False}
+        "/api/install/restore",
+        json={"passphrase": "password123", "backup": backup, "accept_version_change": False},
     )
 
     assert resp.status_code == 200, resp.text
@@ -364,10 +365,11 @@ async def test_a_restore_carries_the_country_and_the_price_history(client: Async
             "valued_on": "2023-03-11",
         },
     )
-    backup = (await client.get("/api/install/export")).json()
+    backup = (await client.post("/api/install/export", json={"passphrase": "password123"})).json()
 
     resp = await client.post(
-        "/api/install/restore", json={"backup": backup, "accept_version_change": False}
+        "/api/install/restore",
+        json={"passphrase": "password123", "backup": backup, "accept_version_change": False},
     )
 
     assert resp.status_code == 200, resp.text

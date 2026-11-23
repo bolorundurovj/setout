@@ -40,7 +40,8 @@ describe('SettingsComponent', () => {
   let passphraseResult: boolean;
   let exportResult: Backup | null;
   let restoreResult: { row_counts: Record<string, number>; signed_out: boolean } | null;
-  let restores: { backup: Backup; accept: boolean }[];
+  let restores: { backup: Backup; accept: boolean; passphrase: string }[];
+  let exportedWith: string[];
   let navigations: unknown[][];
   let defaultCurrencies: string[];
   let defaultCurrencyResult: boolean;
@@ -62,6 +63,7 @@ describe('SettingsComponent', () => {
     exportResult = backup();
     restoreResult = { row_counts: { project: 2 }, signed_out: true };
     restores = [];
+    exportedWith = [];
     navigations = [];
     defaultCurrencies = [];
     defaultCurrencyResult = true;
@@ -120,9 +122,12 @@ describe('SettingsComponent', () => {
             loading: () => false,
             restoring: () => false,
             load: async () => void (loads += 1),
-            export: async () => exportResult,
-            restore: async (given: Backup, accept: boolean) => {
-              restores.push({ backup: given, accept });
+            export: async (passphrase: string) => {
+              exportedWith.push(passphrase);
+              return exportResult;
+            },
+            restore: async (given: Backup, accept: boolean, passphrase: string) => {
+              restores.push({ backup: given, accept, passphrase });
               return restoreResult;
             },
           },
@@ -147,6 +152,7 @@ describe('SettingsComponent', () => {
 
   async function ready(installation: Install | null = install()) {
     const component = render(installation);
+    component.backupPassphrase.set('password123');
     await Promise.resolve();
     return component;
   }
@@ -274,6 +280,31 @@ describe('SettingsComponent', () => {
     expect((await ready(install({ data_changed_at: null }))).lastChanged()).toBe('no changes yet');
   });
 
+  it('asks for the passphrase before downloading or restoring a backup', async () => {
+    const component = await ready();
+    component.backupPassphrase.set('');
+    component.selectedBackup.set({ name: 'backup.json', bytes: 2048, backup: backup() });
+
+    await component.downloadBackup();
+    await component.restoreBackup();
+
+    expect(component.canRestore()).toBe(false);
+    expect(exportedWith).toEqual([]);
+    expect(restores).toEqual([]);
+  });
+
+  it('sends the passphrase with the export and clears it afterwards', async () => {
+    const component = await ready();
+    exportResult = backup();
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:backup');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+
+    await component.downloadBackup();
+
+    expect(exportedWith).toEqual(['password123']);
+    expect(component.backupPassphrase()).toBe('');
+  });
+
   it('shows an error when the backup export fails', async () => {
     const component = await ready();
     exportResult = null;
@@ -326,7 +357,7 @@ describe('SettingsComponent', () => {
 
     await component.restoreBackup();
 
-    expect(restores).toEqual([{ backup: backup(), accept: false }]);
+    expect(restores).toEqual([{ backup: backup(), accept: false, passphrase: 'password123' }]);
   });
 
   it('restores the backup once the version change is accepted', async () => {
@@ -340,7 +371,10 @@ describe('SettingsComponent', () => {
 
     await component.restoreBackup();
 
-    expect(restores).toEqual([{ backup: backup({ app_version: '0.2.0' }), accept: true }]);
+    expect(restores).toEqual([
+      { backup: backup({ app_version: '0.2.0' }), accept: true, passphrase: 'password123' },
+    ]);
+    expect(component.backupPassphrase()).toBe('');
     expect(component.selectedBackup()).toBeNull();
     expect(toasts[0].message).toContain('Sign in with the passphrase');
     expect(navigations).toEqual([['/login']]);

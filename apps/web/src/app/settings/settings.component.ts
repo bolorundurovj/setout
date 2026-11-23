@@ -41,6 +41,7 @@ export class SettingsComponent {
 
   readonly changingPassphrase = signal(false);
   readonly currentPassphrase = signal('');
+  readonly backupPassphrase = signal('');
   readonly newPassphrase = signal('');
   readonly confirmPassphrase = signal('');
   readonly savingPassphrase = signal(false);
@@ -78,7 +79,9 @@ export class SettingsComponent {
     );
   });
 
-  readonly canRestore = computed(() => !this.versionChanged() || this.versionAccepted());
+  readonly canRestore = computed(
+    () => this.backupPassphrase().length > 0 && (!this.versionChanged() || this.versionAccepted()),
+  );
 
   readonly countMismatch = computed(() => {
     const backup = this.selectedBackup()?.backup;
@@ -223,11 +226,15 @@ export class SettingsComponent {
   }
 
   async downloadBackup(): Promise<void> {
-    const backup = await this.installService.export();
+    if (!this.backupPassphrase()) {
+      return;
+    }
+    const backup = await this.installService.export(this.backupPassphrase());
     if (!backup) {
       this.toast.show(this.installService.error() ?? 'Could not create the backup.', 'error');
       return;
     }
+    this.backupPassphrase.set('');
     this.downloadFile(JSON.stringify(backup, null, 2), this.backupFileName(backup));
     this.toast.show('Backup downloaded. Store it on a different machine as well.');
   }
@@ -295,6 +302,7 @@ export class SettingsComponent {
     const done = await this.installService.restore(
       selected.backup,
       this.versionChanged() && this.versionAccepted(),
+      this.backupPassphrase(),
     );
     if (!done) {
       this.toast.show(this.installService.error() ?? 'Could not restore the backup.', 'error');
@@ -302,6 +310,7 @@ export class SettingsComponent {
     }
     this.selectedBackup.set(null);
     this.versionAccepted.set(false);
+    this.backupPassphrase.set('');
     this.toast.show('Data restored. Sign in with the passphrase from the backup.');
     await this.auth.checkStatus();
     await this.router.navigate(['/login']);

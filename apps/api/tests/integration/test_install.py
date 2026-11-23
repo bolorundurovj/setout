@@ -26,15 +26,17 @@ async def _project(client: AsyncClient, name: str = "Jacaranda Close, Ewuru") ->
 
 
 async def _export(client: AsyncClient) -> dict:
-    resp = await client.get("/api/install/export")
+    resp = await client.post("/api/install/export", json={"passphrase": "password123"})
     assert resp.status_code == 200, resp.text
     return resp.json()
 
 
-async def _restore(client: AsyncClient, backup: dict, accept: bool = False) -> object:
+async def _restore(
+    client: AsyncClient, backup: dict, accept: bool = False, passphrase: str = "password123"
+) -> object:
     return await client.post(
         "/api/install/restore",
-        json={"backup": backup, "accept_version_change": accept},
+        json={"passphrase": passphrase, "backup": backup, "accept_version_change": accept},
     )
 
 
@@ -43,11 +45,15 @@ async def test_the_install_facts_need_authentication(client: AsyncClient) -> Non
 
 
 async def test_an_export_needs_authentication(client: AsyncClient) -> None:
-    assert (await client.get("/api/install/export")).status_code == 401
+    assert (
+        await client.post("/api/install/export", json={"passphrase": "password123"})
+    ).status_code == 401
 
 
 async def test_a_restore_needs_authentication(client: AsyncClient) -> None:
-    assert (await client.post("/api/install/restore", json={"backup": {}})).status_code == 401
+    assert (
+        await client.post("/api/install/restore", json={"passphrase": "password123", "backup": {}})
+    ).status_code == 401
 
 
 async def test_the_install_says_its_version_and_its_schema(client: AsyncClient) -> None:
@@ -116,7 +122,8 @@ async def test_the_passphrase_from_the_backup_is_the_one_that_works_after(
         json={"current_passphrase": "password123", "new_passphrase": "a longer secret"},
     )
 
-    await _restore(client, backup)
+    restored = await _restore(client, backup, passphrase="a longer secret")
+    assert restored.status_code == 200, restored.text
 
     await client.post("/api/auth/sign-out")
     back = await client.post("/api/auth/sign-in", json={"passphrase": "password123"})
@@ -278,13 +285,15 @@ async def test_rows_that_do_not_fit_leave_the_data_alone(client: AsyncClient) ->
 
 async def test_a_backup_naming_a_column_the_table_lacks_is_refused(client: AsyncClient) -> None:
     await _signed_in(client)
-    copy = (await client.get("/api/install/export")).json()
+    copy = (await client.post("/api/install/export", json={"passphrase": "password123"})).json()
     copy["tables"]["vendor"] = [
         {"id": "v1", "name": "A vendor", 'sneaky") ; DROP TABLE vendor; --': "x"}
     ]
     copy["row_counts"]["vendor"] = 1
 
-    resp = await client.post("/api/install/restore", json={"backup": copy})
+    resp = await client.post(
+        "/api/install/restore", json={"passphrase": "password123", "backup": copy}
+    )
 
     assert resp.status_code == 422
     assert "no column" in resp.json()["detail"]
@@ -502,3 +511,29 @@ async def test_a_backup_over_the_size_limit_is_refused(
     assert resp.status_code == 413
     assert "1,000 bytes" in resp.json()["detail"]
     assert await _project_count(client) == 1
+
+
+async def test_an_export_asks_for_the_passphrase_again(client: AsyncClient) -> None:
+    await _signed_in(client)
+
+    wrong = await client.post("/api/install/export", json={"passphrase": "not it"})
+    old_route = await client.get("/api/install/export")
+
+    assert wrong.status_code == 403
+    assert wrong.json()["detail"] == "The passphrase is incorrect"
+    assert "tables" not in wrong.json()
+    assert old_route.status_code == 405
+
+
+async def test_a_restore_with_the_wrong_passphrase_changes_nothing(client: AsyncClient) -> None:
+    await _signed_in(client)
+    await _project(client)
+    backup = await _export(client)
+    await _project(client, name="Added after the copy")
+
+    resp = await client.post(
+        "/api/install/restore", json={"passphrase": "not it", "backup": backup}
+    )
+
+    assert resp.status_code == 403
+    assert await _project_count(client) == 2
