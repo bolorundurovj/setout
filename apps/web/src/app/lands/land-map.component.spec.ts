@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import * as L from 'leaflet';
 import type { LandBoundary } from '@setout/api-client';
 import { LandMapComponent } from './land-map.component';
 import { MapService } from './map.service';
@@ -76,6 +77,49 @@ describe('LandMapComponent', () => {
     component.undo();
 
     expect(sent).toBeNull();
+  });
+
+  it('keeps the first two points of a new boundary while it is drawn', () => {
+    const { fixture, component } = render();
+    const sent: (LandBoundary | null)[] = [];
+    component.boundaryChange.subscribe((value) => {
+      sent.push(value);
+      fixture.componentRef.setInput('boundary', value);
+    });
+
+    component['onClick'](L.latLng(6.5, 3.3));
+    fixture.detectChanges();
+    component['onClick'](L.latLng(6.5, 3.3009));
+    fixture.detectChanges();
+    expect(component.points().length).toBe(2);
+
+    component['onClick'](L.latLng(6.5009, 3.3009));
+    fixture.detectChanges();
+    expect(component.points().length).toBe(3);
+    expect(sent.at(-1)?.coordinates[0].length).toBe(4);
+  });
+
+  it('keeps two points after undoing from three, when the parent echoes the null boundary', () => {
+    const { fixture, component } = render(SQUARE);
+    component.boundaryChange.subscribe((value) => fixture.componentRef.setInput('boundary', value));
+
+    component.undo();
+    fixture.detectChanges();
+    component.undo();
+    fixture.detectChanges();
+
+    expect(component.points().length).toBe(2);
+  });
+
+  it('replaces the points when the parent sends a different boundary', () => {
+    const { fixture, component } = render();
+    component['onClick'](L.latLng(6.5, 3.3));
+    fixture.detectChanges();
+
+    fixture.componentRef.setInput('boundary', SQUARE);
+    fixture.detectChanges();
+
+    expect(component.points().length).toBe(4);
   });
 
   it('clearPin emits null', () => {

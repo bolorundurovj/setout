@@ -8,6 +8,7 @@ import {
   input,
   output,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import * as L from 'leaflet';
@@ -19,6 +20,10 @@ import { MapService } from './map.service';
 export interface LandPoint {
   lat: number;
   lon: number;
+}
+
+function sameBoundary(a: LandBoundary | null, b: LandBoundary | null): boolean {
+  return JSON.stringify(a?.coordinates ?? null) === JSON.stringify(b?.coordinates ?? null);
 }
 
 const PIN = `<svg viewBox="0 0 24 32" width="24" height="32" aria-hidden="true">
@@ -72,13 +77,22 @@ export class LandMapComponent {
         this.addTiles(settings.tile_url, settings.attribution);
       }
     });
+    // Each effect tracks only its input. draw() reads points(), so tracking it would rerun this
+    // on every click and wipe a boundary that does not yet have three points.
     effect(() => {
-      this.points.set(ringOf(this.boundary()));
-      this.draw();
+      const incoming = this.boundary();
+      untracked(() => {
+        // A boundary equal to what the points already describe is this map's own change coming
+        // back, including the null sent while fewer than three points are drawn.
+        if (!sameBoundary(incoming, boundaryOf(this.points()))) {
+          this.points.set(ringOf(incoming));
+        }
+        this.draw();
+      });
     });
     effect(() => {
       this.point();
-      this.draw();
+      untracked(() => this.draw());
     });
   }
 
