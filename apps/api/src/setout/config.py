@@ -95,6 +95,8 @@ class Settings(BaseSettings):
     max_attachment_bytes: int = 25_000_000
     # Maximum import size, in bytes. The file is read into memory to be parsed.
     max_import_bytes: int = 25_000_000
+    # Maximum backup size accepted by a restore, in bytes. Backups hold rows, not files.
+    max_restore_bytes: int = 100_000_000
 
     def allowed_origins(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

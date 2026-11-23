@@ -1,7 +1,11 @@
+import asyncio
+
 import pytest
 from httpx import AsyncClient
 
 from setout import __version__
+from setout.config import get_settings
+from setout.controllers import install as install_controller
 from setout.currencies import CURRENCIES
 from setout.models.currency import Currency
 from setout.utils.backup import FORMAT, forward
@@ -427,3 +431,74 @@ async def test_an_older_backup_can_omit_tables_added_after_it(client: AsyncClien
     resp = await _restore(client, backup, accept=True)
 
     assert resp.status_code == 200, resp.text
+
+
+async def test_a_restore_clears_the_session_cookie(client: AsyncClient) -> None:
+    await _signed_in(client)
+    backup = await _export(client)
+
+    resp = await _restore(client, backup)
+
+    assert resp.status_code == 200, resp.text
+    cookie = resp.headers["set-cookie"]
+    assert cookie.startswith("setout_session=")
+    assert "Max-Age=0" in cookie
+    assert "HttpOnly" in cookie
+
+
+async def test_a_database_error_is_not_shown_to_the_client(client: AsyncClient) -> None:
+    await _signed_in(client)
+    await _project(client)
+    backup = await _export(client)
+    backup["tables"]["category"].append(
+        {"id": "orphan", "name": "Orphan", "project_id": "no-such-project"}
+    )
+    backup["row_counts"]["category"] += 1
+
+    resp = await _restore(client, backup)
+
+    assert resp.status_code == 422
+    assert resp.json()["detail"] == "Your data was not changed: the rows do not match this schema"
+    assert await _project_count(client) == 1
+
+
+async def test_a_second_restore_is_refused_while_one_is_running(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _signed_in(client)
+    backup = await _export(client)
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def slow_check(self: object, backup: object, accepted: bool) -> None:
+        started.set()
+        await release.wait()
+
+    monkeypatch.setattr(
+        install_controller.InstallController, "_require_matching_version", slow_check
+    )
+    first = asyncio.create_task(_restore(client, backup))
+    await started.wait()
+
+    second = await _restore(client, backup)
+    release.set()
+
+    assert second.status_code == 409
+    assert "already running" in second.json()["detail"]
+    assert (await first).status_code == 200
+
+
+async def test_a_backup_over_the_size_limit_is_refused(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _signed_in(client)
+    await _project(client)
+    backup = await _export(client)
+    monkeypatch.setenv("SETOUT_MAX_RESTORE_BYTES", "1000")
+    get_settings.cache_clear()
+
+    resp = await _restore(client, backup)
+
+    assert resp.status_code == 413
+    assert "1,000 bytes" in resp.json()["detail"]
+    assert await _project_count(client) == 1

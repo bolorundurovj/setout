@@ -48,6 +48,7 @@ export class SettingsComponent {
   readonly savingCurrency = signal(false);
 
   readonly selectedBackup = signal<{ name: string; bytes: number; backup: Backup } | null>(null);
+  readonly versionAccepted = signal(false);
   readonly readingFile = signal(false);
 
   private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('file');
@@ -75,6 +76,21 @@ export class SettingsComponent {
       selected.backup.app_version !== installed.version ||
       selected.backup.migration !== installed.migration
     );
+  });
+
+  readonly canRestore = computed(() => !this.versionChanged() || this.versionAccepted());
+
+  readonly countMismatch = computed(() => {
+    const backup = this.selectedBackup()?.backup;
+    if (!backup) {
+      return null;
+    }
+    const listed = this.total(Object.values(backup.row_counts));
+    const found = this.total(Object.values(backup.tables).map((rows) => rows.length));
+    if (listed === found) {
+      return null;
+    }
+    return `The file lists ${listed} rows but contains ${found}. It looks incomplete, so the restore will be rejected.`;
   });
 
   readonly versionWarning = computed(() => {
@@ -234,6 +250,7 @@ export class SettingsComponent {
         this.toast.show('This file is not a Setout backup.', 'error');
         return;
       }
+      this.versionAccepted.set(false);
       this.selectedBackup.set({ name: file.name, bytes: file.size, backup });
     } catch {
       this.toast.show('Could not read the file as a Setout backup.', 'error');
@@ -244,6 +261,7 @@ export class SettingsComponent {
 
   cancelRestore(): void {
     this.selectedBackup.set(null);
+    this.versionAccepted.set(false);
   }
 
   selectedBackupSummary(): string {
@@ -255,22 +273,35 @@ export class SettingsComponent {
   }
 
   selectedBackupRowCount(): string {
-    const counts = this.selectedBackup()?.backup.row_counts ?? {};
-    const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
-    return `${total} ${total === 1 ? 'row' : 'rows'} across ${Object.keys(counts).length} tables`;
+    const tables = this.selectedBackup()?.backup.tables ?? {};
+    const total = this.total(Object.values(tables).map((rows) => rows.length));
+    const count = Object.keys(tables).length;
+    return `${total} ${total === 1 ? 'row' : 'rows'} across ${count} ${count === 1 ? 'table' : 'tables'}`;
+  }
+
+  selectedBackupOrigin(): string {
+    const backup = this.selectedBackup()?.backup;
+    if (!backup) {
+      return '';
+    }
+    return `Created by Setout ${backup.app_version} on schema ${backup.migration ?? 'unknown'}`;
   }
 
   async restoreBackup(): Promise<void> {
     const selected = this.selectedBackup();
-    if (!selected) {
+    if (!selected || !this.canRestore()) {
       return;
     }
-    const done = await this.installService.restore(selected.backup, this.versionChanged());
+    const done = await this.installService.restore(
+      selected.backup,
+      this.versionChanged() && this.versionAccepted(),
+    );
     if (!done) {
       this.toast.show(this.installService.error() ?? 'Could not restore the backup.', 'error');
       return;
     }
     this.selectedBackup.set(null);
+    this.versionAccepted.set(false);
     this.toast.show('Data restored. Sign in with the passphrase from the backup.');
     await this.auth.checkStatus();
     await this.router.navigate(['/login']);
@@ -283,6 +314,10 @@ export class SettingsComponent {
     link.download = name;
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  private total(counts: number[]): number {
+    return counts.reduce((sum, count) => sum + count, 0);
   }
 
   private backupFileName(backup: Backup): string {

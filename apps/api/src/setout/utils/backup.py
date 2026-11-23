@@ -72,6 +72,10 @@ FORMAT = 3
 Rows = dict[str, list[dict[str, Any]]]
 
 
+class BackupError(ValueError):
+    """A problem with a backup's contents, with a message that can be shown to the user."""
+
+
 @dataclass(frozen=True)
 class Renames:
     """What changed between one backup format and the next. "*" in columns means every table."""
@@ -243,7 +247,7 @@ async def write_all(tables: dict[str, list[dict[str, Any]]]) -> dict[str, int]:
             columns = tuple(row.keys())
             unknown_columns = [column for column in columns if column not in fields]
             if unknown_columns:
-                raise ValueError(f"{table} has no column {unknown_columns[0]}")
+                raise BackupError(f"{table} has no column {unknown_columns[0]}")
             values = [
                 to_db_value(fields[column], row[column]) if convert else row[column]
                 for column in columns

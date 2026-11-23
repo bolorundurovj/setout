@@ -160,19 +160,33 @@
       <div class="danger">
         <span class="t-mono danger-file">{{ selectedBackupSummary() }}</span>
         <span class="t-small danger-file">{{ selectedBackupRowCount() }}</span>
+        <span class="t-small danger-file">{{ selectedBackupOrigin() }}</span>
 
         <p class="danger-body">
           Replace current data with this backup? Changes made since the backup was created will be
           lost. Restoring signs out all devices.
         </p>
 
+        @if (countMismatch()) {
+          <p class="danger-body warning" role="alert">{{ countMismatch() }}</p>
+        }
+
         @if (versionWarning()) {
           <p class="danger-body warning">{{ versionWarning() }}</p>
+          <label class="accept-version">
+            <input
+              type="checkbox"
+              [checked]="versionAccepted()"
+              (change)="versionAccepted.set($any($event.target).checked)"
+            />
+            <span class="t-small">Restore anyway</span>
+          </label>
         }
 
         <div class="actions">
           <app-button
             variant="danger"
+            [disabled]="!canRestore()"
             [loading]="installService.restoring()"
             (pressed)="restoreBackup()"
           >

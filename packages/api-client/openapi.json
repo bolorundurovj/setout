@@ -777,7 +777,10 @@
             "description": "Not authenticated"
           },
           "409": {
-            "description": "Created by a different Setout version or schema"
+            "description": "The backup is from a different Setout version or schema, or another restore is in progress"
+          },
+          "413": {
+            "description": "The backup is larger than the server accepts"
           },
           "422": {
             "description": "The file is not a valid backup for this schema"

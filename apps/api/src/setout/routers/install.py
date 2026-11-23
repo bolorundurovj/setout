@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 
 from setout.controllers.install import InstallController
 from setout.models.user import User
-from setout.routers.auth import get_current_user
+from setout.routers.auth import clear_session_cookie, get_current_user
 from setout.schemas.install import Backup, Install, RestoreRequest, RestoreResult
 
 router = APIRouter(
@@ -35,12 +35,22 @@ async def export_backup(user: CurrentUser) -> Backup:
     operation_id="restoreBackup",
     responses={
         status.HTTP_409_CONFLICT: {
-            "description": "Created by a different Setout version or schema"
+            "description": (
+                "The backup is from a different Setout version or schema, "
+                "or another restore is in progress"
+            )
+        },
+        status.HTTP_413_CONTENT_TOO_LARGE: {
+            "description": "The backup is larger than the server accepts"
         },
         status.HTTP_422_UNPROCESSABLE_CONTENT: {
             "description": "The file is not a valid backup for this schema"
         },
     },
 )
-async def restore_backup(req: RestoreRequest, user: CurrentUser) -> RestoreResult:
-    return await controller.restore(req)
+async def restore_backup(
+    req: RestoreRequest, user: CurrentUser, response: Response
+) -> RestoreResult:
+    result = await controller.restore(req)
+    clear_session_cookie(response)
+    return result

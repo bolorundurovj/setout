@@ -145,3 +145,11 @@
 .danger-body.warning {
   font-size: 13px;
 }
+
+.accept-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--over-ink);
+  cursor: pointer;
+}

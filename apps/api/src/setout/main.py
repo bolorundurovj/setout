@@ -46,6 +46,7 @@ from setout.routers import (
 )
 from setout.services import changes
 from setout.services.storage import S3Storage, auto_migrate_legacy_storage, get_storage
+from setout.utils.body_limit import BodyLimit
 
 logger = logging.getLogger("setout")
 
@@ -138,6 +139,11 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    app.add_middleware(
+        BodyLimit,
+        path="/api/install/restore",
+        limit=lambda: get_settings().max_restore_bytes,
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins(),

@@ -174,6 +174,15 @@ def set_session_cookie(response: Response, session_id: str) -> None:
     )
 
 
+def clear_session_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=SESSION_COOKIE_NAME,
+        httponly=True,
+        secure=get_settings().cookie_secure,
+        samesite="lax",
+    )
+
+
 @router.get("/status", operation_id="getAuthStatus")
 async def get_auth_status(
     setout_session: Annotated[str | None, Cookie()] = None,

@@ -306,13 +306,37 @@ describe('SettingsComponent', () => {
     expect(component.versionWarning()).toContain('0001_initial');
   });
 
-  it('restores the backup and accepts the version change', async () => {
+  it('does not restore a backup from another version until the change is accepted', async () => {
     const component = await ready();
     component.selectedBackup.set({
       name: 'backup.json',
       bytes: 2048,
       backup: backup({ app_version: '0.2.0' }),
     });
+    expect(component.canRestore()).toBe(false);
+
+    await component.restoreBackup();
+
+    expect(restores).toEqual([]);
+  });
+
+  it('does not accept a version change when the versions match', async () => {
+    const component = await ready();
+    component.selectedBackup.set({ name: 'backup.json', bytes: 2048, backup: backup() });
+
+    await component.restoreBackup();
+
+    expect(restores).toEqual([{ backup: backup(), accept: false }]);
+  });
+
+  it('restores the backup once the version change is accepted', async () => {
+    const component = await ready();
+    component.selectedBackup.set({
+      name: 'backup.json',
+      bytes: 2048,
+      backup: backup({ app_version: '0.2.0' }),
+    });
+    component.versionAccepted.set(true);
 
     await component.restoreBackup();
 
@@ -339,7 +363,31 @@ describe('SettingsComponent', () => {
 
     expect(component.selectedBackupSummary()).toContain('backup.json');
     expect(component.selectedBackupSummary()).toContain('2.0 KiB');
-    expect(component.selectedBackupRowCount()).toBe('17 rows across 2 tables');
+    expect(component.selectedBackupRowCount()).toBe('0 rows across 2 tables');
+    expect(component.selectedBackupOrigin()).toBe(
+      'Created by Setout 0.4.0 on schema 0003_agreements_and_advances',
+    );
+  });
+
+  it('counts the rows the backup holds, not the counts it lists', async () => {
+    const component = await ready();
+    component.selectedBackup.set({
+      name: 'backup.json',
+      bytes: 2048,
+      backup: backup({
+        row_counts: { project: 2 },
+        tables: { project: [{ id: 'a' }, { id: 'b' }] },
+      }),
+    });
+    expect(component.selectedBackupRowCount()).toBe('2 rows across 1 table');
+    expect(component.countMismatch()).toBeNull();
+
+    component.selectedBackup.set({
+      name: 'backup.json',
+      bytes: 2048,
+      backup: backup({ row_counts: { project: 2 }, tables: { project: [{ id: 'a' }] } }),
+    });
+    expect(component.countMismatch()).toContain('lists 2 rows but contains 1');
   });
 
   it('renders both backup buttons compact and opens the file picker', async () => {

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -13,6 +15,7 @@ from setout.services import changes
 from setout.utils.backup import (
     FORMAT,
     TABLES,
+    BackupError,
     Rows,
     applied_migration,
     forward,
@@ -21,6 +24,11 @@ from setout.utils.backup import (
     required_tables,
     write_all,
 )
+
+logger = logging.getLogger(__name__)
+
+# One restore at a time: a second one would delete rows the first is writing.
+_restoring = asyncio.Lock()
 
 
 class InstallController:
@@ -46,6 +54,15 @@ class InstallController:
         )
 
     async def restore(self, req: RestoreRequest) -> RestoreResult:
+        if _restoring.locked():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Another restore is already running. Try again when it finishes",
+            )
+        async with _restoring:
+            return await self._restore(req)
+
+    async def _restore(self, req: RestoreRequest) -> RestoreResult:
         backup = req.backup
         if backup.format > FORMAT:
             raise HTTPException(
@@ -69,15 +86,16 @@ class InstallController:
             async with in_transaction():
                 with changes.recording_paused():
                     written = await write_all(tables)
-        except HTTPException:
-            raise
-        except Exception as exc:  # noqa: BLE001
+        except BackupError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail=(
-                    "Your data was not changed: the rows do not match this schema. "
-                    f"Database error: {exc}"
-                ),
+                detail=f"Your data was not changed: {exc}",
+            ) from exc
+        except Exception as exc:
+            logger.exception("A restore failed and was rolled back")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Your data was not changed: the rows do not match this schema",
             ) from exc
 
         return RestoreResult(row_counts=written, signed_out=True)
