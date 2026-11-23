@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from setout.models.land_document import LandDocumentKind
+from setout.schemas.base import UpdateModel
 
 
-class LandDocumentUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class LandDocumentUpdate(UpdateModel):
+    NOT_NULL: ClassVar[frozenset[str]] = frozenset({"kind"})
 
     kind: LandDocumentKind | None = None
     notes: str | None = Field(None, max_length=255)

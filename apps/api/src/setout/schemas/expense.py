@@ -3,10 +3,12 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
+from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from setout.models.expense import CostType
+from setout.schemas.base import UpdateModel
 from setout.schemas.decimals import PlainDecimal
 
 
@@ -43,8 +45,9 @@ class ExpenseCreate(BaseModel):
     )
 
 
-class ExpenseUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class ExpenseUpdate(UpdateModel):
+    # A null amount asks for it to be recalculated from quantity and unit rate.
+    NOT_NULL: ClassVar[frozenset[str]] = frozenset({"description", "spent_on"})
 
     description: str | None = Field(None, min_length=1, max_length=255)
     amount: int | None = Field(None, ge=0)

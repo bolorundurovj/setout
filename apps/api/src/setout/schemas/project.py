@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from setout.models.project import ProjectStatus
+from setout.schemas.base import UpdateModel
 
 CURRENCY_PATTERN = r"^[A-Z]{3}$"
 
@@ -21,8 +23,8 @@ class ProjectCreate(BaseModel):
     notes: str | None = None
 
 
-class ProjectUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class ProjectUpdate(UpdateModel):
+    NOT_NULL: ClassVar[frozenset[str]] = frozenset({"name", "status"})
 
     name: str | None = Field(None, min_length=1, max_length=255)
     status: ProjectStatus | None = None

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import StrEnum
+from typing import ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
+
+from setout.schemas.base import UpdateModel
 
 
 class DeliverySort(StrEnum):
@@ -22,8 +25,8 @@ class DeliveryCreate(BaseModel):
     expected: date | None = Field(None, description="When delivery is expected")
 
 
-class DeliveryUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class DeliveryUpdate(UpdateModel):
+    NOT_NULL: ClassVar[frozenset[str]] = frozenset({"description"})
 
     description: str | None = Field(None, min_length=1, max_length=255)
     expected: date | None = None

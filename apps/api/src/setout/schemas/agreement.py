@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
+
+from setout.schemas.base import UpdateModel
 
 
 class AgreementCreate(BaseModel):
@@ -12,8 +15,8 @@ class AgreementCreate(BaseModel):
     notes: str | None = None
 
 
-class AgreementUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class AgreementUpdate(UpdateModel):
+    NOT_NULL: ClassVar[frozenset[str]] = frozenset({"description", "agreed_amount"})
 
     description: str | None = Field(None, min_length=1, max_length=255)
     agreed_amount: int | None = Field(None, ge=0)
@@ -51,8 +54,8 @@ class AdvanceCreate(BaseModel):
     notes: str | None = None
 
 
-class AdvanceUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class AdvanceUpdate(UpdateModel):
+    NOT_NULL: ClassVar[frozenset[str]] = frozenset({"amount", "given_on"})
 
     amount: int | None = Field(None, ge=0)
     given_on: date | None = None

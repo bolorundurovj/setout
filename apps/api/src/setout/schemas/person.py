@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
+
+from setout.schemas.base import UpdateModel
 
 
 class PersonCreate(BaseModel):
@@ -12,8 +15,8 @@ class PersonCreate(BaseModel):
     notes: str | None = None
 
 
-class PersonUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class PersonUpdate(UpdateModel):
+    NOT_NULL: ClassVar[frozenset[str]] = frozenset({"name"})
 
     name: str | None = Field(None, min_length=1, max_length=255)
     role: str | None = Field(None, max_length=255)

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from setout.models.land_valuation import LandValuationKind
+from setout.schemas.base import UpdateModel
 
 
 class LandValuationCreate(BaseModel):
@@ -20,8 +22,8 @@ class LandValuationCreate(BaseModel):
     notes: str | None = Field(None, max_length=255)
 
 
-class LandValuationUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class LandValuationUpdate(UpdateModel):
+    NOT_NULL: ClassVar[frozenset[str]] = frozenset({"kind", "amount", "valued_on"})
 
     kind: LandValuationKind | None = None
     amount: int | None = Field(None, ge=0, description="Minor units")

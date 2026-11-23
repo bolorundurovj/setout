@@ -1,7 +1,8 @@
-from typing import Annotated
+from typing import Annotated, ClassVar
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
 
+from setout.schemas.base import UpdateModel
 from setout.services.auth import MAX_PASSPHRASE_BYTES, PASSPHRASE_TOO_LONG, passphrase_too_long
 
 
@@ -32,8 +33,9 @@ class SignInRequest(BaseModel):
     passphrase: str = Field(..., description="The passphrase")
 
 
-class AccountUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class AccountUpdate(UpdateModel):
+    # A null name is refused by the router with its own documented message.
+    NOT_NULL: ClassVar[frozenset[str]] = frozenset()
 
     name: str | None = Field(None, min_length=1, max_length=255)
     email: EmailStr | None = None

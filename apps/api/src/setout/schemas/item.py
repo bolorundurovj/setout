@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
+from setout.schemas.base import UpdateModel
 from setout.schemas.decimals import PlainDecimal
 
 
@@ -13,8 +15,8 @@ class ItemCreate(BaseModel):
     notes: str | None = None
 
 
-class ItemUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class ItemUpdate(UpdateModel):
+    NOT_NULL: ClassVar[frozenset[str]] = frozenset({"name"})
 
     name: str | None = Field(None, min_length=1, max_length=255)
     unit: str | None = Field(None, max_length=32)

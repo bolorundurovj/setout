@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Literal
+from typing import ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from setout.models.land import LandSizeUnit
+from setout.schemas.base import UpdateModel
 from setout.schemas.decimals import PlainDecimal
 
 # Longitude first, the way GeoJSON orders a position.
@@ -88,8 +89,8 @@ class LandCreate(LandSize, LandPoint):
     notes: str | None = None
 
 
-class LandUpdate(LandSize, LandPoint):
-    model_config = ConfigDict(extra="forbid")
+class LandUpdate(LandSize, LandPoint, UpdateModel):
+    NOT_NULL: ClassVar[frozenset[str]] = frozenset({"name"})
 
     name: str | None = Field(None, min_length=1, max_length=255)
     address: str | None = None

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from setout.models.expense import CostType
+from setout.schemas.base import UpdateModel
 
 
 class CategoryPresetRead(BaseModel):
@@ -22,8 +24,8 @@ class CategoryCreate(BaseModel):
     sort_order: int = 0
 
 
-class CategoryUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class CategoryUpdate(UpdateModel):
+    NOT_NULL: ClassVar[frozenset[str]] = frozenset({"name", "sort_order"})
 
     name: str | None = Field(None, min_length=1, max_length=255)
     code: str | None = Field(None, max_length=32)
@@ -58,8 +60,8 @@ class BudgetItemCreate(BaseModel):
     cost_type: CostType | None = None
 
 
-class BudgetItemUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class BudgetItemUpdate(UpdateModel):
+    NOT_NULL: ClassVar[frozenset[str]] = frozenset({"description", "budgeted_amount"})
 
     description: str | None = Field(None, min_length=1, max_length=255)
     budgeted_amount: int | None = Field(None, ge=0)
