@@ -21,6 +21,7 @@ import { ToastService } from '../toast.service';
 import { LandService } from '../lands/land.service';
 import { locationLabel } from '../lands/land-labels';
 import { ProjectService } from './project.service';
+import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
 
 const STATUS_LINES: Record<ProjectStatus, string> = {
   active: 'Active.',
@@ -34,6 +35,7 @@ const STATUS_LINES: Record<ProjectStatus, string> = {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    DeleteConfirmDirective,
     FormsModule,
     ButtonComponent,
     ChipGroupComponent,
@@ -241,7 +243,7 @@ export class ProjectsComponent {
   }
 
   canConfirmDelete(): boolean {
-    return this.deleteConfirmationText().trim() === 'DELETE';
+    return isDeleteConfirmed(this.deleteConfirmationText());
   }
 
   value(event: Event): string {

@@ -28,9 +28,8 @@
           <div class="confirm-delete">
             <span class="t-small danger-text">Type DELETE to confirm:</span>
             <input
+              appDeleteConfirm
               class="input-field delete-input"
-              type="text"
-              placeholder="DELETE"
               [value]="deleteConfirmationText()"
               (input)="deleteConfirmationText.set(value($event))"
             />

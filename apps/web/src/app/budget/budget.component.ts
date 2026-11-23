@@ -12,12 +12,14 @@ import { ToggleComponent } from '../ui/toggle.component';
 import { currencySymbol } from '../ui/currency-pill.component';
 import { BudgetService } from './budget.service';
 import { formatAmountInput, formatMoney, parseMoney } from './money';
+import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
 
 @Component({
   selector: 'app-budget',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    DeleteConfirmDirective,
     FormsModule,
     ButtonComponent,
     ChangeHistoryComponent,
@@ -261,7 +263,7 @@ export class BudgetComponent {
   }
 
   canConfirmDelete(): boolean {
-    return this.deleteConfirmationText().trim() === 'DELETE';
+    return isDeleteConfirmed(this.deleteConfirmationText());
   }
 
   value(event: Event): string {

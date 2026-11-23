@@ -127,9 +127,8 @@
           } @else if (isPending(project.id, 'delete')) {
             <span class="confirm danger t-small">Type DELETE to confirm:</span>
             <input
+              appDeleteConfirm
               class="input-field delete-input"
-              type="text"
-              placeholder="DELETE"
               [value]="deleteConfirmationText()"
               (input)="deleteConfirmationText.set(value($event))"
             />

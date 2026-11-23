@@ -9,12 +9,14 @@ import { ButtonComponent } from '../ui/button.component';
 import { PaginationComponent } from '../ui/pagination.component';
 import { ToggleComponent } from '../ui/toggle.component';
 import { DeliveryService } from './delivery.service';
+import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
 
 @Component({
   selector: 'app-deliveries',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    DeleteConfirmDirective,
     AttachmentsComponent,
     ChangeHistoryComponent,
     ButtonComponent,
@@ -143,7 +145,7 @@ export class DeliveriesComponent {
   }
 
   canConfirmDelete(): boolean {
-    return this.deleteConfirmationText().trim() === 'DELETE';
+    return isDeleteConfirmed(this.deleteConfirmationText());
   }
 
   async deletePermanently(delivery: DeliveryRead): Promise<void> {

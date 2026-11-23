@@ -26,6 +26,7 @@ import { ToggleComponent } from '../ui/toggle.component';
 import { VendorService } from '../vendors/vendor.service';
 import { AddExpenseComponent } from './add-expense.component';
 import { ExpenseService, UNCATEGORISED, type ExpenseFilters } from './expense.service';
+import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
 
 const SORTS: Chip[] = [
   { value: 'recent', label: 'Newest first' },
@@ -39,6 +40,7 @@ const SORTS: Chip[] = [
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    DeleteConfirmDirective,
     AddExpenseComponent,
     ButtonComponent,
     ChipGroupComponent,
@@ -375,7 +377,7 @@ export class ExpensesComponent {
   }
 
   canConfirmDelete(): boolean {
-    return this.deleteConfirmationText().trim() === 'DELETE';
+    return isDeleteConfirmed(this.deleteConfirmationText());
   }
 
   async deletePermanently(expenseId: string): Promise<void> {

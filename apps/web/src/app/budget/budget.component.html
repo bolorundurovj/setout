@@ -97,9 +97,8 @@
                       @if (pendingDelete() === item.id) {
                         <span class="confirm-inline">
                           <input
+                            appDeleteConfirm
                             class="input-field delete-input"
-                            type="text"
-                            placeholder="DELETE"
                             [value]="deleteConfirmationText()"
                             (input)="deleteConfirmationText.set(value($event))"
                           />

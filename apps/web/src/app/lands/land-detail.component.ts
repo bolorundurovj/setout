@@ -22,12 +22,14 @@ import { LandMapComponent, type LandPoint } from './land-map.component';
 import { TabsComponent, type Tab } from '../ui/tabs.component';
 import { formatAreaIn, pointInRing, ringOf } from './land-geo';
 import { DOCUMENT_KINDS, kindName, statedAreaLabel, unitName, valuationLabel } from './land-labels';
+import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
 
 @Component({
   selector: 'app-land-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    DeleteConfirmDirective,
     ButtonComponent,
     ChipGroupComponent,
     LandMapComponent,
@@ -308,7 +310,7 @@ export class LandDetailComponent {
   }
 
   canConfirmDelete(): boolean {
-    return this.deleteConfirmationText().trim() === 'DELETE';
+    return isDeleteConfirmed(this.deleteConfirmationText());
   }
 
   async deletePermanently(): Promise<void> {

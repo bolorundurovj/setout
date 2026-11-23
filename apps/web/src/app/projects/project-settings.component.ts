@@ -22,6 +22,7 @@ import { ToggleComponent } from '../ui/toggle.component';
 import { LandService } from '../lands/land.service';
 import { locationLabel } from '../lands/land-labels';
 import { ProjectService } from './project.service';
+import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
 
 const TINT_COUNT = 5;
 
@@ -36,7 +37,13 @@ interface StatusChoice {
   selector: 'app-project-settings',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AttachmentsComponent, ButtonComponent, ChipGroupComponent, ToggleComponent],
+  imports: [
+    DeleteConfirmDirective,
+    AttachmentsComponent,
+    ButtonComponent,
+    ChipGroupComponent,
+    ToggleComponent,
+  ],
   templateUrl: './project-settings.component.html',
   styleUrl: './project-settings.component.scss',
 })
@@ -263,7 +270,7 @@ export class ProjectSettingsComponent {
   }
 
   canConfirmDelete(): boolean {
-    return this.deleteConfirmationText().trim() === 'DELETE';
+    return isDeleteConfirmed(this.deleteConfirmationText());
   }
 
   async deletePermanently(category: CategoryRead): Promise<void> {

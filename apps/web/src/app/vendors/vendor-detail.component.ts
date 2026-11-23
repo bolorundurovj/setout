@@ -22,12 +22,13 @@ import { DeliveryService } from '../deliveries/delivery.service';
 import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
 import { VendorService } from './vendor.service';
+import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
 
 @Component({
   selector: 'app-vendor-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, ButtonComponent],
+  imports: [DeleteConfirmDirective, RouterLink, ButtonComponent],
   templateUrl: './vendor-detail.component.html',
   styleUrl: './vendor-detail.component.scss',
 })
@@ -166,7 +167,7 @@ export class VendorDetailComponent {
   }
 
   canConfirmDelete(): boolean {
-    return this.deleteConfirmationText().trim() === 'DELETE';
+    return isDeleteConfirmed(this.deleteConfirmationText());
   }
 
   value(event: Event): string {

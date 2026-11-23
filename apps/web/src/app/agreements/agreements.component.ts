@@ -22,12 +22,14 @@ import { currencySymbol } from '../ui/currency-pill.component';
 import { PersonService } from '../people/person.service';
 import { VendorService } from '../vendors/vendor.service';
 import { AgreementService } from './agreement.service';
+import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
 
 @Component({
   selector: 'app-agreements',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    DeleteConfirmDirective,
     AttachmentsComponent,
     ChangeHistoryComponent,
     ButtonComponent,
@@ -324,7 +326,7 @@ export class AgreementsComponent {
   }
 
   canConfirmDelete(): boolean {
-    return this.deleteConfirmationText().trim() === 'DELETE';
+    return isDeleteConfirmed(this.deleteConfirmationText());
   }
 
   async deletePermanently(agreement: AgreementRead): Promise<void> {

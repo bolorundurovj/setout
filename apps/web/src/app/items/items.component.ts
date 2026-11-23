@@ -9,12 +9,19 @@ import { PaginationComponent } from '../ui/pagination.component';
 import { ToggleComponent } from '../ui/toggle.component';
 import { TopbarComponent } from '../ui/topbar.component';
 import { ItemService } from './item.service';
+import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
 
 @Component({
   selector: 'app-items',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, PaginationComponent, ToggleComponent, TopbarComponent],
+  imports: [
+    DeleteConfirmDirective,
+    ButtonComponent,
+    PaginationComponent,
+    ToggleComponent,
+    TopbarComponent,
+  ],
   templateUrl: './items.component.html',
   styleUrl: './items.component.scss',
 })
@@ -110,7 +117,7 @@ export class ItemsComponent {
   }
 
   canConfirmDelete(): boolean {
-    return this.deleteConfirmationText().trim() === 'DELETE';
+    return isDeleteConfirmed(this.deleteConfirmationText());
   }
 
   async deletePermanently(itemId: string): Promise<void> {

@@ -181,6 +181,17 @@ describe('ProjectsComponent', () => {
     expect(deleted).toEqual(['p1']);
     expect(component.pending()).toBeNull();
   });
+
+  it('accepts DELETE typed in any letter case, as the box shows it in capitals', () => {
+    const component = render([project({ id: 'p1', archived_at: '2026-08-16T00:00:00Z' })]);
+    component.requestConfirmation('p1', 'delete');
+
+    component.deleteConfirmationText.set('delete');
+    expect(component.canConfirmDelete()).toBe(true);
+
+    component.deleteConfirmationText.set('delet');
+    expect(component.canConfirmDelete()).toBe(false);
+  });
 });
 
 describe('ProjectsComponent navigation', () => {
