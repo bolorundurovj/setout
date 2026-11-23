@@ -1,12 +1,16 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   afterRenderEffect,
+  inject,
   input,
   output,
   viewChild,
 } from '@angular/core';
+
+import { DrawerStack } from './drawer-stack.service';
 
 @Component({
   selector: 'app-drawer',
@@ -130,13 +134,21 @@ import {
 })
 export class DrawerComponent {
   private readonly panel = viewChild.required<ElementRef<HTMLDialogElement>>('panel');
+  private readonly drawers = inject(DrawerStack);
 
   constructor() {
     afterRenderEffect(() => {
       const panel = this.panel().nativeElement;
-      if (this.open() && !panel.open) panel.showModal();
-      if (!this.open() && panel.open) panel.close();
+      if (this.open() && !panel.open) {
+        panel.showModal();
+        this.drawers.enter(panel);
+      }
+      if (!this.open() && panel.open) {
+        panel.close();
+        this.drawers.leave(panel);
+      }
     });
+    inject(DestroyRef).onDestroy(() => this.drawers.leave(this.panel().nativeElement));
   }
 
   onCancel(event: Event): void {
@@ -145,6 +157,7 @@ export class DrawerComponent {
   }
 
   onDialogClose(): void {
+    this.drawers.leave(this.panel().nativeElement);
     if (this.open()) this.closeRequested.emit();
   }
 

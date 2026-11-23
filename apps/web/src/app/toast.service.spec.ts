@@ -51,4 +51,25 @@ describe('ToastService', () => {
     vi.advanceTimersByTime(1000);
     expect(toast.message()).toBe('');
   });
+
+  it('keeps an error until it is dismissed', () => {
+    const toast = make();
+    toast.show('Could not save.', 'error');
+
+    vi.advanceTimersByTime(60_000);
+    expect(toast.message()).toBe('Could not save.');
+
+    toast.dismiss();
+    expect(toast.message()).toBe('');
+  });
+
+  it('does not let an earlier timeout clear a later error', () => {
+    const toast = make();
+    toast.show('Saved.');
+    toast.show('Could not save.', 'error');
+
+    vi.advanceTimersByTime(4000);
+
+    expect(toast.message()).toBe('Could not save.');
+  });
 });

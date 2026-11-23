@@ -7,6 +7,7 @@ import { CountsService } from './counts.service';
 import { ToastService } from './toast.service';
 import { IconComponent, type IconName } from './ui/icon.component';
 import { LogoComponent } from './ui/logo.component';
+import { ToastComponent } from './ui/toast.component';
 
 interface NavItem {
   key: string;
@@ -20,7 +21,14 @@ interface NavItem {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [IconComponent, RouterLink, RouterLinkActive, RouterOutlet, LogoComponent],
+  imports: [
+    IconComponent,
+    RouterLink,
+    RouterLinkActive,
+    RouterOutlet,
+    LogoComponent,
+    ToastComponent,
+  ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

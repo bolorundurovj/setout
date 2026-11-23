@@ -74,29 +74,15 @@
     </aside>
 
     <div class="content">
-      @if (toast.message()) {
-        <div role="status" [class]="'toast ' + toast.type()">
-          {{ toast.message() }}
-          <button type="button" class="toast-close" aria-label="Dismiss" (click)="toast.dismiss()">
-            &times;
-          </button>
-        </div>
-      }
       <main class="app-main">
         <router-outlet></router-outlet>
       </main>
     </div>
   </div>
 } @else {
-  @if (toast.message()) {
-    <div role="status" [class]="'toast ' + toast.type()">
-      {{ toast.message() }}
-      <button type="button" class="toast-close" aria-label="Dismiss" (click)="toast.dismiss()">
-        &times;
-      </button>
-    </div>
-  }
   <main class="app-main">
     <router-outlet></router-outlet>
   </main>
 }
+
+<app-toast />

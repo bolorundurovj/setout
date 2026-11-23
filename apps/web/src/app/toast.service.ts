@@ -14,11 +14,15 @@ export class ToastService {
 
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
+      this.timeoutId = undefined;
     }
 
-    this.timeoutId = setTimeout(() => {
-      this.message.set('');
-    }, 4000);
+    // An error stays until it is dismissed, so it cannot disappear before it is read.
+    if (type !== 'error') {
+      this.timeoutId = setTimeout(() => {
+        this.message.set('');
+      }, 4000);
+    }
   }
 
   dismiss() {

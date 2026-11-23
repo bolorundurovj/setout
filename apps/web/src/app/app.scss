@@ -241,64 +241,6 @@
   flex-direction: column;
 }
 
-.toast {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  z-index: 200;
-  max-width: min(360px, calc(100vw - 32px));
-  padding: 12px 16px;
-  text-align: left;
-  font:
-    400 13px/1.45 'DM Sans',
-    sans-serif;
-  border: 1px solid var(--ok-edge);
-  border-radius: 12px;
-  background: var(--ok-surface);
-  color: var(--ok-ink);
-  box-shadow: 0 8px 24px rgb(30 34 38 / 18%);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.toast-close {
-  flex: none;
-  padding: 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font:
-    500 16px/1 'DM Sans',
-    sans-serif;
-  color: inherit;
-  border-radius: 6px;
-
-  &:hover {
-    opacity: 0.7;
-  }
-
-  &:focus-visible {
-    outline: none;
-    box-shadow:
-      0 0 0 2px var(--surface),
-      0 0 0 4px var(--accent);
-  }
-}
-
-.toast.error {
-  background: var(--danger-surface);
-  color: var(--danger-ink);
-  border-color: var(--danger-edge);
-}
-
-.toast.info {
-  background: var(--field);
-  color: var(--ink);
-  border-color: var(--rule);
-}
-
 // On wide screens the shell fills the viewport and each column scrolls independently,
 // so the navigation stays visible on long pages.
 @media (min-width: 900px) {
