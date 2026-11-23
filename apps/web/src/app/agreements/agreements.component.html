@@ -58,6 +58,11 @@
             (keyup.enter)="save()"
           />
         </span>
+        <app-money-hint
+          [value]="agreedAmount()"
+          [code]="project().currency_code"
+          [exponent]="project().currency_exponent"
+        />
       </div>
       <div class="form-actions">
         <app-button variant="secondary" (pressed)="cancel()">Cancel</app-button>
@@ -93,6 +98,8 @@
                     class="amount-input t-mono"
                     inputmode="decimal"
                     aria-label="Agreed Amount"
+                    [attr.aria-invalid]="amountInvalid(editAgreed())"
+                    [title]="amountHint(editAgreed())"
                     [value]="editAgreed()"
                     (input)="editAgreed.set(value($event))"
                     (keyup.enter)="saveEdit(agreement)"
@@ -211,6 +218,8 @@
                   class="amount-input t-mono"
                   inputmode="decimal"
                   aria-label="Amount paid"
+                  [attr.aria-invalid]="amountInvalid(expenseAmount())"
+                  [title]="amountHint(expenseAmount())"
                   [value]="expenseAmount()"
                   (input)="expenseAmount.set(value($event))"
                   (keyup.enter)="saveExpense(agreement)"
@@ -307,6 +316,11 @@
               (keyup.enter)="saveAdvance()"
             />
           </span>
+          <app-money-hint
+            [value]="advanceAmount()"
+            [code]="project().currency_code"
+            [exponent]="project().currency_exponent"
+          />
         </div>
         <div class="form-actions">
           <app-button variant="secondary" (pressed)="addingAdvance.set(false)">Cancel</app-button>
@@ -428,6 +442,8 @@
                   class="amount-input t-mono"
                   inputmode="decimal"
                   [attr.aria-label]="'Amount advanced to ' + advance.person_name"
+                  [attr.aria-invalid]="amountInvalid(editAdvanceAmount())"
+                  [title]="amountHint(editAdvanceAmount())"
                   [value]="editAdvanceAmount()"
                   (input)="editAdvanceAmount.set(value($event))"
                   (keyup.enter)="saveEditAdvance(advance)"

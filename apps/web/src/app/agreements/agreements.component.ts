@@ -3,11 +3,18 @@ import type { AdvanceRead, AgreementRead, ExpenseRead, ProjectRead } from '@seto
 import { AttachmentParent } from '../attachments/attachment.service';
 import { AttachmentsComponent } from '../attachments/attachments.component';
 import { ChangeHistoryComponent } from '../changes/change-history.component';
-import { formatAmount, formatAmountInput, formatMoney, parseMoney } from '../budget/money';
+import {
+  formatAmount,
+  formatAmountInput,
+  formatMoney,
+  moneyInputHint,
+  parseMoney,
+} from '../budget/money';
 import { ExpenseService } from '../expenses/expense.service';
 import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
 import { InfiniteScrollDirective } from '../ui/infinite-scroll.directive';
+import { MoneyHintComponent } from '../ui/money-hint.component';
 import { PaginationComponent } from '../ui/pagination.component';
 import { pageOf } from '../ui/paging';
 import { ToggleComponent } from '../ui/toggle.component';
@@ -25,6 +32,7 @@ import { AgreementService } from './agreement.service';
     ChangeHistoryComponent,
     ButtonComponent,
     InfiniteScrollDirective,
+    MoneyHintComponent,
     PaginationComponent,
     ToggleComponent,
   ],
@@ -63,6 +71,16 @@ export class AgreementsComponent {
   readonly agreedAmount = signal('');
 
   readonly symbol = computed(() => currencySymbol(this.project().currency_code));
+
+  amountHint(value: string): string {
+    const project = this.project();
+    return moneyInputHint(value, project.currency_code, project.currency_exponent)?.text ?? '';
+  }
+
+  amountInvalid(value: string): boolean {
+    const project = this.project();
+    return moneyInputHint(value, project.currency_code, project.currency_exponent)?.valid === false;
+  }
 
   readonly balancePage = signal(1);
   readonly balanceRows = computed(() => pageOf(this.agreements.balances(), this.balancePage()));

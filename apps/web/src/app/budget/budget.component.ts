@@ -4,6 +4,7 @@ import type { BudgetItemRead, CostType, ProjectRead, CategoryRead } from '@setou
 import { ChangeHistoryComponent } from '../changes/change-history.component';
 import { ButtonComponent } from '../ui/button.component';
 import { DrawerComponent } from '../ui/drawer.component';
+import { MoneyHintComponent } from '../ui/money-hint.component';
 import { Chip, ChipGroupComponent } from '../ui/chip-group.component';
 import { ComboboxComponent } from '../ui/combobox.component';
 import { ToastService } from '../toast.service';
@@ -23,6 +24,7 @@ import { formatAmountInput, formatMoney, parseMoney } from './money';
     ChipGroupComponent,
     ComboboxComponent,
     DrawerComponent,
+    MoneyHintComponent,
     ToggleComponent,
   ],
   templateUrl: './budget.component.html',

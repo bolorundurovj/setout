@@ -77,6 +77,11 @@
           (input)="amount.set(value($event))"
         />
       </label>
+      <app-money-hint
+        [value]="amount()"
+        [code]="project().currency_code"
+        [exponent]="project().currency_exponent"
+      />
     }
     <span class="t-small muted">{{ calculationNote() }}</span>
   </div>
@@ -101,6 +106,11 @@
         name="unit_rate"
         [value]="unitRate()"
         (input)="unitRate.set(value($event))"
+      />
+      <app-money-hint
+        [value]="unitRate()"
+        [code]="project().currency_code"
+        [exponent]="project().currency_exponent"
       />
     </label>
   </div>

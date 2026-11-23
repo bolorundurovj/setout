@@ -1,4 +1,4 @@
-import { formatAmount, formatAmountInput, formatMoney, parseMoney } from './money';
+import { formatAmount, formatAmountInput, formatMoney, moneyInputHint, parseMoney } from './money';
 
 describe('money', () => {
   it('formats minor units using the exponent', () => {
@@ -24,6 +24,39 @@ describe('money', () => {
     expect(parseMoney('abc', 2)).toBeNull();
     expect(parseMoney('', 2)).toBeNull();
     expect(parseMoney('.', 2)).toBeNull();
+  });
+
+  it('accepts commas and spaces only between groups of three digits', () => {
+    expect(parseMoney('1,250.50', 2)).toBe(125050);
+    expect(parseMoney('1 250 000', 2)).toBe(125000000);
+    expect(parseMoney(' 1,250 ', 0)).toBe(1250);
+    expect(parseMoney('.5', 2)).toBe(50);
+  });
+
+  it('refuses a decimal comma instead of multiplying the amount by 100', () => {
+    expect(parseMoney('12,50', 2)).toBeNull();
+    expect(parseMoney('10,50', 2)).toBeNull();
+    expect(parseMoney('1,25,000', 2)).toBeNull();
+    expect(parseMoney('12 50', 2)).toBeNull();
+    expect(parseMoney('1,250,', 2)).toBeNull();
+  });
+
+  it('refuses more decimal places than the currency has', () => {
+    expect(parseMoney('250.505', 2)).toBeNull();
+    expect(parseMoney('5000.5', 0)).toBeNull();
+    expect(parseMoney('250.5', 2)).toBe(25050);
+  });
+
+  it('describes what an amount field will save', () => {
+    expect(moneyInputHint('', 'NGN', 2)).toBeNull();
+    expect(moneyInputHint('1,250.5', 'NGN', 2)).toEqual({
+      text: expect.stringContaining('1,250.50'),
+      valid: true,
+    });
+    expect(moneyInputHint('12,50', 'NGN', 2)).toEqual({
+      text: expect.stringContaining('commas only to separate thousands'),
+      valid: false,
+    });
   });
 
   it('formats an amount in whole major units without the currency symbol', () => {

@@ -177,6 +177,11 @@
                   + Budget Item
                 </app-button>
               </div>
+              <app-money-hint
+                [value]="itemAmount()"
+                [code]="project().currency_code"
+                [exponent]="project().currency_exponent"
+              />
             </div>
           }
         </div>

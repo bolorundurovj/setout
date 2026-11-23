@@ -31,6 +31,7 @@ import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
 import { Chip, ChipGroupComponent } from '../ui/chip-group.component';
 import { currencySymbol } from '../ui/currency-pill.component';
+import { MoneyHintComponent } from '../ui/money-hint.component';
 import { VendorService } from '../vendors/vendor.service';
 import { ExpenseService } from './expense.service';
 
@@ -46,7 +47,7 @@ function isoDay(offsetDays = 0): string {
   selector: 'app-add-expense',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChangeHistoryComponent, ChipGroupComponent],
+  imports: [ButtonComponent, ChangeHistoryComponent, ChipGroupComponent, MoneyHintComponent],
   templateUrl: './add-expense.component.html',
   styleUrl: './add-expense.component.scss',
 })

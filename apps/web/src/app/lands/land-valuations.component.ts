@@ -14,13 +14,14 @@ import { ProjectService } from '../projects/project.service';
 import { ButtonComponent } from '../ui/button.component';
 import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
 import { CurrencyPillComponent, currencySymbol } from '../ui/currency-pill.component';
+import { MoneyHintComponent } from '../ui/money-hint.component';
 import { LandService } from './land.service';
 
 @Component({
   selector: 'app-land-valuations',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChipGroupComponent, CurrencyPillComponent],
+  imports: [ButtonComponent, ChipGroupComponent, CurrencyPillComponent, MoneyHintComponent],
   templateUrl: './land-valuations.component.html',
   styleUrl: './land-valuations.component.scss',
 })

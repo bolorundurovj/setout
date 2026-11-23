@@ -78,6 +78,11 @@
           (input)="amount.set(value($event))"
         />
       </span>
+      <app-money-hint
+        [value]="amount()"
+        [code]="landCurrency() || currency()"
+        [exponent]="exponent()"
+      />
     </label>
 
     <label class="field">
