@@ -10,6 +10,7 @@ from setout.controllers.report import ReportController
 from setout.models.user import User
 from setout.routers.auth import get_current_user
 from setout.services.sheets.write import filename_for
+from setout.utils.disposition import content_disposition
 
 router = APIRouter(
     tags=["reports"],
@@ -42,5 +43,5 @@ async def export_project_report(project_id: str, user: CurrentUser) -> Response:
     return Response(
         content=data,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": content_disposition("attachment", filename)},
     )

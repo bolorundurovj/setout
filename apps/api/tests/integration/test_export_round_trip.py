@@ -214,3 +214,18 @@ async def test_csv_export_restores_the_same_project_rows_after_deletion(
     await _import(client, "expenses.csv", expenses.content, project_id=imported["project_id"])
 
     assert await _snapshot() == before
+
+
+async def test_a_project_with_a_non_latin_name_exports(client: AsyncClient) -> None:
+    await Currency.bulk_create(
+        [Currency(code=c[0], name=c[1], exponent=c[2]) for c in CURRENCIES if c[0] == "NGN"]
+    )
+    await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": "password123"})
+    project = await _post(client, "/projects", {"name": "Ọ̀yọ́ 土地", "currency_code": "NGN"})
+
+    workbook = await client.get(f"/api/projects/{project['id']}/export")
+    csv = await client.get(f"/api/projects/{project['id']}/export.csv", params={"sheet": "budget"})
+
+    assert workbook.status_code == 200, workbook.text
+    assert csv.status_code == 200, csv.text
+    assert "filename*=UTF-8''" in workbook.headers["content-disposition"]

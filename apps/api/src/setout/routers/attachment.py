@@ -11,6 +11,7 @@ from setout.models.user import User
 from setout.routers.auth import get_current_user
 from setout.schemas.attachment import AttachmentPage, AttachmentRead
 from setout.services.storage import Storage, get_storage
+from setout.utils.disposition import content_disposition
 from setout.utils.uploads import read_capped
 
 router = APIRouter(
@@ -214,7 +215,7 @@ async def download_attachment(attachment_id: str, user: CurrentUser, storage: St
     return Response(
         content=stored_file.data,
         media_type=stored_file.content_type,
-        headers={"Content-Disposition": f'inline; filename="{stored_file.filename}"'},
+        headers={"Content-Disposition": content_disposition("inline", stored_file.filename)},
     )
 
 

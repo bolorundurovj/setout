@@ -413,3 +413,19 @@ async def test_deleting_a_project_deletes_its_project_attachment_files(
 
     assert resp.status_code == 204
     assert _stored_files(tmp_path) == []
+
+
+async def test_a_file_with_a_non_latin_name_downloads(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    expense = await _expense(client, project_id)
+    code, attachment = await _attach(client, project_id, expense["id"], filename="résumé-土地.jpg")
+    assert code == 201, attachment
+
+    resp = await client.get(f"/api/attachments/{attachment['id']}/file")
+
+    assert resp.status_code == 200
+    assert resp.content == JPEG_BYTES
+    assert (
+        "filename*=UTF-8''r%C3%A9sum%C3%A9-%E5%9C%9F%E5%9C%B0.jpg"
+        in resp.headers["content-disposition"]
+    )

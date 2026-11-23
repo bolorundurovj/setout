@@ -14,6 +14,7 @@ from setout.routers.auth import get_current_user
 from setout.schemas.import_sheet import Answers, ImportReport, ImportResult
 from setout.services.sheets.workbook import SheetError
 from setout.services.sheets.write import SAMPLES, XLSX_TYPE, filename_for, sample
+from setout.utils.disposition import content_disposition
 from setout.utils.uploads import read_capped
 
 router = APIRouter(
@@ -112,7 +113,7 @@ async def export_project(project_id: str, user: CurrentUser) -> Response:
     return Response(
         content=data,
         media_type=XLSX_TYPE,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": content_disposition("attachment", filename)},
     )
 
 
@@ -139,7 +140,7 @@ async def export_project_csv(
     return Response(
         content=data,
         media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": content_disposition("attachment", filename)},
     )
 
 
@@ -169,5 +170,5 @@ async def download_import_template(
     return Response(
         content=sample(kind),
         media_type=media_type,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": content_disposition("attachment", filename)},
     )

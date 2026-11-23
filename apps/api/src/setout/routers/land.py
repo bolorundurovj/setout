@@ -25,6 +25,7 @@ from setout.schemas.land_valuation import (
     LandValuationUpdate,
 )
 from setout.services.storage import Storage, get_storage
+from setout.utils.disposition import content_disposition
 from setout.utils.uploads import read_capped
 
 router = APIRouter(
@@ -201,7 +202,7 @@ async def download_land_document(document_id: str, user: CurrentUser, storage: S
     return Response(
         content=stored_file.data,
         media_type=stored_file.content_type,
-        headers={"Content-Disposition": f'inline; filename="{stored_file.filename}"'},
+        headers={"Content-Disposition": content_disposition("inline", stored_file.filename)},
     )
 
 

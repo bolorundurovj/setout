@@ -8,6 +8,7 @@ from botocore.config import Config
 from botocore.exceptions import ClientError
 
 from setout.services.storage.base import Storage
+from setout.utils.disposition import content_disposition
 
 MISSING_CODES = ("404", "NoSuchKey", "NotFound")
 
@@ -137,7 +138,7 @@ class S3Storage(Storage):
                 "Bucket": self.bucket,
                 "Key": self._object_key(key),
                 "ResponseContentType": content_type,
-                "ResponseContentDisposition": f'inline; filename="{filename}"',
+                "ResponseContentDisposition": content_disposition("inline", filename),
             },
             ExpiresIn=self.link_seconds,
         )
