@@ -3,12 +3,15 @@
 FROM node:26-bookworm-slim AS web
 WORKDIR /build
 RUN npm install -g corepack && corepack enable
+# Manifests first, so editing source does not invalidate the dependency install.
+COPY package.json yarn.lock ./
+COPY packages/api-client/package.json ./packages/api-client/
+COPY apps/web/package.json ./apps/web/
+RUN yarn install --frozen-lockfile
 # The web app imports the SDK through a path alias, so both are copied.
-COPY package.json yarn.lock* ./
 COPY packages/api-client ./packages/api-client
 COPY apps/web ./apps/web
-RUN yarn install --frozen-lockfile || yarn install
-RUN cd packages/api-client && yarn generate && yarn format
+RUN cd packages/api-client && yarn generate
 WORKDIR /build/apps/web
 RUN yarn build
 
@@ -40,9 +43,10 @@ RUN uv sync --frozen --no-dev
 
 COPY --from=web /build/apps/web/dist/*/browser /app/web
 
+# The app only writes to the data directory, so /app stays owned by root and read-only to it.
 RUN useradd --system --create-home --uid 10001 setout \
 	&& mkdir -p "$SETOUT_DATA_DIR" \
-	&& chown -R setout:setout "$SETOUT_DATA_DIR" /app
+	&& chown setout:setout "$SETOUT_DATA_DIR"
 USER setout
 
 VOLUME ["/var/lib/setout"]

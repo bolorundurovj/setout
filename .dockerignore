@@ -9,9 +9,15 @@
 **/.ruff_cache
 **/htmlcov
 **/.coverage
-data/
-backups/
-*.sqlite3
-*.db
-*.tar.gz
-.env
+# Local databases, uploads, secrets and test output never belong in an image.
+**/data/
+**/.data/
+**/.auth/
+**/backups/
+**/*.sqlite3*
+**/*.db
+**/*.tar.gz
+**/.env
+**/.env.*
+**/playwright-report/
+**/test-results/

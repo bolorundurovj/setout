@@ -85,7 +85,7 @@ setup: require-uv require-yarn ## Install everything, backend and frontend.
 	cd $(API_DIR) && uv sync
 	@# Workspace dependencies install once at the root. Installing from inside a
 	@# workspace member re-links the shared node_modules/.bin and breaks it.
-	yarn install --frozen-lockfile || yarn install
+	yarn install --frozen-lockfile
 
 dev: ## Run API and web together with reload.
 	@echo "Starting API and web. Press Ctrl-C to stop both."

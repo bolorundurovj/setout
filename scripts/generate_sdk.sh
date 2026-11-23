@@ -31,7 +31,7 @@ if [ -d "$ROOT_DIR/node_modules/ng-openapi-gen" ]; then
   echo "SDK toolchain already installed"
 else
   echo "Installing SDK toolchain"
-  ( cd "$ROOT_DIR" && ( yarn install --frozen-lockfile || yarn install ) )
+  ( cd "$ROOT_DIR" && yarn install --frozen-lockfile )
 fi
 
 echo "Generating TypeScript client"
