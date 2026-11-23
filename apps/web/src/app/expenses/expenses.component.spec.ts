@@ -96,13 +96,14 @@ describe('ExpensesComponent', () => {
       expenses: () => expenses,
       total: () => expenses.length,
       page: () => 1,
-      byCategory: () => ({
-        [UNCATEGORISED]: {
-          rows: uncategorised,
-          total: uncategorised.length,
-          page: uncategorisedPages.at(-1) ?? 1,
-        },
-      }),
+      categoryPage: (_p: string, id: string) =>
+        id === UNCATEGORISED
+          ? {
+              rows: uncategorised,
+              total: uncategorised.length,
+              page: uncategorisedPages.at(-1) ?? 1,
+            }
+          : undefined,
       summary: () => ({
         project_id: 'p1',
         currency_code: 'NGN',

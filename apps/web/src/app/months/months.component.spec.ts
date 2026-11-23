@@ -110,7 +110,7 @@ describe('MonthsComponent', () => {
           provide: ExpenseService,
           useValue: {
             months: () => payload,
-            byMonth: () => byMonth,
+            monthPage: (_p: string, month: string) => byMonth[month],
             error: () => error,
             loadMonths: async () => undefined,
             loadForMonth: async (_p: string, month: string) => {

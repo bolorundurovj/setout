@@ -124,7 +124,7 @@ export class MonthsComponent {
       return;
     }
     this.openMonth.set(row.month);
-    if (!this.expenses.byMonth()[row.month]) {
+    if (!this.expenses.monthPage(this.project().id, row.month)) {
       void this.expenses.loadForMonth(this.project().id, row.month);
     }
   }
@@ -134,7 +134,7 @@ export class MonthsComponent {
   }
 
   monthExpenses(row: MonthRow): ExpensePage | undefined {
-    return this.expenses.byMonth()[row.month];
+    return this.expenses.monthPage(this.project().id, row.month);
   }
 
   async goToPage(row: MonthRow, page: number): Promise<void> {

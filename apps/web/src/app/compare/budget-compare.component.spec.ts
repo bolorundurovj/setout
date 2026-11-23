@@ -78,7 +78,7 @@ describe('BudgetCompareComponent', () => {
           useValue: {
             summary: () => summary,
             total: () => expenseCount,
-            byCategory: () => byCategory,
+            categoryPage: (_p: string, id: string) => byCategory[id],
             load: async () => undefined,
             loadForCategory: async (_p: string, categoryId: string) => {
               loaded.push(categoryId);

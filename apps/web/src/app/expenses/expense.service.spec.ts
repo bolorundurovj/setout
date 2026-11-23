@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Api } from '@setout/api-client';
-import { ExpenseService } from './expense.service';
+import { ExpenseService, UNCATEGORISED } from './expense.service';
 
 function expense(id: string, overrides: Record<string, unknown> = {}) {
   return {
@@ -172,10 +172,49 @@ describe('ExpenseService', () => {
     await service.loadForCategory('p1', 's1', 2);
     await service.loadForMonth('p1', '2026-06', 3);
 
-    expect(service.byCategory()['s1'].page).toBe(2);
-    expect(service.byCategory()['s1'].total).toBe(24);
-    expect(service.byMonth()['2026-06'].page).toBe(3);
-    expect(service.byMonth()['2026-06'].rows.length).toBe(1);
+    expect(service.categoryPage('p1', 's1')?.page).toBe(2);
+    expect(service.categoryPage('p1', 's1')?.total).toBe(24);
+    expect(service.monthPage('p1', '2026-06')?.page).toBe(3);
+    expect(service.monthPage('p1', '2026-06')?.rows.length).toBe(1);
+  });
+
+  it("keeps each project's category and month rows separate", async () => {
+    const service = configure((_name, args) =>
+      page([expense((args as { project_id: string }).project_id === 'pA' ? 'from-a' : 'from-b')]),
+    );
+    await service.loadForCategory('pA', UNCATEGORISED);
+    await service.loadForMonth('pA', '2026-06');
+
+    expect(service.categoryPage('pB', UNCATEGORISED)).toBeUndefined();
+    expect(service.monthPage('pB', '2026-06')).toBeUndefined();
+
+    await service.loadForCategory('pB', UNCATEGORISED);
+    expect(service.categoryPage('pA', UNCATEGORISED)?.rows[0].id).toBe('from-a');
+    expect(service.categoryPage('pB', UNCATEGORISED)?.rows[0].id).toBe('from-b');
+  });
+
+  it('reloads the cached category and month pages after a change', async () => {
+    let description = 'Before';
+    const service = configure((name) => {
+      if (name === 'getProjectExpenseSummary') {
+        return summary;
+      }
+      if (name === 'archiveExpense') {
+        description = 'After';
+        return undefined;
+      }
+      return page([expense('e1', { description })]);
+    });
+    await service.loadForCategory('p1', 's1');
+    await service.loadForMonth('p1', '2026-06');
+    await service.loadForCategory('p2', 's1');
+    expect(service.categoryPage('p1', 's1')?.rows[0].description).toBe('Before');
+
+    await service.archive('p1', 'e1');
+
+    expect(service.categoryPage('p1', 's1')?.rows[0].description).toBe('After');
+    expect(service.monthPage('p1', '2026-06')?.rows[0].description).toBe('After');
+    expect(service.categoryPage('p2', 's1')?.rows[0].description).toBe('Before');
   });
 
   it('reloads the list and expense summary after creating an expense', async () => {

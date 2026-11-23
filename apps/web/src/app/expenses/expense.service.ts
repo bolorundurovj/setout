@@ -53,6 +53,7 @@ export class ExpenseService {
   private readonly summaryState = signal<ProjectExpenseSummary | null>(null);
   private readonly totalState = signal(0);
   private readonly pageState = signal(1);
+  // Keyed by project and then category or month, so one project's rows never show in another.
   private readonly byCategoryState = signal<Record<string, ExpensePage>>({});
   private readonly monthsState = signal<ProjectMonths | null>(null);
   private readonly byMonthState = signal<Record<string, ExpensePage>>({});
@@ -62,14 +63,22 @@ export class ExpenseService {
   readonly expenses = this.state.asReadonly();
   readonly summary = this.summaryState.asReadonly();
   readonly total = this.totalState.asReadonly();
-  readonly byCategory = this.byCategoryState.asReadonly();
   readonly months = this.monthsState.asReadonly();
-  readonly byMonth = this.byMonthState.asReadonly();
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
 
   readonly page = this.pageState.asReadonly();
   readonly totalAmount = this.totalAmountState.asReadonly();
+
+  /** The loaded page of a project's expenses in one category, if any. */
+  categoryPage(projectId: string, categoryId: string): ExpensePage | undefined {
+    return this.byCategoryState()[cacheKey(projectId, categoryId)];
+  }
+
+  /** The loaded page of a project's expenses in one month, if any. */
+  monthPage(projectId: string, month: string): ExpensePage | undefined {
+    return this.byMonthState()[cacheKey(projectId, month)];
+  }
 
   async load(projectId: string, filters: ExpenseFilters = {}): Promise<void> {
     this.filterState.set(filters);
@@ -114,6 +123,7 @@ export class ExpenseService {
   }
 
   async loadForCategory(projectId: string, categoryId: string, page = 1): Promise<void> {
+    const key = cacheKey(projectId, categoryId);
     try {
       const rows = await this.api.invoke(listExpenses, {
         project_id: projectId,
@@ -124,13 +134,10 @@ export class ExpenseService {
       });
       this.byCategoryState.update((all) => ({
         ...all,
-        [categoryId]: { rows: rows.items, total: rows.total, page },
+        [key]: { rows: rows.items, total: rows.total, page },
       }));
     } catch {
-      this.byCategoryState.update((all) => ({
-        ...all,
-        [categoryId]: { rows: [], total: 0, page: 1 },
-      }));
+      this.byCategoryState.update((all) => ({ ...all, [key]: { rows: [], total: 0, page: 1 } }));
     }
   }
 
@@ -145,6 +152,7 @@ export class ExpenseService {
   }
 
   async loadForMonth(projectId: string, month: string, page = 1): Promise<void> {
+    const key = cacheKey(projectId, month);
     try {
       const rows = await this.api.invoke(listExpenses, {
         project_id: projectId,
@@ -154,10 +162,10 @@ export class ExpenseService {
       });
       this.byMonthState.update((all) => ({
         ...all,
-        [month]: { rows: rows.items, total: rows.total, page },
+        [key]: { rows: rows.items, total: rows.total, page },
       }));
     } catch {
-      this.byMonthState.update((all) => ({ ...all, [month]: { rows: [], total: 0, page: 1 } }));
+      this.byMonthState.update((all) => ({ ...all, [key]: { rows: [], total: 0, page: 1 } }));
     }
   }
 
@@ -183,6 +191,7 @@ export class ExpenseService {
     try {
       const created = await this.api.invoke(createExpense, { project_id: projectId, body });
       await this.goTo(projectId, this.pageState());
+      await this.reloadCached(projectId);
       return created;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not save the expense.');
@@ -203,6 +212,7 @@ export class ExpenseService {
       const updated = await this.api.invoke(updateExpense, { expense_id: expenseId, body });
       this.state.update((rows) => rows.map((row) => (row.id === expenseId ? updated : row)));
       await this.loadSummary(projectId);
+      await this.reloadCached(projectId);
       return updated;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not update the expense.');
@@ -249,5 +259,27 @@ export class ExpenseService {
     if (this.state().length === 0 && currentPage > 1) {
       await this.goTo(projectId, currentPage - 1);
     }
+    await this.reloadCached(projectId);
   }
+
+  /** Reload a project's cached category and month pages so they don't show stale rows. */
+  private async reloadCached(projectId: string): Promise<void> {
+    const prefix = cacheKey(projectId, '');
+    const reloads: Promise<void>[] = [];
+    for (const [key, cached] of Object.entries(this.byCategoryState())) {
+      if (key.startsWith(prefix)) {
+        reloads.push(this.loadForCategory(projectId, key.slice(prefix.length), cached.page));
+      }
+    }
+    for (const [key, cached] of Object.entries(this.byMonthState())) {
+      if (key.startsWith(prefix)) {
+        reloads.push(this.loadForMonth(projectId, key.slice(prefix.length), cached.page));
+      }
+    }
+    await Promise.all(reloads);
+  }
+}
+
+function cacheKey(projectId: string, id: string): string {
+  return `${projectId}/${id}`;
 }

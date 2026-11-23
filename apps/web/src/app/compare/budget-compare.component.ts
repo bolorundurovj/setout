@@ -126,7 +126,7 @@ export class BudgetCompareComponent {
 
   private expand(categoryId: string): void {
     this.expanded.set(categoryId);
-    if (!this.expenses.byCategory()[categoryId]) {
+    if (!this.expenses.categoryPage(this.project().id, categoryId)) {
       void this.expenses.loadForCategory(this.project().id, categoryId);
     }
   }
@@ -144,7 +144,7 @@ export class BudgetCompareComponent {
   }
 
   rowExpenses(row: CompareRow): ExpensePage | undefined {
-    return this.expenses.byCategory()[row.id];
+    return this.expenses.categoryPage(this.project().id, row.id);
   }
 
   async goTo(row: CompareRow, page: number): Promise<void> {

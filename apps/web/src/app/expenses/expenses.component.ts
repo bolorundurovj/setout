@@ -72,11 +72,15 @@ export class ExpensesComponent {
   readonly selected = signal<Set<string>>(new Set());
   readonly bulkCategoryId = signal<string>('');
 
-  readonly uncategorised = computed(() => this.expenses.byCategory()[UNCATEGORISED]?.rows ?? []);
-  readonly uncategorisedTotal = computed(
-    () => this.expenses.byCategory()[UNCATEGORISED]?.total ?? 0,
+  readonly uncategorised = computed(
+    () => this.expenses.categoryPage(this.project().id, UNCATEGORISED)?.rows ?? [],
   );
-  readonly uncategorisedPage = computed(() => this.expenses.byCategory()[UNCATEGORISED]?.page ?? 1);
+  readonly uncategorisedTotal = computed(
+    () => this.expenses.categoryPage(this.project().id, UNCATEGORISED)?.total ?? 0,
+  );
+  readonly uncategorisedPage = computed(
+    () => this.expenses.categoryPage(this.project().id, UNCATEGORISED)?.page ?? 1,
+  );
   readonly allSelected = computed(
     () =>
       this.uncategorised().length > 0 &&
