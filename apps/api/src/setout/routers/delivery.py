@@ -88,7 +88,9 @@ async def list_all_deliveries(
     status_code=status.HTTP_201_CREATED,
     responses={
         **NOT_FOUND,
-        status.HTTP_409_CONFLICT: {"description": "That expense already has a delivery"},
+        status.HTTP_409_CONFLICT: {
+            "description": "That expense already has a delivery, active or archived"
+        },
     },
 )
 async def create_delivery(project_id: str, req: DeliveryCreate, user: CurrentUser) -> DeliveryRead:

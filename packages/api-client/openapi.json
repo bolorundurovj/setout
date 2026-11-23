@@ -8170,7 +8170,7 @@
             "description": "Not found"
           },
           "409": {
-            "description": "That expense already has a delivery"
+            "description": "That expense already has a delivery, active or archived"
           },
           "422": {
             "description": "Validation Error",

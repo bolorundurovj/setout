@@ -304,3 +304,21 @@ async def test_outstanding_amount_covers_all_pages(
     assert len(page["items"]) == 1
     assert page["total"] == 3
     assert page["outstanding_amount"] == 3_000_00
+
+
+async def test_an_expense_with_an_archived_delivery_asks_for_a_restore(
+    client: AsyncClient,
+) -> None:
+    project_id = await _project(client)
+    expense = await _expense(client, project_id)
+    delivery = await _delivery(client, project_id, expense_id=expense["id"])
+    await client.post(f"/api/deliveries/{delivery['id']}/archive")
+
+    resp = await client.post(
+        f"/api/projects/{project_id}/deliveries", json={"expense_id": expense["id"]}
+    )
+
+    assert resp.status_code == 409
+    assert "Restore it" in resp.json()["detail"]
+    restored = await client.post(f"/api/deliveries/{delivery['id']}/restore")
+    assert restored.status_code == 200, restored.text

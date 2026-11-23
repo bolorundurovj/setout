@@ -81,10 +81,17 @@ class DeliveryController:
         expense = await Expense.get_or_none(id=req.expense_id, archived_at__isnull=True)
         if expense is None or expense.project_id != project_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Expense not found")
-        if await Delivery.filter(expense_id=expense.id, archived_at__isnull=True).exists():
+        # An expense has at most one delivery row, archived or not.
+        existing = await Delivery.get_or_none(expense_id=expense.id)
+        if existing is not None and existing.archived_at is None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="This expense already has a delivery",
+            )
+        if existing is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This expense has an archived delivery. Restore it instead of adding one",
             )
         delivery = await Delivery.create(
             project_id=project_id,
