@@ -48,3 +48,18 @@ export function monthLabel(month: string): string {
   const [year, number] = month.split('-');
   return MONTH.format(new Date(Number(year), Number(number) - 1, 1));
 }
+
+/** Whether a timestamp string already carries a UTC offset. */
+function hasZone(value: string): boolean {
+  return /(?:Z|[+-]\d{2}:\d{2})$/i.test(value.trim());
+}
+
+/**
+ * A stored timestamp as a Date. Naive values were written as UTC, so `Z` is
+ * appended only when no zone is present; appending it to a zoned value such as
+ * '2026-11-22T12:00:00+00:00' produces an invalid date.
+ */
+export function parseTimestamp(value: string): Date {
+  const text = value.trim();
+  return new Date(hasZone(text) ? text : `${text}Z`);
+}

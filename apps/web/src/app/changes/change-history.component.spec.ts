@@ -99,4 +99,39 @@ describe('ChangeHistoryComponent', () => {
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Budget item: Blocks');
   });
+
+  it('reads a zoned created_at without appending another zone', () => {
+    const component = render().componentInstance;
+    const zoned = component.when(change({ created_at: '2026-11-22T12:00:00+00:00' }));
+    expect(zoned).toBe(component.when(change({ created_at: '2026-11-22T12:00:00Z' })));
+    expect(zoned).toContain('22 Nov 2026');
+  });
+
+  it('formats zoned, UTC and naive timestamp fields as the same instant', () => {
+    const component = render().componentInstance;
+    const stamp = (value: string) =>
+      component.lines(change({ fields: [{ name: 'received_at', before: null, after: value }] }))[0]
+        .after;
+    const utc = stamp('2026-11-22T12:00:00Z');
+    expect(stamp('2026-11-22T12:00:00+00:00')).toBe(utc);
+    expect(stamp('2026-11-22T12:00:00')).toBe(utc);
+    expect(utc).toContain('22 Nov 2026');
+  });
+
+  it('formats a date-only field value as a day, without a time', () => {
+    const component = render().componentInstance;
+    const line = component.lines(
+      change({ fields: [{ name: 'spent_on', before: '2026-11-21', after: '2026-11-22' }] }),
+    )[0];
+    expect(line.before).toBe('21 Nov 2026');
+    expect(line.after).toBe('22 Nov 2026');
+  });
+
+  it('renders an object field value as JSON text, not [object Object]', () => {
+    const component = render().componentInstance;
+    const line = component.lines(
+      change({ fields: [{ name: 'boundary', before: null, after: { type: 'Polygon' } }] }),
+    )[0];
+    expect(line.after).toBe('{"type":"Polygon"}');
+  });
 });

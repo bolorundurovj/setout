@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import type { ChangeField, ChangeRead } from '@setout/api-client';
 import { toMajor } from '../budget/money';
+import { formatDay, parseTimestamp } from '../shared/dates';
 import { ChangeService, ChangeTarget } from './change.service';
 import { ACTION_LABELS, MONEY_FIELDS, entityNoun, fieldLabel } from './labels';
 
@@ -68,7 +69,7 @@ export class ChangeHistoryComponent {
   }
 
   when(change: ChangeRead): string {
-    return WHEN.format(new Date(change.created_at));
+    return WHEN.format(parseTimestamp(change.created_at));
   }
 
   lines(change: ChangeRead): ChangeLine[] {
@@ -102,8 +103,15 @@ export class ChangeHistoryComponent {
         maximumFractionDigits: digits,
       }).format(toMajor(value, digits));
     }
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return formatDay(value);
+    }
     if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)) {
-      return WHEN.format(new Date(`${value}Z`));
+      return WHEN.format(parseTimestamp(value));
+    }
+    if (typeof value === 'object') {
+      // A stored object such as a boundary renders as JSON, not [object Object].
+      return JSON.stringify(value);
     }
     return String(value);
   }

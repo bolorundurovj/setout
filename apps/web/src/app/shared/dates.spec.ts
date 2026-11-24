@@ -1,4 +1,11 @@
-import { calendarDay, formatDay, formatLongToday, formatStampDay, monthLabel } from './dates';
+import {
+  calendarDay,
+  formatDay,
+  formatLongToday,
+  formatStampDay,
+  monthLabel,
+  parseTimestamp,
+} from './dates';
 
 describe('shared date helpers', () => {
   it('formats a date-only string as the same day in every timezone', () => {
@@ -29,5 +36,14 @@ describe('shared date helpers', () => {
 
   it('labels a month key without a day', () => {
     expect(monthLabel('2026-11')).toBe('Nov 2026');
+  });
+
+  it('reads zoned, UTC and naive timestamps as the same instant', () => {
+    // A naive value was written as UTC, so Z is appended only when absent.
+    const utc = parseTimestamp('2026-11-22T12:00:00Z').getTime();
+    expect(parseTimestamp('2026-11-22T12:00:00+00:00').getTime()).toBe(utc);
+    expect(parseTimestamp('2026-11-22T12:00:00').getTime()).toBe(utc);
+    // Appending Z to a value that already carries a zone would be invalid.
+    expect(parseTimestamp('2026-11-22T12:00:00+00:00').toString()).not.toBe('Invalid Date');
   });
 });
