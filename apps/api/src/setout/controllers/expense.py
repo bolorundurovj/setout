@@ -35,6 +35,7 @@ from setout.services import changes
 from setout.services.storage import Storage
 from setout.utils.attachments import counts_for
 from setout.utils.cascade import archive_under_expense, restore_under_expense
+from setout.utils.categories import subtree_ids
 from setout.utils.expenses import derived_amount
 from setout.utils.months import month_range, to_months
 from setout.utils.uploads import delete_unreferenced
@@ -75,7 +76,8 @@ class ExpenseController:
         if uncategorised_only:
             query = query.filter(category_id__isnull=True)
         elif category_id is not None:
-            query = query.filter(category_id=category_id)
+            pairs = await Category.filter(project_id=project_id).values_list("id", "parent_id")
+            query = query.filter(category_id__in=subtree_ids(category_id, dict(pairs)))
         if agreement_id is not None:
             query = query.filter(agreement_id=agreement_id)
         elif agreement_only:
@@ -117,7 +119,7 @@ class ExpenseController:
         if category_id is not None:
             await self._categorisable_category(category_id, project_id)
         await self._references_or_404(req.item_id, req.vendor_id, req.paid_by_id)
-        await self._agreement_or_404(req.agreement_id, project_id)
+        await self._validate_agreement(req.agreement_id, project_id, req.vendor_id)
         amount = self._amount(req.quantity, req.unit_rate, req.amount)
         expense = await Expense.create(
             project_id=project_id,
@@ -195,6 +197,12 @@ class ExpenseController:
             query = query.filter(vendor_id=vendor_id)
         else:
             return {}, 0
+        parents = await Category.filter(
+            project_id=project_id, archived_at__isnull=True, parent_id__not_isnull=True
+        ).values_list("parent_id", flat=True)
+        query = query.filter(category__archived_at__isnull=True).exclude(
+            category_id__in=list(parents)
+        )
         counts: dict[str, int] = {}
         for expense in await query.only("category_id"):
             category_id = expense.category_id
@@ -239,7 +247,12 @@ class ExpenseController:
         await self._references_or_404(
             changes.get("item_id"), changes.get("vendor_id"), changes.get("paid_by_id")
         )
-        await self._agreement_or_404(changes.get("agreement_id"), expense.project_id)
+        if "agreement_id" in changes or "vendor_id" in changes:
+            await self._validate_agreement(
+                changes.get("agreement_id", expense.agreement_id),
+                expense.project_id,
+                changes.get("vendor_id", expense.vendor_id),
+            )
         if changes:
             # Amount is derived below. The column is not nullable, and a request with
             # quantity and unit rate sends a null amount intentionally.
@@ -378,14 +391,20 @@ class ExpenseController:
         ):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Person not found")
 
-    async def _agreement_or_404(self, agreement_id: str | None, project_id: str) -> None:
+    async def _validate_agreement(
+        self, agreement_id: str | None, project_id: str, vendor_id: str | None
+    ) -> None:
         if agreement_id is None:
             return
-        exists = await Agreement.filter(
+        agreement = await Agreement.get_or_none(
             id=agreement_id, project_id=project_id, archived_at__isnull=True
-        ).exists()
-        if not exists:
+        )
+        if agreement is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agreement not found")
+        if vendor_id is not None and agreement.vendor_id != vendor_id:
+            raise HTTPException(
+                status_code=422, detail="The agreement belongs to a different vendor"
+            )
 
     async def _total(self, query: QuerySet[Any], column: str) -> int:
         rows = await query.annotate(total=Sum(column)).values("total")

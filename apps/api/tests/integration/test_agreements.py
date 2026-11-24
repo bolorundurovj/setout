@@ -286,3 +286,20 @@ async def test_expenses_can_be_filtered_by_agreement(client: AsyncClient) -> Non
     ).json()
     assert page["total"] == 2
     assert sum(row["amount"] for row in page["items"]) == 90_000_00
+
+
+async def test_expense_cannot_use_another_vendors_agreement(client: AsyncClient) -> None:
+    project = await _project(client)
+    vendor = await _vendor(client)
+    other = await _vendor(client, "Other")
+    agreement = await _agreement(client, project, vendor, 1000)
+    resp = await client.post(
+        f"/api/projects/{project}/expenses",
+        json={
+            "description": "Payment",
+            "amount": 400,
+            "vendor_id": other,
+            "agreement_id": agreement["id"],
+        },
+    )
+    assert resp.status_code == 422
