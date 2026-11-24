@@ -8,7 +8,7 @@ from setout.services.sheets.parsed import (
     Problem,
     ProblemKind,
 )
-from setout.services.sheets.values import as_code, as_minor, as_text, is_category_code
+from setout.services.sheets.values import as_code, as_minor, as_text, checked_cell, is_category_code
 
 NO_DESCRIPTION_PLACEHOLDER = "(No description)"
 
@@ -31,7 +31,6 @@ def read(detected: DetectedSheet, exponent: int) -> ParsedBudget:
         number = detected.header_row + offset + 2
         code = as_code(_cell(row, code_at))
         name = as_text(_cell(row, name_at))
-        budgeted = as_minor(_cell(row, budgeted_at), exponent)
 
         if not code and not name:
             continue
@@ -46,6 +45,10 @@ def read(detected: DetectedSheet, exponent: int) -> ParsedBudget:
             out.categories.append(current)
             continue
 
+        raw_budget = _cell(row, budgeted_at)
+        budgeted = checked_cell(
+            raw_budget, as_minor(raw_budget, exponent), detected.sheet.name, number, "budget"
+        )
         if budgeted is None or budgeted == 0:
             if not name:
                 out.blank_rows += 1

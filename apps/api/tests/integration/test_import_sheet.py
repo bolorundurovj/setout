@@ -772,3 +772,21 @@ async def test_oversize_file_is_rejected_before_writing(
     assert response.status_code == 422
     assert ("24 sheets" if kind == "sheets" else "20,000 rows") in response.json()["detail"]
     assert (await client.get("/api/projects")).json()["total"] == 0
+
+
+@pytest.mark.parametrize(
+    ("amount", "date_value"), [("-2", ""), ("NaN", ""), ("Infinity", ""), ("12", "99999999")]
+)
+async def test_invalid_cell_reports_its_row(
+    client: AsyncClient, amount: str, date_value: str
+) -> None:
+    await set_up_admin(client)
+    data = workbook(Invoices=[EXPENSE_HEADERS, [12, "Supplier", "", date_value, amount]])
+    for url in ["/api/import/preview", "/api/import"]:
+        response = await client.post(
+            url,
+            files={"file": ("sheet.xlsx", data)},
+            data={"name": "Example", "currency_code": "NGN"},
+        )
+        assert response.status_code == 422
+        assert "Invoices, row 3" in response.json()["detail"]

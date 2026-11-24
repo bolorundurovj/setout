@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import math
 import re
 from datetime import date, datetime, timedelta
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, DecimalException
+
+from setout.services.sheets.workbook import SheetError
 
 # Excel treats 1900 as a leap year, so serials after 28 Feb 1900 are one day too high.
 EPOCH = date(1899, 12, 31)
@@ -50,6 +53,8 @@ def as_date(value: object) -> date | None:
 
 
 def from_serial(serial: float) -> date | None:
+    if not math.isfinite(serial) or serial > (date.max - EPOCH).days + 1:
+        return None
     days = int(serial)
     if days <= 0:
         return None
@@ -70,9 +75,12 @@ def as_minor(value: object, exponent: int) -> int | None:
         cleaned = str(value)
     try:
         amount = Decimal(cleaned)
-    except (InvalidOperation, ValueError):
+        if not amount.is_finite() or amount < 0:
+            return None
+        minor = (amount * (10**exponent)).quantize(Decimal(1))
+        return int(minor) if minor <= 2**63 - 1 else None
+    except (DecimalException, ValueError):
         return None
-    return int((amount * (10**exponent)).quantize(Decimal(1)))
 
 
 def as_quantity(value: object) -> Decimal | None:
@@ -81,9 +89,18 @@ def as_quantity(value: object) -> Decimal | None:
         return None
     try:
         quantity = Decimal(str(value).replace(",", "").strip())
-    except (InvalidOperation, ValueError):
+        if not quantity.is_finite() or quantity < 0:
+            return None
+        rounded = quantity.quantize(Decimal("0.001"))
+        return rounded if rounded < 10**9 else None
+    except (DecimalException, ValueError):
         return None
-    return quantity.quantize(Decimal("0.001"))
+
+
+def checked_cell[T](raw: object, parsed: T | None, sheet: str, row: int, field: str) -> T | None:
+    if parsed is None and raw is not None and str(raw).strip():
+        raise SheetError(f"{sheet}, row {row}: invalid {field}.")
+    return parsed
 
 
 COST_TYPES = {"labour": "labour", "labor": "labour", "material": "material", "fixed": "fixed"}

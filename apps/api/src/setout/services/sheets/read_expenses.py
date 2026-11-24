@@ -10,6 +10,7 @@ from setout.services.sheets.values import (
     as_minor,
     as_quantity,
     as_text,
+    checked_cell,
     codes_in,
 )
 
@@ -20,7 +21,10 @@ def read(detected: DetectedSheet, exponent: int) -> ParsedExpenses:
 
     for offset, row in enumerate(detected.sheet.rows[detected.header_row + 1 :]):
         number = detected.header_row + offset + 2
-        amount = as_minor(_cell(row, at.get("amount", -1)), exponent)
+        raw_amount = _cell(row, at.get("amount", -1))
+        amount = checked_cell(
+            raw_amount, as_minor(raw_amount, exponent), detected.sheet.name, number, "amount"
+        )
         vendor = as_text(_cell(row, at.get("subcontractors & vendors", -1)))
         invoice = as_text(_cell(row, at.get("invoice no.", -1)))
 
@@ -63,20 +67,29 @@ def read(detected: DetectedSheet, exponent: int) -> ParsedExpenses:
             )
             description = NO_DESCRIPTION_PLACEHOLDER
 
+        raw_date = _cell(row, at.get("date invoiced", -1))
+        raw_quantity = _cell(row, at.get("quantity", -1))
+        raw_rate = _cell(row, at.get("unit rate", -1))
         out.expenses.append(
             ExpenseLine(
                 row=number,
                 description=description,
                 amount=amount,
-                spent_on=as_date(_cell(row, at.get("date invoiced", -1))),
+                spent_on=checked_cell(
+                    raw_date, as_date(raw_date), detected.sheet.name, number, "invoice date"
+                ),
                 codes=codes,
                 vendor=vendor,
                 paid_by=as_text(_cell(row, at.get("paid by", -1))),
                 paid=paid,
                 notes=_notes(row, at),
                 cost_type=as_cost_type(_cell(row, at.get("cost type", -1))),
-                quantity=as_quantity(_cell(row, at.get("quantity", -1))),
-                unit_rate=as_minor(_cell(row, at.get("unit rate", -1)), exponent),
+                quantity=checked_cell(
+                    raw_quantity, as_quantity(raw_quantity), detected.sheet.name, number, "quantity"
+                ),
+                unit_rate=checked_cell(
+                    raw_rate, as_minor(raw_rate, exponent), detected.sheet.name, number, "unit rate"
+                ),
                 item=as_text(_cell(row, at.get("item", -1))),
                 unit=as_text(_cell(row, at.get("unit", -1))),
             )
