@@ -27,7 +27,7 @@ from setout.schemas.import_sheet import (
 )
 from setout.services import changes
 from setout.services.sheets.gather import ParsedWorkbook, parse_workbook
-from setout.services.sheets.parsed import ProblemKind
+from setout.services.sheets.parsed import ExpenseLine, ProblemKind
 from setout.services.sheets.values import category_code_for
 from setout.services.sheets.workbook import Sheet, detect_currency
 from setout.services.sheets.workbook import read as read_sheets
@@ -39,6 +39,69 @@ class Target:
     name: str
     currency_code: str
     exponent: int
+
+
+@dataclass
+class ClassifiedExpense:
+    line: ExpenseLine
+    spent_on: date
+    duplicate: bool
+
+
+def vendor_names(entries: list[tuple[str, str | None]]) -> dict[str, str]:
+    names = {name.casefold(): name.casefold() for name, _ in entries}
+    contacts: dict[str, set[str]] = {}
+    for name, contact in entries:
+        if contact:
+            contacts.setdefault(contact.casefold(), set()).add(name.casefold())
+    for contact, companies in contacts.items():
+        if len(companies) == 1:
+            names.setdefault(contact, next(iter(companies)))
+    return names
+
+
+async def classify_rows(
+    parsed: ParsedWorkbook, project: Project | None, *, take_unpaid: bool
+) -> list[ClassifiedExpense]:
+    vendors = await Vendor.filter(archived_at__isnull=True)
+    entries = [(v.name, v.contact_name) for v in vendors]
+    known = {v.name.casefold() for v in vendors}
+    entries.extend(
+        (v.name, v.contact_name) for v in parsed.vendors.vendors if v.name.casefold() not in known
+    )
+    aliases = vendor_names(entries)
+    existing = set()
+    if project:
+        expenses = await Expense.filter(
+            project_id=project.id, archived_at__isnull=True
+        ).prefetch_related("vendor", "paid_by")
+        existing.update(
+            (
+                e.spent_on,
+                e.amount,
+                e.description.casefold(),
+                e.vendor.name.casefold() if e.vendor else "",
+                e.paid_by.name.casefold() if e.paid_by else "",
+            )
+            for e in expenses
+        )
+    today = date.today()
+    rows = []
+    for line in parsed.expenses.expenses:
+        if not line.paid and not take_unpaid:
+            continue
+        spent_on = line.spent_on or today
+        vendor = line.vendor.casefold()
+        key = (
+            spent_on,
+            line.amount,
+            line.description.casefold(),
+            aliases.get(vendor, vendor),
+            line.paid_by.casefold(),
+        )
+        rows.append(ClassifiedExpense(line, spent_on, key in existing))
+        existing.add(key)
+    return rows
 
 
 IMPORT_COUNTS = {
@@ -107,8 +170,9 @@ class ImportController:
 
     async def _report(self, parsed: ParsedWorkbook, target: Target) -> ImportReport:
         known_categories = await self._known_categories(target.project)
-        known_vendors = {v.casefold() for v in await self._known_vendor_names()}
-        duplicates = await self._duplicates(parsed, target.project)
+        known_vendors = await Vendor.filter(archived_at__isnull=True)
+        classified = await classify_rows(parsed, target.project, take_unpaid=True)
+        duplicates = [row.line.row for row in classified if row.duplicate]
 
         categories = [
             CategoryMatch(
@@ -121,7 +185,21 @@ class ImportController:
             )
             for category in parsed.budget.categories
         ]
-        new_vendors = [v for v in parsed.vendors.vendors if v.name.casefold() not in known_vendors]
+        existing_names = {v.name.casefold() for v in known_vendors}
+        aliases = vendor_names(
+            [(v.name, v.contact_name) for v in known_vendors]
+            + [
+                (v.name, v.contact_name)
+                for v in parsed.vendors.vendors
+                if v.name.casefold() not in existing_names
+            ]
+        )
+        referenced = {v.name.casefold() for v in parsed.vendors.vendors}
+        referenced.update(
+            aliases.get(e.vendor.casefold(), e.vendor.casefold())
+            for e in parsed.expenses.expenses
+            if e.vendor
+        )
 
         return ImportReport(
             project_id=target.project.id if target.project else None,
@@ -135,8 +213,8 @@ class ImportController:
             budgeted_lines=sum(len(s.lines) for s in parsed.budget.categories),
             expense_rows=len(parsed.expenses.expenses),
             spent_amount=parsed.expenses.amount,
-            vendors_new=len(new_vendors),
-            vendors_known=len(parsed.vendors.vendors) - len(new_vendors),
+            vendors_new=len(referenced - existing_names),
+            vendors_known=len(referenced & existing_names),
             outstanding_rows=len([o for o in parsed.outstanding.outstanding if not o.received]),
             decisions=self._decisions(parsed, categories, duplicates),
             sample=self._sample(parsed, known_categories),
@@ -161,10 +239,10 @@ class ImportController:
         return rows
 
     def _blocking(self, parsed: ParsedWorkbook) -> list[Decision]:
-        return [decision for decision in self._decisions(parsed, [], 0) if decision.blocking]
+        return [decision for decision in self._decisions(parsed, [], []) if decision.blocking]
 
     def _decisions(
-        self, parsed: ParsedWorkbook, categories: list[CategoryMatch], duplicates: int
+        self, parsed: ParsedWorkbook, categories: list[CategoryMatch], duplicates: list[int]
     ) -> list[Decision]:
         out: list[Decision] = []
 
@@ -225,8 +303,8 @@ class ImportController:
             out.append(
                 Decision(
                     kind=DecisionKind.DUPLICATES,
-                    count=duplicates,
-                    detail="already in this project, matched by date, amount and description",
+                    count=len(duplicates),
+                    detail="Possible duplicate expense rows: " + ", ".join(map(str, duplicates)),
                 )
             )
         return out
@@ -241,22 +319,6 @@ class ImportController:
                 out[category.code] = category.name
             out[category.name.casefold()] = category.name
         return out
-
-    async def _known_vendor_names(self) -> list[str]:
-        return [v.name for v in await Vendor.filter(archived_at__isnull=True)]
-
-    async def _duplicates(self, parsed: ParsedWorkbook, project: Project | None) -> int:
-        if project is None or not parsed.expenses.expenses:
-            return 0
-        existing = {
-            (e.spent_on, e.amount, e.description.casefold())
-            for e in await Expense.filter(project_id=project.id, archived_at__isnull=True)
-        }
-        return sum(
-            1
-            for line in parsed.expenses.expenses
-            if (line.spent_on, line.amount, line.description.casefold()) in existing
-        )
 
     async def run_import(
         self,
@@ -292,6 +354,8 @@ class ImportController:
             name=target.name, currency_id=target.currency_code
         )
 
+        await Project.filter(id=project.id).select_for_update().first()
+        classified = await classify_rows(parsed, project, take_unpaid=answers.take_unpaid)
         vendors, vendors_created = await self._vendors(parsed)
         people = await self._people(parsed)
         catalogue = await self._items(parsed)
@@ -299,7 +363,7 @@ class ImportController:
             parsed, project, answers
         )
         expenses, spent, skipped = await self._import_expenses(
-            parsed, project, vendors, people, catalogue, categories, answers
+            classified, project, vendors, people, catalogue, categories, answers
         )
 
         return ImportResult(
@@ -316,11 +380,9 @@ class ImportController:
         )
 
     async def _vendors(self, parsed: ParsedWorkbook) -> tuple[dict[str, str], int]:
-        by_name: dict[str, str] = {}
-        for vendor in await Vendor.filter(archived_at__isnull=True):
-            by_name[vendor.name.casefold()] = vendor.id
-            if vendor.contact_name:
-                by_name.setdefault(vendor.contact_name.casefold(), vendor.id)
+        existing = await Vendor.filter(archived_at__isnull=True)
+        by_name = {v.name.casefold(): v.id for v in existing}
+        entries = [(v.name, v.contact_name) for v in existing]
 
         created_count = 0
         for line in parsed.vendors.vendors:
@@ -336,9 +398,16 @@ class ImportController:
                 notes=line.notes or None,
             )
             by_name[line.name.casefold()] = created.id
-            if line.contact_name:
-                by_name.setdefault(line.contact_name.casefold(), created.id)
-        return by_name, created_count
+            entries.append((line.name, line.contact_name))
+        aliases = vendor_names(entries)
+        resolved = {alias: by_name[name] for alias, name in aliases.items()}
+        for expense in parsed.expenses.expenses:
+            key = expense.vendor.casefold()
+            if key and key not in resolved:
+                vendor = await Vendor.create(name=expense.vendor)
+                resolved[key] = vendor.id
+                created_count += 1
+        return resolved, created_count
 
     async def _people(self, parsed: ParsedWorkbook) -> dict[str, str]:
         payer_names = {
@@ -414,7 +483,7 @@ class ImportController:
 
     async def _import_expenses(
         self,
-        parsed: ParsedWorkbook,
+        rows: list[ClassifiedExpense],
         project: Project,
         vendors: dict[str, str],
         people: dict[str, str],
@@ -422,20 +491,13 @@ class ImportController:
         categories: dict[str, str],
         answers: Answers,
     ) -> tuple[int, int, int]:
-        existing = {
-            (e.spent_on, e.amount, e.description.casefold())
-            for e in await Expense.filter(project_id=project.id, archived_at__isnull=True)
-        }
         imported = 0
         total = 0
         skipped = 0
 
-        for line in parsed.expenses.expenses:
-            if not line.paid and not answers.take_unpaid:
-                continue
-            spent_on = line.spent_on or date.today()
-            key = (spent_on, line.amount, line.description.casefold())
-            if answers.skip_duplicates and key in existing:
+        for row in rows:
+            line = row.line
+            if answers.skip_duplicates and row.duplicate:
                 skipped += 1
                 continue
 
@@ -451,7 +513,7 @@ class ImportController:
                 category_id=category_id,
                 vendor_id=vendors.get(line.vendor.casefold()),
                 paid_by_id=people.get(line.paid_by.casefold()),
-                spent_on=spent_on,
+                spent_on=row.spent_on,
                 description=line.description,
                 amount=line.amount,
                 notes=line.notes or None,
@@ -460,7 +522,6 @@ class ImportController:
                 unit_rate=line.unit_rate,
                 item_id=catalogue.get(line.item.casefold()) if line.item else None,
             )
-            existing.add(key)
             imported += 1
             total += line.amount
         return imported, total, skipped

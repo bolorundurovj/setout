@@ -722,3 +722,26 @@ async def test_workbook_with_old_headers_and_sheet_names_imports(
     ][0]
     assert expense["paid_by_id"] is not None
     assert expense["category_id"] is not None
+
+
+async def test_preview_and_import_agree_on_undated_duplicates_and_distinct_parties(
+    client: AsyncClient,
+) -> None:
+    await set_up_admin(client)
+    data = workbook(
+        Invoices=[
+            [*EXPENSE_HEADERS, "Description"],
+            *[
+                ["", vendor, "", "", 123, "", payer, 1, "", "", "Supplies"]
+                for vendor, payer in [("One", "Jo"), ("Two", "Jo"), ("One", "Lee"), ("One", "Jo")]
+            ],
+        ]
+    )
+    report = await preview_import(client, data)
+    duplicate = next(d for d in report["decisions"] if d["kind"] == "duplicates")
+    assert duplicate["count"] == 1
+    result = await run_import(client, data)
+    assert result["expense_count"] == 3
+    assert result["skipped_duplicates"] == 1
+    report = await preview_import(client, data, project_id=result["project_id"])
+    assert next(d["count"] for d in report["decisions"] if d["kind"] == "duplicates") == 4
