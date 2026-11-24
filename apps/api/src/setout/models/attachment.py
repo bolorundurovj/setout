@@ -60,6 +60,13 @@ class Attachment(Model):
     class Meta:
         table = "attachment"
         ordering = ["-created_at", "id"]
+        indexes = (
+            ("storage_key",),
+            ("project_id",),
+            ("expense_id",),
+            ("agreement_id",),
+            ("delivery_id",),
+        )
 
     def __str__(self) -> str:
         return self.filename

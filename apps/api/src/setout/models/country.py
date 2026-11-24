@@ -32,6 +32,7 @@ class State(Model):
 
     class Meta:
         table = "state"
+        indexes = (("country_id",),)
         ordering = ["name"]
 
     def __str__(self) -> str:

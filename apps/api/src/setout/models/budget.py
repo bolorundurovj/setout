@@ -35,6 +35,7 @@ class BudgetItem(Model):
     class Meta:
         table = "budget_item"
         ordering = ["id"]
+        indexes = (("category_id",),)
 
     def __str__(self) -> str:
         return self.description

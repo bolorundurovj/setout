@@ -65,6 +65,7 @@ class Land(Model):
     class Meta:
         table = "land"
         ordering = ["name", "id"]
+        indexes = (("country_id",),)
 
     def __str__(self) -> str:
         return self.name

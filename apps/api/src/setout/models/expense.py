@@ -92,6 +92,16 @@ class Expense(Model):
     class Meta:
         table = "expense"
         ordering = ["-spent_on", "-created_at"]
+        indexes = (
+            ("project_id",),
+            ("category_id",),
+            ("item_id",),
+            ("vendor_id",),
+            ("paid_by_id",),
+            ("agreement_id",),
+            ("spent_on",),
+            ("archived_at",),
+        )
 
     def __str__(self) -> str:
         return self.description

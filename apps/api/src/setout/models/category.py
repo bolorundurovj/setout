@@ -33,6 +33,10 @@ class Category(Model):
     class Meta:
         table = "category"
         ordering = ["sort_order", "id"]
+        indexes = (
+            ("project_id",),
+            ("parent_id",),
+        )
 
     def __str__(self) -> str:
         return self.name

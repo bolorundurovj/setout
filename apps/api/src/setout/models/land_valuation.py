@@ -52,6 +52,7 @@ class LandValuation(Model):
     class Meta:
         table = "land_valuation"
         ordering = ["-valued_on", "id"]
+        indexes = (("land_id",),)
 
     def __str__(self) -> str:
         return f"{self.currency_id} {self.amount}"

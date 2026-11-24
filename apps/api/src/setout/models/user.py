@@ -38,3 +38,7 @@ class Session(Model):
 
     class Meta:
         table = "session"
+        indexes = (
+            ("user_id",),
+            ("expires_at",),
+        )

@@ -42,6 +42,7 @@ class Project(Model):
 
     class Meta:
         table = "project"
+        indexes = (("land_id",),)
 
     def __str__(self) -> str:
         return self.name

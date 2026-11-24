@@ -38,6 +38,10 @@ class Advance(Model):
     class Meta:
         table = "advance"
         ordering = ["-given_on", "-created_at"]
+        indexes = (
+            ("project_id",),
+            ("person_id",),
+        )
 
     def __str__(self) -> str:
         return f"{self.amount} to {self.person_id}"

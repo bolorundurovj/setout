@@ -56,6 +56,10 @@ class LandDocument(Model):
     class Meta:
         table = "land_document"
         ordering = ["-created_at", "id"]
+        indexes = (
+            ("storage_key",),
+            ("land_id",),
+        )
 
     def __str__(self) -> str:
         return self.filename

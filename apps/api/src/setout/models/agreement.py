@@ -39,6 +39,10 @@ class Agreement(Model):
     class Meta:
         table = "agreement"
         ordering = ["-created_at", "id"]
+        indexes = (
+            ("project_id",),
+            ("vendor_id",),
+        )
 
     def __str__(self) -> str:
         return self.description

@@ -38,6 +38,10 @@ class Delivery(Model):
     class Meta:
         table = "delivery"
         ordering = ["-created_at", "id"]
+        indexes = (
+            ("project_id",),
+            ("received_at",),
+        )
 
     def __str__(self) -> str:
         return self.description

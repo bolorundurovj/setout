@@ -45,4 +45,4 @@ class Change(Model):
     class Meta:
         table = "change"
         ordering = ["-created_at", "id"]
-        indexes = (("entity", "entity_id"),)
+        indexes = (("entity", "entity_id"), ("created_at",))
