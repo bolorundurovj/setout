@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input } f
 import { Router } from '@angular/router';
 import type { Hit, HitGroup } from '@setout/api-client';
 import { formatMoney } from '../budget/money';
+import { formatDay } from '../shared/dates';
 import { ButtonComponent } from '../ui/button.component';
 import { TopbarComponent } from '../ui/topbar.component';
 import { SearchService } from './search.service';
@@ -66,11 +67,7 @@ export class SearchComponent {
     if (!hit.spent_on) {
       return '';
     }
-    return new Date(hit.spent_on).toLocaleDateString(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return formatDay(hit.spent_on);
   }
 
   open(group: HitGroup, hit: Hit): void {

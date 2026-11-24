@@ -17,6 +17,7 @@ import { InfiniteScrollDirective } from '../ui/infinite-scroll.directive';
 import { MoneyHintComponent } from '../ui/money-hint.component';
 import { PaginationComponent } from '../ui/pagination.component';
 import { pageOf } from '../ui/paging';
+import { formatDay } from '../shared/dates';
 import { ToggleComponent } from '../ui/toggle.component';
 import { currencySymbol } from '../ui/currency-pill.component';
 import { PersonService } from '../people/person.service';
@@ -119,11 +120,7 @@ export class AgreementsComponent {
   }
 
   formatDate(value: string): string {
-    return new Date(value).toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return formatDay(value);
   }
 
   startEdit(agreement: AgreementRead): void {

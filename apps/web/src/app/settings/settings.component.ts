@@ -10,6 +10,7 @@ import {
 import { Router } from '@angular/router';
 import type { Backup } from '@setout/api-client';
 import { AuthService } from '../auth/auth.service';
+import { formatStampDay } from '../shared/dates';
 import { ProjectService } from '../projects/project.service';
 import { ThemeService, type ThemeChoice } from '../theme.service';
 import { ToastService } from '../toast.service';
@@ -181,11 +182,7 @@ export class SettingsComponent {
     if (!at) {
       return 'no changes yet';
     }
-    return new Date(at).toLocaleDateString(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return formatStampDay(at);
   }
 
   async saveName(): Promise<void> {
@@ -349,10 +346,6 @@ export class SettingsComponent {
   }
 
   private formatDate(at: string): string {
-    return new Date(at).toLocaleDateString(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return formatStampDay(at);
   }
 }

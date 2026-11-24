@@ -10,6 +10,7 @@ import {
 import type { ExpenseRead, ProjectRead } from '@setout/api-client';
 import { BudgetService } from '../budget/budget.service';
 import { formatAmount, formatMoney, formatNumber } from '../budget/money';
+import { formatDay } from '../shared/dates';
 import { ExpenseService, UNCATEGORISED, type ExpensePage } from '../expenses/expense.service';
 import { currencySymbol } from '../ui/currency-pill.component';
 import { PaginationComponent } from '../ui/pagination.component';
@@ -186,10 +187,6 @@ export class BudgetCompareComponent {
   }
 
   formatDate(expense: ExpenseRead): string {
-    return new Date(expense.spent_on).toLocaleDateString(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return formatDay(expense.spent_on);
   }
 }

@@ -18,6 +18,7 @@ import type {
   VendorRead,
 } from '@setout/api-client';
 import { formatMoney } from '../budget/money';
+import { formatDay } from '../shared/dates';
 import { DeliveryService } from '../deliveries/delivery.service';
 import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
@@ -97,20 +98,11 @@ export class VendorDetailComponent {
   }
 
   deliveryDates(delivery: DeliveryRead): string {
-    const paid = new Date(delivery.spent_on).toLocaleDateString(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    const paid = formatDay(delivery.spent_on);
     if (!delivery.expected) {
       return `Paid ${paid}`;
     }
-    const expected = new Date(`${delivery.expected}T00:00:00`).toLocaleDateString(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-    return `Paid ${paid} · expected ${expected}`;
+    return `Paid ${paid} · expected ${formatDay(delivery.expected)}`;
   }
 
   async markReceived(delivery: DeliveryRead): Promise<void> {

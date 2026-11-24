@@ -12,6 +12,7 @@ import {
 import { Router } from '@angular/router';
 import type { Decision, ImportReport, ImportResult, SampleRow } from '@setout/api-client';
 import { formatMoney } from '../budget/money';
+import { formatDay } from '../shared/dates';
 import { ProjectService } from '../projects/project.service';
 import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
@@ -173,11 +174,7 @@ export class ImportComponent {
     if (!row.spent_on) {
       return 'no date';
     }
-    return new Date(row.spent_on).toLocaleDateString(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return formatDay(row.spent_on);
   }
 
   choicesFor(decision: Decision): Chip[] {

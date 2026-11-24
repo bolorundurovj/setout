@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 import type { ExpenseRead, ProjectRead } from '@setout/api-client';
 import { BudgetService } from '../budget/budget.service';
 import { formatAmount, formatMoney } from '../budget/money';
+import { monthLabel } from '../shared/dates';
 import { ExpenseService, type ExpensePage } from '../expenses/expense.service';
 import { PaginationComponent } from '../ui/pagination.component';
 
@@ -107,11 +108,7 @@ export class MonthsComponent {
   }
 
   label(month: string): string {
-    const [year, monthNumber] = month.split('-');
-    return new Date(Number(year), Number(monthNumber) - 1, 1).toLocaleDateString(undefined, {
-      month: 'short',
-      year: 'numeric',
-    });
+    return monthLabel(month);
   }
 
   countLabel(row: MonthRow): string {

@@ -10,6 +10,7 @@ import { ComboboxComponent } from '../ui/combobox.component';
 import { ToastService } from '../toast.service';
 import { ToggleComponent } from '../ui/toggle.component';
 import { currencySymbol } from '../ui/currency-pill.component';
+import { formatStampDay } from '../shared/dates';
 import { BudgetService } from './budget.service';
 import { formatAmountInput, formatMoney, parseMoney } from './money';
 import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
@@ -169,11 +170,7 @@ export class BudgetComponent {
   }
 
   private formatDate(value: string): string {
-    return new Date(value).toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return formatStampDay(value);
   }
 
   onAmountInput(categoryId: string, event: Event): void {

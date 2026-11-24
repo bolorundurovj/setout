@@ -9,6 +9,7 @@ import type {
 } from '@setout/api-client';
 import { AuthService } from '../auth/auth.service';
 import { formatAmount, formatMoney } from '../budget/money';
+import { formatDay, formatLongToday } from '../shared/dates';
 import { ButtonComponent } from '../ui/button.component';
 import { TopbarComponent } from '../ui/topbar.component';
 import { HomeService } from './home.service';
@@ -37,12 +38,7 @@ export class DashboardComponent {
   readonly home = inject(HomeService);
   private readonly router = inject(Router);
 
-  readonly today = new Date().toLocaleDateString(undefined, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  readonly today = formatLongToday(new Date());
 
   readonly greeting = computed(() => {
     const name = this.auth.user()?.name;
@@ -209,11 +205,7 @@ export class DashboardComponent {
   }
 
   formatDate(row: HomeExpenseSummary): string {
-    return new Date(row.spent_on).toLocaleDateString(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return formatDay(row.spent_on);
   }
 
   expenseLocation(row: HomeExpenseSummary): string {

@@ -4,6 +4,7 @@ import { AttachmentParent } from '../attachments/attachment.service';
 import { AttachmentsComponent } from '../attachments/attachments.component';
 import { ChangeHistoryComponent } from '../changes/change-history.component';
 import { formatMoney } from '../budget/money';
+import { formatDay, formatStampDay } from '../shared/dates';
 import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
 import { PaginationComponent } from '../ui/pagination.component';
@@ -101,30 +102,18 @@ export class DeliveriesComponent {
   }
 
   paidOn(delivery: DeliveryRead): string {
-    return new Date(delivery.spent_on).toLocaleDateString(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return formatDay(delivery.spent_on);
   }
 
   receivedOn(delivery: DeliveryRead): string {
     if (!delivery.received_at) {
       return '';
     }
-    return new Date(delivery.received_at).toLocaleDateString(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return formatStampDay(delivery.received_at);
   }
 
   formatExpected(dateStr: string): string {
-    return new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return formatDay(dateStr);
   }
 
   outstandingDetail(delivery: DeliveryRead): string {
