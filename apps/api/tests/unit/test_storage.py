@@ -269,6 +269,7 @@ class TestS3Storage:
         params = client.calls[0][1]["Params"]
         # The stored name is a hash, so the real name rides on the link.
         assert 'filename="receipt_16aug.jpg"' in params["ResponseContentDisposition"]
+        assert params["ResponseCacheControl"] == "private, no-store"
         assert params["ResponseContentType"] == "image/jpeg"
 
     async def test_a_public_url_is_signed_with_the_browser_facing_host(self) -> None:

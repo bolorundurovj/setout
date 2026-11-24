@@ -138,6 +138,7 @@ class S3Storage(Storage):
                 "Bucket": self.bucket,
                 "Key": self._object_key(key),
                 "ResponseContentType": content_type,
+                "ResponseCacheControl": "private, no-store",
                 "ResponseContentDisposition": upload_disposition(content_type, filename),
             },
             ExpiresIn=self.link_seconds,

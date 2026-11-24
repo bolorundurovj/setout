@@ -75,6 +75,11 @@ async def test_download_returns_identical_bytes(client: AsyncClient) -> None:
     resp = await client.get(f"/api/attachments/{attachment['id']}/file")
 
     assert resp.status_code == 200
+    assert resp.headers["cache-control"] == "private, no-store"
+    assert resp.headers["x-content-type-options"] == "nosniff"
+    assert resp.headers["x-frame-options"] == "DENY"
+    assert "frame-ancestors 'none'" in resp.headers["content-security-policy"]
+    assert resp.headers["referrer-policy"] == "strict-origin-when-cross-origin"
     assert resp.content == JPEG_BYTES
     assert resp.headers["content-type"].startswith("image/jpeg")
     assert "receipt_16aug.jpg" in resp.headers["content-disposition"]

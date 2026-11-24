@@ -47,6 +47,7 @@ from setout.routers import (
 from setout.services import changes
 from setout.services.storage import S3Storage, auto_migrate_legacy_storage, get_storage
 from setout.utils.body_limit import BodyLimit
+from setout.utils.security_headers import SecurityHeaders
 
 logger = logging.getLogger("setout")
 
@@ -151,6 +152,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    app.add_middleware(SecurityHeaders, static_dir=settings.static_dir)
 
     # Health is at the root, outside /api, for orchestrator probes.
     app.include_router(health.router)
