@@ -9,15 +9,7 @@ from setout.config import get_settings
 from setout.models.attachment import Attachment
 from setout.models.land_document import LandDocument
 from setout.services.storage import Storage, checksum_of, key_for
-
-ALLOWED: dict[str, str] = {
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "image/webp": ".webp",
-    "image/heic": ".heic",
-    "image/heif": ".heif",
-    "application/pdf": ".pdf",
-}
+from setout.utils.file_types import ALLOWED, matches_signature
 
 
 async def read_capped(file: UploadFile, cap: int) -> bytes:
@@ -45,6 +37,8 @@ def checked_media_type(content_type: str, data: bytes, *, subject: str) -> str:
             status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail=f"That file is larger than the {max_bytes // 1_000_000} MB limit",
         )
+    if not matches_signature(media_type, data):
+        raise HTTPException(status_code=422, detail="File contents do not match the declared type")
     return media_type
 
 

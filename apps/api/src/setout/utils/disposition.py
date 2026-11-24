@@ -5,6 +5,12 @@ from pathlib import PurePath
 from typing import Literal
 from urllib.parse import quote
 
+from setout.utils.file_types import ALLOWED
+
+
+def upload_disposition(media_type: str, filename: str) -> str:
+    return content_disposition("inline" if media_type in ALLOWED else "attachment", filename)
+
 
 def content_disposition(kind: Literal["inline", "attachment"], filename: str) -> str:
     """A Content-Disposition header value that is safe for any filename.

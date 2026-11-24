@@ -29,9 +29,9 @@ def test_sanitise_filename_truncates_to_255_characters() -> None:
 
 
 def test_checked_media_type_drops_parameters_and_lowercases() -> None:
-    assert checked_media_type("Image/JPEG; charset=binary", b"x", subject="An attachment") == (
-        "image/jpeg"
-    )
+    assert checked_media_type(
+        "Image/JPEG; charset=binary", b"\xff\xd8\xff", subject="An attachment"
+    ) == ("image/jpeg")
 
 
 def test_checked_media_type_rejects_types_other_than_images_and_pdfs() -> None:
@@ -47,3 +47,9 @@ def test_checked_media_type_rejects_an_empty_file() -> None:
         checked_media_type("application/pdf", b"", subject="An attachment")
 
     assert caught.value.status_code == 400
+
+
+def test_mislabeled_html_is_rejected() -> None:
+    with pytest.raises(HTTPException) as error:
+        checked_media_type("image/png", b"<html>Hello</html>", subject="An attachment")
+    assert error.value.status_code == 422

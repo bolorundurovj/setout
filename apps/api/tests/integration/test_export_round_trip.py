@@ -103,7 +103,7 @@ async def _seed(client: AsyncClient) -> str:
 
     attached = await client.post(
         f"/api/projects/{project_id}/expenses/{expense['id']}/attachments",
-        files={"file": ("receipt.jpg", b"\xff\xd8 receipt", "image/jpeg")},
+        files={"file": ("receipt.jpg", b"\xff\xd8\xff receipt", "image/jpeg")},
     )
     assert attached.status_code == 201, attached.text
     return str(project_id)
