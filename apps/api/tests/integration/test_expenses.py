@@ -340,7 +340,7 @@ async def test_archived_expense_is_excluded_from_total_amount(client: AsyncClien
     await client.post(f"/api/expenses/{archived_expense['id']}/archive")
 
     assert (await _listed(client, project_id))["total_amount"] == 10_000
-    assert (await _listed(client, project_id, include_archived=True))["total_amount"] == 15_000
+    assert (await _listed(client, project_id, include_archived=True))["total_amount"] == 10_000
     assert active["amount"] == 10_000
 
 

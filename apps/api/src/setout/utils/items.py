@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+
 from setout.schemas.item import ItemPricePoint, ItemPriceSeries, ItemPriceSummary
 
 
@@ -9,8 +11,12 @@ def price_change_percent(first: int, last: int, count: int) -> float | None:
     return round((last - first) / first * 100, 2)
 
 
+def price_order(day: date, expense_id: str) -> tuple[date, str]:
+    return day, expense_id
+
+
 def sort_by_date(points: list[ItemPricePoint]) -> list[ItemPricePoint]:
-    return sorted(points, key=lambda point: (point.spent_on, point.expense_id))
+    return sorted(points, key=lambda point: price_order(point.spent_on, point.expense_id))
 
 
 def summarise(

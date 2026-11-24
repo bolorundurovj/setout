@@ -21,5 +21,5 @@ def test_paying_in_full_clears_it() -> None:
     assert balance_of(100_000, 100_000) == 0
 
 
-def test_overpaying_owes_nothing_rather_than_a_negative() -> None:
-    assert balance_of(100_000, 150_000) == 0
+def test_overpayment_has_a_negative_balance() -> None:
+    assert balance_of(100_000, 150_000) == -50_000

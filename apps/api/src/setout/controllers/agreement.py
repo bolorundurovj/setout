@@ -173,7 +173,7 @@ class AgreementController:
 
     async def balances(self, project_id: str) -> list[PersonBalance]:
         project = await self._project_or_404(project_id)
-        people = await Person.filter(archived_at__isnull=True)
+        people = await Person.all()
         ids = [person.id for person in people]
         balances = await person_balances(ids, project_id)
 
@@ -203,7 +203,8 @@ class AgreementController:
                 balance_amount=balances.get((person.id, project.currency_id), 0),
             )
             for person in people
-            if advanced.get(person.id) or spent.get(person.id)
+            if (advanced.get(person.id) or spent.get(person.id))
+            and (person.archived_at is None or balances.get((person.id, project.currency_id), 0))
         ]
 
     async def _read_one(self, agreement: Agreement, paid: int) -> AgreementRead:

@@ -14,6 +14,7 @@ from setout.models.project import Project
 from setout.services.sheets import write
 from setout.services.sheets.values import is_category_code
 from setout.utils.balances import paid_by_agreement
+from setout.utils.items import price_order
 
 CsvSheet = Literal["budget", "expenses"]
 
@@ -106,6 +107,7 @@ class ExportController:
         people: dict[str, write.PersonRow] = {}
         prices: dict[str, write.PriceRow] = {}
 
+        latest_ids: dict[str, str] = {}
         for expense in rows:
             vendor = expense.vendor
             if vendor and vendor.id not in vendors:
@@ -128,7 +130,13 @@ class ExportController:
             item = expense.item
             if item and expense.unit_rate is not None:
                 latest = prices.get(item.id)
-                if latest is None or latest.spent_on is None or expense.spent_on >= latest.spent_on:
+                if (
+                    latest is None
+                    or latest.spent_on is None
+                    or price_order(expense.spent_on, expense.id)
+                    > price_order(latest.spent_on, latest_ids[item.id])
+                ):
+                    latest_ids[item.id] = expense.id
                     prices[item.id] = write.PriceRow(
                         name=item.name,
                         unit=item.unit or "",

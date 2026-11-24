@@ -98,7 +98,7 @@ class ExpenseController:
         if spent_to is not None:
             query = query.filter(spent_on__lte=spent_to)
         total = await query.count()
-        total_amount = await self._sum_of(query)
+        total_amount = await self._sum_of(query.filter(archived_at__isnull=True))
         rows = await query.order_by(*SORT_ORDERS[sort]).offset(offset).limit(limit)
         counts = await counts_for("expense_id", [row.id for row in rows])
         return ExpensePage(

@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
+from tortoise.functions import Count
 from tortoise.transactions import in_transaction
 
 from setout.models.expense import Expense
@@ -20,7 +21,7 @@ from setout.schemas.item import (
     ItemUpdate,
 )
 from setout.services import changes
-from setout.utils.items import summarise, summarise_series
+from setout.utils.items import price_order, summarise, summarise_series
 
 NOT_FOUND_ITEM = "Item not found"
 DUPLICATE_NAME = "An item with that name already exists"
@@ -35,9 +36,9 @@ class ItemController:
             query = query.filter(name__icontains=search)
         total = await query.count()
         items = await query.offset(offset).limit(limit)
-        prices = await self._price_summaries([item.id for item in items])
+        reads = await self._reads(items)
         return ItemPage(
-            items=[self._read(item, prices.get(item.id, [])) for item in items],
+            items=reads,
             total=total,
             limit=limit,
             offset=offset,
@@ -50,8 +51,7 @@ class ItemController:
 
     async def get(self, item_id: str) -> ItemRead:
         item = await self._item_or_404(item_id)
-        prices = await self._price_summaries([item.id])
-        return self._read(item, prices.get(item.id, []))
+        return (await self._reads([item]))[0]
 
     async def update(self, item_id: str, req: ItemUpdate) -> ItemRead:
         item = await self._item_or_404(item_id)
@@ -62,8 +62,7 @@ class ItemController:
         if changes:
             item.update_from_dict(changes)
             await item.save()
-        prices = await self._price_summaries([item.id])
-        return self._read(item, prices.get(item.id, []))
+        return (await self._reads([item]))[0]
 
     async def archive(self, item_id: str) -> None:
         item = await self._item_or_404(item_id)
@@ -76,8 +75,7 @@ class ItemController:
             await self._reject_duplicate(item.name)
             item.archived_at = None
             await item.save()
-        prices = await self._price_summaries([item.id])
-        return self._read(item, prices.get(item.id, []))
+        return (await self._reads([item]))[0]
 
     async def delete(self, item_id: str) -> None:
         async with in_transaction():
@@ -120,7 +118,7 @@ class ItemController:
         ]
         if not priced:
             return ItemLastPriceResponse(item_id=item_id, project_id=project_id, last_price=None)
-        latest = max(priced, key=lambda expense: (expense.spent_on, expense.created_at))
+        latest = max(priced, key=lambda expense: price_order(expense.spent_on, expense.id))
         return ItemLastPriceResponse(
             item_id=item_id,
             project_id=project_id,
@@ -177,13 +175,25 @@ class ItemController:
             for item_id, by_currency in grouped.items()
         }
 
-    def _read(self, item: Item, prices: list[ItemPriceSummary]) -> ItemRead:
+    async def _reads(self, items: list[Item]) -> list[ItemRead]:
+        ids = [i.id for i in items]
+        prices = await self._price_summaries(ids)
+        rows = (
+            await Expense.filter(item_id__in=ids, archived_at__isnull=True)
+            .annotate(n=Count("id"))
+            .group_by("item_id")
+            .values("item_id", "n")
+        )
+        counts = {row["item_id"]: row["n"] for row in rows}
+        return [self._read(i, prices.get(i.id, []), counts.get(i.id, 0)) for i in items]
+
+    def _read(self, item: Item, prices: list[ItemPriceSummary], count: int = 0) -> ItemRead:
         return ItemRead(
             id=item.id,
             name=item.name,
             unit=item.unit,
             notes=item.notes,
-            purchase_count=sum(summary.count for summary in prices),
+            purchase_count=count,
             prices=prices,
             created_at=item.created_at,
             updated_at=item.updated_at,

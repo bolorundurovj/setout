@@ -148,7 +148,7 @@ async def test_a_purchase_with_no_unit_rate_carries_no_price(client: AsyncClient
     )
     assert resp.status_code == 201
 
-    assert (await client.get(f"/api/items/{item['id']}")).json()["purchase_count"] == 0
+    assert (await client.get(f"/api/items/{item['id']}")).json()["purchase_count"] == 1
     assert (await client.get(f"/api/items/{item['id']}/prices")).json()["series"] == []
 
 

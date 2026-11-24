@@ -429,6 +429,12 @@ async def test_a_plot_keeps_the_shape_of_its_edge(client: AsyncClient) -> None:
     assert land["boundary"]["type"] == "Polygon"
     assert land["boundary"]["coordinates"][0][0] == [3.3, 6.5]
     assert land["boundary_area_sqm"] == pytest.approx(10_000, rel=0.01)
+    hole = [[3.3 + (x - 3.3) / 2, 6.5 + (y - 6.5) / 2] for x, y in SQUARE]
+    changed = await client.patch(
+        f"/api/lands/{land['id']}",
+        json={"boundary": {"type": "Polygon", "coordinates": [SQUARE, hole]}},
+    )
+    assert changed.json()["boundary_area_sqm"] == pytest.approx(7_500, rel=0.01)
 
 
 async def test_an_edge_that_was_left_open_comes_back_closed(client: AsyncClient) -> None:

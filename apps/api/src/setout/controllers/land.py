@@ -302,4 +302,7 @@ def _as_boundary(text: str | None) -> LandBoundary | None:
 def _area_of(boundary: LandBoundary | None) -> float | None:
     if boundary is None or not boundary.coordinates:
         return None
-    return round(polygon_area_sqm(boundary.coordinates[0]), 2)
+    outer, *holes = boundary.coordinates
+    return round(
+        max(0.0, polygon_area_sqm(outer) - sum(polygon_area_sqm(ring) for ring in holes)), 2
+    )

@@ -21,8 +21,8 @@ async def paid_by_agreement(agreement_ids: list[str]) -> dict[str, int]:
 
 
 def balance_of(agreed_amount: int, paid_amount: int) -> int:
-    """Balance, floored at zero when overpaid."""
-    return max(0, agreed_amount - paid_amount)
+    """Amount still due, negative when payments exceed the agreement."""
+    return agreed_amount - paid_amount
 
 
 async def person_balances(

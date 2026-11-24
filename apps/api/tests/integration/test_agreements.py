@@ -95,7 +95,7 @@ async def test_balance_excludes_an_archived_payment(client: AsyncClient) -> None
     assert read["balance_amount"] == 100_000
 
 
-async def test_overpayment_gives_zero_balance_not_negative(client: AsyncClient) -> None:
+async def test_overpayment_has_a_negative_balance(client: AsyncClient) -> None:
     project_id = await _project(client)
     vendor_id = await _vendor(client)
     agreement = await _agreement(client, project_id, vendor_id, 50_000)
@@ -103,7 +103,7 @@ async def test_overpayment_gives_zero_balance_not_negative(client: AsyncClient) 
 
     read = (await client.get(f"/api/agreements/{agreement['id']}")).json()
     assert read["paid_amount"] == 80_000
-    assert read["balance_amount"] == 0
+    assert read["balance_amount"] == -30_000
 
 
 async def test_agreement_with_unknown_vendor_returns_404(client: AsyncClient) -> None:
@@ -162,6 +162,8 @@ async def test_spending_beyond_the_advance_gives_negative_balance(client: AsyncC
 
     balances = (await client.get(f"/api/projects/{project_id}/balances")).json()
     assert balances[0]["balance_amount"] == -11_000_00
+    assert (await client.post(f"/api/people/{person_id}/archive")).status_code == 204
+    assert (await client.get(f"/api/projects/{project_id}/balances")).json() == balances
 
 
 async def test_person_without_advances_or_expenses_is_omitted(client: AsyncClient) -> None:
