@@ -1,5 +1,53 @@
 # Changelog
 
+## [2.5.1](https://github.com/bolorundurovj/setout/compare/v2.5.0...v2.5.1) (2026-11-24)
+
+
+### Bug Fixes
+
+* **api:** make cascading database changes atomic (SET-35) ([620009a](https://github.com/bolorundurovj/setout/commit/620009aeaad86e9e04e374b2d3bbbbbab3451b8e))
+* **api:** refuse null for required fields in PATCH bodies (SET-16) ([a754548](https://github.com/bolorundurovj/setout/commit/a7545482edbde7dba0d0aef520732be125de6eed))
+* **api:** set browser security and private download headers (SET-44) ([b553761](https://github.com/bolorundurovj/setout/commit/b553761a5c4a9041c6652a3dc20440ce8110f9ea))
+* **auth:** refuse passphrases over 72 bytes instead of failing (SET-14) ([4928f0a](https://github.com/bolorundurovj/setout/commit/4928f0ada077ab9ed8bf3a6d31ed3d7e5b38fee6))
+* **backup:** ask for the passphrase again to export or restore (SET-11) ([1a691d7](https://github.com/bolorundurovj/setout/commit/1a691d77e3ac10438449578fb43b27b52bdb524a))
+* **backup:** make restore work on postgres (SET-7) ([fbcb3af](https://github.com/bolorundurovj/setout/commit/fbcb3af7bc6fdde1101e438c14cf2c2e1187383e))
+* **backup:** restore categories regardless of row order (SET-8) ([d5d8141](https://github.com/bolorundurovj/setout/commit/d5d8141c8e93cc3b56077d4b37b848493c2b007d))
+* **categories:** archive and restore the entire category subtree (SET-37) ([97bff43](https://github.com/bolorundurovj/setout/commit/97bff4378ba17daecf8227e63f2627e8e65701e1))
+* **categories:** block deletion when descendants are active (SET-38) ([24f7150](https://github.com/bolorundurovj/setout/commit/24f7150d3e99f0dbff3152372d18e98a5596f173))
+* **categories:** reject cycles and invalid parent changes (SET-36) ([c7dc416](https://github.com/bolorundurovj/setout/commit/c7dc416567e0c86ca2006370f8c4c76bc9bf90a1))
+* **deliveries:** ask to restore an archived delivery instead of failing (SET-17) ([a5e214f](https://github.com/bolorundurovj/setout/commit/a5e214ff80cce4a433d83687be43f04d1609a2c6))
+* **docker:** keep local data out of images and cache the dependency install (SET-19) ([e4f43ce](https://github.com/bolorundurovj/setout/commit/e4f43ce387fe2fb8305407dac0e6855b84d85a49))
+* **docker:** shut down cleanly, keep the container on port 8474 and add a healthcheck (SET-18) ([b549e93](https://github.com/bolorundurovj/setout/commit/b549e933468ad2afd312e17d75841fb5aa1fbb80))
+* **export:** escape formula prefixes in CSV and XLSX cells (SET-46) ([5bfe454](https://github.com/bolorundurovj/setout/commit/5bfe4540948a8b0a042b777938c7b9731021b912))
+* **export:** reserve category codes before assigning new ones (SET-58) ([f47ab40](https://github.com/bolorundurovj/setout/commit/f47ab40236279ce4c16c634fe129ecf97f398994))
+* **files:** send non-Latin filenames safely in downloads (SET-15) ([ccce20d](https://github.com/bolorundurovj/setout/commit/ccce20d683e133d64f40f5b51c2b04e7d280def1))
+* **files:** validate upload signatures and restrict inline downloads (SET-45) ([0935751](https://github.com/bolorundurovj/setout/commit/09357519ddbee07e834a11cf66eb3b9a24369ce3))
+* **finance:** group outstanding deliveries and balances by currency (SET-41) ([41f467d](https://github.com/bolorundurovj/setout/commit/41f467df8aea85858c91abdc44efca045ca41116))
+* **import:** reject spreadsheets exceeding row or sheet limits (SET-57) ([f5ecace](https://github.com/bolorundurovj/setout/commit/f5ecace9d5a0b8eb8473b2d5eb9fc7f0cf4d44af))
+* **import:** report invalid numbers and dates with their sheet rows (SET-60) ([a54c474](https://github.com/bolorundurovj/setout/commit/a54c474cea0e6765e002e6862d3570604008951b))
+* **import:** skip existing budget lines and preview the net addition (SET-56) ([c90280f](https://github.com/bolorundurovj/setout/commit/c90280f71bd4536ecba564083801c098ad80f611))
+* **import:** use the same duplicate checks for preview and import (SET-55) ([8e5bde5](https://github.com/bolorundurovj/setout/commit/8e5bde5ed769035489f157028830c63f7ed6a2ba))
+* **import:** validate numeric text before converting to minor units (SET-60) ([f98f4f3](https://github.com/bolorundurovj/setout/commit/f98f4f3254bfde9441b843045b6f3f7a7fc28606))
+* **lands:** keep boundary points while drawing and after undo (SET-20) ([73df85e](https://github.com/bolorundurovj/setout/commit/73df85e93b5801e1bb1d57704d5bb19a81c93a06))
+* **lands:** project survey legs in metres and preserve bearing inputs (SET-21) ([a90bf3e](https://github.com/bolorundurovj/setout/commit/a90bf3e200fcc9c62b471eeea82ea348418bae97))
+* **migrations:** fail on plan errors and use applied history for downgrades (SET-53) ([228a991](https://github.com/bolorundurovj/setout/commit/228a991c3874f61c130cf9a0734b7537fe0ae84a))
+* **restore:** add a restore lock, size limit and version confirmation (SET-10) ([e711143](https://github.com/bolorundurovj/setout/commit/e71114301118a396a3eef834889637dc767f03c6))
+* **restore:** recheck active record constraints before restoring (SET-39) ([053078c](https://github.com/bolorundurovj/setout/commit/053078ca5a789df537404c50382314cc823b9024))
+* **restore:** validate a backup before deleting data (SET-9) ([758cc49](https://github.com/bolorundurovj/setout/commit/758cc49b17a5bd069125e6198e026b20b473794c))
+* **scripts:** make server backups consistent, private and replace-only (SET-13) ([18d7ca1](https://github.com/bolorundurovj/setout/commit/18d7ca15530ff7eba5ee3d25d3fd3f04bf4621ee))
+* **web:** accept DELETE in any case and label the confirmation box (SET-24) ([8ebeeb2](https://github.com/bolorundurovj/setout/commit/8ebeeb2cea053264a2a396f6872b9a95136c2409))
+* **web:** guard pending saves and keep pagination in sync (SET-74) ([7ab1a4c](https://github.com/bolorundurovj/setout/commit/7ab1a4cf1d66be94c87577254e13f76d4ee11f2d))
+* **web:** preserve currency precision when displaying amounts (SET-31) ([36b8104](https://github.com/bolorundurovj/setout/commit/36b81041164dacf0bd9ad508ce1fcbfd46a30e15))
+* **web:** refuse ambiguous money input and show the parsed amount (SET-30) ([fc59b7d](https://github.com/bolorundurovj/setout/commit/fc59b7d3d841fc167e857da489354c30e9943faf))
+* **web:** reload project tabs when the route ID changes (SET-34) ([f0f2f3a](https://github.com/bolorundurovj/setout/commit/f0f2f3a13e3fccd5730da77e680469ba660c7589))
+* **web:** scope expense caches to their project and refresh after changes (SET-22) ([be10c9e](https://github.com/bolorundurovj/setout/commit/be10c9ee8aca48ed09eed0e18bd8991a3b2a5c47))
+* **web:** show toasts above open drawers and keep errors until dismissed (SET-25) ([a4c7045](https://github.com/bolorundurovj/setout/commit/a4c70455f388360c3e3b975e86a65d76e41ffdbc))
+
+
+### Build and dependencies
+
+* **deps:** bump dnspython ([#140](https://github.com/bolorundurovj/setout/issues/140)) ([a43fb10](https://github.com/bolorundurovj/setout/commit/a43fb10a87fea8b42ccd4d6ce5bf680241267fe7))
+
 ## [2.5.0](https://github.com/bolorundurovj/setout/compare/v2.4.1...v2.5.0) (2026-11-14)
 
 
