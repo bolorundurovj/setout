@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import re
+import unicodedata
 from datetime import date, datetime, timedelta
 from decimal import Decimal, DecimalException
 
@@ -67,12 +68,11 @@ def as_minor(value: object, exponent: int) -> int | None:
     """Uses Decimal throughout so the amount is rounded once."""
     if value is None or value == "":
         return None
-    if isinstance(value, str):
-        cleaned = re.sub(r"[^\d.\-]", "", value.replace(",", ""))
-        if cleaned in ("", "-", "."):
-            return None
-    else:
-        cleaned = str(value)
+    cleaned = str(value).strip().replace(",", "")
+    if cleaned and unicodedata.category(cleaned[0]) == "Sc":
+        cleaned = cleaned[1:].strip()
+    elif re.match(r"^[A-Z]{3}\s*[-+.0-9]", cleaned):
+        cleaned = cleaned[3:].strip()
     try:
         amount = Decimal(cleaned)
         if not amount.is_finite() or amount < 0:

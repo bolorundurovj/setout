@@ -185,3 +185,12 @@ def test_as_cost_type_reads_display_names_and_the_american_spelling(
     value: object, expected: str | None
 ) -> None:
     assert as_cost_type(value) == expected
+
+
+@pytest.mark.parametrize("cell", [-1, "NaN", float("nan"), float("inf"), "1e309", "3broken4"])
+def test_invalid_amount_is_rejected(cell: object) -> None:
+    assert as_minor(cell, 2) is None
+
+
+def test_serial_outside_date_range_is_rejected() -> None:
+    assert as_date(99999999) is None
