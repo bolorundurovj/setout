@@ -1,14 +1,24 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  input,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import type { Hit, HitGroup } from '@setout/api-client';
 import { formatMoney } from '../budget/money';
 import { formatDay } from '../shared/dates';
 import { ButtonComponent } from '../ui/button.component';
+import { debounce } from '../ui/debounce';
 import { TopbarComponent } from '../ui/topbar.component';
 import { SearchService } from './search.service';
 
 const GROUP_LABELS: Record<string, string> = {
   projects: 'Projects',
+  lands: 'Land',
   expenses: 'Expenses',
   vendors: 'Vendors',
   people: 'People',
@@ -38,14 +48,33 @@ export class SearchComponent {
     return `${results.total} ${matches} for "${results.query}"`;
   });
 
-  readonly empty = computed(
-    () => !this.search.loading() && this.q().trim().length > 0 && !this.search.results()?.total,
-  );
+  readonly empty = computed(() => {
+    const results = this.search.results();
+    return (
+      !this.search.loading() &&
+      !this.search.error() &&
+      this.q().trim().length > 0 &&
+      results !== null &&
+      results.total === 0
+    );
+  });
+
+  private initialized = false;
+  private readonly debouncedSearch = debounce<string>((term) => {
+    void this.search.search(term);
+  });
 
   constructor() {
     effect(() => {
-      void this.search.search(this.q());
+      const term = this.q();
+      if (!this.initialized) {
+        this.initialized = true;
+        void this.search.search(term);
+        return;
+      }
+      this.debouncedSearch.call(term);
     });
+    inject(DestroyRef).onDestroy(() => this.debouncedSearch.cancel());
   }
 
   heading(group: HitGroup): string {
@@ -75,8 +104,13 @@ export class SearchComponent {
       case 'projects':
         void this.router.navigate(['/projects', hit.id]);
         break;
+      case 'lands':
+        void this.router.navigate(['/lands', hit.id]);
+        break;
       case 'expenses':
-        void this.router.navigate(['/projects', hit.project_id, 'expense']);
+        void this.router.navigate(['/projects', hit.project_id, 'expense'], {
+          queryParams: { expense: hit.id },
+        });
         break;
       case 'vendors':
         void this.router.navigate(['/vendors', hit.id]);

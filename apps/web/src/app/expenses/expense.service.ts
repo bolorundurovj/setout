@@ -14,6 +14,7 @@ import {
   categoriseExpenses,
   createExpense,
   deleteExpense,
+  getExpense,
   getProjectExpenseSummary,
   getProjectMonths,
   listExpenses,
@@ -166,6 +167,14 @@ export class ExpenseService {
       }));
     } catch {
       this.byMonthState.update((all) => ({ ...all, [key]: { rows: [], total: 0, page: 1 } }));
+    }
+  }
+
+  async get(expenseId: string): Promise<ExpenseRead | null> {
+    try {
+      return await this.api.invoke(getExpense, { expense_id: expenseId });
+    } catch {
+      return null;
     }
   }
 

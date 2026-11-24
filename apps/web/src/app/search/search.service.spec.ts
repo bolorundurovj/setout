@@ -5,13 +5,13 @@ import { SearchService } from './search.service';
 describe('SearchService', () => {
   let calls: Record<string, unknown>[];
 
-  function configure(respond: () => unknown) {
+  function configure(respond: (params: Record<string, unknown>) => unknown) {
     calls = [];
     TestBed.resetTestingModule();
     const api = {
       invoke: async (fn: { name?: string }, params: Record<string, unknown>) => {
         calls.push({ call: fn?.name ?? '', ...params });
-        const response = respond();
+        const response = respond(params ?? {});
         if (response instanceof Error) {
           throw response;
         }
@@ -48,5 +48,26 @@ describe('SearchService', () => {
 
     expect(service.results()).toBeNull();
     expect(service.error()).toBe('Could not search.');
+  });
+
+  it('drops superseded responses when a newer search completes first', async () => {
+    let releaseSlow!: () => void;
+    const service = configure((params) => {
+      if (params['q'] === 'slow') {
+        return new Promise((resolve) => {
+          releaseSlow = () => resolve({ query: 'slow', total: 1, groups: [] });
+        });
+      }
+      return { query: 'fast', total: 2, groups: [] };
+    });
+
+    const slow = service.search('slow');
+    await service.search('fast');
+    releaseSlow();
+    await slow;
+
+    expect(service.results()?.query).toBe('fast');
+    expect(service.results()?.total).toBe(2);
+    expect(service.loading()).toBe(false);
   });
 });

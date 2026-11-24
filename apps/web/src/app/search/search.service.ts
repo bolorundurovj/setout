@@ -12,21 +12,35 @@ export class SearchService {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
+  private requestSeq = 0;
+
   async search(query: string): Promise<void> {
     const term = query.trim();
+    const requestId = ++this.requestSeq;
     if (!term) {
       this.results.set(null);
+      this.error.set(null);
+      this.loading.set(false);
       return;
     }
     this.loading.set(true);
     this.error.set(null);
     try {
-      this.results.set(await this.api.invoke(search, { q: term }));
+      const response = await this.api.invoke(search, { q: term });
+      if (requestId !== this.requestSeq) {
+        return;
+      }
+      this.results.set(response);
     } catch (e: unknown) {
+      if (requestId !== this.requestSeq) {
+        return;
+      }
       this.results.set(null);
       this.error.set(detailOf(e) ?? 'Could not search.');
     } finally {
-      this.loading.set(false);
+      if (requestId === this.requestSeq) {
+        this.loading.set(false);
+      }
     }
   }
 }

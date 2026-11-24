@@ -55,6 +55,7 @@ const SORTS: Chip[] = [
 export class ExpensesComponent {
   readonly project = input.required<ProjectRead>();
   readonly filters = input<ExpenseFilters>({});
+  readonly openExpenseId = input('');
 
   readonly expenses = inject(ExpenseService);
   readonly vendors = inject(VendorService);
@@ -145,6 +146,7 @@ export class ExpensesComponent {
     return `${total} ${noun} matching · ${this.money(this.expenses.totalAmount())}`;
   });
 
+  private openedExpenseId = '';
   private readonly debouncedSearch = debounce<string>((text) => {
     this.search.set(text);
     this.apply();
@@ -164,6 +166,18 @@ export class ExpensesComponent {
         ...filters,
         includeArchived: untracked(this.includeArchived),
       });
+    });
+    effect(() => {
+      const expenseId = this.openExpenseId();
+      if (!expenseId) {
+        this.openedExpenseId = '';
+        return;
+      }
+      if (expenseId === this.openedExpenseId) {
+        return;
+      }
+      this.openedExpenseId = expenseId;
+      untracked(() => void this.openExpenseById(expenseId));
     });
     queueMicrotask(() => {
       void this.budget.load(this.project().id);
@@ -284,6 +298,22 @@ export class ExpensesComponent {
   closeDrawer(): void {
     this.drawerOpen.set(false);
     this.editingExpense.set(null);
+    if (this.openExpenseId()) {
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { expense: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
+  }
+
+  private async openExpenseById(expenseId: string): Promise<void> {
+    const cached = this.expenses.expenses().find((row) => row.id === expenseId);
+    const expense = cached ?? (await this.expenses.get?.(expenseId)) ?? null;
+    if (expense && this.openExpenseId() === expenseId) {
+      this.edit(expense);
+    }
   }
 
   async onSaved(): Promise<void> {

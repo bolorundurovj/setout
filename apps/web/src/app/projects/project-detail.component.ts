@@ -59,6 +59,7 @@ export class ProjectDetailComponent {
   readonly id = input.required<string>();
   readonly tab = input('');
   readonly category = input('');
+  readonly expense = input('');
   readonly q = input('');
   readonly vendor = input('');
   readonly person = input('');

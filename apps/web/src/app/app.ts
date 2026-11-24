@@ -1,10 +1,11 @@
-import { Component, HostListener, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from './auth/auth.service';
 import { CountsService } from './counts.service';
 import { ToastService } from './toast.service';
+import { debounce } from './ui/debounce';
 import { IconComponent, type IconName } from './ui/icon.component';
 import { LogoComponent } from './ui/logo.component';
 import { ToastComponent } from './ui/toast.component';
@@ -41,6 +42,15 @@ export class App {
   readonly query = signal('');
   private readonly router = inject(Router);
   readonly host = location.host;
+  private readonly debouncedSearch = debounce<string>((term) => {
+    const cleaned = term.trim();
+    if (!cleaned && !this.router.url.startsWith('/search')) {
+      return;
+    }
+    void this.router.navigate(cleaned ? ['/search'] : ['/'], {
+      queryParams: cleaned ? { q: cleaned } : {},
+    });
+  });
 
   readonly appNav: NavItem[] = [
     { key: 'home', name: 'Home', icon: 'home', path: '/', badge: () => '', exact: true },
@@ -100,6 +110,8 @@ export class App {
         takeUntilDestroyed(),
       )
       .subscribe(() => this.closeNav());
+
+    inject(DestroyRef).onDestroy(() => this.debouncedSearch.cancel());
   }
 
   @HostListener('document:keydown.escape')
@@ -112,10 +124,13 @@ export class App {
   }
 
   onQuery(event: Event): void {
-    this.query.set((event.target as HTMLInputElement).value);
+    const value = (event.target as HTMLInputElement).value;
+    this.query.set(value);
+    this.debouncedSearch.call(value);
   }
 
   onSearch(): void {
+    this.debouncedSearch.cancel();
     const term = this.query().trim();
     void this.router.navigate(term ? ['/search'] : ['/'], {
       queryParams: term ? { q: term } : {},

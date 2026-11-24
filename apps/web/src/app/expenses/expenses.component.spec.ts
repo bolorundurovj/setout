@@ -121,6 +121,7 @@ describe('ExpensesComponent', () => {
         loaded.push(projectId);
         includeArchivedRequests.push(filters.includeArchived ?? false);
       },
+      get: async (expenseId: string) => expense(expenseId),
       goTo: async (projectId: string) => void loaded.push(projectId),
       loadForCategory: async (projectId: string, categoryId: string, page = 1) => {
         loaded.push(projectId);
@@ -284,5 +285,15 @@ describe('ExpensesComponent', () => {
     categories = [category('s1', 'Structure', true), category('s2', 'Blockwork')];
 
     expect(component.assignableCategories().map((s) => s.id)).toEqual(['s2']);
+  });
+
+  it('opens the edit drawer when openExpenseId is set', async () => {
+    const fixture = renderFixture();
+    fixture.componentRef.setInput('openExpenseId', 'e99');
+    fixture.detectChanges();
+    await Promise.resolve();
+
+    expect(fixture.componentInstance.drawerOpen()).toBe(true);
+    expect(fixture.componentInstance.editingExpense()?.id).toBe('e99');
   });
 });

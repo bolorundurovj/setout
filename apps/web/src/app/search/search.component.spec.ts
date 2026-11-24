@@ -12,11 +12,17 @@ describe('SearchComponent', () => {
   let queries: string[];
   let navigations: unknown[][];
   let response: SearchResults | null;
+  let searchError: string | null;
 
-  function render(query = 'cement', results: SearchResults | null = null) {
+  function renderFixture(
+    query = 'cement',
+    results: SearchResults | null = null,
+    error: string | null = null,
+  ) {
     queries = [];
     navigations = [];
     response = results;
+    searchError = error;
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -28,7 +34,7 @@ describe('SearchComponent', () => {
           useValue: {
             results: () => response,
             loading: () => false,
-            error: () => null,
+            error: () => searchError,
             search: async (term: string) => {
               queries.push(term);
             },
@@ -44,7 +50,15 @@ describe('SearchComponent', () => {
     const fixture = TestBed.createComponent(SearchComponent);
     fixture.componentRef.setInput('q', query);
     fixture.detectChanges();
-    return fixture.componentInstance;
+    return fixture;
+  }
+
+  function render(
+    query = 'cement',
+    results: SearchResults | null = null,
+    error: string | null = null,
+  ) {
+    return renderFixture(query, results, error).componentInstance;
   }
 
   it('searches for the q parameter', () => {
@@ -70,9 +84,31 @@ describe('SearchComponent', () => {
     );
   });
 
-  it('reports no results', () => {
+  it('reports no results only on a successful empty response, never alongside an error', () => {
     const component = render('helicopter', { query: 'helicopter', total: 0, groups: [] });
     expect(component.empty()).toBe(true);
+
+    const errored = render('helicopter', null, 'Could not search.');
+    expect(errored.empty()).toBe(false);
+  });
+
+  it('debounces subsequent query updates', () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = renderFixture('c');
+      expect(queries).toEqual(['c']);
+
+      fixture.componentRef.setInput('q', 'ce');
+      fixture.detectChanges();
+      fixture.componentRef.setInput('q', 'cem');
+      fixture.detectChanges();
+      expect(queries).toEqual(['c']);
+
+      vi.advanceTimersByTime(300);
+      expect(queries).toEqual(['c', 'cem']);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('formats an amount only for hits that have one', () => {
@@ -90,22 +126,26 @@ describe('SearchComponent', () => {
     expect(component.money({ id: 'v1', title: 'A vendor', detail: '' })).toBe('');
   });
 
-  it("navigates to each result kind's page", () => {
+  it("navigates to each result kind's page, including lands and specific expenses", () => {
     const component = render();
     const hit = { id: 'x1', title: 'A', detail: '', project_id: 'p1' };
 
+    expect(component.heading(group('lands', [hit]))).toBe('Land · 1');
+
     component.open(group('projects', [hit]), hit);
+    component.open(group('lands', [hit]), hit);
     component.open(group('expenses', [hit]), hit);
     component.open(group('vendors', [hit]), hit);
     component.open(group('people', [hit]), hit);
     component.open(group('items', [hit]), hit);
 
-    expect(navigations.map((call) => call[0])).toEqual([
-      ['/projects', 'x1'],
-      ['/projects', 'p1', 'expense'],
-      ['/vendors', 'x1'],
-      ['/people', 'x1'],
-      ['/items', 'x1'],
+    expect(navigations).toEqual([
+      [['/projects', 'x1']],
+      [['/lands', 'x1']],
+      [['/projects', 'p1', 'expense'], { queryParams: { expense: 'x1' } }],
+      [['/vendors', 'x1']],
+      [['/people', 'x1']],
+      [['/items', 'x1']],
     ]);
   });
 });
