@@ -71,7 +71,7 @@ async def classify_rows(
         (v.name, v.contact_name) for v in parsed.vendors.vendors if v.name.casefold() not in known
     )
     aliases = vendor_names(entries)
-    existing = set()
+    existing: set[tuple[date, int, str, str, str]] = set()
     if project:
         expenses = await Expense.filter(
             project_id=project.id, archived_at__isnull=True
@@ -180,7 +180,7 @@ class ImportController:
         items = await BudgetItem.filter(
             category_id__in=list(by_key.values()), archived_at__isnull=True
         )
-        remaining = Counter(
+        remaining: Counter[tuple[str, str, int, str | None]] = Counter(
             (i.category_id, i.description.casefold(), i.budgeted_amount, i.cost_type) for i in items
         )
         for heading in parsed.budget.categories:
