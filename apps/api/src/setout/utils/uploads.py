@@ -4,7 +4,6 @@ from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import HTTPException, UploadFile, status
-
 from tortoise.transactions import in_transaction
 
 from setout.config import get_settings
