@@ -100,25 +100,9 @@ async def test_identical_uploads_share_one_stored_file(client: AsyncClient) -> N
     assert both.content == JPEG_BYTES
 
 
-async def test_concurrent_uploads_are_downloadable_from_each_expense(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_concurrent_uploads_are_downloadable_from_each_expense(client: AsyncClient) -> None:
     project_id = await _project(client)
     expenses = [await _expense(client, project_id, description=f"Expense {i}") for i in range(8)]
-    ready = asyncio.Event()
-    arrivals = 0
-    original = LocalStorage.exists
-
-    async def simultaneous_exists(storage: LocalStorage, key: str) -> bool:
-        nonlocal arrivals
-        exists = await original(storage, key)
-        arrivals += 1
-        if arrivals == len(expenses):
-            ready.set()
-        await asyncio.wait_for(ready.wait(), timeout=5)
-        return exists
-
-    monkeypatch.setattr(LocalStorage, "exists", simultaneous_exists)
     uploads = await asyncio.gather(
         *(_attach(client, project_id, expense["id"]) for expense in expenses)
     )
@@ -434,3 +418,32 @@ async def test_a_file_with_a_non_latin_name_downloads(client: AsyncClient) -> No
         "filename*=UTF-8''r%C3%A9sum%C3%A9-%E5%9C%9F%E5%9C%B0.jpg"
         in resp.headers["content-disposition"]
     )
+
+
+async def test_concurrent_upload_survives_last_reference_delete(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = await _project(client)
+    expense = await _expense(client, project)
+    _, old = await _attach(client, project, expense["id"])
+    url = f"/api/attachments/{old['id']}"
+    assert (await client.post(url + "/archive")).status_code == 204
+    deleting = asyncio.Event()
+    resume = asyncio.Event()
+    original = LocalStorage.delete
+
+    async def delayed_delete(storage: LocalStorage, key: str) -> None:
+        deleting.set()
+        await asyncio.wait_for(resume.wait(), timeout=5)
+        await original(storage, key)
+
+    monkeypatch.setattr(LocalStorage, "delete", delayed_delete)
+    removal = asyncio.create_task(client.delete(url))
+    await asyncio.wait_for(deleting.wait(), timeout=5)
+    upload = asyncio.create_task(_attach(client, project, expense["id"]))
+    await asyncio.sleep(0)
+    resume.set()
+    assert (await removal).status_code == 204
+    code, new = await upload
+    assert code == 201
+    assert (await client.get(f"/api/attachments/{new['id']}/file")).content == JPEG_BYTES

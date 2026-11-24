@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
-from contextlib import suppress
+from collections.abc import AsyncIterator, Iterable
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import HTTPException, UploadFile, status
+
+from tortoise.transactions import in_transaction
 
 from setout.config import get_settings
 from setout.models.attachment import Attachment
@@ -48,27 +50,47 @@ def sanitise_filename(filename: str) -> str:
     return "".join(c for c in last if c.isalnum() or c in " ._-()")[:255].strip()
 
 
+@asynccontextmanager
+async def blob_transaction(key: str) -> AsyncIterator[None]:
+    async with in_transaction() as db:
+        if db.capabilities.dialect == "postgres":
+            await db.execute_query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [key])
+        else:
+            # Obtain SQLite's database write lock before reading either reference table.
+            await db.execute_query('UPDATE "attachment" SET storage_key = storage_key WHERE 0')
+        yield
+
+
+@asynccontextmanager
 async def store(
     data: bytes, filename: str, media_type: str, storage: Storage, *, default_stem: str
-) -> tuple[str, str, str]:
-    """Returns the stored filename, the checksum and the storage key."""
+) -> AsyncIterator[tuple[str, str, str]]:
     extension = ALLOWED[media_type]
     name = sanitise_filename(filename) or f"{default_stem}{extension}"
     checksum = checksum_of(data)
     key = key_for(checksum, name if "." in name else f"{name}{extension}")
-    if not await storage.exists(key):
-        await storage.put(key, data, content_type=media_type)
-    return name, checksum, key
+    writing = False
+    try:
+        async with blob_transaction(key):
+            # Insert the reference first. A failed insert never creates a blob.
+            yield name, checksum, key
+            if not await storage.exists(key):
+                writing = True
+                await storage.put(key, data, content_type=media_type)
+    except BaseException:
+        if writing:
+            await delete_unreferenced([key], storage)
+        raise
 
 
 async def delete_unreferenced(keys: Iterable[str], storage: Storage | None) -> None:
-    """Deletes each stored file that no attachment or land document references."""
     if storage is None:
         return
     for key in set(keys):
-        if await Attachment.filter(storage_key=key).exists():
-            continue
-        if await LandDocument.filter(storage_key=key).exists():
-            continue
-        with suppress(Exception):
-            await storage.delete(key)
+        async with blob_transaction(key):
+            if await Attachment.filter(storage_key=key).exists():
+                continue
+            if await LandDocument.filter(storage_key=key).exists():
+                continue
+            with suppress(Exception):
+                await storage.delete(key)

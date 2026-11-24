@@ -58,19 +58,21 @@ class LandDocumentController:
         await self._land_or_404(land_id)
 
         media_type = checked_media_type(content_type, data, subject="A land document")
-        name, checksum, key = await store(
-            data, filename, media_type, storage, default_stem="document"
-        )
-        row = await LandDocument.create(
-            land_id=land_id,
-            kind=kind,
-            notes=notes,
-            filename=name,
-            content_type=media_type,
-            byte_size=len(data),
-            checksum=checksum,
-            storage_key=key,
-        )
+        async with store(data, filename, media_type, storage, default_stem="document") as (
+            name,
+            checksum,
+            key,
+        ):
+            row = await LandDocument.create(
+                land_id=land_id,
+                kind=kind,
+                notes=notes,
+                filename=name,
+                content_type=media_type,
+                byte_size=len(data),
+                checksum=checksum,
+                storage_key=key,
+            )
         return LandDocumentRead.model_validate(row, from_attributes=True)
 
     async def get(self, document_id: str) -> LandDocumentRead:

@@ -86,18 +86,23 @@ class AttachmentController:
             )
 
         media_type = checked_media_type(content_type, data, subject="An attachment")
-        name, checksum, key = await store(
-            data, filename, media_type, storage, default_stem="attachment"
-        )
-        parent_fields = {**self._parent_filter(attached_to, parent_id), "project_id": project_id}
-        row = await Attachment.create(
-            **parent_fields,
-            filename=name,
-            content_type=media_type,
-            byte_size=len(data),
-            checksum=checksum,
-            storage_key=key,
-        )
+        async with store(data, filename, media_type, storage, default_stem="attachment") as (
+            name,
+            checksum,
+            key,
+        ):
+            parent_fields = {
+                **self._parent_filter(attached_to, parent_id),
+                "project_id": project_id,
+            }
+            row = await Attachment.create(
+                **parent_fields,
+                filename=name,
+                content_type=media_type,
+                byte_size=len(data),
+                checksum=checksum,
+                storage_key=key,
+            )
         return AttachmentRead.model_validate(row, from_attributes=True)
 
     async def get(self, attachment_id: str) -> AttachmentRead:
