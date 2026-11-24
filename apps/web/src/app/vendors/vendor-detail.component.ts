@@ -45,6 +45,16 @@ export class VendorDetailComponent {
   readonly vendor = signal<VendorRead | null>(null);
   readonly expenseSummary = signal<VendorExpenseSummary | null>(null);
   readonly agreements = signal<VendorAgreement[]>([]);
+  readonly outstandingTotals = computed(() =>
+    (this.deliveries.forVendor(this.id()).currencyTotals ?? [])
+      .filter((total) => total.amount !== 0)
+      .map(
+        (total) =>
+          total.currency_code +
+          ' ' +
+          formatMoney(total.amount, total.currency_code, total.currency_exponent),
+      ),
+  );
   readonly outstandingDeliveries = computed(() => this.deliveries.forVendor(this.id()).rows);
   readonly loading = signal(true);
   readonly pendingDelete = signal(false);

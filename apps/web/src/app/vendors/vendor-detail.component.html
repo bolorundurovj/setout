@@ -71,6 +71,9 @@
     @if (outstandingDeliveries().length > 0) {
       <section class="block">
         <h2 class="t-heading">Outstanding Deliveries</h2>
+        @for (total of outstandingTotals(); track total) {
+          <span class="t-mono">{{ total }}</span>
+        }
         @for (delivery of outstandingDeliveries(); track delivery.id) {
           <div class="outstanding">
             <span class="outstanding-text">

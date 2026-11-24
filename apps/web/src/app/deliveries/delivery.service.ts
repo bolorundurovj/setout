@@ -3,6 +3,7 @@ import { detailOf } from '../api-error';
 import {
   Api,
   DeliveryCreate,
+  DeliveryCurrencyTotal,
   DeliveryRead,
   DeliveryUpdate,
   archiveDelivery,
@@ -20,10 +21,17 @@ import { PAGE_SIZE, offsetOf } from '../ui/paging';
 export interface DeliveryList {
   readonly rows: DeliveryRead[];
   readonly total: number;
+  readonly currencyTotals?: DeliveryCurrencyTotal[];
   readonly outstandingAmount: number;
 }
 
 const EMPTY: DeliveryList = { rows: [], total: 0, outstandingAmount: 0 };
+
+function adjustTotals(list: DeliveryList, row: DeliveryRead, delta: number) {
+  return list.currencyTotals?.map((total) =>
+    total.currency_code === row.currency_code ? { ...total, amount: total.amount + delta } : total,
+  );
+}
 
 @Injectable({
   providedIn: 'root',
@@ -126,6 +134,11 @@ export class DeliveryService {
             {
               rows: list.rows.filter((row) => row.id !== deliveryId),
               total: Math.max(0, list.total - 1),
+              currencyTotals: adjustTotals(
+                list,
+                archived,
+                archived.received_at || archived.archived_at ? 0 : -archived.amount,
+              ),
               outstandingAmount: archived.received_at
                 ? list.outstandingAmount
                 : Math.max(0, list.outstandingAmount - archived.amount),
@@ -159,6 +172,11 @@ export class DeliveryService {
             {
               rows: list.rows.filter((row) => row.id !== deliveryId),
               total: Math.max(0, list.total - 1),
+              currencyTotals: adjustTotals(
+                list,
+                matched,
+                matched.received_at || matched.archived_at ? 0 : -matched.amount,
+              ),
               outstandingAmount: matched.received_at
                 ? list.outstandingAmount
                 : Math.max(0, list.outstandingAmount - matched.amount),
@@ -191,7 +209,8 @@ export class DeliveryService {
       this.put(key, {
         rows: response.items,
         total: response.total,
-        outstandingAmount: response.outstanding_amount,
+        outstandingAmount: response.outstanding_amount ?? 0,
+        currencyTotals: response.outstanding_by_currency,
       });
     } catch {
       this.error.set('Could not load the deliveries.');
@@ -218,6 +237,7 @@ export class DeliveryService {
             {
               rows: list.rows.map((row) => (row.id === changed.id ? changed : row)),
               total: list.total,
+              currencyTotals: adjustTotals(list, changed, outstandingAfter - outstandingBefore),
               outstandingAmount: Math.max(
                 0,
                 list.outstandingAmount - outstandingBefore + outstandingAfter,

@@ -54,10 +54,17 @@ class DeliveryRead(BaseModel):
     archived_at: datetime | None
 
 
+class DeliveryCurrencyTotal(BaseModel):
+    currency_code: str
+    currency_exponent: int
+    amount: int
+
+
 class DeliveryPage(BaseModel):
     items: list[DeliveryRead]
     total: int
-    outstanding_amount: int = Field(
+    outstanding_by_currency: list[DeliveryCurrencyTotal]
+    outstanding_amount: int | None = Field(
         ..., description="Total outstanding amount of all matching rows, in the project currency"
     )
     limit: int

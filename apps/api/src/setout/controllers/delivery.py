@@ -11,6 +11,7 @@ from setout.models.expense import Expense
 from setout.models.project import Project
 from setout.schemas.delivery import (
     DeliveryCreate,
+    DeliveryCurrencyTotal,
     DeliveryPage,
     DeliveryRead,
     DeliverySort,
@@ -56,7 +57,11 @@ class DeliveryController:
             outstanding_rows = outstanding_rows.filter(
                 archived_at__isnull=True, expense__archived_at__isnull=True
             )
-        outstanding = await outstanding_rows.prefetch_related("expense")
+        outstanding = await outstanding_rows.prefetch_related("expense", "project__currency")
+        amounts: dict[tuple[str, int], int] = {}
+        for row in outstanding:
+            key = (row.project.currency_id, row.project.currency.exponent)
+            amounts[key] = amounts.get(key, 0) + row.expense.amount
         order = (
             ("expected", "-created_at", "id")
             if sort == DeliverySort.EXPECTED
@@ -72,7 +77,11 @@ class DeliveryController:
         return DeliveryPage(
             items=[self._read(row, counts.get(row.id, 0)) for row in rows],
             total=total,
-            outstanding_amount=sum(row.expense.amount for row in outstanding),
+            outstanding_amount=next(iter(amounts.values()), 0) if len(amounts) <= 1 else None,
+            outstanding_by_currency=[
+                DeliveryCurrencyTotal(currency_code=code, currency_exponent=exponent, amount=amount)
+                for (code, exponent), amount in sorted(amounts.items())
+            ],
             limit=limit,
             offset=offset,
         )

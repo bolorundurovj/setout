@@ -322,3 +322,20 @@ async def test_an_expense_with_an_archived_delivery_asks_for_a_restore(
     assert "Restore it" in resp.json()["detail"]
     restored = await client.post(f"/api/deliveries/{delivery['id']}/restore")
     assert restored.status_code == 200, restored.text
+
+
+async def test_global_outstanding_totals_are_grouped_before_pagination(client: AsyncClient) -> None:
+    first = await _project(client)
+    await Currency.create(code="JPY", name="Yen", exponent=0)
+    second = (
+        await client.post("/api/projects", json={"name": "Tokyo", "currency_code": "JPY"})
+    ).json()["id"]
+    for project, amount in [(first, 51), (second, 700)]:
+        expense = await _expense(client, project, amount=amount)
+        await _delivery(client, project, expense_id=expense["id"])
+    page = (await client.get("/api/deliveries?limit=1")).json()
+    assert page["outstanding_amount"] is None
+    assert page["outstanding_by_currency"] == [
+        {"currency_code": "JPY", "currency_exponent": 0, "amount": 700},
+        {"currency_code": "NGN", "currency_exponent": 2, "amount": 51},
+    ]

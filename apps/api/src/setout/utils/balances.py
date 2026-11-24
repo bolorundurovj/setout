@@ -25,8 +25,10 @@ def balance_of(agreed_amount: int, paid_amount: int) -> int:
     return max(0, agreed_amount - paid_amount)
 
 
-async def person_balances(person_ids: list[str], project_id: str | None = None) -> dict[str, int]:
-    """Advanced amount less spent amount, per person.
+async def person_balances(
+    person_ids: list[str], project_id: str | None = None
+) -> dict[tuple[str, str], int]:
+    """Advanced amount less spent amount, per person and currency.
 
     Positive when the person holds unspent money, negative when you owe the person.
     """
@@ -38,9 +40,13 @@ async def person_balances(person_ids: list[str], project_id: str | None = None) 
         advance_filter["project_id"] = project_id
         spend_filter["project_id"] = project_id
 
-    balances: dict[str, int] = defaultdict(int)
-    for row in await Advance.filter(**advance_filter).values("amount", "person_id"):
-        balances[str(row["person_id"])] += int(row["amount"])
-    for row in await Expense.filter(**spend_filter).values("amount", "paid_by_id"):
-        balances[str(row["paid_by_id"])] -= int(row["amount"])
+    balances: dict[tuple[str, str], int] = defaultdict(int)
+    for row in await Advance.filter(**advance_filter).values(
+        "amount", "person_id", "project__currency_id"
+    ):
+        balances[(str(row["person_id"]), str(row["project__currency_id"]))] += int(row["amount"])
+    for row in await Expense.filter(**spend_filter).values(
+        "amount", "paid_by_id", "project__currency_id"
+    ):
+        balances[(str(row["paid_by_id"]), str(row["project__currency_id"]))] -= int(row["amount"])
     return balances

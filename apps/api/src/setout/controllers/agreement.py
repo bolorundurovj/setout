@@ -200,7 +200,7 @@ class AgreementController:
                 currency_exponent=project.currency.exponent,
                 advanced_amount=advanced.get(person.id, 0),
                 spent_amount=spent.get(person.id, 0),
-                balance_amount=balances.get(person.id, 0),
+                balance_amount=balances.get((person.id, project.currency_id), 0),
             )
             for person in people
             if advanced.get(person.id) or spent.get(person.id)

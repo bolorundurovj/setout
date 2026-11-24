@@ -12346,6 +12346,29 @@
         ],
         "title": "DeliveryCreate"
       },
+      "DeliveryCurrencyTotal": {
+        "properties": {
+          "currency_code": {
+            "type": "string",
+            "title": "Currency Code"
+          },
+          "currency_exponent": {
+            "type": "integer",
+            "title": "Currency Exponent"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currency_code",
+          "currency_exponent",
+          "amount"
+        ],
+        "title": "DeliveryCurrencyTotal"
+      },
       "DeliveryPage": {
         "properties": {
           "items": {
@@ -12359,8 +12382,22 @@
             "type": "integer",
             "title": "Total"
           },
+          "outstanding_by_currency": {
+            "items": {
+              "$ref": "#/components/schemas/DeliveryCurrencyTotal"
+            },
+            "type": "array",
+            "title": "Outstanding By Currency"
+          },
           "outstanding_amount": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Outstanding Amount",
             "description": "Total outstanding amount of all matching rows, in the project currency"
           },
@@ -12377,6 +12414,7 @@
         "required": [
           "items",
           "total",
+          "outstanding_by_currency",
           "outstanding_amount",
           "limit",
           "offset"
