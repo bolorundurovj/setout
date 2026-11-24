@@ -116,6 +116,20 @@ jobs:
 
   migrations:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 127.0.0.1:5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SETOUT_DATABASE_URL: postgres://postgres@127.0.0.1:5432/postgres
     steps:
       - uses: actions/checkout@v7
 
@@ -130,6 +144,11 @@ jobs:
 
       - name: Migrate from an empty database
         run: cd apps/api && uv run tortoise migrate
+
+      - name: Roll back one migration and reapply it
+        run: |
+          make downgrade
+          make migrate
 
       - name: Seed, then migrate again from the seeded database
         run: |
