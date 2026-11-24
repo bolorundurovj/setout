@@ -4,6 +4,7 @@ from collections import defaultdict
 from datetime import UTC, date, datetime
 
 from fastapi import HTTPException, status
+from tortoise.transactions import in_transaction
 
 from setout.models.advance import Advance
 from setout.models.agreement import Agreement
@@ -74,34 +75,39 @@ class AgreementController:
         return await self._read_one(agreement, paid.get(agreement.id, 0))
 
     async def archive(self, agreement_id: str) -> None:
-        agreement = await self._agreement_or_404(agreement_id)
-        archived_at = datetime.now(UTC)
-        agreement.archived_at = archived_at
-        await agreement.save()
-        await archive_under_agreement(agreement.id, archived_at)
+        async with in_transaction():
+            agreement = await self._agreement_or_404(agreement_id)
+            archived_at = datetime.now(UTC)
+            agreement.archived_at = archived_at
+            await agreement.save()
+            await archive_under_agreement(agreement.id, archived_at)
 
     async def restore(self, agreement_id: str) -> AgreementRead:
-        agreement = await self._agreement_or_404(agreement_id, include_archived=True)
-        if agreement.archived_at is not None:
-            archived_at = agreement.archived_at
-            agreement.archived_at = None
-            await agreement.save()
-            await restore_under_agreement(agreement.id, archived_at)
-        paid = await paid_by_agreement([agreement.id])
-        return await self._read_one(agreement, paid.get(agreement.id, 0))
+        async with in_transaction():
+            agreement = await self._agreement_or_404(agreement_id, include_archived=True)
+            if agreement.archived_at is not None:
+                archived_at = agreement.archived_at
+                agreement.archived_at = None
+                await agreement.save()
+                await restore_under_agreement(agreement.id, archived_at)
+            paid = await paid_by_agreement([agreement.id])
+            return await self._read_one(agreement, paid.get(agreement.id, 0))
 
     async def delete(self, agreement_id: str, storage: Storage | None = None) -> None:
-        agreement = await self._agreement_or_404(agreement_id, include_archived=True)
-        if agreement.archived_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only archived agreements can be deleted permanently",
+        async with in_transaction():
+            agreement = await self._agreement_or_404(agreement_id, include_archived=True)
+            if agreement.archived_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only archived agreements can be deleted permanently",
+                )
+            storage_keys = await Attachment.filter(agreement_id=agreement.id).values_list(
+                "storage_key", flat=True
             )
-        storage_keys = await Attachment.filter(agreement_id=agreement.id).values_list(
-            "storage_key", flat=True
-        )
-        await changes.recorded_update(Expense.filter(agreement_id=agreement.id), agreement_id=None)
-        await agreement.delete()
+            await changes.recorded_update(
+                Expense.filter(agreement_id=agreement.id), agreement_id=None
+            )
+            await agreement.delete()
         await delete_unreferenced([str(key) for key in storage_keys], storage)
 
     async def list_advances(
@@ -156,13 +162,14 @@ class AgreementController:
         return self._advance(advance)
 
     async def delete_advance(self, advance_id: str) -> None:
-        advance = await self._advance_or_404(advance_id, include_archived=True)
-        if advance.archived_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only archived advances can be deleted permanently",
-            )
-        await advance.delete()
+        async with in_transaction():
+            advance = await self._advance_or_404(advance_id, include_archived=True)
+            if advance.archived_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only archived advances can be deleted permanently",
+                )
+            await advance.delete()
 
     async def balances(self, project_id: str) -> list[PersonBalance]:
         project = await self._project_or_404(project_id)

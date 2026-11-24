@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 
 from fastapi import HTTPException, status
+from tortoise.transactions import in_transaction
 
 from setout.models.country import Country, State
 from setout.models.currency import Currency
@@ -104,32 +105,35 @@ class LandController:
         return await self._one(land)
 
     async def archive(self, land_id: str) -> None:
-        land = await self._land_or_404(land_id)
-        archived_at = datetime.now(UTC)
-        land.archived_at = archived_at
-        await land.save()
-        await archive_under_land(land.id, archived_at)
+        async with in_transaction():
+            land = await self._land_or_404(land_id)
+            archived_at = datetime.now(UTC)
+            land.archived_at = archived_at
+            await land.save()
+            await archive_under_land(land.id, archived_at)
 
     async def restore(self, land_id: str) -> LandRead:
-        land = await self._land_or_404(land_id, include_archived=True)
-        if land.archived_at is not None:
-            archived_at = land.archived_at
-            land.archived_at = None
-            await land.save()
-            await restore_under_land(land.id, archived_at)
-        return await self._one(land)
+        async with in_transaction():
+            land = await self._land_or_404(land_id, include_archived=True)
+            if land.archived_at is not None:
+                archived_at = land.archived_at
+                land.archived_at = None
+                await land.save()
+                await restore_under_land(land.id, archived_at)
+            return await self._one(land)
 
     async def delete(self, land_id: str, storage: Storage | None = None) -> None:
-        land = await self._land_or_404(land_id, include_archived=True)
-        if land.archived_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only archived land records can be deleted permanently",
-            )
-        docs = await LandDocument.filter(land_id=land.id).all()
-        storage_keys = [doc.storage_key for doc in docs]
-        await changes.recorded_update(Project.filter(land_id=land.id), land_id=None)
-        await land.delete()
+        async with in_transaction():
+            land = await self._land_or_404(land_id, include_archived=True)
+            if land.archived_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only archived land records can be deleted permanently",
+                )
+            docs = await LandDocument.filter(land_id=land.id).all()
+            storage_keys = [doc.storage_key for doc in docs]
+            await changes.recorded_update(Project.filter(land_id=land.id), land_id=None)
+            await land.delete()
         await delete_unreferenced(storage_keys, storage)
 
     async def _one(self, land: Land) -> LandRead:

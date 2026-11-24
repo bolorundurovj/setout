@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
+from tortoise.transactions import in_transaction
 
 from setout.models.budget import BudgetItem
 from setout.models.category import Category
@@ -95,32 +96,35 @@ class CategoryController:
         return self._find_category(await self.list_categories(category.project_id), category.id)
 
     async def archive(self, category_id: str) -> None:
-        category = await self._category_or_404(category_id)
-        await self._require_no_expenses(category)
-        archived_at = datetime.now(UTC)
-        category.archived_at = archived_at
-        await category.save()
-        await archive_under_category(category.id, archived_at)
+        async with in_transaction():
+            category = await self._category_or_404(category_id)
+            await self._require_no_expenses(category)
+            archived_at = datetime.now(UTC)
+            category.archived_at = archived_at
+            await category.save()
+            await archive_under_category(category.id, archived_at)
 
     async def restore(self, category_id: str) -> CategoryRead:
-        category = await self._category_or_404(category_id, include_archived=True)
-        if category.archived_at is not None:
-            archived_at = category.archived_at
-            category.archived_at = None
-            await category.save()
-            await restore_under_category(category.id, archived_at)
-        return self._find_category(await self.list_categories(category.project_id), category.id)
+        async with in_transaction():
+            category = await self._category_or_404(category_id, include_archived=True)
+            if category.archived_at is not None:
+                archived_at = category.archived_at
+                category.archived_at = None
+                await category.save()
+                await restore_under_category(category.id, archived_at)
+            return self._find_category(await self.list_categories(category.project_id), category.id)
 
     async def delete(self, category_id: str) -> None:
-        category = await self._category_or_404(category_id, include_archived=True)
-        if category.archived_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only archived categories can be deleted permanently",
-            )
-        branch = [category.id, *await self._descendant_ids(category)]
-        await changes.recorded_update(Expense.filter(category_id__in=branch), category_id=None)
-        await category.delete()
+        async with in_transaction():
+            category = await self._category_or_404(category_id, include_archived=True)
+            if category.archived_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only archived categories can be deleted permanently",
+                )
+            branch = [category.id, *await self._descendant_ids(category)]
+            await changes.recorded_update(Expense.filter(category_id__in=branch), category_id=None)
+            await category.delete()
 
     async def list_items(
         self, category_id: str, *, include_archived: bool, limit: int, offset: int
@@ -175,13 +179,14 @@ class CategoryController:
         return BudgetItemRead.model_validate(item)
 
     async def delete_item(self, item_id: str) -> None:
-        item = await self._item_or_404(item_id, include_archived=True)
-        if item.archived_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only archived budget items can be deleted permanently",
-            )
-        await item.delete()
+        async with in_transaction():
+            item = await self._item_or_404(item_id, include_archived=True)
+            if item.archived_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only archived budget items can be deleted permanently",
+                )
+            await item.delete()
 
     async def _require_no_expenses(self, category: Category) -> None:
         # Archiving a category with expenses would exclude them from every category total

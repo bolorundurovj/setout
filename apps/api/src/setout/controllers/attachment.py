@@ -6,6 +6,7 @@ from enum import StrEnum
 from typing import Any
 
 from fastapi import HTTPException, status
+from tortoise.transactions import in_transaction
 
 from setout.models.agreement import Agreement
 from setout.models.attachment import Attachment
@@ -134,14 +135,15 @@ class AttachmentController:
         return AttachmentRead.model_validate(row, from_attributes=True)
 
     async def delete(self, attachment_id: str, storage: Storage | None = None) -> None:
-        row = await self._attachment_or_404(attachment_id, include_archived=True)
-        if row.archived_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only archived attachments can be deleted permanently",
-            )
-        key = row.storage_key
-        await row.delete()
+        async with in_transaction():
+            row = await self._attachment_or_404(attachment_id, include_archived=True)
+            if row.archived_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only archived attachments can be deleted permanently",
+                )
+            key = row.storage_key
+            await row.delete()
         await delete_unreferenced([key], storage)
 
     @staticmethod

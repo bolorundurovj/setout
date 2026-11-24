@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
+from tortoise.transactions import in_transaction
 
 from setout.models.advance import Advance
 from setout.models.expense import Expense
@@ -75,15 +76,16 @@ class PersonController:
         return self._read(person, totals.get(person.id, []))
 
     async def delete(self, person_id: str) -> None:
-        person = await self._person_or_404(person_id, include_archived=True)
-        if person.archived_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only archived people can be deleted permanently",
-            )
-        await changes.recorded_update(Expense.filter(paid_by_id=person.id), paid_by_id=None)
-        await changes.recorded_delete(Advance.filter(person_id=person.id))
-        await person.delete()
+        async with in_transaction():
+            person = await self._person_or_404(person_id, include_archived=True)
+            if person.archived_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only archived people can be deleted permanently",
+                )
+            await changes.recorded_update(Expense.filter(paid_by_id=person.id), paid_by_id=None)
+            await changes.recorded_delete(Advance.filter(person_id=person.id))
+            await person.delete()
 
     async def expense_summary(self, person_id: str) -> PersonExpenseSummary:
         person = await self._person_or_404(person_id, include_archived=True)

@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, date, datetime
 
 from fastapi import HTTPException, status
+from tortoise.transactions import in_transaction
 
 from setout.models.attachment import Attachment
 from setout.models.delivery import Delivery
@@ -128,32 +129,35 @@ class DeliveryController:
         return await self._read_one(delivery)
 
     async def archive(self, delivery_id: str) -> None:
-        delivery = await self._delivery_or_404(delivery_id)
-        archived_at = datetime.now(UTC)
-        delivery.archived_at = archived_at
-        await delivery.save()
-        await archive_under_delivery(delivery.id, archived_at)
+        async with in_transaction():
+            delivery = await self._delivery_or_404(delivery_id)
+            archived_at = datetime.now(UTC)
+            delivery.archived_at = archived_at
+            await delivery.save()
+            await archive_under_delivery(delivery.id, archived_at)
 
     async def restore(self, delivery_id: str) -> DeliveryRead:
-        delivery = await self._delivery_or_404(delivery_id, include_archived=True)
-        if delivery.archived_at is not None:
-            archived_at = delivery.archived_at
-            delivery.archived_at = None
-            await delivery.save()
-            await restore_under_delivery(delivery.id, archived_at)
-        return await self._read_one(delivery)
+        async with in_transaction():
+            delivery = await self._delivery_or_404(delivery_id, include_archived=True)
+            if delivery.archived_at is not None:
+                archived_at = delivery.archived_at
+                delivery.archived_at = None
+                await delivery.save()
+                await restore_under_delivery(delivery.id, archived_at)
+            return await self._read_one(delivery)
 
     async def delete(self, delivery_id: str, storage: Storage | None = None) -> None:
-        delivery = await self._delivery_or_404(delivery_id, include_archived=True)
-        if delivery.archived_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only archived deliveries can be deleted permanently",
+        async with in_transaction():
+            delivery = await self._delivery_or_404(delivery_id, include_archived=True)
+            if delivery.archived_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only archived deliveries can be deleted permanently",
+                )
+            storage_keys = await Attachment.filter(delivery_id=delivery.id).values_list(
+                "storage_key", flat=True
             )
-        storage_keys = await Attachment.filter(delivery_id=delivery.id).values_list(
-            "storage_key", flat=True
-        )
-        await delivery.delete()
+            await delivery.delete()
         await delete_unreferenced([str(key) for key in storage_keys], storage)
 
     async def _read_one(self, delivery: Delivery) -> DeliveryRead:

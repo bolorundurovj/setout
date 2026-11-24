@@ -1,6 +1,9 @@
+from unittest.mock import AsyncMock
+
 import pytest
 from httpx import AsyncClient
 
+from setout.controllers.project import ProjectController
 from setout.currencies import CURRENCIES
 from setout.models.currency import Currency
 
@@ -116,6 +119,25 @@ async def test_name_and_notes_can_be_updated(client: AsyncClient) -> None:
     assert resp.status_code == 200
     assert resp.json()["name"] == "Owode Bungalow"
     assert resp.json()["notes"] == "Second site"
+
+
+async def test_failed_child_restore_leaves_project_archived(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _sign_in(client)
+    project = await _create(client)
+    url = f"/api/projects/{project['id']}"
+    await client.patch(url, json={"status": "closed"})
+    assert (await client.post(f"{url}/archive")).status_code == 204
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            "setout.controllers.project.restore_under_project",
+            AsyncMock(side_effect=RuntimeError("child restore failed")),
+        )
+        with pytest.raises(RuntimeError, match="child restore failed"):
+            await ProjectController().restore(project["id"])
+    assert (await client.get(url)).status_code == 404
+    assert (await client.post(f"{url}/restore")).status_code == 200
 
 
 async def test_summary_counts_by_status(client: AsyncClient) -> None:

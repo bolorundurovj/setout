@@ -7,6 +7,7 @@ from fastapi import HTTPException, status
 from tortoise.expressions import Q
 from tortoise.functions import Sum
 from tortoise.queryset import QuerySet
+from tortoise.transactions import in_transaction
 
 from setout.models.agreement import Agreement
 from setout.models.attachment import Attachment
@@ -259,35 +260,38 @@ class ExpenseController:
         return self._read(expense, counts.get(expense.id, 0))
 
     async def archive(self, expense_id: str) -> None:
-        expense = await self._expense_or_404(expense_id)
-        archived_at = datetime.now(UTC)
-        expense.archived_at = archived_at
-        await expense.save()
-        await archive_under_expense(expense.id, archived_at)
+        async with in_transaction():
+            expense = await self._expense_or_404(expense_id)
+            archived_at = datetime.now(UTC)
+            expense.archived_at = archived_at
+            await expense.save()
+            await archive_under_expense(expense.id, archived_at)
 
     async def restore(self, expense_id: str) -> ExpenseRead:
-        expense = await self._expense_or_404(expense_id, include_archived=True)
-        if expense.archived_at is not None:
-            archived_at = expense.archived_at
-            expense.archived_at = None
-            await expense.save()
-            await restore_under_expense(expense.id, archived_at)
-        counts = await counts_for("expense_id", [expense.id])
-        return self._read(expense, counts.get(expense.id, 0))
+        async with in_transaction():
+            expense = await self._expense_or_404(expense_id, include_archived=True)
+            if expense.archived_at is not None:
+                archived_at = expense.archived_at
+                expense.archived_at = None
+                await expense.save()
+                await restore_under_expense(expense.id, archived_at)
+            counts = await counts_for("expense_id", [expense.id])
+            return self._read(expense, counts.get(expense.id, 0))
 
     async def delete(self, expense_id: str, storage: Storage | None = None) -> None:
-        expense = await self._expense_or_404(expense_id, include_archived=True)
-        if expense.archived_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only archived expenses can be deleted permanently",
-            )
-        delivery_ids = await Delivery.filter(expense_id=expense.id).values_list("id", flat=True)
-        attachments = await Attachment.filter(
-            Q(expense_id=expense.id) | Q(delivery_id__in=list(delivery_ids))
-        ).all()
-        storage_keys = [att.storage_key for att in attachments]
-        await expense.delete()
+        async with in_transaction():
+            expense = await self._expense_or_404(expense_id, include_archived=True)
+            if expense.archived_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only archived expenses can be deleted permanently",
+                )
+            delivery_ids = await Delivery.filter(expense_id=expense.id).values_list("id", flat=True)
+            attachments = await Attachment.filter(
+                Q(expense_id=expense.id) | Q(delivery_id__in=list(delivery_ids))
+            ).all()
+            storage_keys = [att.storage_key for att in attachments]
+            await expense.delete()
         await delete_unreferenced(storage_keys, storage)
 
     async def expense_summary(self, project_id: str) -> ProjectExpenseSummary:

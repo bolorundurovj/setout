@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
+from tortoise.transactions import in_transaction
 
 from setout.models.expense import Expense
 from setout.models.item import Item
@@ -78,14 +79,15 @@ class ItemController:
         return self._read(item, prices.get(item.id, []))
 
     async def delete(self, item_id: str) -> None:
-        item = await self._item_or_404(item_id, include_archived=True)
-        if item.archived_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only archived items can be deleted permanently",
-            )
-        await changes.recorded_update(Expense.filter(item_id=item.id), item_id=None)
-        await item.delete()
+        async with in_transaction():
+            item = await self._item_or_404(item_id, include_archived=True)
+            if item.archived_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only archived items can be deleted permanently",
+                )
+            await changes.recorded_update(Expense.filter(item_id=item.id), item_id=None)
+            await item.delete()
 
     async def prices(self, item_id: str) -> ItemPrices:
         item = await self._item_or_404(item_id)

@@ -4,6 +4,7 @@ from collections import Counter
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
+from tortoise.transactions import in_transaction
 
 from setout.models.attachment import Attachment
 from setout.models.currency import Currency
@@ -98,34 +99,37 @@ class ProjectController:
         return to_read(project, budgeted.get(project.id, 0), spent.get(project.id, 0))
 
     async def archive(self, project_id: str) -> None:
-        project = await self._get_or_404(project_id)
-        require_closed(project)
-        archived_at = datetime.now(UTC)
-        project.archived_at = archived_at
-        await project.save()
-        await archive_under_project(project.id, archived_at)
+        async with in_transaction():
+            project = await self._get_or_404(project_id)
+            require_closed(project)
+            archived_at = datetime.now(UTC)
+            project.archived_at = archived_at
+            await project.save()
+            await archive_under_project(project.id, archived_at)
 
     async def restore(self, project_id: str) -> ProjectRead:
-        project = await self._get_or_404(project_id, include_archived=True)
-        if project.archived_at is not None:
-            archived_at = project.archived_at
-            project.archived_at = None
-            await project.save()
-            await restore_under_project(project.id, archived_at)
-        budgeted = await budgeted_by_project([project.id])
-        spent = await spent_by_project([project.id])
-        return to_read(project, budgeted.get(project.id, 0), spent.get(project.id, 0))
+        async with in_transaction():
+            project = await self._get_or_404(project_id, include_archived=True)
+            if project.archived_at is not None:
+                archived_at = project.archived_at
+                project.archived_at = None
+                await project.save()
+                await restore_under_project(project.id, archived_at)
+            budgeted = await budgeted_by_project([project.id])
+            spent = await spent_by_project([project.id])
+            return to_read(project, budgeted.get(project.id, 0), spent.get(project.id, 0))
 
     async def delete(self, project_id: str, storage: Storage | None = None) -> None:
-        project = await self._get_or_404(project_id, include_archived=True)
-        if project.archived_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only archived projects can be deleted permanently",
-            )
-        attachments = await Attachment.filter(project_id=project.id).all()
-        storage_keys = [att.storage_key for att in attachments]
-        await project.delete()
+        async with in_transaction():
+            project = await self._get_or_404(project_id, include_archived=True)
+            if project.archived_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only archived projects can be deleted permanently",
+                )
+            attachments = await Attachment.filter(project_id=project.id).all()
+            storage_keys = [att.storage_key for att in attachments]
+            await project.delete()
         await delete_unreferenced(storage_keys, storage)
 
     async def _land_or_422(self, land_id: str | None) -> str | None:

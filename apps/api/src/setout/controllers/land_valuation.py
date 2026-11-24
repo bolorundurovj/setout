@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
+from tortoise.transactions import in_transaction
 
 from setout.models.currency import Currency
 from setout.models.land import Land
@@ -39,75 +40,80 @@ class LandValuationController:
         )
 
     async def create(self, land_id: str, req: LandValuationCreate) -> LandValuationRead:
-        land = await self._land_or_404(land_id)
-        code = req.currency_code.upper()
-        currency = await Currency.get_or_none(code=code)
-        if currency is None:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail=f"Unknown currency: {req.currency_code}",
-            )
-        if land.currency_id is not None and land.currency_id != code:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail=f"This land's valuations must use {land.currency_id}",
-            )
-        if req.kind is LandValuationKind.PURCHASE and await self._has_purchase(land_id):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=DUPLICATE_PURCHASE)
+        async with in_transaction():
+            land = await self._land_or_404(land_id)
+            code = req.currency_code.upper()
+            currency = await Currency.get_or_none(code=code)
+            if currency is None:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail=f"Unknown currency: {req.currency_code}",
+                )
+            if land.currency_id is not None and land.currency_id != code:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail=f"This land's valuations must use {land.currency_id}",
+                )
+            if req.kind is LandValuationKind.PURCHASE and await self._has_purchase(land_id):
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=DUPLICATE_PURCHASE)
 
-        row = await LandValuation.create(
-            land_id=land_id,
-            kind=req.kind,
-            amount=req.amount,
-            currency_id=code,
-            valued_on=req.valued_on,
-            notes=req.notes,
-        )
-        if land.currency_id is None:
-            land.currency_id = code
-            await land.save()
-        return self._read(row, {code: currency.exponent})
+            row = await LandValuation.create(
+                land_id=land_id,
+                kind=req.kind,
+                amount=req.amount,
+                currency_id=code,
+                valued_on=req.valued_on,
+                notes=req.notes,
+            )
+            if land.currency_id is None:
+                land.currency_id = code
+                await land.save()
+            return self._read(row, {code: currency.exponent})
 
     async def update(self, valuation_id: str, req: LandValuationUpdate) -> LandValuationRead:
-        row = await self._valuation_or_404(valuation_id)
-        changes = req.model_dump(exclude_unset=True)
-        kind = changes.get("kind")
-        if kind is LandValuationKind.PURCHASE and await self._has_purchase(
-            row.land_id, exclude_id=row.id
-        ):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=DUPLICATE_PURCHASE)
-        if changes:
-            row.update_from_dict(changes)
-            await row.save()
-        return self._read(row, await self._exponents([row]))
+        async with in_transaction():
+            row = await self._valuation_or_404(valuation_id)
+            changes = req.model_dump(exclude_unset=True)
+            kind = changes.get("kind")
+            if kind is LandValuationKind.PURCHASE and await self._has_purchase(
+                row.land_id, exclude_id=row.id
+            ):
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=DUPLICATE_PURCHASE)
+            if changes:
+                row.update_from_dict(changes)
+                await row.save()
+            return self._read(row, await self._exponents([row]))
 
     async def archive(self, valuation_id: str) -> None:
-        row = await self._valuation_or_404(valuation_id)
-        row.archived_at = datetime.now(UTC)
-        await row.save()
-        await self._clear_unused_currency(row.land_id)
+        async with in_transaction():
+            row = await self._valuation_or_404(valuation_id)
+            row.archived_at = datetime.now(UTC)
+            await row.save()
+            await self._clear_unused_currency(row.land_id)
 
     async def restore(self, valuation_id: str) -> LandValuationRead:
-        row = await self._valuation_or_404(valuation_id, include_archived=True)
-        if row.archived_at is not None:
-            row.archived_at = None
-            await row.save()
-            land = await Land.get_or_none(id=row.land_id)
-            if land is not None and land.currency_id is None:
-                land.currency_id = row.currency_id
-                await land.save()
-        return self._read(row, await self._exponents([row]))
+        async with in_transaction():
+            row = await self._valuation_or_404(valuation_id, include_archived=True)
+            if row.archived_at is not None:
+                row.archived_at = None
+                await row.save()
+                land = await Land.get_or_none(id=row.land_id)
+                if land is not None and land.currency_id is None:
+                    land.currency_id = row.currency_id
+                    await land.save()
+            return self._read(row, await self._exponents([row]))
 
     async def delete(self, valuation_id: str) -> None:
-        row = await self._valuation_or_404(valuation_id, include_archived=True)
-        if row.archived_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only archived land valuations can be deleted permanently",
-            )
-        land_id = row.land_id
-        await row.delete()
-        await self._clear_unused_currency(land_id)
+        async with in_transaction():
+            row = await self._valuation_or_404(valuation_id, include_archived=True)
+            if row.archived_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only archived land valuations can be deleted permanently",
+                )
+            land_id = row.land_id
+            await row.delete()
+            await self._clear_unused_currency(land_id)
 
     async def _has_purchase(self, land_id: str, *, exclude_id: str | None = None) -> bool:
         query = LandValuation.filter(

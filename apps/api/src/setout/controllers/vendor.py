@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
+from tortoise.transactions import in_transaction
 
 from setout.models.agreement import Agreement
 from setout.models.expense import Expense
@@ -78,15 +79,16 @@ class VendorController:
         return self._read(vendor, totals.get(vendor.id, []))
 
     async def delete(self, vendor_id: str) -> None:
-        vendor = await self._vendor_or_404(vendor_id, include_archived=True)
-        if vendor.archived_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only archived vendors can be deleted permanently",
-            )
-        await changes.recorded_update(Expense.filter(vendor_id=vendor.id), vendor_id=None)
-        await changes.recorded_delete(Agreement.filter(vendor_id=vendor.id))
-        await vendor.delete()
+        async with in_transaction():
+            vendor = await self._vendor_or_404(vendor_id, include_archived=True)
+            if vendor.archived_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only archived vendors can be deleted permanently",
+                )
+            await changes.recorded_update(Expense.filter(vendor_id=vendor.id), vendor_id=None)
+            await changes.recorded_delete(Agreement.filter(vendor_id=vendor.id))
+            await vendor.delete()
 
     async def expense_summary(self, vendor_id: str) -> VendorExpenseSummary:
         vendor = await self._vendor_or_404(vendor_id, include_archived=True)

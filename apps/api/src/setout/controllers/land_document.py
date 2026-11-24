@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
+from tortoise.transactions import in_transaction
 
 from setout.models.land import Land
 from setout.models.land_document import LandDocument, LandDocumentKind
@@ -115,14 +116,15 @@ class LandDocumentController:
         return LandDocumentRead.model_validate(row, from_attributes=True)
 
     async def delete(self, document_id: str, storage: Storage | None = None) -> None:
-        row = await self._document_or_404(document_id, include_archived=True)
-        if row.archived_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only archived land documents can be deleted permanently",
-            )
-        key = row.storage_key
-        await row.delete()
+        async with in_transaction():
+            row = await self._document_or_404(document_id, include_archived=True)
+            if row.archived_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only archived land documents can be deleted permanently",
+                )
+            key = row.storage_key
+            await row.delete()
         await delete_unreferenced([key], storage)
 
     async def _land_or_404(self, land_id: str) -> Land:
