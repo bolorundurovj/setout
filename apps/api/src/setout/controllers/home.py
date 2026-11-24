@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 from tortoise import connections
-from tortoise.functions import Count
+from tortoise.functions import Count, Sum
 
 from setout.models.delivery import Delivery
 from setout.models.expense import Expense
@@ -194,41 +194,49 @@ class HomeController:
     async def _alerts(self, project_ids: list[str]) -> list[HomeAlert]:
         alerts: list[HomeAlert] = []
 
-        uncategorised = await Expense.filter(
-            project_id__in=project_ids, archived_at__isnull=True, category_id__isnull=True
-        ).values_list("project_id", "amount")
+        uncategorised = (
+            await Expense.filter(
+                project_id__in=project_ids, archived_at__isnull=True, category_id__isnull=True
+            )
+            .group_by("project_id")
+            .annotate(n=Count("id"), total=Sum("amount"))
+            .values("project_id", "n", "total")
+        )
         if uncategorised:
-            projects = len({project_id for project_id, _ in uncategorised})
+            count = sum(int(row["n"]) for row in uncategorised)
+            projects = len(uncategorised)
             alerts.append(
                 HomeAlert(
                     kind="uncategorised",
                     title="Uncategorised Expenses",
                     detail=(
-                        f"{len(uncategorised)} "
-                        f"{'expense' if len(uncategorised) == 1 else 'expenses'} "
+                        f"{count} "
+                        f"{'expense' if count == 1 else 'expenses'} "
                         f"across {projects} {'project' if projects == 1 else 'projects'}"
                     ),
-                    amount=sum(amount for _, amount in uncategorised),
+                    amount=sum(int(row["total"] or 0) for row in uncategorised),
                     urgent=True,
                 )
             )
 
-        outstanding = await Delivery.filter(
-            project_id__in=project_ids,
-            archived_at__isnull=True,
-            received_at__isnull=True,
-            expense__archived_at__isnull=True,
-        ).prefetch_related("expense")
-        if outstanding:
+        outstanding = (
+            await Delivery.filter(
+                project_id__in=project_ids,
+                archived_at__isnull=True,
+                received_at__isnull=True,
+                expense__archived_at__isnull=True,
+            )
+            .annotate(n=Count("id"), total=Sum("expense__amount"))
+            .values("n", "total")
+        )
+        if outstanding and int(outstanding[0]["n"] or 0):
+            count = int(outstanding[0]["n"])
             alerts.append(
                 HomeAlert(
                     kind="deliveries",
                     title="Outstanding Deliveries",
-                    detail=(
-                        f"{len(outstanding)} paid "
-                        f"{'expense' if len(outstanding) == 1 else 'expenses'} outstanding"
-                    ),
-                    amount=sum(row.expense.amount for row in outstanding),
+                    detail=(f"{count} paid {'expense' if count == 1 else 'expenses'} outstanding"),
+                    amount=int(outstanding[0]["total"] or 0),
                     urgent=False,
                 )
             )

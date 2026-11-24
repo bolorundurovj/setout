@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, date, datetime
 
 from fastapi import HTTPException, status
+from tortoise.functions import Sum
 from tortoise.transactions import in_transaction
 
 from setout.models.attachment import Attachment
@@ -20,6 +21,7 @@ from setout.schemas.delivery import (
 from setout.services.storage import Storage
 from setout.utils.attachments import counts_for
 from setout.utils.cascade import archive_under_delivery, restore_under_delivery
+from setout.utils.currencies import currency_exponents
 from setout.utils.uploads import delete_unreferenced
 
 NOT_FOUND = "Delivery not found"
@@ -57,11 +59,18 @@ class DeliveryController:
             outstanding_rows = outstanding_rows.filter(
                 archived_at__isnull=True, expense__archived_at__isnull=True
             )
-        outstanding = await outstanding_rows.prefetch_related("expense", "project__currency")
-        amounts: dict[tuple[str, int], int] = {}
-        for row in outstanding:
-            key = (row.project.currency_id, row.project.currency.exponent)
-            amounts[key] = amounts.get(key, 0) + row.expense.amount
+        grouped = (
+            await outstanding_rows.group_by("project__currency_id")
+            .annotate(amount=Sum("expense__amount"))
+            .values("project__currency_id", "amount")
+        )
+        exponents = await currency_exponents({row["project__currency_id"] for row in grouped})
+        amounts: dict[tuple[str, int], int] = {
+            (str(row["project__currency_id"]), exponents[str(row["project__currency_id"])]): int(
+                row["amount"] or 0
+            )
+            for row in grouped
+        }
         order = (
             ("expected", "-created_at", "id")
             if sort == DeliverySort.EXPECTED

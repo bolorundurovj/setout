@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from collections import defaultdict
 
+from tortoise.functions import Sum
+
 from setout.models.advance import Advance
 from setout.models.expense import Expense
 
@@ -10,14 +12,16 @@ async def paid_by_agreement(agreement_ids: list[str]) -> dict[str, int]:
     """Paid amount per agreement, summed from its expenses."""
     if not agreement_ids:
         return {}
-    rows = await Expense.filter(
-        archived_at__isnull=True,
-        agreement_id__in=agreement_ids,
-    ).values("amount", "agreement_id")
-    totals: dict[str, int] = defaultdict(int)
-    for row in rows:
-        totals[str(row["agreement_id"])] += int(row["amount"])
-    return totals
+    rows = (
+        await Expense.filter(
+            archived_at__isnull=True,
+            agreement_id__in=agreement_ids,
+        )
+        .group_by("agreement_id")
+        .annotate(total=Sum("amount"))
+        .values("agreement_id", "total")
+    )
+    return {str(row["agreement_id"]): int(row["total"] or 0) for row in rows}
 
 
 def balance_of(agreed_amount: int, paid_amount: int) -> int:
@@ -41,12 +45,22 @@ async def person_balances(
         spend_filter["project_id"] = project_id
 
     balances: dict[tuple[str, str], int] = defaultdict(int)
-    for row in await Advance.filter(**advance_filter).values(
-        "amount", "person_id", "project__currency_id"
-    ):
-        balances[(str(row["person_id"]), str(row["project__currency_id"]))] += int(row["amount"])
-    for row in await Expense.filter(**spend_filter).values(
-        "amount", "paid_by_id", "project__currency_id"
-    ):
-        balances[(str(row["paid_by_id"]), str(row["project__currency_id"]))] -= int(row["amount"])
+    advanced = (
+        await Advance.filter(**advance_filter)
+        .group_by("person_id", "project__currency_id")
+        .annotate(total=Sum("amount"))
+        .values("person_id", "project__currency_id", "total")
+    )
+    for row in advanced:
+        key = (str(row["person_id"]), str(row["project__currency_id"]))
+        balances[key] += int(row["total"] or 0)
+    spent = (
+        await Expense.filter(**spend_filter)
+        .group_by("paid_by_id", "project__currency_id")
+        .annotate(total=Sum("amount"))
+        .values("paid_by_id", "project__currency_id", "total")
+    )
+    for row in spent:
+        key = (str(row["paid_by_id"]), str(row["project__currency_id"]))
+        balances[key] -= int(row["total"] or 0)
     return balances

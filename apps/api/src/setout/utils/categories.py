@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from setout.models.budget import BudgetItem
 from setout.models.category import Category
-from setout.models.expense import Expense
 from setout.schemas.category import CategoryRead
 
 
@@ -35,29 +33,6 @@ def subtree_ids(category_id: str, parents: dict[str, str | None]) -> list[str]:
     return result
 
 
-def own_totals(items: list[BudgetItem]) -> dict[str, int]:
-    totals: dict[str, int] = defaultdict(int)
-    for item in items:
-        totals[item.category_id] += item.budgeted_amount
-    return totals
-
-
-def own_spent(expenses: list[Expense]) -> dict[str, int]:
-    totals: dict[str, int] = defaultdict(int)
-    for expense in expenses:
-        if expense.category_id is not None:
-            totals[expense.category_id] += expense.amount
-    return totals
-
-
-def own_counts(expenses: list[Expense]) -> dict[str, int]:
-    counts: dict[str, int] = defaultdict(int)
-    for expense in expenses:
-        if expense.category_id is not None:
-            counts[expense.category_id] += 1
-    return counts
-
-
 def rolled_up_totals(categories: list[Category], own: dict[str, int]) -> dict[str, int]:
     """Add each category's total to every ancestor.
 
@@ -76,14 +51,19 @@ def rolled_up_totals(categories: list[Category], own: dict[str, int]) -> dict[st
 
 def to_reads(
     categories: list[Category],
-    items: list[BudgetItem],
-    expenses: list[Expense] | None = None,
+    items_total: dict[str, int],
+    spent_total: dict[str, int] | None = None,
+    expense_counts: dict[str, int] | None = None,
 ) -> list[CategoryRead]:
-    own = own_totals(items)
-    rolled = rolled_up_totals(categories, own)
-    spent_own = own_spent(expenses or [])
+    """Build the reads from per-category totals the database has already grouped.
+
+    `items_total` is budgeted amount per category id; `spent_total` and
+    `expense_counts` are spent amount and expense count per category id.
+    """
+    rolled = rolled_up_totals(categories, items_total)
+    spent_own = spent_total or {}
     spent_rolled = rolled_up_totals(categories, spent_own)
-    count_own = own_counts(expenses or [])
+    count_own = expense_counts or {}
     count_rolled = rolled_up_totals(categories, count_own)
     parent_ids = {category.parent_id for category in categories if category.parent_id is not None}
     return [
@@ -96,7 +76,7 @@ def to_reads(
             sort_order=category.sort_order,
             is_group=category.id in parent_ids,
             budgeted_amount=rolled.get(category.id, 0),
-            own_budgeted_amount=own.get(category.id, 0),
+            own_budgeted_amount=items_total.get(category.id, 0),
             spent_amount=spent_rolled.get(category.id, 0),
             own_spent_amount=spent_own.get(category.id, 0),
             expense_count=count_rolled.get(category.id, 0),

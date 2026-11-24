@@ -3,10 +3,12 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
+from tortoise.functions import Count, Sum
 from tortoise.transactions import in_transaction
 
 from setout.models.agreement import Agreement
 from setout.models.expense import Expense
+from setout.models.project import Project
 from setout.models.vendor import Vendor
 from setout.schemas.vendor import (
     VendorAgreement,
@@ -21,6 +23,7 @@ from setout.schemas.vendor import (
 )
 from setout.services import changes
 from setout.utils.balances import paid_by_agreement
+from setout.utils.currencies import currency_exponents
 
 NOT_FOUND_VENDOR = "Vendor not found"
 DUPLICATE_NAME = "A vendor with that name already exists"
@@ -93,27 +96,32 @@ class VendorController:
 
     async def expense_summary(self, vendor_id: str) -> VendorExpenseSummary:
         vendor = await self._vendor_or_404(vendor_id, include_archived=True)
-        rows: dict[str, VendorProjectExpenseSummary] = {}
-        for expense in await Expense.filter(
-            vendor_id=vendor_id, archived_at__isnull=True
-        ).prefetch_related("project__currency"):
-            row = rows.get(expense.project_id)
-            if row is None:
-                rows[expense.project_id] = VendorProjectExpenseSummary(
-                    project_id=expense.project_id,
-                    project_name=expense.project.name,
-                    currency_code=expense.project.currency_id,
-                    currency_exponent=expense.project.currency.exponent,
-                    expense_count=1,
-                    spent_amount=expense.amount,
-                )
-            else:
-                row.expense_count += 1
-                row.spent_amount += expense.amount
+        rows = (
+            await Expense.filter(vendor_id=vendor_id, archived_at__isnull=True)
+            .group_by("project_id")
+            .annotate(n=Count("id"), total=Sum("amount"))
+            .values("project_id", "n", "total")
+        )
+        projects = await Project.filter(
+            id__in=[row["project_id"] for row in rows]
+        ).prefetch_related("currency")
+        by_id = {project.id: project for project in projects}
+        summaries = [
+            VendorProjectExpenseSummary(
+                project_id=str(row["project_id"]),
+                project_name=by_id[row["project_id"]].name,
+                currency_code=by_id[row["project_id"]].currency_id,
+                currency_exponent=by_id[row["project_id"]].currency.exponent,
+                expense_count=int(row["n"]),
+                spent_amount=int(row["total"] or 0),
+            )
+            for row in rows
+        ]
+        summaries.sort(key=lambda row: row.project_name)
         return VendorExpenseSummary(
             vendor_id=vendor.id,
             name=vendor.name,
-            projects=sorted(rows.values(), key=lambda row: row.project_name),
+            projects=summaries,
         )
 
     async def agreements(self, vendor_id: str) -> VendorAgreements:
@@ -144,30 +152,27 @@ class VendorController:
         )
 
     async def _totals(self, vendor_ids: list[str]) -> dict[str, list[VendorCurrencyTotal]]:
+        """Spent amount and expense count per vendor currency, grouped by the database."""
         if not vendor_ids:
             return {}
-        grouped: dict[str, dict[tuple[str, int], VendorCurrencyTotal]] = {}
-        for expense in await Expense.filter(
-            vendor_id__in=vendor_ids, archived_at__isnull=True
-        ).prefetch_related("project__currency"):
-            vendor_id = expense.vendor_id
-            if vendor_id is None:
-                continue
-            key = (expense.project.currency_id, expense.project.currency.exponent)
-            rows = grouped.setdefault(vendor_id, {})
-            row = rows.get(key)
-            if row is None:
-                rows[key] = VendorCurrencyTotal(
-                    currency_code=key[0],
-                    currency_exponent=key[1],
-                    expense_count=1,
-                    spent_amount=expense.amount,
-                )
-            else:
-                row.expense_count += 1
-                row.spent_amount += expense.amount
+        rows = (
+            await Expense.filter(vendor_id__in=vendor_ids, archived_at__isnull=True)
+            .group_by("vendor_id", "project__currency_id")
+            .annotate(n=Count("id"), total=Sum("amount"))
+            .values("vendor_id", "project__currency_id", "n", "total")
+        )
+        exponents = await currency_exponents({row["project__currency_id"] for row in rows})
+        grouped: dict[str, dict[str, VendorCurrencyTotal]] = {}
+        for row in rows:
+            code = str(row["project__currency_id"])
+            grouped.setdefault(str(row["vendor_id"]), {})[code] = VendorCurrencyTotal(
+                currency_code=code,
+                currency_exponent=exponents[code],
+                expense_count=int(row["n"]),
+                spent_amount=int(row["total"] or 0),
+            )
         return {
-            vendor_id: [rows[key] for key in sorted(rows)] for vendor_id, rows in grouped.items()
+            vendor_id: [rows[code] for code in sorted(rows)] for vendor_id, rows in grouped.items()
         }
 
     def _read(self, vendor: Vendor, totals: list[VendorCurrencyTotal]) -> VendorRead:

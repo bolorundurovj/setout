@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from collections import defaultdict
-
 from tortoise.functions import Sum
 
 from setout.models.budget import BudgetItem
@@ -12,15 +10,17 @@ async def budgeted_by_project(project_ids: list[str]) -> dict[str, int]:
     """Budgeted totals per project, summed from budget items in categories that are not archived."""
     if not project_ids:
         return {}
-    rows = await BudgetItem.filter(
-        archived_at__isnull=True,
-        category__archived_at__isnull=True,
-        category__project_id__in=project_ids,
-    ).values("budgeted_amount", "category__project_id")
-    totals: dict[str, int] = defaultdict(int)
-    for row in rows:
-        totals[str(row["category__project_id"])] += int(row["budgeted_amount"])
-    return totals
+    rows = (
+        await BudgetItem.filter(
+            archived_at__isnull=True,
+            category__archived_at__isnull=True,
+            category__project_id__in=project_ids,
+        )
+        .group_by("category__project_id")
+        .annotate(total=Sum("budgeted_amount"))
+        .values("category__project_id", "total")
+    )
+    return {str(row["category__project_id"]): int(row["total"] or 0) for row in rows}
 
 
 async def spent_by_project(project_ids: list[str]) -> dict[str, int]:

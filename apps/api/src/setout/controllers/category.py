@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import HTTPException, status
+from tortoise.functions import Count, Sum
+from tortoise.queryset import QuerySet
 from tortoise.transactions import in_transaction
 
 from setout.models.budget import BudgetItem
@@ -38,12 +41,11 @@ class CategoryController:
     ) -> list[CategoryRead]:
         await self._project_or_404(project_id)
         categories = await Category.filter(project_id=project_id, archived_at__isnull=True)
-        items = await BudgetItem.filter(
-            category__project_id=project_id,
-            archived_at__isnull=True,
+        reads = to_reads(
+            categories,
+            await self._item_totals(project_id, active_only=True),
+            *await self._expense_totals(project_id),
         )
-        expenses = await Expense.filter(project_id=project_id, archived_at__isnull=True)
-        reads = to_reads(categories, items, expenses)
         if include_archived:
             reads.extend(await self._archived_reads(project_id))
         return reads
@@ -69,8 +71,44 @@ class CategoryController:
         categories = await Category.filter(project_id=project_id, archived_at__not_isnull=True)
         if not categories:
             return []
-        items = await BudgetItem.filter(category_id__in=[row.id for row in categories])
-        return to_reads(categories, items)
+        return to_reads(
+            categories,
+            await self._item_totals_of([category.id for category in categories]),
+        )
+
+    async def _item_totals(self, project_id: str, *, active_only: bool) -> dict[str, int]:
+        """Budgeted amount per category, grouped by the database."""
+        query = BudgetItem.filter(category__project_id=project_id)
+        if active_only:
+            query = query.filter(archived_at__isnull=True)
+        return await self._item_totals_of_all(query)
+
+    async def _item_totals_of(self, category_ids: list[str]) -> dict[str, int]:
+        return await self._item_totals_of_all(BudgetItem.filter(category_id__in=category_ids))
+
+    @staticmethod
+    async def _item_totals_of_all(query: QuerySet[Any]) -> dict[str, int]:
+        rows = (
+            await query.group_by("category_id")
+            .annotate(total=Sum("budgeted_amount"))
+            .values("category_id", "total")
+        )
+        return {str(row["category_id"]): int(row["total"] or 0) for row in rows}
+
+    @staticmethod
+    async def _expense_totals(project_id: str) -> tuple[dict[str, int], dict[str, int]]:
+        """Spent amount and expense count per category, grouped by the database."""
+        rows = (
+            await Expense.filter(
+                project_id=project_id, archived_at__isnull=True, category_id__isnull=False
+            )
+            .group_by("category_id")
+            .annotate(spent=Sum("amount"), n=Count("id"))
+            .values("category_id", "spent", "n")
+        )
+        spent = {str(row["category_id"]): int(row["spent"] or 0) for row in rows}
+        counts = {str(row["category_id"]): int(row["n"]) for row in rows}
+        return spent, counts
 
     async def create(self, project_id: str, req: CategoryCreate) -> CategoryRead:
         await self._project_or_404(project_id)

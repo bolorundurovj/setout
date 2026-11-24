@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import HTTPException, status
 from tortoise.expressions import Q
-from tortoise.functions import Sum
+from tortoise.functions import Count, Sum
 from tortoise.queryset import QuerySet
 from tortoise.transactions import in_transaction
 
@@ -203,11 +203,10 @@ class ExpenseController:
         query = query.filter(category__archived_at__isnull=True).exclude(
             category_id__in=list(parents)
         )
-        counts: dict[str, int] = {}
-        for expense in await query.only("category_id"):
-            category_id = expense.category_id
-            assert category_id is not None
-            counts[category_id] = counts.get(category_id, 0) + 1
+        rows = (
+            await query.group_by("category_id").annotate(n=Count("id")).values("category_id", "n")
+        )
+        counts = {str(row["category_id"]): int(row["n"]) for row in rows}
         return counts, sum(counts.values())
 
     async def _most_common_category(
