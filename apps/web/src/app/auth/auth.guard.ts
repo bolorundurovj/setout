@@ -6,10 +6,11 @@ export const authGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  if (auth.isStatusLoading()) {
+  if (auth.isStatusLoading() || auth.statusUnavailable()) {
     await auth.checkStatus();
   }
 
+  if (auth.statusUnavailable()) return router.parseUrl('/login');
   if (!auth.isSetUp()) {
     return router.parseUrl('/setup');
   }
@@ -25,7 +26,7 @@ export const guestGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  if (auth.isStatusLoading()) {
+  if (auth.isStatusLoading() || auth.statusUnavailable()) {
     await auth.checkStatus();
   }
 
@@ -38,4 +39,12 @@ export const guestGuard: CanActivateFn = async () => {
   }
 
   return true;
+};
+
+export const setupGuard: CanActivateFn = async () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  await auth.checkStatus();
+  if (auth.statusUnavailable()) return router.parseUrl('/login');
+  return auth.isSetUp() ? router.parseUrl(auth.isAuthenticated() ? '/' : '/login') : true;
 };

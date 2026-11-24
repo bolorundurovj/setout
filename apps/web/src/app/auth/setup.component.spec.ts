@@ -64,6 +64,14 @@ describe('SetupComponent', () => {
     expect(component.isValid()).toBeTruthy();
   });
 
+  it('requires confirmation and a nonblank name', () => {
+    const c = filled(render());
+    c.confirmPassphrase.set('');
+    expect(c.isValid()).toBeFalsy();
+    filled(c).name.set('   ');
+    expect(c.isValid()).toBeFalsy();
+  });
+
   it('flags a passphrase mismatch as invalid', () => {
     const component = render();
     component.passphrase.set('a long passphrase');

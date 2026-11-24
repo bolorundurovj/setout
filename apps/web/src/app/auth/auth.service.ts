@@ -30,6 +30,9 @@ export class AuthService {
   loading = signal(false);
   error = signal<string | null>(null);
 
+  readonly statusUnavailable = computed(
+    () => !this.state().loading && this.state().status === null,
+  );
   readonly isSetUp = computed(() => this.state().status?.is_setup ?? false);
   readonly isAuthenticated = computed(() => this.state().status?.is_authenticated ?? false);
   readonly user = computed(() => this.state().status?.user ?? null);
@@ -78,6 +81,7 @@ export class AuthService {
       this.state.set({ status, loading: false });
     } catch {
       this.state.set({ status: null, loading: false });
+      this.error.set('Could not reach the server to check account status. Try again.');
     }
   }
 

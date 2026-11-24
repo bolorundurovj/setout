@@ -18,11 +18,11 @@ import { VendorFormComponent } from './vendors/vendor-form.component';
 import { PersonFormComponent } from './people/person-form.component';
 import { ProjectDetailComponent } from './projects/project-detail.component';
 import { SettingsComponent } from './settings/settings.component';
-import { authGuard, guestGuard } from './auth/auth.guard';
+import { authGuard, guestGuard, setupGuard } from './auth/auth.guard';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent, canActivate: [guestGuard], title: 'Sign In' },
-  { path: 'setup', component: SetupComponent, canActivate: [guestGuard], title: 'Setup' },
+  { path: 'setup', component: SetupComponent, canActivate: [setupGuard], title: 'Setup' },
   { path: '', component: DashboardComponent, canActivate: [authGuard], title: 'Home' },
   {
     path: 'projects',

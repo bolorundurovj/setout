@@ -169,10 +169,10 @@ export class SetupComponent {
 
   isValid() {
     return (
-      this.name() &&
+      this.name().trim() &&
       this.passphrase() &&
       this.passphrase().length >= 8 &&
-      !this.passphraseMismatch()
+      this.confirmPassphrase() === this.passphrase()
     );
   }
 
@@ -180,7 +180,7 @@ export class SetupComponent {
     if (!this.isValid()) return;
 
     const success = await this.authService.setup(
-      this.name(),
+      this.name().trim(),
       this.email().trim() || undefined,
       this.passphrase(),
     );

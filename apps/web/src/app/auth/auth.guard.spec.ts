@@ -2,12 +2,18 @@ import { TestBed } from '@angular/core/testing';
 import { Router, UrlTree } from '@angular/router';
 import { provideRouter } from '@angular/router';
 import { AuthService } from './auth.service';
-import { authGuard, guestGuard } from './auth.guard';
+import { authGuard, guestGuard, setupGuard } from './auth.guard';
 
 describe('auth guards', () => {
-  function configure(state: { setUp: boolean; authenticated: boolean; loading?: boolean }) {
+  function configure(state: {
+    setUp: boolean;
+    authenticated: boolean;
+    loading?: boolean;
+    unavailable?: boolean;
+  }) {
     TestBed.resetTestingModule();
     const auth = {
+      statusUnavailable: () => state.unavailable ?? false,
       isSetUp: () => state.setUp,
       isAuthenticated: () => state.authenticated,
       isStatusLoading: () => state.loading ?? false,
@@ -51,5 +57,11 @@ describe('auth guards', () => {
   it('allows a signed-out visitor to reach the sign-in page', async () => {
     configure({ setUp: true, authenticated: false });
     expect(await run(guestGuard)).toBe(true);
+  });
+  it('routes status failures and configured setup visits to login', async () => {
+    configure({ setUp: false, authenticated: false, unavailable: true });
+    expect((await run(authGuard)).toString()).toBe('/login');
+    configure({ setUp: true, authenticated: false });
+    expect((await run(setupGuard)).toString()).toBe('/login');
   });
 });
