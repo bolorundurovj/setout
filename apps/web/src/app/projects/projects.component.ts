@@ -12,6 +12,7 @@ import { Router } from '@angular/router';
 import type { ProjectRead, ProjectStatus } from '@setout/api-client';
 import { formatMoney } from '../budget/money';
 import { ButtonComponent } from '../ui/button.component';
+import { budgetBar } from '../ui/budget-bar';
 import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
 import { CurrencyPillComponent } from '../ui/currency-pill.component';
 import { InfiniteScrollDirective } from '../ui/infinite-scroll.directive';
@@ -213,18 +214,11 @@ export class ProjectsComponent {
   }
 
   usedPercent(project: ProjectRead): number {
-    if (!project.budgeted_amount) {
-      return 0;
-    }
-    return Math.min(100, (project.spent_amount / project.budgeted_amount) * 100);
+    return budgetBar(project.budgeted_amount, project.spent_amount).fill;
   }
 
   overBudgetPercent(project: ProjectRead): number {
-    if (!project.budgeted_amount || project.spent_amount <= project.budgeted_amount) {
-      return 0;
-    }
-    const overspend = project.spent_amount - project.budgeted_amount;
-    return Math.min(100 - this.usedPercent(project), (overspend / project.budgeted_amount) * 100);
+    return budgetBar(project.budgeted_amount, project.spent_amount).over;
   }
 
   requestConfirmation(id: string, action: 'close' | 'archive' | 'delete'): void {

@@ -132,9 +132,12 @@ describe('ProjectDashboardComponent', () => {
     expect(c.varianceNote()).toContain('No budget set');
   });
 
-  it('fills the meter proportionally, capped at 100', () => {
+  it('fills the meter proportionally and splits over-budget spend across used and over segments', () => {
     expect(render(summary(1000, 250)).usedPercent()).toBe(25);
-    expect(render(summary(1000, 5000)).usedPercent()).toBe(100);
+    expect(render(summary(1000, 250)).overBudgetPercent()).toBe(0);
+    const over = render(summary(100, 150));
+    expect(over.usedPercent()).toBeCloseTo(66.6667, 3);
+    expect(over.overBudgetPercent()).toBeCloseTo(33.3333, 3);
     expect(render(summary(0, 500)).usedPercent()).toBe(0);
   });
 

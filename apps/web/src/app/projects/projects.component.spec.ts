@@ -152,18 +152,21 @@ describe('ProjectsComponent', () => {
     expect(component.isOverBudget(row)).toBe(false);
   });
 
-  it('fills the meter in proportion and caps it at full', () => {
+  it('fills the meter in proportion and splits over-budget spend across both segments', () => {
     const component = render([project()]);
     expect(component.usedPercent(project({ budgeted_amount: 1000, spent_amount: 250 }))).toBe(25);
-    expect(component.usedPercent(project({ budgeted_amount: 1000, spent_amount: 5000 }))).toBe(100);
+    expect(component.usedPercent(project({ budgeted_amount: 100, spent_amount: 150 }))).toBeCloseTo(
+      66.6667,
+      3,
+    );
     expect(component.usedPercent(project({ budgeted_amount: 0, spent_amount: 500 }))).toBe(0);
   });
 
-  it('shows the overspend as a separate meter segment', () => {
+  it('shows the overspend as a separate non-zero meter segment', () => {
     const component = render([project()]);
     expect(
-      component.overBudgetPercent(project({ budgeted_amount: 1000, spent_amount: 1200 })),
-    ).toBe(0);
+      component.overBudgetPercent(project({ budgeted_amount: 100, spent_amount: 150 })),
+    ).toBeCloseTo(33.3333, 3);
     expect(component.overBudgetPercent(project({ budgeted_amount: 1000, spent_amount: 900 }))).toBe(
       0,
     );

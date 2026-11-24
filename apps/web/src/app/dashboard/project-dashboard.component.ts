@@ -5,6 +5,7 @@ import { BudgetService } from '../budget/budget.service';
 import { DeliveryService } from '../deliveries/delivery.service';
 import { formatAmount, formatMoney, formatNumber } from '../budget/money';
 import { ExpenseService } from '../expenses/expense.service';
+import { budgetBar } from '../ui/budget-bar';
 import { currencySymbol } from '../ui/currency-pill.component';
 import { tintFor } from '../ui/tints';
 
@@ -165,18 +166,11 @@ export class ProjectDashboardComponent {
   }
 
   usedPercent(): number {
-    if (!this.budgeted()) {
-      return 0;
-    }
-    return Math.min(100, (this.spent() / this.budgeted()) * 100);
+    return budgetBar(this.budgeted(), this.spent()).fill;
   }
 
   overBudgetPercent(): number {
-    if (!this.budgeted() || this.spent() <= this.budgeted()) {
-      return 0;
-    }
-    const overspend = this.spent() - this.budgeted();
-    return Math.min(100 - this.usedPercent(), (overspend / this.budgeted()) * 100);
+    return budgetBar(this.budgeted(), this.spent()).over;
   }
 
   readonly scale = computed(() =>
@@ -203,24 +197,15 @@ export class ProjectDashboardComponent {
   }
 
   fillPercent(category: CategoryRead): number {
-    const inBudgetAmount = category.budgeted_amount
-      ? Math.min(category.spent_amount, category.budgeted_amount)
-      : category.spent_amount;
-    return (inBudgetAmount / this.scale()) * 100;
+    return budgetBar(category.budgeted_amount, category.spent_amount, this.scale()).fill;
   }
 
   categoryOverPercent(category: CategoryRead): number {
-    if (!this.categoryIsOverBudget(category)) {
-      return 0;
-    }
-    return ((category.spent_amount - category.budgeted_amount) / this.scale()) * 100;
+    return budgetBar(category.budgeted_amount, category.spent_amount, this.scale()).over;
   }
 
   budgetMarkPercent(category: CategoryRead): number | null {
-    if (!category.budgeted_amount) {
-      return null;
-    }
-    return (category.budgeted_amount / this.scale()) * 100;
+    return budgetBar(category.budgeted_amount, category.spent_amount, this.scale()).mark;
   }
 
   categoryNote(category: CategoryRead): string {

@@ -87,16 +87,16 @@
   height: 6px;
   border-radius: 3px;
   background: var(--field);
+  display: flex;
   overflow: hidden;
 }
 
 .meter-used {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  border-radius: 3px;
   background: var(--ink-2);
+}
+
+.meter-over {
+  background: var(--over);
 }
 
 .caption {

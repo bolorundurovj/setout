@@ -226,13 +226,17 @@ describe('DashboardComponent', () => {
     expect(component.rowBudgetStatus(project({ budgeted_amount: 0 }))).toBe('No budget set');
   });
 
-  it('fills a project bar to the spent share and caps the over-budget segment', () => {
-    const component = render();
+  it('fills a project bar to the spent share and shows a non-zero over-budget segment', () => {
+    const component = render({
+      summary: summary({ budgeted_amount: 100, spent_amount: 150 }),
+    });
     const overBudget = project({ budgeted_amount: 100, spent_amount: 150 });
 
+    expect(component.usedPercent()).toBeCloseTo(66.6667, 3);
+    expect(component.overBudgetPercent()).toBeCloseTo(33.3333, 3);
     expect(component.rowFill(project())).toBe(40);
-    expect(component.rowFill(overBudget)).toBe(100);
-    expect(component.rowOverBudgetPercent(overBudget)).toBe(0);
+    expect(component.rowFill(overBudget)).toBeCloseTo(66.6667, 3);
+    expect(component.rowOverBudgetPercent(overBudget)).toBeCloseTo(33.3333, 3);
     expect(component.rowOverBudgetPercent(project())).toBe(0);
   });
 

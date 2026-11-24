@@ -11,6 +11,7 @@ import { AuthService } from '../auth/auth.service';
 import { formatAmount, formatMoney } from '../budget/money';
 import { formatDay, formatLongToday } from '../shared/dates';
 import { ButtonComponent } from '../ui/button.component';
+import { budgetBar } from '../ui/budget-bar';
 import { TopbarComponent } from '../ui/topbar.component';
 import { HomeService } from './home.service';
 
@@ -59,9 +60,9 @@ export class DashboardComponent {
     this.budgeted() ? `${Math.round((this.spent() / this.budgeted()) * 100)}%` : '—',
   );
 
-  readonly usedPercent = computed(() =>
-    this.budgeted() ? Math.min(100, (this.spent() / this.budgeted()) * 100) : 0,
-  );
+  private readonly summaryBar = computed(() => budgetBar(this.budgeted(), this.spent()));
+  readonly usedPercent = computed(() => this.summaryBar().fill);
+  readonly overBudgetPercent = computed(() => this.summaryBar().over);
 
   readonly alerts = computed(() => this.home.summary()?.alerts ?? []);
   readonly rows = computed(() => this.home.projects()?.rows ?? []);
@@ -172,18 +173,13 @@ export class DashboardComponent {
   }
 
   rowFill(row: HomeProject): number {
-    if (!row.budgeted_amount) {
-      return row.spent_amount > 0 ? 100 : 0;
-    }
-    return Math.min(100, (row.spent_amount / row.budgeted_amount) * 100);
+    const scale = Math.max(row.budgeted_amount, row.spent_amount, 1);
+    return budgetBar(row.budgeted_amount, row.spent_amount, scale).fill;
   }
 
   rowOverBudgetPercent(row: HomeProject): number {
-    if (!this.rowIsOverBudget(row)) {
-      return 0;
-    }
-    const overspend = row.spent_amount - row.budgeted_amount;
-    return Math.min(100 - this.rowFill(row), (overspend / row.budgeted_amount) * 100);
+    const scale = Math.max(row.budgeted_amount, row.spent_amount, 1);
+    return budgetBar(row.budgeted_amount, row.spent_amount, scale).over;
   }
 
   rowBudgetStatus(row: HomeProject): string {

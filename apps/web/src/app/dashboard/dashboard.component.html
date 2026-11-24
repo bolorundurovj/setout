@@ -52,6 +52,7 @@
               <span class="stat-value t-mono">{{ usedLabel() }}</span>
               <span class="meter">
                 <span class="meter-used" [style.width.%]="usedPercent()"></span>
+                <span class="meter-over" [style.width.%]="overBudgetPercent()"></span>
               </span>
             </div>
           </div>
