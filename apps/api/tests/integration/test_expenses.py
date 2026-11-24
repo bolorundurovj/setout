@@ -1109,3 +1109,19 @@ async def test_bulk_categorise_rejects_a_category_from_another_project(client: A
         json={"expense_ids": [expense["id"]], "category_id": other_category["id"]},
     )
     assert resp.status_code == 404
+
+
+@pytest.mark.parametrize("group", [False, True])
+async def test_restore_expense_requires_active_leaf_category(
+    client: AsyncClient, group: bool
+) -> None:
+    project_id = await _project(client)
+    category = await _category(client, project_id, "Root")
+    expense = await _expense(client, project_id, category_id=category["id"])
+    url = f"/api/expenses/{expense['id']}"
+    assert (await client.post(f"{url}/archive")).status_code == 204
+    if group:
+        await _category(client, project_id, "Child", parent_id=category["id"])
+    else:
+        assert (await client.post(f"/api/categories/{category['id']}/archive")).status_code == 204
+    assert (await client.post(f"{url}/restore")).status_code == (409 if group else 404)

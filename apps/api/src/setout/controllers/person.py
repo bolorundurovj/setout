@@ -70,6 +70,7 @@ class PersonController:
     async def restore(self, person_id: str) -> PersonRead:
         person = await self._person_or_404(person_id, include_archived=True)
         if person.archived_at is not None:
+            await self._reject_duplicate(person.name)
             person.archived_at = None
             await person.save()
         totals = await self._totals([person.id])

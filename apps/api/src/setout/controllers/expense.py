@@ -271,6 +271,8 @@ class ExpenseController:
         async with in_transaction():
             expense = await self._expense_or_404(expense_id, include_archived=True)
             if expense.archived_at is not None:
+                if expense.category_id is not None:
+                    await self._categorisable_category(expense.category_id, expense.project_id)
                 archived_at = expense.archived_at
                 expense.archived_at = None
                 await expense.save()

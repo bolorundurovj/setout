@@ -116,6 +116,7 @@ class LandController:
         async with in_transaction():
             land = await self._land_or_404(land_id, include_archived=True)
             if land.archived_at is not None:
+                await self._reject_duplicate(land.name)
                 archived_at = land.archived_at
                 land.archived_at = None
                 await land.save()

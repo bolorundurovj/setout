@@ -73,6 +73,7 @@ class VendorController:
     async def restore(self, vendor_id: str) -> VendorRead:
         vendor = await self._vendor_or_404(vendor_id, include_archived=True)
         if vendor.archived_at is not None:
+            await self._reject_duplicate(vendor.name)
             vendor.archived_at = None
             await vendor.save()
         totals = await self._totals([vendor.id])

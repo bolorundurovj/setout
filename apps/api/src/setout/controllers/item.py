@@ -73,6 +73,7 @@ class ItemController:
     async def restore(self, item_id: str) -> ItemRead:
         item = await self._item_or_404(item_id, include_archived=True)
         if item.archived_at is not None:
+            await self._reject_duplicate(item.name)
             item.archived_at = None
             await item.save()
         prices = await self._price_summaries([item.id])

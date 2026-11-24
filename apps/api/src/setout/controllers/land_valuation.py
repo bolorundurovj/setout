@@ -49,13 +49,7 @@ class LandValuationController:
                     status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail=f"Unknown currency: {req.currency_code}",
                 )
-            if land.currency_id is not None and land.currency_id != code:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                    detail=f"This land's valuations must use {land.currency_id}",
-                )
-            if req.kind is LandValuationKind.PURCHASE and await self._has_purchase(land_id):
-                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=DUPLICATE_PURCHASE)
+            await self._validate_value(land, code, req.kind)
 
             row = await LandValuation.create(
                 land_id=land_id,
@@ -95,10 +89,11 @@ class LandValuationController:
         async with in_transaction():
             row = await self._valuation_or_404(valuation_id, include_archived=True)
             if row.archived_at is not None:
+                land = await self._land_or_404(row.land_id)
+                await self._validate_value(land, row.currency_id, row.kind)
                 row.archived_at = None
                 await row.save()
-                land = await Land.get_or_none(id=row.land_id)
-                if land is not None and land.currency_id is None:
+                if land.currency_id is None:
                     land.currency_id = row.currency_id
                     await land.save()
             return self._read(row, await self._exponents([row]))
@@ -114,6 +109,15 @@ class LandValuationController:
             land_id = row.land_id
             await row.delete()
             await self._clear_unused_currency(land_id)
+
+    async def _validate_value(self, land: Land, code: str, kind: LandValuationKind) -> None:
+        if land.currency_id is not None and land.currency_id != code:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=f"This land's valuations must use {land.currency_id}",
+            )
+        if kind is LandValuationKind.PURCHASE and await self._has_purchase(land.id):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=DUPLICATE_PURCHASE)
 
     async def _has_purchase(self, land_id: str, *, exclude_id: str | None = None) -> bool:
         query = LandValuation.filter(

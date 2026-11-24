@@ -185,3 +185,16 @@ async def test_a_valuation_in_a_currency_that_is_not_there(client: AsyncClient) 
 
     assert code == 422
     assert "ZZZ" in body["detail"]
+
+
+@pytest.mark.parametrize(("currency", "status"), [("USD", 422), ("NGN", 409)])
+async def test_restore_purchase_rechecks_currency_and_kind(
+    client: AsyncClient, currency: str, status: int
+) -> None:
+    await _setup(client)
+    land = await _land(client)
+    _, old = await _value(client, land, kind="purchase")
+    url = f"/api/land-valuations/{old['id']}"
+    assert (await client.post(f"{url}/archive")).status_code == 204
+    assert (await _value(client, land, kind="purchase", currency_code=currency))[0] == 201
+    assert (await client.post(f"{url}/restore")).status_code == status
