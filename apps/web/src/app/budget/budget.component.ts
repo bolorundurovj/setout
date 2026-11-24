@@ -194,10 +194,12 @@ export class BudgetComponent {
   }
 
   /** A category with more than one item can only be changed through its items. */
+  private readonly pendingCommits = new Set<string>();
+
   async commit(category: CategoryRead): Promise<void> {
     const typed = this.draftFor(category.id).trim();
     const items = this.activeItemsFor(category.id);
-    if (typed === '') {
+    if (this.pendingCommits.has(category.id) || typed === '') {
       return;
     }
     const budgeted = parseMoney(typed, this.project().currency_exponent);
@@ -215,13 +217,18 @@ export class BudgetComponent {
       return;
     }
 
-    if (items.length === 1) {
-      await this.budget.updateItem(this.project().id, category.id, items[0].id, budgeted);
-    } else {
-      await this.budget.addItem(this.project().id, category.id, category.name, budgeted);
+    this.pendingCommits.add(category.id);
+    try {
+      if (items.length === 1) {
+        await this.budget.updateItem(this.project().id, category.id, items[0].id, budgeted);
+      } else {
+        await this.budget.addItem(this.project().id, category.id, category.name, budgeted);
+      }
+      await this.load();
+      this.toast.show(`${category.name} budgeted at ${this.money(budgeted)}.`);
+    } finally {
+      this.pendingCommits.delete(category.id);
     }
-    await this.load();
-    this.toast.show(`${category.name} budgeted at ${this.money(budgeted)}.`);
   }
 
   async addCategory(): Promise<void> {

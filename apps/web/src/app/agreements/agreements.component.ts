@@ -47,7 +47,7 @@ export class AgreementsComponent {
   readonly agreements = inject(AgreementService);
   readonly vendors = inject(VendorService);
   readonly people = inject(PersonService);
-  private readonly expenses = inject(ExpenseService);
+  readonly expenses = inject(ExpenseService);
   private readonly toast = inject(ToastService);
 
   readonly adding = signal(false);
@@ -218,7 +218,7 @@ export class AgreementsComponent {
       return;
     }
     this.cancelExpense();
-    await this.agreements.loadAll(this.project().id);
+    await this.agreements.loadAll(this.project().id, this.includeArchived());
     this.toast.show(`Expense of ${this.money(amount)} recorded for ${agreement.vendor_name}.`);
   }
 
@@ -353,7 +353,7 @@ export class AgreementsComponent {
     this.cancelEditAdvance();
     this.cancelExpense();
     await this.agreements.loadAll(this.project().id, on);
-    await this.agreements.loadAdvances(this.project().id);
+    await this.agreements.loadAdvances(this.project().id, 1, on);
   }
 
   archivedLabel(): string {

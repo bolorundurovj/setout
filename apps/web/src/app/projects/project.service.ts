@@ -31,7 +31,6 @@ export class ProjectService {
   private readonly currencyState = signal<CurrencyRead[]>([]);
   private readonly summaryState = signal<ProjectSummary | null>(null);
   private readonly totalState = signal(0);
-  private readonly offsetState = signal(0);
   private readonly includeArchivedState = signal(false);
 
   readonly projects = this.projectsState.asReadonly();
@@ -46,7 +45,6 @@ export class ProjectService {
 
   async load(includeArchived = false): Promise<void> {
     this.includeArchivedState.set(includeArchived);
-    this.offsetState.set(0);
     this.loading.set(true);
     this.error.set(null);
     try {
@@ -57,7 +55,6 @@ export class ProjectService {
       });
       this.projectsState.set(page.items);
       this.totalState.set(page.total);
-      this.offsetState.set(page.items.length);
     } catch {
       this.error.set('Could not load the projects.');
     } finally {
@@ -75,11 +72,10 @@ export class ProjectService {
       const page = await this.api.invoke(listProjects, {
         include_archived: this.includeArchivedState(),
         limit: SCROLL_SIZE,
-        offset: this.offsetState(),
+        offset: this.projectsState().length,
       });
       this.projectsState.update((projects) => [...projects, ...page.items]);
       this.totalState.set(page.total);
-      this.offsetState.update((offset) => offset + page.items.length);
     } catch {
       this.error.set('Could not load more of the projects.');
     } finally {

@@ -186,6 +186,7 @@ export class ExpenseService {
   }
 
   async add(projectId: string, body: ExpenseCreate): Promise<ExpenseRead | null> {
+    if (this.saving()) return null;
     this.saving.set(true);
     this.error.set(null);
     try {

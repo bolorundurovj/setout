@@ -133,6 +133,8 @@ export class LandService {
   }
 
   async edit(landId: string, body: LandUpdate): Promise<LandRead | null> {
+    if (this.saving()) return null;
+    this.saving.set(true);
     this.error.set(null);
     try {
       const updated = await this.api.invoke(updateLand, { land_id: landId, body });
@@ -141,6 +143,8 @@ export class LandService {
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not save the land record.');
       return null;
+    } finally {
+      this.saving.set(false);
     }
   }
 

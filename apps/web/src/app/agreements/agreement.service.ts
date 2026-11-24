@@ -43,6 +43,10 @@ export class AgreementService {
   private readonly loadedProjectId = signal('');
   private readonly includeArchivedState = signal(false);
 
+  private advanceArchived = false;
+  private loadingMore = false;
+  private agreementRevision = 0;
+
   readonly agreements = this.agreementState.asReadonly();
   readonly advances = this.advanceState.asReadonly();
   readonly balances = this.balanceState.asReadonly();
@@ -59,6 +63,9 @@ export class AgreementService {
       return;
     }
     this.loadedProjectId.set(projectId);
+    this.includeArchivedState.set(false);
+    this.advanceArchived = false;
+    this.agreementRevision++;
     this.agreementState.set([]);
     this.advanceState.set([]);
     this.balanceState.set([]);
@@ -79,6 +86,7 @@ export class AgreementService {
 
   async load(projectId: string): Promise<void> {
     this.resetForProject(projectId);
+    const revision = ++this.agreementRevision;
     this.error.set(null);
     try {
       const page = await this.api.invoke(listAgreements, {
@@ -87,6 +95,7 @@ export class AgreementService {
         limit: SCROLL_SIZE,
         offset: 0,
       });
+      if (revision !== this.agreementRevision) return;
       this.agreementState.set(page.items);
       this.agreementTotalState.set(page.total);
     } catch {
@@ -96,18 +105,25 @@ export class AgreementService {
 
   async loadMore(projectId: string): Promise<void> {
     this.resetForProject(projectId);
-    if (!this.hasMore()) {
+    if (this.loadingMore || !this.hasMore()) {
       return;
     }
-    const page = await this.api.invoke(listAgreements, {
-      project_id: projectId,
-      include_archived: this.includeArchivedState(),
-      limit: SCROLL_SIZE,
-      offset: this.agreementState().length,
-    });
-    this.agreementState.update((rows) => [...rows, ...page.items]);
-    this.agreementTotalState.set(page.total);
-    await this.loadAgreementExpenses(projectId);
+    this.loadingMore = true;
+    const revision = this.agreementRevision;
+    try {
+      const page = await this.api.invoke(listAgreements, {
+        project_id: projectId,
+        include_archived: this.includeArchivedState(),
+        limit: SCROLL_SIZE,
+        offset: this.agreementState().length,
+      });
+      if (revision !== this.agreementRevision) return;
+      this.agreementState.update((rows) => [...rows, ...page.items]);
+      this.agreementTotalState.set(page.total);
+      await this.loadAgreementExpenses(projectId);
+    } finally {
+      this.loadingMore = false;
+    }
   }
 
   async loadAgreementExpenses(projectId: string): Promise<void> {
@@ -144,12 +160,13 @@ export class AgreementService {
     await this.loadAgreementExpenses(projectId);
   }
 
-  async loadAdvances(projectId: string, page = 1): Promise<void> {
+  async loadAdvances(projectId: string, page = 1, includeArchived?: boolean): Promise<void> {
     this.resetForProject(projectId);
     try {
+      this.advanceArchived = includeArchived ?? this.advanceArchived;
       const rows = await this.api.invoke(listAdvances, {
         project_id: projectId,
-        include_archived: this.includeArchivedState(),
+        include_archived: this.advanceArchived,
         limit: PAGE_SIZE,
         offset: offsetOf(page),
       });

@@ -114,6 +114,8 @@ export class PersonService {
   }
 
   async edit(personId: string, body: PersonUpdate): Promise<PersonRead | null> {
+    if (this.saving()) return null;
+    this.saving.set(true);
     this.error.set(null);
     try {
       const updated = await this.api.invoke(updatePerson, { person_id: personId, body });
@@ -122,6 +124,8 @@ export class PersonService {
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not save the person.');
       return null;
+    } finally {
+      this.saving.set(false);
     }
   }
 

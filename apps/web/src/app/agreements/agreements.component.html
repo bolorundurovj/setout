@@ -226,7 +226,7 @@
               </span>
               <app-button
                 [disabled]="!canSaveExpense()"
-                [loading]="agreements.saving()"
+                [loading]="expenses.saving()"
                 (pressed)="saveExpense(agreement)"
               >
                 Save Expense

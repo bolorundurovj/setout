@@ -101,7 +101,7 @@ describe('BudgetComponent', () => {
   it('creates the first item when a category has none', async () => {
     const component = render([category()], []);
     component.onAmountInput('s1', { target: { value: '11000' } } as unknown as Event);
-    await component.commit(category());
+    await Promise.all([component.commit(category()), component.commit(category())]);
 
     expect(added.length).toBe(1);
     expect(added[0]).toEqual(['p1', 's1', 'Concrete foundation', 1_100_000]);

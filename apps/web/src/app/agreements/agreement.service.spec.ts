@@ -196,7 +196,9 @@ describe('AgreementService', () => {
     await service.loadAll('p1', true);
     await service.loadAdvances('p1');
     expect(calls('listAgreements')[1]['include_archived']).toBe(true);
-    expect(calls('listAdvances')[1]['include_archived']).toBe(true);
+    expect(calls('listAdvances')[1]['include_archived']).toBe(false);
+    await service.loadAdvances('p1', 1, true);
+    expect(calls('listAdvances')[2]['include_archived']).toBe(true);
   });
 
   it('replaces a restored agreement in place with archived_at cleared', async () => {

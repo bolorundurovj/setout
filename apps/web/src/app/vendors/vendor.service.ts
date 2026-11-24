@@ -116,6 +116,8 @@ export class VendorService {
   }
 
   async edit(vendorId: string, body: VendorUpdate): Promise<VendorRead | null> {
+    if (this.saving()) return null;
+    this.saving.set(true);
     this.error.set(null);
     try {
       const updated = await this.api.invoke(updateVendor, { vendor_id: vendorId, body });
@@ -124,6 +126,8 @@ export class VendorService {
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not save the vendor.');
       return null;
+    } finally {
+      this.saving.set(false);
     }
   }
 

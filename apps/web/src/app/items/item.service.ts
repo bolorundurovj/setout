@@ -114,6 +114,8 @@ export class ItemService {
   }
 
   async update(itemId: string, body: ItemUpdate): Promise<ItemRead | null> {
+    if (this.saving()) return null;
+    this.saving.set(true);
     this.error.set(null);
     try {
       const updated = await this.api.invoke(updateItem, { item_id: itemId, body });
@@ -122,6 +124,8 @@ export class ItemService {
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not save the item.');
       return null;
+    } finally {
+      this.saving.set(false);
     }
   }
 
