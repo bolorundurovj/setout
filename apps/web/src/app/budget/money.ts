@@ -3,10 +3,21 @@ export function toMajor(minor: number, exponent: number): number {
   return minor / 10 ** exponent;
 }
 
+const formatters = new Map<string, Intl.NumberFormat>();
+
+function formatter(key: string, options: Intl.NumberFormatOptions): Intl.NumberFormat {
+  let result = formatters.get(key);
+  if (!result) {
+    result = new Intl.NumberFormat('en', options);
+    formatters.set(key, result);
+  }
+  return result;
+}
+
 export function formatMoney(minor: number, code: string, exponent: number): string {
   const major = toMajor(minor, exponent);
   try {
-    return new Intl.NumberFormat('en', {
+    return formatter(`currency-${code}-${exponent}`, {
       style: 'currency',
       currency: code,
       currencyDisplay: 'narrowSymbol',
@@ -18,9 +29,11 @@ export function formatMoney(minor: number, code: string, exponent: number): stri
   }
 }
 
-/** Rounds to whole major units and omits the currency symbol. */
+/** Displays major units with the precision of the project currency. */
 export function formatAmount(minor: number, exponent: number): string {
-  return new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(toMajor(minor, exponent));
+  return formatter(`amount-${exponent}`, { maximumFractionDigits: exponent }).format(
+    toMajor(minor, exponent),
+  );
 }
 
 export function formatAmountInput(minor: number, exponent: number): string {
@@ -32,7 +45,7 @@ export function formatNumber(value: number | string, maxDecimals = 2): string {
   if (!Number.isFinite(parsed)) {
     return String(value);
   }
-  return new Intl.NumberFormat('en', { maximumFractionDigits: maxDecimals }).format(parsed);
+  return formatter(`amount-${maxDecimals}`, { maximumFractionDigits: maxDecimals }).format(parsed);
 }
 
 // Commas and spaces are accepted only between groups of three digits, so "12,50"

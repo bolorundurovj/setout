@@ -59,8 +59,10 @@ describe('money', () => {
     });
   });
 
-  it('formats an amount in whole major units without the currency symbol', () => {
-    expect(formatAmount(215000050, 2)).toBe('2,150,001');
+  it('formats an amount in major units without the currency symbol', () => {
+    expect(formatAmount(215000050, 2)).toBe('2,150,000.5');
+    expect(formatAmount(49, 2)).toBe('0.49');
+    expect(formatAmount(-1, 3)).toBe('-0.001');
     expect(formatAmount(5000, 0)).toBe('5,000');
   });
 
