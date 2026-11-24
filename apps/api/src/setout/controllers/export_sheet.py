@@ -63,12 +63,17 @@ class ExportController:
             by_category.setdefault(item.category_id, []).append(item)
 
         codes: dict[str, str] = {}
-        for order, category in enumerate(categories, start=1):
-            code = (
-                category.code
-                if category.code and is_category_code(category.code)
-                else f"{order}000"
-            )
+        reserved = {c.code for c in categories if c.code and is_category_code(c.code)}
+        assigned: set[str] = set()
+        sequence = 1
+        for category in categories:
+            code = category.code
+            if not code or code not in reserved or code in assigned:
+                while f"{sequence}000" in reserved:
+                    sequence += 1
+                code = f"{sequence}000"
+                sequence += 1
+            assigned.add(code)
             codes[category.id] = code
             lines = [
                 write.BudgetLine(

@@ -229,3 +229,15 @@ async def test_a_project_with_a_non_latin_name_exports(client: AsyncClient) -> N
     assert workbook.status_code == 200, workbook.text
     assert csv.status_code == 200, csv.text
     assert "filename*=UTF-8''" in workbook.headers["content-disposition"]
+
+
+async def test_uncoded_category_does_not_take_a_later_reserved_code(client: AsyncClient) -> None:
+    await Currency.create(code="NGN", name="Naira", exponent=2)
+    await client.post("/api/auth/setup", json={"name": "Admin", "passphrase": "password123"})
+    project = await _post(client, "/projects", {"name": "Codes", "currency_code": "NGN"})
+    url = f"/projects/{project['id']}"
+    await _post(client, url + "/categories", {"name": "First", "sort_order": 1})
+    await _post(client, url + "/categories", {"name": "Second", "code": "1000", "sort_order": 2})
+    response = await client.get("/api" + url + "/export.csv?sheet=budget")
+    assert "2000,First," in response.text
+    assert "1000,Second," in response.text
