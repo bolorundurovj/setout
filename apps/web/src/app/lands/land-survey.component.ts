@@ -21,13 +21,27 @@ export class LandSurveyComponent {
   readonly grid = signal('minna31');
   readonly northing = signal('');
   readonly easting = signal('');
-  readonly legs = signal<Leg[]>([emptyLeg(), emptyLeg(), emptyLeg(), emptyLeg()]);
+  readonly legs = signal<ReturnType<typeof emptyLeg>[]>([
+    emptyLeg(),
+    emptyLeg(),
+    emptyLeg(),
+    emptyLeg(),
+  ]);
   readonly areaSqm = signal<number | null>(null);
   readonly projecting = signal(false);
 
   readonly gridOptions: Option[] = GRIDS.map((g) => ({ value: g.value, label: g.label }));
 
-  readonly validLegs = computed(() => this.legs().filter(isValidLeg));
+  readonly validLegs = computed(() =>
+    this.legs()
+      .map((leg) => ({
+        degrees: numeric(leg.degrees),
+        minutes: numeric(leg.minutes),
+        seconds: leg.seconds.trim() ? numeric(leg.seconds) : 0,
+        distance: numeric(leg.distance),
+      }))
+      .filter(isValidLeg),
+  );
 
   readonly firstBeacon = computed(() => {
     const northing = Number(this.northing().replace(/[^\d.-]/g, ''));
@@ -50,11 +64,6 @@ export class LandSurveyComponent {
     return (event.target as HTMLInputElement).value;
   }
 
-  /** Empty inputs are stored as NaN and render as an empty string. */
-  legValueText(value: number): string {
-    return Number.isFinite(value) ? String(value) : '';
-  }
-
   areaText(): string {
     const sqm = this.areaSqm();
     return sqm === null ? '' : `${Math.round(sqm * 10) / 10} sqm calculated from the traverse.`;
@@ -62,7 +71,7 @@ export class LandSurveyComponent {
 
   setLeg(index: number, field: keyof Leg, raw: string): void {
     const next = [...this.legs()];
-    next[index] = { ...next[index], [field]: raw.trim() === '' ? NaN : Number(raw) };
+    next[index] = { ...next[index], [field]: raw };
     this.legs.set(next);
     void this.redraw();
   }
@@ -85,24 +94,44 @@ export class LandSurveyComponent {
     void this.redraw();
   }
 
+  private revision = 0;
+
   async redraw(): Promise<void> {
+    const revision = ++this.revision;
     const start = this.firstBeacon();
     const legs = this.validLegs();
     if (!start || legs.length < 3) {
+      this.projecting.set(false);
+      this.boundaryChange.emit(null);
       this.areaSqm.set(null);
       return;
     }
     this.projecting.set(true);
     try {
-      const ring = await toPositions(gridOf(this.grid()), runTraverse(start, legs).beacons);
+      const grid = gridOf(this.grid());
+      // Centre a local metric projection on the geographic first beacon.
+      const local = !grid.definition;
+      const projection = local
+        ? {
+            ...grid,
+            definition: `+proj=aeqd +lat_0=${start.northing} +lon_0=${start.easting} +datum=WGS84 +units=m`,
+          }
+        : grid;
+      const origin = local ? { northing: 0, easting: 0 } : start;
+      const ring = await toPositions(projection, runTraverse(origin, legs).beacons);
+      if (revision !== this.revision) return;
       this.areaSqm.set(polygonAreaSqm(ring));
       this.boundaryChange.emit(boundaryOf(ring));
     } finally {
-      this.projecting.set(false);
+      if (revision === this.revision) this.projecting.set(false);
     }
   }
 }
 
-function emptyLeg(): Leg {
-  return { degrees: NaN, minutes: NaN, distance: NaN };
+function numeric(raw: string): number {
+  return raw.trim() ? Number(raw) : NaN;
+}
+
+function emptyLeg() {
+  return { degrees: '', minutes: '', seconds: '', distance: '' };
 }

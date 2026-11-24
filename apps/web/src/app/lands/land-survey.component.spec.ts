@@ -1,3 +1,4 @@
+import { bearingOf } from './land-traverse';
 import { TestBed } from '@angular/core/testing';
 import type { LandBoundary } from '@setout/api-client';
 import { ringOf } from './land-geo';
@@ -38,10 +39,32 @@ describe('LandSurveyComponent', () => {
     expect(component.validLegs()).toEqual([]);
   });
 
-  it('renders an empty leg value as empty text, not NaN', () => {
+  it('preserves partial decimals and includes bearing seconds', () => {
     const component = render();
-    expect(component.legValueText(NaN)).toBe('');
-    expect(component.legValueText(33)).toBe('33');
+    component.setLeg(0, 'distance', '12.');
+    expect(component.legs()[0].distance).toBe('12.');
+    component.setLeg(0, 'degrees', '0');
+    component.setLeg(0, 'minutes', '0');
+    component.setLeg(0, 'seconds', '30');
+    expect(bearingOf(component.validLegs()[0])).toBeCloseTo(30 / 3600);
+  });
+
+  it('projects metric legs from a geographic beacon and clears an incomplete traverse', async () => {
+    const c = render();
+    let boundary: LandBoundary | null | undefined;
+    c.boundaryChange.subscribe((value) => (boundary = value));
+    c.setGrid('latlon');
+    c.northing.set('7');
+    c.easting.set('5');
+    [0, 90, 180].forEach((deg, i) => {
+      c.setLeg(i, 'degrees', String(deg));
+      c.setLeg(i, 'minutes', '0');
+      c.setLeg(i, 'distance', '40');
+    });
+    await c.redraw();
+    expect(ringOf(boundary)[1][1] - 7).toBeCloseTo(0.00036, 5);
+    c.removeLeg(0);
+    expect(boundary).toBeNull();
   });
 
   it('shows no closure with fewer than three legs', () => {

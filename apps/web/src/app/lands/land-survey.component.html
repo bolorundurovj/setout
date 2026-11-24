@@ -50,7 +50,7 @@
           inputmode="numeric"
           [attr.aria-label]="'Leg ' + ($index + 1) + ' bearing degrees'"
           placeholder="30"
-          [value]="legValueText(leg.degrees)"
+          [value]="leg.degrees"
           (input)="setLeg($index, 'degrees', value($event))"
         />
         <span class="t-mono unit">&deg;</span>
@@ -59,10 +59,19 @@
           inputmode="numeric"
           [attr.aria-label]="'Leg ' + ($index + 1) + ' bearing minutes'"
           placeholder="00"
-          [value]="legValueText(leg.minutes)"
+          [value]="leg.minutes"
           (input)="setLeg($index, 'minutes', value($event))"
         />
         <span class="t-mono unit">&prime;</span>
+        <input
+          class="input-field t-mono"
+          inputmode="decimal"
+          [attr.aria-label]="'Leg ' + ($index + 1) + ' bearing seconds'"
+          placeholder="00"
+          [value]="leg.seconds"
+          (input)="setLeg($index, 'seconds', value($event))"
+        />
+        <span class="t-mono unit">&Prime;</span>
       </span>
       <span class="distance">
         <input
@@ -70,7 +79,7 @@
           inputmode="decimal"
           [attr.aria-label]="'Leg ' + ($index + 1) + ' distance in metres'"
           placeholder="40.00"
-          [value]="legValueText(leg.distance)"
+          [value]="leg.distance"
           (input)="setLeg($index, 'distance', value($event))"
         />
         <span class="t-mono unit">m</span>

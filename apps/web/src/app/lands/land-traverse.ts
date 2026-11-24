@@ -13,6 +13,7 @@ export interface GridPoint {
 export interface Leg {
   degrees: number;
   minutes: number;
+  seconds?: number;
   distance: number;
 }
 
@@ -23,7 +24,7 @@ export interface Traverse {
 }
 
 export function bearingOf(leg: Leg): number {
-  return leg.degrees + leg.minutes / 60;
+  return leg.degrees + leg.minutes / 60 + (leg.seconds ?? 0) / 3600;
 }
 
 export function isValidLeg(leg: Leg): boolean {
@@ -35,6 +36,8 @@ export function isValidLeg(leg: Leg): boolean {
     leg.degrees < 360 &&
     leg.minutes >= 0 &&
     leg.minutes < 60 &&
+    (leg.seconds ?? 0) >= 0 &&
+    (leg.seconds ?? 0) < 60 &&
     leg.distance > 0
   );
 }
