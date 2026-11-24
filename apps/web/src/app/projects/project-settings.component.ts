@@ -75,6 +75,7 @@ export class ProjectSettingsComponent {
   readonly archiving = signal<string | null>(null);
   readonly lastArchived = signal<CategoryRead | null>(null);
   readonly includeArchived = signal(false);
+  readonly deleteError = signal<string | null>(null);
   readonly pendingDelete = signal<string | null>(null);
   readonly deleteConfirmationText = signal('');
 
@@ -260,6 +261,7 @@ export class ProjectSettingsComponent {
   }
 
   requestDelete(id: string): void {
+    this.deleteError.set(null);
     this.pendingDelete.set(id);
     this.deleteConfirmationText.set('');
   }
@@ -282,7 +284,11 @@ export class ProjectSettingsComponent {
       category.id,
       this.includeArchived(),
     );
-    this.cancelDelete();
+    if (done) {
+      this.cancelDelete();
+    } else {
+      this.deleteError.set(this.budget.error() ?? 'Could not delete the category.');
+    }
     this.toast.show(
       done
         ? `${category.name} deleted permanently.`

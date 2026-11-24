@@ -131,6 +131,9 @@
               <span class="category-name">{{ category.name }}</span>
               <span class="category-count t-mono">archived</span>
               @if (pendingDelete() === category.id) {
+                @if (deleteError(); as message) {
+                  <span role="alert">{{ message }}</span>
+                }
                 <span class="confirm-inline">
                   <input
                     appDeleteConfirm

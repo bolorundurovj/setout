@@ -499,3 +499,25 @@ async def test_cannot_move_category_under_budget_line(client: AsyncClient) -> No
     assert line.status_code == 201
     resp = await client.patch(f"/api/categories/{child['id']}", json={"parent_id": parent["id"]})
     assert resp.status_code == 409
+
+
+async def test_delete_checks_active_grandchildren_below_archived_children(
+    client: AsyncClient,
+) -> None:
+    project_id = await _project(client)
+    root = await _category(client, project_id, "Root")
+    child = await _category(client, project_id, "Child", parent_id=root["id"])
+    leaf = await _category(client, project_id, "Leaf", parent_id=child["id"])
+    for category in (child, root):
+        assert (await client.post(f"/api/categories/{category['id']}/archive")).status_code == 204
+    url = f"/api/categories/{root['id']}"
+    conflict = await client.delete(url)
+    assert conflict.status_code == 409
+    assert conflict.json()["detail"]["descendants"] == [
+        {"id": leaf["id"], "name": "Leaf", "expense_count": 0}
+    ]
+    assert (await client.post(f"/api/categories/{leaf['id']}/archive")).status_code == 204
+    assert (await client.delete(url)).status_code == 204
+    assert (
+        await client.get(f"/api/projects/{project_id}/categories?include_archived=true")
+    ).json() == []

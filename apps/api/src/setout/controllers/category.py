@@ -134,8 +134,29 @@ class CategoryController:
                     detail="Only archived categories can be deleted permanently",
                 )
             branch = await self._subtree(category)
+            rows = await Category.filter(id__in=branch)
+            by_id = {row.id: row for row in rows}
+            blockers = []
+            for row in rows:
+                if row.archived_at is None:
+                    count = await Expense.filter(category_id=row.id).count()
+                    blockers.append({"id": row.id, "name": row.name, "expense_count": count})
+            if blockers:
+                names = ", ".join(
+                    f"{row['name']} ({row['expense_count']} expenses)" for row in blockers
+                )
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "code": "CATEGORY_HAS_ACTIVE_DESCENDANTS",
+                        "message": f"Archive these subcategories before deleting: {names}.",
+                        "descendants": blockers,
+                    },
+                )
             await changes.recorded_update(Expense.filter(category_id__in=branch), category_id=None)
-            await category.delete()
+            await changes.recorded_delete(BudgetItem.filter(category_id__in=branch))
+            for descendant_id in reversed(branch):
+                await by_id[descendant_id].delete()
 
     async def list_items(
         self, category_id: str, *, include_archived: bool, limit: int, offset: int

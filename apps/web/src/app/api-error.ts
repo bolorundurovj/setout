@@ -4,6 +4,14 @@ export function detailOf(e: unknown): string | null {
   if (typeof detail === 'string') {
     return detail;
   }
+  if (
+    detail &&
+    typeof detail === 'object' &&
+    'message' in detail &&
+    typeof detail.message === 'string'
+  ) {
+    return detail.message;
+  }
   if (Array.isArray(detail)) {
     return (detail[0] as { msg?: string } | undefined)?.msg ?? null;
   }
