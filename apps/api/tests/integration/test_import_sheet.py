@@ -750,3 +750,25 @@ async def test_preview_and_import_agree_on_undated_duplicates_and_distinct_parti
     assert result["skipped_duplicates"] == 1
     report = await preview_import(client, data, project_id=result["project_id"])
     assert next(d["count"] for d in report["decisions"] if d["kind"] == "duplicates") == 4
+
+
+@pytest.mark.parametrize("endpoint", ["/api/import/preview", "/api/import"])
+@pytest.mark.parametrize("kind", ["csv", "xlsx", "sheets"])
+async def test_oversize_file_is_rejected_before_writing(
+    client: AsyncClient, endpoint: str, kind: str
+) -> None:
+    await set_up_admin(client)
+    if kind == "csv":
+        data = b"row\n" * 20_001
+    elif kind == "xlsx":
+        data = workbook(Budget=[["row"]] * 20_000)  # plus the title row
+    else:
+        data = workbook(**{f"Sheet{i}": [] for i in range(25)})
+    response = await client.post(
+        endpoint,
+        files={"file": ("sheet.csv" if kind == "csv" else "sheet.xlsx", data)},
+        data={"name": "Too large", "currency_code": "NGN"},
+    )
+    assert response.status_code == 422
+    assert ("24 sheets" if kind == "sheets" else "20,000 rows") in response.json()["detail"]
+    assert (await client.get("/api/projects")).json()["total"] == 0

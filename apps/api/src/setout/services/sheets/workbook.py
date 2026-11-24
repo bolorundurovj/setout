@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 
 from openpyxl import load_workbook
@@ -31,9 +32,17 @@ def _csv(data: bytes, filename: str) -> Sheet:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError:
         text = data.decode("latin-1")
-    rows: list[list[object]] = [list(row) for row in csv.reader(io.StringIO(text))]
     stem = filename.rsplit("/", 1)[-1].rsplit(".", 1)[0]
-    return Sheet(name=stem or "Sheet1", rows=rows[:MAX_ROWS])
+    return _read_rows(stem or "Sheet1", csv.reader(io.StringIO(text, newline="")))
+
+
+def _read_rows(name: str, source: Iterable[Iterable[object]]) -> Sheet:
+    sheet = Sheet(name=name)
+    for row in source:
+        if len(sheet.rows) == MAX_ROWS:
+            raise SheetError(f"Sheet '{name}' exceeds the limit of {MAX_ROWS:,} rows.")
+        sheet.rows.append(list(row))
+    return sheet
 
 
 def _xlsx(data: bytes) -> list[Sheet]:
@@ -43,16 +52,16 @@ def _xlsx(data: bytes) -> list[Sheet]:
     except Exception as exc:  # noqa: BLE001
         raise SheetError("Could not open the file as a spreadsheet") from exc
 
-    sheets: list[Sheet] = []
-    for name in book.sheetnames[:MAX_SHEETS]:
-        rows: list[list[object]] = []
-        for row in book[name].iter_rows(values_only=True):
-            rows.append(list(row))
-            if len(rows) >= MAX_ROWS:
-                break
-        sheets.append(Sheet(name=name, rows=rows))
-    book.close()
-    return sheets
+    try:
+        if len(book.sheetnames) > MAX_SHEETS:
+            raise SheetError(f"The workbook exceeds the limit of {MAX_SHEETS} sheets.")
+        sheets = []
+        for worksheet in book.worksheets:
+            worksheet.reset_dimensions()
+            sheets.append(_read_rows(worksheet.title, worksheet.iter_rows(values_only=True)))
+        return sheets
+    finally:
+        book.close()
 
 
 CURRENCY_LABELS = {"currency code", "currency"}
