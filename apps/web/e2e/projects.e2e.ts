@@ -1,4 +1,4 @@
-import { expect, test, uniqueName } from './fixtures';
+import { api, expect, test, uniqueName } from './fixtures';
 
 const TABS = [
   'Dashboard',
@@ -42,4 +42,22 @@ test('New Project creates a project and every tab renders without console errors
     await page.waitForLoadState('networkidle');
   }
   expect(errors).toEqual([]);
+});
+
+test('switching project IDs refreshes the current tab', async ({ page, request }) => {
+  const first = await api.createProject(request);
+  const second = await api.createProject(request);
+  const firstCategory = uniqueName('First budget');
+  const secondCategory = uniqueName('Second budget');
+  await api.createCategory(request, first.id, firstCategory);
+  await api.createCategory(request, second.id, secondCategory);
+  await page.goto(`/projects/${first.id}/budget`);
+  await expect(page.getByText(firstCategory, { exact: true }).first()).toBeVisible();
+  await page.evaluate((url) => {
+    history.pushState({}, '', url);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, `/projects/${second.id}/budget`);
+  await expect(page.getByRole('heading', { name: String(second.name) })).toBeVisible();
+  await expect(page.getByText(secondCategory, { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(firstCategory, { exact: true })).toHaveCount(0);
 });

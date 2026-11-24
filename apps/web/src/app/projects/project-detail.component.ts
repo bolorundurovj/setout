@@ -6,6 +6,7 @@ import {
   inject,
   input,
   signal,
+  untracked,
 } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
@@ -77,6 +78,7 @@ export class ProjectDetailComponent {
   }));
 
   readonly project = signal<ProjectRead | null>(null);
+  private loadSequence = 0;
   readonly activeTab = signal('dashboard');
 
   readonly tabs: Tab[] = [
@@ -107,11 +109,19 @@ export class ProjectDetailComponent {
         this.title.setTitle(`${project.name} · ${this.activeTabName()} · Setout`);
       }
     });
-    queueMicrotask(() => void this.load());
+    effect(() => {
+      const id = this.id();
+      this.project.set(null);
+      untracked(() => void this.load(id));
+    });
   }
 
-  async load(): Promise<void> {
-    this.project.set(await this.projects.get(this.id()));
+  async load(id = this.id()): Promise<void> {
+    const sequence = ++this.loadSequence;
+    const project = await this.projects.get(id);
+    if (sequence === this.loadSequence && id === this.id()) {
+      this.project.set(project);
+    }
   }
 
   initials(name: string): string {
