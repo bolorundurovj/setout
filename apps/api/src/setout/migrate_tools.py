@@ -7,22 +7,31 @@ single migration, roll it back with no target.
 
 from __future__ import annotations
 
+import asyncio
 import subprocess
 import sys
-from pathlib import Path
+
+from tortoise import Tortoise
+from tortoise.migrations.recorder import MigrationRecorder
+
+from setout.db import close_db, init_db
 
 APP_LABEL = "models"
-MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 
 
-def migration_names() -> list[str]:
-    """Return migration file stems in order, for example 0001_initial."""
-    names = [p.stem for p in MIGRATIONS_DIR.glob("[0-9]*.py")]
-    return sorted(names)
+async def applied_names() -> list[str]:
+    await init_db()
+    try:
+        recorder = MigrationRecorder(Tortoise.get_connection("default"))
+        return [
+            key.name for key in await recorder.applied_migrations() if key.app_label == APP_LABEL
+        ]
+    finally:
+        await close_db()
 
 
 def downgrade_one() -> int:
-    names = migration_names()
+    names = asyncio.run(applied_names())
     if not names:
         print("No migrations to roll back.")
         return 0

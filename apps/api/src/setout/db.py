@@ -41,13 +41,6 @@ async def apply_migrations() -> str:
 
     try:
         plan_lines = await migration_plan(config=TORTOISE_ORM)
-    except Exception as exc:  # noqa: BLE001
-        # No migration files yet. Create the schema directly as a fallback.
-        logger.warning("Could not read migration plan (%s); generating schema", exc)
-        await close_db()
-        await init_db(generate_schemas=True)
-        await close_db()
-        return "schema-generated"
     finally:
         # The migration API opens its own connection; close it so the app and
         # any later step start from a clean state. SQLite otherwise deadlocks.

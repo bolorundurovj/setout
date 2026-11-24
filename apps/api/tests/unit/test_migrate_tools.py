@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock
+
 import pytest
 
 from setout import migrate_tools
@@ -9,14 +11,8 @@ from setout import migrate_tools
 pytestmark = pytest.mark.unit
 
 
-def test_migration_names_are_sorted_and_include_initial() -> None:
-    names = migrate_tools.migration_names()
-    assert "0001_initial" in names
-    assert names == sorted(names)
-
-
 def test_downgrade_one_with_no_migrations_is_a_noop(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(migrate_tools, "migration_names", list)
+    monkeypatch.setattr(migrate_tools, "applied_names", AsyncMock(return_value=[]))
     assert migrate_tools.downgrade_one() == 0
 
 
@@ -26,7 +22,7 @@ class _FakeResult:
 
 
 def test_downgrade_one_single_migration_has_no_target(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(migrate_tools, "migration_names", lambda: ["0001_initial"])
+    monkeypatch.setattr(migrate_tools, "applied_names", AsyncMock(return_value=["0001_initial"]))
     captured: dict[str, list[str]] = {}
 
     def fake_run(cmd: list[str], check: bool) -> _FakeResult:
@@ -40,7 +36,9 @@ def test_downgrade_one_single_migration_has_no_target(monkeypatch: pytest.Monkey
 
 
 def test_downgrade_one_targets_second_to_last(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(migrate_tools, "migration_names", lambda: ["0001_initial", "0002_next"])
+    monkeypatch.setattr(
+        migrate_tools, "applied_names", AsyncMock(return_value=["0001_initial", "0002_next"])
+    )
     captured: dict[str, list[str]] = {}
 
     def fake_run(cmd: list[str], check: bool) -> _FakeResult:
