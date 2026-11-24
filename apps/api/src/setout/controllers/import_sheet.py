@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 
@@ -168,7 +169,40 @@ class ImportController:
             exponent=currency.exponent,
         )
 
+    async def _exclude_existing_budget_lines(
+        self, parsed: ParsedWorkbook, project: Project | None
+    ) -> None:
+        if project is None or not parsed.budget.categories:
+            return
+        categories = await Category.filter(project_id=project.id, archived_at__isnull=True)
+        by_key = {c.name.casefold(): c.id for c in categories}
+        by_key.update({c.code: c.id for c in categories if c.code})
+        items = await BudgetItem.filter(
+            category_id__in=list(by_key.values()), archived_at__isnull=True
+        )
+        remaining = Counter(
+            (i.category_id, i.description.casefold(), i.budgeted_amount, i.cost_type) for i in items
+        )
+        for heading in parsed.budget.categories:
+            category_id = by_key.get(heading.code) or by_key.get(heading.name.casefold())
+            if category_id is None:
+                continue
+            new_lines = []
+            for line in heading.lines:
+                key = (
+                    category_id,
+                    line.description.casefold(),
+                    line.budgeted_amount,
+                    line.cost_type,
+                )
+                if remaining[key]:
+                    remaining[key] -= 1
+                else:
+                    new_lines.append(line)
+            heading.lines = new_lines
+
     async def _report(self, parsed: ParsedWorkbook, target: Target) -> ImportReport:
+        await self._exclude_existing_budget_lines(parsed, target.project)
         known_categories = await self._known_categories(target.project)
         known_vendors = await Vendor.filter(archived_at__isnull=True)
         classified = await classify_rows(parsed, target.project, take_unpaid=True)
@@ -355,6 +389,7 @@ class ImportController:
         )
 
         await Project.filter(id=project.id).select_for_update().first()
+        await self._exclude_existing_budget_lines(parsed, project)
         classified = await classify_rows(parsed, project, take_unpaid=answers.take_unpaid)
         vendors, vendors_created = await self._vendors(parsed)
         people = await self._people(parsed)

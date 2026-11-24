@@ -190,8 +190,13 @@ async def test_reimport_skips_duplicate_expenses(client: AsyncClient) -> None:
     await set_up_admin(client)
     project_id = (await run_import(client, sample_workbook()))["project_id"]
 
+    preview = await preview_import(client, sample_workbook(), project_id=project_id)
+    assert preview["budgeted_amount"] == preview["budgeted_lines"] == 0
     again = await run_import(client, sample_workbook(), project_id=project_id)
 
+    assert again["budgeted_amount"] == again["budget_item_count"] == 0
+    budget = (await client.get(f"/api/projects/{project_id}/budget")).json()
+    assert budget["budgeted_amount"] == 58_500_00
     assert again["skipped_duplicates"] == 1
     assert again["expense_count"] == 0
     summary = (await client.get(f"/api/projects/{project_id}/expense-summary")).json()
