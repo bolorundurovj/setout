@@ -8,6 +8,33 @@ from setout.models.expense import Expense
 from setout.schemas.category import CategoryRead
 
 
+def ancestor_ids(category_id: str, parents: dict[str, str | None]) -> list[str]:
+    result = []
+    seen = {category_id}
+    parent = parents.get(category_id)
+    while parent is not None and parent not in seen:
+        result.append(parent)
+        seen.add(parent)
+        parent = parents.get(parent)
+    return result
+
+
+def subtree_ids(category_id: str, parents: dict[str, str | None]) -> list[str]:
+    """Return the root and its descendants in parent-first order."""
+    children: dict[str, list[str]] = defaultdict(list)
+    for child, parent in parents.items():
+        if parent is not None:
+            children[parent].append(child)
+    result = [category_id]
+    seen = {category_id}
+    for current in result:
+        for child in children[current]:
+            if child not in seen:
+                result.append(child)
+                seen.add(child)
+    return result
+
+
 def own_totals(items: list[BudgetItem]) -> dict[str, int]:
     totals: dict[str, int] = defaultdict(int)
     for item in items:
@@ -42,12 +69,8 @@ def rolled_up_totals(categories: list[Category], own: dict[str, int]) -> dict[st
         amount = own.get(category.id, 0)
         if not amount:
             continue
-        parent_id = parents.get(category.id)
-        seen = {category.id}
-        while parent_id is not None and parent_id not in seen:
+        for parent_id in ancestor_ids(category.id, parents):
             rolled[parent_id] = rolled.get(parent_id, 0) + amount
-            seen.add(parent_id)
-            parent_id = parents.get(parent_id)
     return rolled
 
 

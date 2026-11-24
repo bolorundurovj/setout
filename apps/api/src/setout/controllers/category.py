@@ -23,7 +23,7 @@ from setout.schemas.category import (
 )
 from setout.services import changes
 from setout.utils.cascade import archive_under_category, restore_under_category
-from setout.utils.categories import to_reads
+from setout.utils.categories import subtree_ids, to_reads
 
 NOT_FOUND_CATEGORY = "Category not found"
 NOT_FOUND_ITEM = "Budget item not found"
@@ -76,24 +76,35 @@ class CategoryController:
         await self._project_or_404(project_id)
         if req.parent_id is not None:
             await self._category_or_404(req.parent_id, project_id=project_id)
+            await self._require_empty_parent(req.parent_id)
         category = await Category.create(project_id=project_id, **req.model_dump())
         return self._find_category(await self.list_categories(project_id), category.id)
 
     async def update(self, category_id: str, req: CategoryUpdate) -> CategoryRead:
-        category = await self._category_or_404(category_id)
-        changes = req.model_dump(exclude_unset=True)
-        parent_id = changes.get("parent_id")
-        if parent_id is not None:
-            if parent_id == category.id:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="A category cannot be its own parent",
-                )
-            await self._category_or_404(parent_id, project_id=category.project_id)
-        if changes:
-            category.update_from_dict(changes)
-            await category.save()
-        return self._find_category(await self.list_categories(category.project_id), category.id)
+        async with in_transaction():
+            category = await self._category_or_404(category_id)
+            updates = req.model_dump(exclude_unset=True)
+            parent_id = updates.get("parent_id")
+            if "parent_id" in updates:
+                await Project.filter(id=category.project_id).select_for_update().first()
+            if parent_id is not None:
+                await self._category_or_404(parent_id, project_id=category.project_id)
+                if parent_id in await self._subtree(category):
+                    raise HTTPException(status_code=409, detail="CATEGORY_CYCLE")
+                await self._require_empty_parent(parent_id)
+            if updates:
+                category.update_from_dict(updates)
+                await category.save(update_fields=[*updates, "updated_at"])
+            return self._find_category(await self.list_categories(category.project_id), category.id)
+
+    async def _require_empty_parent(self, parent_id: str) -> None:
+        if (
+            await Expense.filter(category_id=parent_id, archived_at__isnull=True).exists()
+            or await BudgetItem.filter(category_id=parent_id, archived_at__isnull=True).exists()
+        ):
+            raise HTTPException(
+                status_code=409, detail="A parent category cannot hold expenses or budget items"
+            )
 
     async def archive(self, category_id: str) -> None:
         async with in_transaction():
@@ -122,7 +133,7 @@ class CategoryController:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Only archived categories can be deleted permanently",
                 )
-            branch = [category.id, *await self._descendant_ids(category)]
+            branch = await self._subtree(category)
             await changes.recorded_update(Expense.filter(category_id__in=branch), category_id=None)
             await category.delete()
 
@@ -191,21 +202,18 @@ class CategoryController:
     async def _require_no_expenses(self, category: Category) -> None:
         # Archiving a category with expenses would exclude them from every category total
         # while the project total still included them.
-        branch = [category.id, *await self._descendant_ids(category)]
+        branch = await self._subtree(category)
         if await Expense.filter(category_id__in=branch, archived_at__isnull=True).exists():
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="A category with expenses cannot be archived, only renamed",
             )
 
-    async def _descendant_ids(self, category: Category) -> list[str]:
-        descendants: list[str] = []
-        level = [category.id]
-        while level:
-            children = await Category.filter(parent_id__in=level, archived_at__isnull=True)
-            level = [child.id for child in children if child.id not in descendants]
-            descendants.extend(level)
-        return descendants
+    async def _subtree(self, category: Category) -> list[str]:
+        parents = await Category.filter(project_id=category.project_id).values_list(
+            "id", "parent_id"
+        )
+        return subtree_ids(category.id, dict(parents))
 
     def _find_category(self, categories: list[CategoryRead], category_id: str) -> CategoryRead:
         for category in categories:

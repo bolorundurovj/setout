@@ -474,3 +474,28 @@ async def test_archiving_a_category_archives_its_budget_items_and_restore_restor
     assert (await client.post(f"/api/categories/{category['id']}/restore")).status_code == 200
     restored_items = (await client.get(f"/api/categories/{category['id']}/budget-items")).json()
     assert [row["description"] for row in restored_items["items"]] == ["Sand"]
+
+
+@pytest.mark.parametrize("depth", [1, 2])
+async def test_cannot_move_category_under_its_descendant(client: AsyncClient, depth: int) -> None:
+    project_id = await _project(client)
+    root = await _category(client, project_id, "Root")
+    descendant = root
+    for level in range(depth):
+        descendant = await _category(client, project_id, str(level), parent_id=descendant["id"])
+    resp = await client.patch(f"/api/categories/{root['id']}", json={"parent_id": descendant["id"]})
+    assert resp.status_code == 409
+    assert "CATEGORY_CYCLE" in resp.text
+
+
+async def test_cannot_move_category_under_budget_line(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    parent = await _category(client, project_id, "Supplies")
+    child = await _category(client, project_id, "Tools")
+    line = await client.post(
+        f"/api/categories/{parent['id']}/budget-items",
+        json={"description": "Hammer", "budgeted_amount": 500},
+    )
+    assert line.status_code == 201
+    resp = await client.patch(f"/api/categories/{child['id']}", json={"parent_id": parent["id"]})
+    assert resp.status_code == 409
