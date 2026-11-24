@@ -10,13 +10,20 @@ import {
   viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import type { Decision, ImportReport, ImportResult, SampleRow } from '@setout/api-client';
+import type {
+  Decision,
+  ImportReport,
+  ImportResult,
+  ProjectRead,
+  SampleRow,
+} from '@setout/api-client';
 import { formatMoney } from '../budget/money';
 import { formatDay } from '../shared/dates';
 import { ProjectService } from '../projects/project.service';
 import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
 import { Chip, ChipGroupComponent } from '../ui/chip-group.component';
+import { Option, OptionPickerComponent } from '../ui/option-picker.component';
 import { TopbarComponent } from '../ui/topbar.component';
 import { ImportService, type ImportTarget } from './import.service';
 
@@ -29,7 +36,7 @@ interface Step {
   selector: 'app-import',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChipGroupComponent, TopbarComponent],
+  imports: [ButtonComponent, ChipGroupComponent, OptionPickerComponent, TopbarComponent],
   templateUrl: './import.component.html',
   styleUrl: './import.component.scss',
 })
@@ -56,6 +63,7 @@ export class ImportComponent {
   readonly currencyCode = signal('NGN');
   readonly report = signal<ImportReport | null>(null);
   readonly result = signal<ImportResult | null>(null);
+  private readonly resolvedProject = signal<ProjectRead | null>(null);
 
   readonly createMissingCategories = signal(true);
   readonly skipDuplicates = signal(true);
@@ -64,8 +72,31 @@ export class ImportComponent {
 
   readonly isNewProject = computed(() => this.projectId() === '');
 
+  readonly projectOptions = computed<Option[]>(() => [
+    { value: '', label: 'New project' },
+    ...this.projects.choices().map((project) => ({
+      value: project.id,
+      label: project.name,
+      detail: project.currency_code,
+    })),
+  ]);
+
+  readonly selectedProjectOption = computed<Option | null>(() => {
+    const id = this.projectId();
+    if (!id) {
+      return null;
+    }
+    const found =
+      this.projects.choices().find((p) => p.id === id) ??
+      (this.resolvedProject()?.id === id ? this.resolvedProject() : null);
+    return found ? { value: found.id, label: found.name, detail: found.currency_code } : null;
+  });
+
   readonly targetName = computed(() => {
-    const selected = this.projects.projects().find((p) => p.id === this.projectId());
+    const id = this.projectId();
+    const selected =
+      this.projects.choices().find((p) => p.id === id) ??
+      (this.resolvedProject()?.id === id ? this.resolvedProject() : null);
     return selected ? selected.name : this.name();
   });
 
@@ -82,15 +113,26 @@ export class ImportComponent {
 
   constructor() {
     queueMicrotask(() => {
-      void this.projects.load();
+      void this.projects.loadChoices();
       void this.projects.loadCurrencies();
     });
     effect(() => {
       const projectId = this.project();
       if (projectId) {
         this.projectId.set(projectId);
+        void this.resolveProject(projectId);
       }
     });
+  }
+
+  private async resolveProject(projectId: string): Promise<void> {
+    if (this.projects.choices().some((p) => p.id === projectId)) {
+      return;
+    }
+    const loaded = await this.projects.get?.(projectId);
+    if (loaded) {
+      this.resolvedProject.set(loaded);
+    }
   }
 
   value(event: Event): string {
@@ -298,7 +340,7 @@ export class ImportComponent {
     }
     this.result.set(result);
     this.step.set('done');
-    await this.projects.load();
+    await Promise.all([this.projects.load(), this.projects.loadChoices()]);
     this.toast.show(`Imported into ${result.project_name}.`);
   }
 

@@ -28,17 +28,22 @@
     <section class="card block">
       <span class="t-micro">Destination</span>
       <div class="fields">
-        <label class="field">
+        <div class="field">
           <span class="t-micro">Project</span>
-          <select class="input-field" [value]="projectId()" (change)="projectId.set(value($event))">
-            <option value="" [selected]="isNewProject()">New project</option>
-            @for (option of projects.projects(); track option.id) {
-              <option [value]="option.id" [selected]="option.id === projectId()">
-                {{ option.name }}
-              </option>
-            }
-          </select>
-        </label>
+          <app-option-picker
+            label="Project"
+            [options]="projectOptions()"
+            [value]="projectId()"
+            [selectedOption]="selectedProjectOption()"
+            [serverFilter]="true"
+            [total]="projects.choicesTotal()"
+            [hasMore]="projects.choicesHasMore()"
+            [loading]="projects.choicesLoading()"
+            (valueChange)="projectId.set($event)"
+            (searchChange)="projects.loadChoices($event)"
+            (loadMore)="projects.loadMoreChoices()"
+          />
+        </div>
 
         @if (isNewProject()) {
           <label class="field">

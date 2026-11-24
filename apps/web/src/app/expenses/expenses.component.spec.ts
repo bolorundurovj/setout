@@ -143,7 +143,14 @@ describe('ExpensesComponent', () => {
       load: async () => undefined,
     };
 
-    const choices = { choices: () => [], loadChoices: async () => undefined };
+    const choices = {
+      choices: () => [],
+      choicesTotal: () => 0,
+      choicesHasMore: () => false,
+      choicesLoading: () => false,
+      loadChoices: async () => undefined,
+      loadMoreChoices: async () => undefined,
+    };
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({

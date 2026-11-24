@@ -37,7 +37,13 @@
           label="Vendor"
           [chips]="vendorChips()"
           [value]="vendorId()"
+          [serverFilter]="true"
+          [total]="vendors.choicesTotal()"
+          [hasMore]="vendors.choicesHasMore()"
+          [loading]="vendors.choicesLoading()"
           (valueChange)="setFilter('vendorId', $event)"
+          (searchChange)="vendors.loadChoices($event)"
+          (loadMore)="vendors.loadMoreChoices()"
         />
       </div>
 
@@ -47,7 +53,13 @@
           label="Paid By"
           [chips]="personChips()"
           [value]="paidById()"
+          [serverFilter]="true"
+          [total]="people.choicesTotal()"
+          [hasMore]="people.choicesHasMore()"
+          [loading]="people.choicesLoading()"
           (valueChange)="setFilter('paidById', $event)"
+          (searchChange)="people.loadChoices($event)"
+          (loadMore)="people.loadMoreChoices()"
         />
       </div>
 
@@ -57,7 +69,13 @@
           label="Item"
           [chips]="itemChips()"
           [value]="itemId()"
+          [serverFilter]="true"
+          [total]="items.choicesTotal()"
+          [hasMore]="items.choicesHasMore()"
+          [loading]="items.choicesLoading()"
           (valueChange)="setFilter('itemId', $event)"
+          (searchChange)="items.loadChoices($event)"
+          (loadMore)="items.loadMoreChoices()"
         />
       </div>
 

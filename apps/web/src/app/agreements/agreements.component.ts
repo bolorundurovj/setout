@@ -15,6 +15,7 @@ import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
 import { InfiniteScrollDirective } from '../ui/infinite-scroll.directive';
 import { MoneyHintComponent } from '../ui/money-hint.component';
+import { Option, OptionPickerComponent } from '../ui/option-picker.component';
 import { PaginationComponent } from '../ui/pagination.component';
 import { formatDay } from '../shared/dates';
 import { ToggleComponent } from '../ui/toggle.component';
@@ -35,6 +36,7 @@ import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.
     ButtonComponent,
     InfiniteScrollDirective,
     MoneyHintComponent,
+    OptionPickerComponent,
     PaginationComponent,
     ToggleComponent,
   ],
@@ -73,6 +75,20 @@ export class AgreementsComponent {
   readonly agreedAmount = signal('');
 
   readonly symbol = computed(() => currencySymbol(this.project().currency_code));
+
+  readonly vendorOptions = computed<Option[]>(() => [
+    { value: '', label: 'Select a vendor' },
+    ...this.vendors
+      .choices()
+      .map((vendor) => ({ value: vendor.id, label: vendor.name, detail: vendor.trade })),
+  ]);
+
+  readonly personOptions = computed<Option[]>(() => [
+    { value: '', label: 'Select a person' },
+    ...this.people
+      .choices()
+      .map((person) => ({ value: person.id, label: person.name, detail: person.role })),
+  ]);
 
   amountHint(value: string): string {
     const project = this.project();

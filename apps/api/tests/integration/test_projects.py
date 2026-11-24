@@ -60,6 +60,23 @@ async def test_create_and_list_a_project(client: AsyncClient) -> None:
     assert page["offset"] == 0
 
 
+async def test_projects_can_be_searched_and_paged(client: AsyncClient) -> None:
+    await _sign_in(client)
+    await _create(client, name="Jacaranda Close")
+    await _create(client, name="Owode Bungalow")
+    await _create(client, name="Owode Duplex")
+
+    matched = (await client.get("/api/projects", params={"search": "owode"})).json()
+    assert matched["total"] == 2
+    assert {row["name"] for row in matched["items"]} == {"Owode Bungalow", "Owode Duplex"}
+
+    paged = (
+        await client.get("/api/projects", params={"search": "owode", "limit": 1, "offset": 1})
+    ).json()
+    assert paged["total"] == 2
+    assert len(paged["items"]) == 1
+
+
 async def test_an_unknown_currency_is_rejected(client: AsyncClient) -> None:
     await _sign_in(client)
     resp = await client.post(

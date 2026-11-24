@@ -52,7 +52,13 @@
           label="Land"
           [chips]="landChips()"
           [value]="landId()"
+          [serverFilter]="true"
+          [total]="lands.choicesTotal()"
+          [hasMore]="lands.choicesHasMore()"
+          [loading]="lands.choicesLoading()"
           (valueChange)="landId.set($event)"
+          (searchChange)="lands.loadChoices($event)"
+          (loadMore)="lands.loadMoreChoices()"
         />
         <span class="t-small">Can be set later in the project settings.</span>
       </div>

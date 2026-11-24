@@ -87,8 +87,12 @@ describe('AgreementsComponent', () => {
       vendors: () => [],
       people: () => [],
       choices: () => [],
+      choicesTotal: () => 0,
+      choicesHasMore: () => false,
+      choicesLoading: () => false,
       load: async () => undefined,
       loadChoices: async () => undefined,
+      loadMoreChoices: async () => undefined,
     };
     const expenses = {
       error: () => null,

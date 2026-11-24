@@ -125,7 +125,13 @@
       label="Item"
       [chips]="itemChips()"
       [value]="itemId()"
+      [serverFilter]="true"
+      [total]="items.choicesTotal()"
+      [hasMore]="items.choicesHasMore()"
+      [loading]="items.choicesLoading()"
       (valueChange)="pickItem($event)"
+      (searchChange)="items.loadChoices($event)"
+      (loadMore)="items.loadMoreChoices()"
     />
 
     @if (addingItem()) {
@@ -183,7 +189,13 @@
       label="Vendor"
       [chips]="vendorChips()"
       [value]="vendorId()"
+      [serverFilter]="true"
+      [total]="vendors.choicesTotal()"
+      [hasMore]="vendors.choicesHasMore()"
+      [loading]="vendors.choicesLoading()"
       (valueChange)="vendorId.set($event)"
+      (searchChange)="vendors.loadChoices($event)"
+      (loadMore)="vendors.loadMoreChoices()"
     />
 
     @if (addingVendor()) {
@@ -217,7 +229,10 @@
         label="Agreement"
         [chips]="agreementChips()"
         [value]="agreementId()"
+        [total]="agreements.agreementTotal()"
+        [hasMore]="agreements.hasMore()"
         (valueChange)="agreementId.set($event)"
+        (loadMore)="agreements.loadMore(project().id)"
       />
       @if (agreementNote()) {
         <span class="t-small muted">{{ agreementNote() }}</span>
@@ -231,7 +246,13 @@
       label="Paid By"
       [chips]="payerChips()"
       [value]="paidById()"
+      [serverFilter]="true"
+      [total]="people.choicesTotal()"
+      [hasMore]="people.choicesHasMore()"
+      [loading]="people.choicesLoading()"
       (valueChange)="paidById.set($event)"
+      (searchChange)="people.loadChoices($event)"
+      (loadMore)="people.loadMoreChoices()"
     />
     @if (payerNote()) {
       <span class="t-small muted">{{ payerNote() }}</span>

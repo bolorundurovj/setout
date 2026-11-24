@@ -133,4 +133,27 @@ describe('ProjectService', () => {
     await service.loadMore();
     expect(calls.length).toBe(before);
   });
+
+  it('searches and pages picker choices separately from the project list', async () => {
+    const service = configure(async (_fn, params) => {
+      const offset = Number((params as { offset?: number }).offset ?? 0);
+      return offset === 0
+        ? { items: [project({ id: 'p1', name: 'Owode 1' })], total: 2, limit: 100, offset: 0 }
+        : { items: [project({ id: 'p2', name: 'Owode 2' })], total: 2, limit: 100, offset };
+    });
+
+    await service.loadChoices('Owode');
+    expect(service.choices().map((p) => p.id)).toEqual(['p1']);
+    expect(service.choicesTotal()).toBe(2);
+    expect(service.choicesHasMore()).toBe(true);
+    expect((calls[0][1] as { search?: string }).search).toBe('Owode');
+
+    await service.loadMoreChoices();
+    expect(service.choices().map((p) => p.id)).toEqual(['p1', 'p2']);
+    expect(service.choicesHasMore()).toBe(false);
+    expect(calls[1][1] as { search?: string; offset?: number }).toMatchObject({
+      search: 'Owode',
+      offset: 1,
+    });
+  });
 });

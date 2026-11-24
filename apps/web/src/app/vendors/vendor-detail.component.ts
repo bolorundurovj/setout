@@ -22,6 +22,7 @@ import { formatDay } from '../shared/dates';
 import { DeliveryService } from '../deliveries/delivery.service';
 import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
+import { PaginationComponent } from '../ui/pagination.component';
 import { VendorService } from './vendor.service';
 import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
 
@@ -29,7 +30,7 @@ import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.
   selector: 'app-vendor-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DeleteConfirmDirective, RouterLink, ButtonComponent],
+  imports: [DeleteConfirmDirective, RouterLink, ButtonComponent, PaginationComponent],
   templateUrl: './vendor-detail.component.html',
   styleUrl: './vendor-detail.component.scss',
 })
@@ -57,6 +58,8 @@ export class VendorDetailComponent {
       ),
   );
   readonly outstandingDeliveries = computed(() => this.deliveries.forVendor(this.id()).rows);
+  readonly deliveryTotal = computed(() => this.deliveries.forVendor(this.id()).total);
+  readonly deliveryPage = signal(1);
   readonly loading = signal(true);
   readonly pendingDelete = signal(false);
   readonly deleteConfirmationText = signal('');
@@ -66,8 +69,9 @@ export class VendorDetailComponent {
   constructor() {
     effect(() => {
       this.id();
+      this.deliveryPage.set(1);
       void this.load();
-      void this.deliveries.loadForVendor(this.id());
+      void this.deliveries.loadForVendor(this.id(), 1);
     });
     effect(() => {
       const vendor = this.vendor();
@@ -105,9 +109,18 @@ export class VendorDetailComponent {
     return `Paid ${paid} · expected ${formatDay(delivery.expected)}`;
   }
 
+  async goToDeliveryPage(page: number): Promise<void> {
+    this.deliveryPage.set(page);
+    await this.deliveries.loadForVendor(this.id(), page);
+  }
+
   async markReceived(delivery: DeliveryRead): Promise<void> {
     await this.deliveries.markReceived(delivery.id);
-    await this.deliveries.loadForVendor(this.id());
+    const currentPage = this.deliveryPage();
+    await this.deliveries.loadForVendor(this.id(), currentPage);
+    if (this.outstandingDeliveries().length === 0 && currentPage > 1) {
+      await this.goToDeliveryPage(currentPage - 1);
+    }
     this.toast.show(`${delivery.description} marked received.`);
   }
 

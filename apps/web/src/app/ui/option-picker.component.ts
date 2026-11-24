@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   HostListener,
   computed,
@@ -12,6 +13,7 @@ import {
   viewChild,
   viewChildren,
 } from '@angular/core';
+import { debounce } from './debounce';
 export interface Option {
   value: string;
   label: string;
@@ -64,7 +66,13 @@ let nextId = 0;
         />
 
         @if (matches().length) {
-          <ul class="options" role="listbox" [id]="listId" [attr.aria-label]="label()">
+          <ul
+            class="options"
+            role="listbox"
+            [id]="listId"
+            [attr.aria-label]="label()"
+            (scroll)="onScroll($event)"
+          >
             @for (option of matches(); track option.value; let i = $index) {
               <li
                 #option
@@ -84,8 +92,30 @@ let nextId = 0;
               </li>
             }
           </ul>
+        } @else if (loading()) {
+          <p class="empty t-small">Searching…</p>
         } @else {
           <p class="empty t-small">No matches.</p>
+        }
+
+        @if (truncated()) {
+          <div class="truncation">
+            <span class="t-small truncation-note">
+              @if (total() !== null) {
+                Showing {{ shownCount() }} of {{ total() }}
+              } @else {
+                More options available
+              }
+            </span>
+            <button
+              type="button"
+              class="more-btn t-mono"
+              [disabled]="loading()"
+              (mousedown)="onLoadMore($event)"
+            >
+              {{ loading() ? 'Loading…' : 'Load more' }}
+            </button>
+          </div>
         }
       </div>
     }
@@ -218,6 +248,39 @@ let nextId = 0;
         margin: 10px;
         color: var(--ink-3);
       }
+
+      .truncation {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 6px;
+        padding: 6px 8px 2px;
+        border-top: 1px solid var(--hairline);
+      }
+
+      .truncation-note {
+        color: var(--ink-3);
+      }
+
+      .more-btn {
+        background: none;
+        border: none;
+        padding: 4px 6px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 11px;
+        color: var(--accent);
+
+        &:hover:not(:disabled) {
+          background: var(--field);
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: default;
+        }
+      }
     `,
   ],
 })
@@ -230,25 +293,47 @@ export class OptionPickerComponent {
   readonly options = input.required<Option[]>();
   readonly value = input('');
   readonly label = input('');
+  readonly selectedOption = input<Option | null>(null);
+  readonly serverFilter = input(false);
+  readonly total = input<number | null>(null);
+  readonly hasMore = input(false);
+  readonly loading = input(false);
 
   readonly valueChange = output<string>();
+  readonly searchChange = output<string>();
+  readonly loadMore = output<void>();
 
   protected readonly open = signal(false);
   protected readonly activeIndex = signal(0);
   protected readonly filterText = signal('');
   protected readonly triggerId = `picker-trigger-${nextId}`;
   protected readonly listId = `picker-list-${nextId++}`;
+  private readonly remembered = signal<Option | null>(null);
+  private readonly debouncedSearch = debounce<string>((text) => this.searchChange.emit(text));
 
-  private readonly selected = computed(() =>
-    this.options().find((option) => option.value === this.value()),
-  );
+  private readonly selected = computed(() => {
+    const val = this.value();
+    const fromList = this.options().find((option) => option.value === val);
+    if (fromList) {
+      return fromList;
+    }
+    const explicit = this.selectedOption();
+    if (explicit && explicit.value === val) {
+      return explicit;
+    }
+    const last = this.remembered();
+    return last && last.value === val ? last : undefined;
+  });
 
   protected readonly selectedLabel = computed(() => this.selected()?.label ?? 'Select an option');
   protected readonly selectedDetail = computed(() => this.selected()?.detail ?? '');
 
   protected readonly matches = computed(() => {
-    const filterText = this.filterText().trim().toLowerCase();
     const options = this.options();
+    if (this.serverFilter()) {
+      return options;
+    }
+    const filterText = this.filterText().trim().toLowerCase();
     if (!filterText) {
       return options;
     }
@@ -257,9 +342,24 @@ export class OptionPickerComponent {
     );
   });
 
-  protected readonly activeId = computed(() =>
-    this.matches().length ? `${this.listId}-${this.activeIndex()}` : null,
+  protected readonly shownCount = computed(() => {
+    const opts = this.options();
+    const hasBlank = opts.some((option) => option.value === '');
+    return hasBlank ? Math.max(0, opts.length - 1) : opts.length;
+  });
+
+  protected readonly truncated = computed(
+    () => this.hasMore() || (this.total() !== null && this.shownCount() < (this.total() ?? 0)),
   );
+
+  protected readonly activeId = computed(() => {
+    const count = this.matches().length;
+    if (!count) {
+      return null;
+    }
+    const index = Math.min(this.activeIndex(), count - 1);
+    return `${this.listId}-${index}`;
+  });
 
   constructor() {
     // View queries resolve after render, so these effects run once the popup is in the DOM.
@@ -273,6 +373,7 @@ export class OptionPickerComponent {
       // Optional call because jsdom does not implement scrollIntoView.
       option?.nativeElement.scrollIntoView?.({ block: 'nearest' });
     });
+    inject(DestroyRef).onDestroy(() => this.debouncedSearch.cancel());
   }
 
   @HostListener('document:click', ['$event'])
@@ -298,11 +399,36 @@ export class OptionPickerComponent {
   }
 
   onFilter(event: Event): void {
-    this.filterText.set((event.target as HTMLInputElement).value);
+    const text = (event.target as HTMLInputElement).value;
+    this.filterText.set(text);
     this.activeIndex.set(0);
+    if (this.serverFilter()) {
+      this.debouncedSearch.call(text.trim());
+    }
+  }
+
+  onScroll(event: Event): void {
+    if (!this.truncated() || this.loading()) {
+      return;
+    }
+    const list = event.target as HTMLElement;
+    if (list.scrollTop + list.clientHeight >= list.scrollHeight - 24) {
+      this.loadMore.emit();
+    }
+  }
+
+  onLoadMore(event: MouseEvent): void {
+    event.preventDefault();
+    if (!this.loading()) {
+      this.loadMore.emit();
+    }
   }
 
   choose(value: string): void {
+    const picked = this.matches().find((option) => option.value === value);
+    if (picked) {
+      this.remembered.set(picked);
+    }
     this.valueChange.emit(value);
     this.close();
     this.trigger().nativeElement.focus();
@@ -340,13 +466,19 @@ export class OptionPickerComponent {
     if (event.key === 'Enter') {
       event.preventDefault();
       if (matches.length) {
-        this.choose(matches[this.activeIndex()].value);
+        const index = Math.min(this.activeIndex(), matches.length - 1);
+        this.choose(matches[index].value);
       }
     }
   }
 
   private close(): void {
+    const hadSearch = this.filterText().trim().length > 0;
     this.open.set(false);
     this.filterText.set('');
+    this.debouncedSearch.cancel();
+    if (this.serverFilter() && hadSearch) {
+      this.searchChange.emit('');
+    }
   }
 }

@@ -71,7 +71,7 @@ describe('VendorDetailComponent', () => {
   let navigations: unknown[][];
   let outstandingDeliveries: DeliveryRead[];
   let marked: string[];
-  let reloads: string[];
+  let reloads: { vendorId: string; page: number }[];
 
   async function render(current: VendorRead | null = vendor(), outstanding: DeliveryRead[] = []) {
     edits = [];
@@ -110,7 +110,8 @@ describe('VendorDetailComponent', () => {
               total: outstandingDeliveries.length,
               outstandingAmount: 0,
             }),
-            loadForVendor: async () => void reloads.push('v1'),
+            loadForVendor: async (vendorId: string, page = 1) =>
+              void reloads.push({ vendorId, page }),
             markReceived: async (id: string) => void marked.push(id),
           },
         },
@@ -155,7 +156,15 @@ describe('VendorDetailComponent', () => {
     const component = await render(vendor(), [outstandingDelivery()]);
     await component.markReceived(outstandingDelivery());
     expect(marked).toEqual(['d1']);
-    expect(reloads).toContain('v1');
+    expect(reloads).toContainEqual({ vendorId: 'v1', page: 1 });
+  });
+
+  it('pages through outstanding deliveries for the vendor', async () => {
+    const component = await render(vendor(), [outstandingDelivery()]);
+    await component.goToDeliveryPage(2);
+
+    expect(component.deliveryPage()).toBe(2);
+    expect(reloads).toContainEqual({ vendorId: 'v1', page: 2 });
   });
 
   it('opens the edit form', async () => {

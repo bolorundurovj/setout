@@ -202,4 +202,57 @@ describe('OptionPickerComponent', () => {
     expect(view.filter()?.value).toBe('');
     expect(view.options().length).toBe(4);
   });
+
+  it('shows a truncation notice and emits loadMore when more options exist on the server', async () => {
+    const view = await render(VENDORS);
+    const loadedMore: number[] = [];
+    view.fixture.componentInstance.loadMore.subscribe(() => loadedMore.push(1));
+    view.fixture.componentRef.setInput('total', 120);
+    view.fixture.componentRef.setInput('hasMore', true);
+    view.fixture.detectChanges();
+
+    view.trigger.click();
+    view.fixture.detectChanges();
+
+    expect(view.element.querySelector('.truncation-note')?.textContent).toContain(
+      'Showing 3 of 120',
+    );
+    const more = view.element.querySelector('.more-btn') as HTMLButtonElement;
+    more.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(loadedMore.length).toBe(1);
+  });
+
+  it('emits debounced searchChange without local filtering when serverFilter is enabled', async () => {
+    vi.useFakeTimers();
+    try {
+      const view = await render(VENDORS);
+      const searches: string[] = [];
+      view.fixture.componentInstance.searchChange.subscribe((q) => searches.push(q));
+      view.fixture.componentRef.setInput('serverFilter', true);
+      view.fixture.detectChanges();
+
+      view.trigger.click();
+      view.fixture.detectChanges();
+      view.type('unmatched');
+
+      expect(view.options().length).toBe(4);
+      vi.advanceTimersByTime(300);
+      expect(searches).toEqual(['unmatched']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('uses selectedOption when the selected value is not on the current page', async () => {
+    const view = await render(VENDORS, 'v999');
+    view.fixture.componentRef.setInput('selectedOption', {
+      value: 'v999',
+      label: 'Faraway Concrete',
+      detail: 'concrete',
+    });
+    view.fixture.detectChanges();
+
+    expect(view.trigger.textContent).toContain('Faraway Concrete');
+    expect(view.trigger.textContent).toContain('concrete');
+  });
 });

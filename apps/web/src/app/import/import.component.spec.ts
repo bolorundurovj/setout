@@ -83,8 +83,15 @@ describe('ImportComponent', () => {
           provide: ProjectService,
           useValue: {
             projects: () => available,
+            choices: () => available,
+            choicesTotal: () => available.length,
+            choicesHasMore: () => false,
+            choicesLoading: () => false,
             currencies: () => [{ code: 'NGN', name: 'Nigerian naira', exponent: 2 }],
             load: async () => undefined,
+            loadChoices: async () => undefined,
+            loadMoreChoices: async () => undefined,
+            get: async () => null,
             loadCurrencies: async () => undefined,
           },
         },
@@ -118,12 +125,10 @@ describe('ImportComponent', () => {
     ];
     fixture.detectChanges();
 
-    const options = [
-      ...(fixture.nativeElement as HTMLElement).querySelectorAll('option'),
-    ] as HTMLOptionElement[];
-    const marked = options.filter((option) => option.selected).map((option) => option.value);
-
-    expect(marked).toEqual(['p1']);
+    const trigger = (fixture.nativeElement as HTMLElement).querySelector(
+      'app-option-picker .trigger',
+    ) as HTMLElement;
+    expect(trigger.textContent).toContain('Jacaranda Close');
   });
 
   it('starts on the file step with preview disabled', () => {

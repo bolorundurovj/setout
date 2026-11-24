@@ -56,6 +56,20 @@ describe('AttachmentService', () => {
     expect(service.forParent(expense('unknown'))).toEqual([]);
   });
 
+  it('pages through all attachments when total exceeds one page', async () => {
+    const service = configure((_name, params) => {
+      const offset = Number(params['offset'] ?? 0);
+      return offset === 0
+        ? { items: [attachment('a1'), attachment('a2')], total: 3 }
+        : { items: [attachment('a3')], total: 3 };
+    });
+
+    await service.load(expense('e1'));
+
+    expect(service.forParent(expense('e1')).map((row) => row.id)).toEqual(['a1', 'a2', 'a3']);
+    expect(invocations.map((call) => call['offset'])).toEqual([0, 2]);
+  });
+
   it('keeps parents of different types with the same id apart', async () => {
     const service = configure((name) =>
       name === 'listAgreementAttachments'

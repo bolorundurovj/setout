@@ -28,15 +28,16 @@ describe('BudgetService', () => {
   let names: string[];
   let calls: Record<string, unknown>[];
 
-  function configure(reply: (name: string) => unknown) {
+  function configure(reply: (name: string, args: Record<string, unknown>) => unknown) {
     names = [];
     calls = [];
     TestBed.resetTestingModule();
     const api = {
       invoke: async (fn: { name?: string }, args?: Record<string, unknown>) => {
         names.push(fn?.name ?? '');
-        calls.push({ call: fn?.name ?? '', ...(args ?? {}) });
-        return reply(fn?.name ?? '');
+        const entry = { call: fn?.name ?? '', ...(args ?? {}) };
+        calls.push(entry);
+        return reply(fn?.name ?? '', args ?? {});
       },
     };
     TestBed.configureTestingModule({ providers: [{ provide: Api, useValue: api }] });
@@ -118,6 +119,33 @@ describe('BudgetService', () => {
     }));
     await service.loadItems('s1');
     expect(service.items()['s1'].length).toBe(1);
+  });
+
+  it('pages through all budget items in a category when total exceeds one page', async () => {
+    const service = configure((_name, args) => {
+      const offset = Number(args['offset'] ?? 0);
+      return offset === 0
+        ? {
+            items: [
+              { id: 'i1', category_id: 's1', description: 'Blocks', budgeted_amount: 100 },
+              { id: 'i2', category_id: 's1', description: 'Sand', budgeted_amount: 200 },
+            ],
+            total: 3,
+            limit: 100,
+            offset: 0,
+          }
+        : {
+            items: [{ id: 'i3', category_id: 's1', description: 'Cement', budgeted_amount: 300 }],
+            total: 3,
+            limit: 100,
+            offset,
+          };
+    });
+
+    await service.loadItems('s1');
+
+    expect(service.items()['s1'].map((row) => row.id)).toEqual(['i1', 'i2', 'i3']);
+    expect(calls.map((call) => call['offset'])).toEqual([0, 2]);
   });
 
   it('fetches the presets once', async () => {

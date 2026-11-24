@@ -64,7 +64,7 @@ export class AddExpenseComponent {
   readonly vendors = inject(VendorService);
   readonly people = inject(PersonService);
   private readonly budget = inject(BudgetService);
-  private readonly agreements = inject(AgreementService);
+  readonly agreements = inject(AgreementService);
   private readonly toast = inject(ToastService);
   private readonly deliveries = inject(DeliveryService);
   readonly attachments = inject(AttachmentService);

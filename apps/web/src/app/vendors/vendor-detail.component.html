@@ -91,6 +91,12 @@
             </span>
           </div>
         }
+        <app-pagination
+          [total]="deliveryTotal()"
+          [page]="deliveryPage()"
+          noun="deliveries"
+          (pageChange)="goToDeliveryPage($event)"
+        />
       </section>
     }
 

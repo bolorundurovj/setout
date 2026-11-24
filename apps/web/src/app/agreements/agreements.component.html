@@ -21,18 +21,19 @@
   @if (adding()) {
     <div class="panel">
       <div class="field">
-        <label class="t-micro" for="agreement-vendor">Vendor</label>
-        <select
-          id="agreement-vendor"
-          class="input-field"
+        <span class="t-micro">Vendor</span>
+        <app-option-picker
+          label="Vendor"
+          [options]="vendorOptions()"
           [value]="vendorId()"
-          (change)="vendorId.set(value($event))"
-        >
-          <option value="">Select a vendor</option>
-          @for (vendor of vendors.choices(); track vendor.id) {
-            <option [value]="vendor.id">{{ vendor.name }}</option>
-          }
-        </select>
+          [serverFilter]="true"
+          [total]="vendors.choicesTotal()"
+          [hasMore]="vendors.choicesHasMore()"
+          [loading]="vendors.choicesLoading()"
+          (valueChange)="vendorId.set($event)"
+          (searchChange)="vendors.loadChoices($event)"
+          (loadMore)="vendors.loadMoreChoices()"
+        />
       </div>
       <div class="field">
         <label class="t-micro" for="agreement-description">Description</label>
@@ -289,18 +290,19 @@
     @if (addingAdvance()) {
       <div class="panel">
         <div class="field">
-          <label class="t-micro" for="advance-person">Person</label>
-          <select
-            id="advance-person"
-            class="input-field"
+          <span class="t-micro">Person</span>
+          <app-option-picker
+            label="Person"
+            [options]="personOptions()"
             [value]="personId()"
-            (change)="personId.set(value($event))"
-          >
-            <option value="">Select a person</option>
-            @for (person of people.choices(); track person.id) {
-              <option [value]="person.id">{{ person.name }}</option>
-            }
-          </select>
+            [serverFilter]="true"
+            [total]="people.choicesTotal()"
+            [hasMore]="people.choicesHasMore()"
+            [loading]="people.choicesLoading()"
+            (valueChange)="personId.set($event)"
+            (searchChange)="people.loadChoices($event)"
+            (loadMore)="people.loadMoreChoices()"
+          />
         </div>
         <div class="field">
           <label class="t-micro" for="advance-amount">Amount</label>

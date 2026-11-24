@@ -37,11 +37,14 @@ NOT_CLOSED: dict[int | str, dict[str, Any]] = {
 @router.get("/projects", operation_id="listProjects")
 async def list_projects(
     user: CurrentUser,
+    search: Annotated[str | None, Query(description="Match part of the name")] = None,
     include_archived: Annotated[bool, Query(description="Include archived projects")] = False,
     limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
 ) -> ProjectPage:
-    return await controller.list(include_archived=include_archived, limit=limit, offset=offset)
+    return await controller.list(
+        search=search, include_archived=include_archived, limit=limit, offset=offset
+    )
 
 
 @router.post(

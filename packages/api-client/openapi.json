@@ -819,6 +819,24 @@
         "operationId": "listProjects",
         "parameters": [
           {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Match part of the name",
+              "title": "Search"
+            },
+            "description": "Match part of the name"
+          },
+          {
             "name": "include_archived",
             "in": "query",
             "required": false,

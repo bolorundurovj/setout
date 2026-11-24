@@ -22,6 +22,7 @@ import {
   updateCategory,
 } from '@setout/api-client';
 import { detailOf } from '../api-error';
+import { PICKER_PAGE_SIZE } from '../ui/paging';
 
 @Injectable({
   providedIn: 'root',
@@ -72,12 +73,22 @@ export class BudgetService {
 
   async loadItems(categoryId: string, includeArchived = false): Promise<void> {
     try {
-      const page = await this.api.invoke(listBudgetItems, {
-        category_id: categoryId,
-        include_archived: includeArchived,
-        limit: 100,
-      });
-      this.itemState.update((all) => ({ ...all, [categoryId]: page.items }));
+      const rows: BudgetItemRead[] = [];
+      let total = Infinity;
+      while (rows.length < total) {
+        const page = await this.api.invoke(listBudgetItems, {
+          category_id: categoryId,
+          include_archived: includeArchived,
+          limit: PICKER_PAGE_SIZE,
+          offset: rows.length,
+        });
+        total = page.total;
+        rows.push(...page.items);
+        if (page.items.length === 0) {
+          break;
+        }
+      }
+      this.itemState.update((all) => ({ ...all, [categoryId]: rows }));
     } catch {
       this.error.set('Could not load the budget items.');
     }

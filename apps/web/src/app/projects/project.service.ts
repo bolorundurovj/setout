@@ -18,6 +18,7 @@ import {
 } from '@setout/api-client';
 import { CountsService } from '../counts.service';
 import { detailOf } from '../api-error';
+import { ChoiceStore } from '../ui/choice-store';
 import { SCROLL_SIZE } from '../ui/paging';
 
 @Injectable({
@@ -32,16 +33,31 @@ export class ProjectService {
   private readonly summaryState = signal<ProjectSummary | null>(null);
   private readonly totalState = signal(0);
   private readonly includeArchivedState = signal(false);
+  private readonly choiceStore = new ChoiceStore<ProjectRead>((params) =>
+    this.api.invoke(listProjects, params),
+  );
 
   readonly projects = this.projectsState.asReadonly();
   readonly currencies = this.currencyState.asReadonly();
   readonly summary = this.summaryState.asReadonly();
+  readonly choices = this.choiceStore.items;
+  readonly choicesTotal = this.choiceStore.total;
+  readonly choicesHasMore = this.choiceStore.hasMore;
+  readonly choicesLoading = this.choiceStore.loading;
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
   readonly hasProjects = computed(() => this.projectsState().length > 0);
   readonly total = this.totalState.asReadonly();
   readonly hasMore = computed(() => this.projectsState().length < this.totalState());
+
+  async loadChoices(search = ''): Promise<void> {
+    await this.choiceStore.load(search);
+  }
+
+  async loadMoreChoices(): Promise<void> {
+    await this.choiceStore.loadMore();
+  }
 
   async load(includeArchived = false): Promise<void> {
     this.includeArchivedState.set(includeArchived);
@@ -118,6 +134,7 @@ export class ProjectService {
       const created = await this.api.invoke(createProject, { body });
       this.projectsState.update((projects) => [created, ...projects]);
       this.totalState.update((total) => total + 1);
+      this.choiceStore.prepend(created);
       await this.loadSummary();
       void this.counts.load();
       return created;

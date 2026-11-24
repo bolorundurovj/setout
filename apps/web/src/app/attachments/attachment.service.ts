@@ -17,8 +17,7 @@ import {
   listProjectAttachments,
   restoreAttachment,
 } from '@setout/api-client';
-
-const PAGE_SIZE = 20;
+import { PICKER_PAGE_SIZE } from '../ui/paging';
 
 export type AttachedTo = 'project' | 'expense' | 'agreement' | 'delivery';
 
@@ -46,8 +45,17 @@ export class AttachmentService {
   async load(parent: AttachmentParent): Promise<void> {
     this.error.set(null);
     try {
-      const page = await this.list(parent);
-      this.set(parent, page.items);
+      const rows: AttachmentRead[] = [];
+      let total = Infinity;
+      while (rows.length < total) {
+        const page = await this.list(parent, PICKER_PAGE_SIZE, rows.length);
+        total = page.total;
+        rows.push(...page.items);
+        if (page.items.length === 0) {
+          break;
+        }
+      }
+      this.set(parent, rows);
     } catch {
       this.error.set('Could not load the attachments.');
       this.set(parent, []);
@@ -111,24 +119,27 @@ export class AttachmentService {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
   }
 
-  private list(parent: AttachmentParent): Promise<AttachmentPage> {
+  private list(parent: AttachmentParent, limit: number, offset: number): Promise<AttachmentPage> {
     switch (parent.attachedTo) {
       case 'project':
         return this.api.invoke(listProjectAttachments, {
           project_id: parent.id,
-          limit: PAGE_SIZE,
+          limit,
+          offset,
         });
       case 'expense':
-        return this.api.invoke(listAttachments, { expense_id: parent.id, limit: PAGE_SIZE });
+        return this.api.invoke(listAttachments, { expense_id: parent.id, limit, offset });
       case 'agreement':
         return this.api.invoke(listAgreementAttachments, {
           agreement_id: parent.id,
-          limit: PAGE_SIZE,
+          limit,
+          offset,
         });
       case 'delivery':
         return this.api.invoke(listDeliveryAttachments, {
           delivery_id: parent.id,
-          limit: PAGE_SIZE,
+          limit,
+          offset,
         });
     }
   }

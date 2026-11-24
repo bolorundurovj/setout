@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { OptionPickerComponent } from './option-picker.component';
 
 export interface Chip {
@@ -16,12 +16,19 @@ const CHIP_LIMIT = 8;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [OptionPickerComponent],
   template: `
-    @if (chips().length > chipLimit) {
+    @if (usePicker()) {
       <app-option-picker
         [options]="chips()"
         [value]="value()"
         [label]="label()"
+        [selectedOption]="selectedOption()"
+        [serverFilter]="serverFilter()"
+        [total]="total()"
+        [hasMore]="hasMore()"
+        [loading]="loading()"
         (valueChange)="valueChange.emit($event)"
+        (searchChange)="onSearch($event)"
+        (loadMore)="loadMore.emit()"
       />
     } @else {
       <div class="chips" role="group" [attr.aria-label]="label()">
@@ -116,10 +123,31 @@ export class ChipGroupComponent {
   readonly value = input('');
   readonly label = input('');
   readonly clearable = input(false);
+  readonly selectedOption = input<Chip | null>(null);
+  readonly serverFilter = input(false);
+  readonly total = input<number | null>(null);
+  readonly hasMore = input(false);
+  readonly loading = input(false);
 
   readonly valueChange = output<string>();
+  readonly searchChange = output<string>();
+  readonly loadMore = output<void>();
 
   protected readonly chipLimit = CHIP_LIMIT;
+  private readonly activeSearch = signal(false);
+
+  protected readonly usePicker = computed(
+    () =>
+      this.chips().length > this.chipLimit ||
+      this.hasMore() ||
+      (this.total() !== null && (this.total() ?? 0) > this.chipLimit) ||
+      this.activeSearch(),
+  );
+
+  onSearch(query: string): void {
+    this.activeSearch.set(query.trim().length > 0);
+    this.searchChange.emit(query);
+  }
 
   pick(value: string): void {
     if (this.clearable() && value === this.value()) {

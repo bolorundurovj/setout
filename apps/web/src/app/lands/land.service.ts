@@ -34,7 +34,8 @@ import {
   updateLandValuation,
 } from '@setout/api-client';
 import { CountsService } from '../counts.service';
-import { CHOICE_LIMIT, PAGE_SIZE, offsetOf } from '../ui/paging';
+import { ChoiceStore } from '../ui/choice-store';
+import { PAGE_SIZE, offsetOf } from '../ui/paging';
 import { detailOf } from '../api-error';
 
 @Injectable({
@@ -47,9 +48,11 @@ export class LandService {
   private readonly state = signal<LandRead[]>([]);
   private readonly totalState = signal(0);
   private readonly pageState = signal(1);
-  private readonly choiceState = signal<LandRead[]>([]);
   private readonly searchState = signal('');
   private readonly archivedState = signal(false);
+  private readonly choiceStore = new ChoiceStore<LandRead>((params) =>
+    this.api.invoke(listLands, params),
+  );
 
   readonly lands = this.state.asReadonly();
   readonly total = this.totalState.asReadonly();
@@ -58,8 +61,10 @@ export class LandService {
   readonly error = signal<string | null>(null);
 
   readonly page = this.pageState.asReadonly();
-  // Up to CHOICE_LIMIT rows for the pickers, which cannot use a single page of results.
-  readonly choices = this.choiceState.asReadonly();
+  readonly choices = this.choiceStore.items;
+  readonly choicesTotal = this.choiceStore.total;
+  readonly choicesHasMore = this.choiceStore.hasMore;
+  readonly choicesLoading = this.choiceStore.loading;
 
   private latestRequest = 0;
 
@@ -69,13 +74,12 @@ export class LandService {
     await this.goTo(1);
   }
 
-  async loadChoices(): Promise<void> {
-    try {
-      const rows = await this.api.invoke(listLands, { limit: CHOICE_LIMIT });
-      this.choiceState.set(rows.items);
-    } catch {
-      this.choiceState.set([]);
-    }
+  async loadChoices(search = ''): Promise<void> {
+    await this.choiceStore.load(search);
+  }
+
+  async loadMoreChoices(): Promise<void> {
+    await this.choiceStore.loadMore();
   }
 
   async goTo(page: number): Promise<void> {
@@ -121,7 +125,7 @@ export class LandService {
     try {
       const created = await this.api.invoke(createLand, { body });
       await this.goTo(this.pageState());
-      this.choiceState.update((rows) => [created, ...rows]);
+      this.choiceStore.prepend(created);
       void this.counts.load();
       return created;
     } catch (e: unknown) {

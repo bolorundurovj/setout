@@ -77,4 +77,14 @@ describe('ChipGroupComponent', () => {
 
     expect(view.picked).toEqual(['c4']);
   });
+
+  it('uses an option picker when more options exist on the server', async () => {
+    const view = await render(chips(3));
+    view.fixture.componentRef.setInput('hasMore', true);
+    view.fixture.componentRef.setInput('total', 50);
+    view.fixture.detectChanges();
+
+    expect(view.chips().length).toBe(0);
+    expect(view.picker()).not.toBeNull();
+  });
 });

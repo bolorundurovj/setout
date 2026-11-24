@@ -25,10 +25,19 @@ from setout.utils.uploads import delete_unreferenced
 
 
 class ProjectController:
-    async def list(self, *, include_archived: bool, limit: int, offset: int) -> ProjectPage:
+    async def list(
+        self,
+        *,
+        search: str | None = None,
+        include_archived: bool,
+        limit: int,
+        offset: int,
+    ) -> ProjectPage:
         query = Project.all()
         if not include_archived:
             query = query.filter(archived_at__isnull=True)
+        if search:
+            query = query.filter(name__icontains=search)
         total = await query.count()
         projects = (
             await query.order_by("-created_at")
