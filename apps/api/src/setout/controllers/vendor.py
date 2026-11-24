@@ -124,15 +124,23 @@ class VendorController:
             projects=summaries,
         )
 
-    async def agreements(self, vendor_id: str) -> VendorAgreements:
+    async def agreements(self, vendor_id: str, *, limit: int, offset: int) -> VendorAgreements:
         vendor = await self._vendor_or_404(vendor_id, include_archived=True)
-        rows = await Agreement.filter(
-            vendor_id=vendor_id, archived_at__isnull=True
-        ).prefetch_related("project__currency")
+        query = Agreement.filter(vendor_id=vendor_id, archived_at__isnull=True)
+        total = await query.count()
+        rows = (
+            await query.order_by("-created_at", "id")
+            .offset(offset)
+            .limit(limit)
+            .prefetch_related("project__currency")
+        )
         paid = await paid_by_agreement([row.id for row in rows])
         return VendorAgreements(
             vendor_id=vendor.id,
             name=vendor.name,
+            total=total,
+            limit=limit,
+            offset=offset,
             agreements=[
                 VendorAgreement(
                     id=row.id,

@@ -187,4 +187,34 @@ describe('VendorService', () => {
     expect(service.vendors().map((row) => row.name)).toEqual(['Fresh']);
     expect(service.loading()).toBe(false);
   });
+
+  it('pages through all vendor agreements until the total is reached', async () => {
+    const service = configure((_name, args) => {
+      const offset = Number((args as { offset?: number }).offset ?? 0);
+      if (offset === 0) {
+        return {
+          vendor_id: 'v1',
+          name: 'Segun',
+          agreements: [{ id: 'a1' }, { id: 'a2' }],
+          total: 3,
+          limit: 100,
+          offset: 0,
+        };
+      }
+      return {
+        vendor_id: 'v1',
+        name: 'Segun',
+        agreements: [{ id: 'a3' }],
+        total: 3,
+        limit: 100,
+        offset,
+      };
+    });
+
+    const rows = await service.agreements('v1');
+
+    expect(rows.map((row) => row.id)).toEqual(['a1', 'a2', 'a3']);
+    expect(calls.length).toBe(2);
+    expect((calls[1] as { offset?: number }).offset).toBe(2);
+  });
 });

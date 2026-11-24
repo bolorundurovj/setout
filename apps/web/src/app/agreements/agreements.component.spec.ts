@@ -55,6 +55,7 @@ describe('AgreementsComponent', () => {
       agreements: () => rows,
       advances: () => [],
       balances: () => balances,
+      balancesTotal: () => balances.length,
       agreementExpenses: () => ({}),
       agreementTotal: () => rows.length,
       advanceTotal: () => 0,

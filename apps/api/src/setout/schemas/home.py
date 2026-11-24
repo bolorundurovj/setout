@@ -56,6 +56,9 @@ class HomeProject(BaseModel):
 
 class HomeProjects(BaseModel):
     rows: list[HomeProject]
+    total: int
+    limit: int
+    offset: int
 
 
 class HomeExpenseSummary(BaseModel):

@@ -176,6 +176,39 @@ describe('ItemService', () => {
     expect(await service.lastPrice('p1', 'i1')).toBeNull();
   });
 
+  it('merges paginated price series points across pages', async () => {
+    const service = configure((_name, args) => {
+      const offset = Number((args as { offset?: number }).offset ?? 0);
+      return {
+        item_id: 'i1',
+        name: 'Cement',
+        unit: 'bag',
+        series: [
+          {
+            currency_code: 'NGN',
+            currency_exponent: 2,
+            count: 3,
+            points_total: 3,
+            first_price: 100,
+            last_price: 300,
+            lowest_price: 100,
+            highest_price: 300,
+            first_paid_on: '2026-01-01',
+            last_paid_on: '2026-03-01',
+            change_percent: 200,
+            points: offset === 0 ? [{ unit_rate: 100 }, { unit_rate: 200 }] : [{ unit_rate: 300 }],
+          },
+        ],
+      };
+    });
+
+    const result = await service.prices('i1');
+
+    expect(result?.series[0].points.map((point) => point.unit_rate)).toEqual([100, 200, 300]);
+    expect(calls.length).toBe(2);
+    expect((calls[1] as { offset?: number }).offset).toBe(100);
+  });
+
   it('returns the last price for a project', async () => {
     const service = configure(() => ({
       item_id: 'i1',

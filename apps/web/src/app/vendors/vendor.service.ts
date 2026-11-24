@@ -17,7 +17,7 @@ import {
   updateVendor,
 } from '@setout/api-client';
 import { CountsService } from '../counts.service';
-import { CHOICE_LIMIT, PAGE_SIZE, offsetOf } from '../ui/paging';
+import { CHOICE_LIMIT, PAGE_SIZE, PICKER_PAGE_SIZE, offsetOf } from '../ui/paging';
 import { detailOf } from '../api-error';
 
 @Injectable({
@@ -168,8 +168,21 @@ export class VendorService {
 
   async agreements(vendorId: string): Promise<VendorAgreement[]> {
     try {
-      const body = await this.api.invoke(getVendorAgreements, { vendor_id: vendorId });
-      return body.agreements;
+      const rows: VendorAgreement[] = [];
+      let total = Infinity;
+      while (rows.length < total) {
+        const body = await this.api.invoke(getVendorAgreements, {
+          vendor_id: vendorId,
+          limit: PICKER_PAGE_SIZE,
+          offset: rows.length,
+        });
+        total = body.total;
+        rows.push(...body.agreements);
+        if (body.agreements.length === 0) {
+          break;
+        }
+      }
+      return rows;
     } catch {
       return [];
     }

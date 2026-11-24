@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from datetime import UTC, date, datetime
 
 from fastapi import HTTPException, status
+from tortoise.functions import Sum
 from tortoise.transactions import in_transaction
 
 from setout.models.advance import Advance
@@ -23,11 +23,12 @@ from setout.schemas.agreement import (
     AgreementRead,
     AgreementUpdate,
     PersonBalance,
+    PersonBalancePage,
 )
 from setout.services import changes
 from setout.services.storage import Storage
 from setout.utils.attachments import counts_for
-from setout.utils.balances import balance_of, paid_by_agreement, person_balances
+from setout.utils.balances import balance_of, paid_by_agreement
 from setout.utils.cascade import archive_under_agreement, restore_under_agreement
 from setout.utils.uploads import delete_unreferenced
 
@@ -171,27 +172,33 @@ class AgreementController:
                 )
             await advance.delete()
 
-    async def balances(self, project_id: str) -> list[PersonBalance]:
+    async def balances(self, project_id: str, *, limit: int, offset: int) -> PersonBalancePage:
+        """One grouped query each for advances and spending; the balance is their difference.
+
+        An archived person stays listed only while a balance remains open.
+        """
         project = await self._project_or_404(project_id)
         people = await Person.all()
-        ids = [person.id for person in people]
-        balances = await person_balances(ids, project_id)
+        advanced_rows = (
+            await Advance.filter(project_id=project.id, archived_at__isnull=True)
+            .group_by("person_id")
+            .annotate(total=Sum("amount"))
+            .values("person_id", "total")
+        )
+        advanced = {str(row["person_id"]): int(row["total"] or 0) for row in advanced_rows}
+        spent_rows = (
+            await Expense.filter(
+                project_id=project.id,
+                archived_at__isnull=True,
+                paid_by_id__not_isnull=True,
+            )
+            .group_by("paid_by_id")
+            .annotate(total=Sum("amount"))
+            .values("paid_by_id", "total")
+        )
+        spent = {str(row["paid_by_id"]): int(row["total"] or 0) for row in spent_rows}
 
-        advanced: dict[str, int] = defaultdict(int)
-        for row in await Advance.filter(project_id=project_id, archived_at__isnull=True).values(
-            "amount", "person_id"
-        ):
-            advanced[str(row["person_id"])] += int(row["amount"])
-
-        spent: dict[str, int] = defaultdict(int)
-        for row in await Expense.filter(
-            project_id=project_id,
-            archived_at__isnull=True,
-            paid_by_id__not_isnull=True,
-        ).values("amount", "paid_by_id"):
-            spent[str(row["paid_by_id"])] += int(row["amount"])
-
-        return [
+        rows = [
             PersonBalance(
                 person_id=person.id,
                 person_name=person.name,
@@ -200,12 +207,18 @@ class AgreementController:
                 currency_exponent=project.currency.exponent,
                 advanced_amount=advanced.get(person.id, 0),
                 spent_amount=spent.get(person.id, 0),
-                balance_amount=balances.get((person.id, project.currency_id), 0),
+                balance_amount=advanced.get(person.id, 0) - spent.get(person.id, 0),
             )
             for person in people
             if (advanced.get(person.id) or spent.get(person.id))
-            and (person.archived_at is None or balances.get((person.id, project.currency_id), 0))
+            and (person.archived_at is None or advanced.get(person.id, 0) - spent.get(person.id, 0))
         ]
+        return PersonBalancePage(
+            items=rows[offset : offset + limit],
+            total=len(rows),
+            limit=limit,
+            offset=offset,
+        )
 
     async def _read_one(self, agreement: Agreement, paid: int) -> AgreementRead:
         counts = await counts_for("agreement_id", [agreement.id])

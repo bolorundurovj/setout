@@ -5,18 +5,26 @@ import { HomeService } from './home.service';
 interface Invocation {
   name: string;
   currency: string | null;
+  offset?: number;
 }
 
 describe('HomeService', () => {
   let invocations: Invocation[];
 
-  function configure(reply: (name: string) => unknown) {
+  function configure(reply: (name: string, params?: Record<string, unknown>) => unknown) {
     invocations = [];
     TestBed.resetTestingModule();
     const api = {
-      invoke: async (fn: { name: string }, params?: { currency?: string | null }) => {
-        invocations.push({ name: fn.name, currency: params?.currency ?? null });
-        const result = reply(fn.name);
+      invoke: async (
+        fn: { name: string },
+        params?: { currency?: string | null; offset?: number },
+      ) => {
+        invocations.push({
+          name: fn.name,
+          currency: params?.currency ?? null,
+          offset: params?.offset,
+        });
+        const result = reply(fn.name, params);
         if (result instanceof Error) {
           throw result;
         }
@@ -47,6 +55,9 @@ describe('HomeService', () => {
     }
     if (name === 'getHomeMonths') {
       return { currency_code: 'NGN', currency_exponent: 2, months: [], highest_month: null };
+    }
+    if (name === 'getHomeProjects') {
+      return { rows: [], total: 0, limit: 100, offset: 0 };
     }
     return { rows: [] };
   }
@@ -120,5 +131,23 @@ describe('HomeService', () => {
     expect(service.months()).toBeNull();
     expect(service.recent()?.rows).toEqual([]);
     expect(service.error()).toBe('Could not load Home.');
+  });
+
+  it('collects all pages of home projects when total exceeds one page', async () => {
+    const service = configure((name, params) => {
+      if (name !== 'getHomeProjects') {
+        return stubReply(name);
+      }
+      const offset = Number(params?.['offset'] ?? 0);
+      return offset === 0
+        ? { rows: [{ id: 'p1' }, { id: 'p2' }], total: 3, limit: 100, offset: 0 }
+        : { rows: [{ id: 'p3' }], total: 3, limit: 100, offset };
+    });
+
+    await service.load();
+
+    expect(service.projects()?.rows.map((row) => row.id)).toEqual(['p1', 'p2', 'p3']);
+    const projectCalls = invocations.filter((call) => call.name === 'getHomeProjects');
+    expect(projectCalls.map((call) => call.offset)).toEqual([0, 2]);
   });
 });

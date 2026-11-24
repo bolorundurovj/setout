@@ -93,6 +93,9 @@ class VendorAgreement(BaseModel):
 class VendorAgreements(BaseModel):
     vendor_id: str
     name: str
+    total: int = Field(..., description="Agreements with this vendor, across every project")
+    limit: int
+    offset: int
     agreements: list[VendorAgreement] = Field(
         ..., description="Across every project, newest first. Currencies are never added together"
     )

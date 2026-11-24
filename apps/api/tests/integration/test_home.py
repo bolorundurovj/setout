@@ -306,3 +306,19 @@ async def test_archived_project_is_excluded_from_home(client: AsyncClient) -> No
     assert [row["project_name"] for row in (await _read(client, "latest"))["rows"]] == [
         "Jacaranda Close"
     ]
+
+
+async def test_home_projects_are_paginated(client: AsyncClient) -> None:
+    await _set_up_admin(client)
+    for name in ("Alpha", "Bravo", "Charlie"):
+        await _project(client, name)
+
+    resp = await client.get("/api/home/projects", params={"limit": 2})
+    assert resp.status_code == 200, resp.text
+    page = resp.json()
+    assert page["total"] == 3
+    assert [row["name"] for row in page["rows"]] == ["Charlie", "Bravo"]
+
+    tail = (await client.get("/api/home/projects", params={"limit": 2, "offset": 2})).json()
+    assert [row["name"] for row in tail["rows"]] == ["Alpha"]
+    assert tail["total"] == 3

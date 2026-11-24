@@ -219,7 +219,7 @@ describe('AgreementService', () => {
   it('reloads advances and balances after restoring an advance', async () => {
     const service = configure((name) =>
       name === 'listBalances'
-        ? []
+        ? page([])
         : name === 'restoreAdvance'
           ? { id: 'ad1' }
           : page([{ id: 'ad1' }]),
@@ -230,6 +230,17 @@ describe('AgreementService', () => {
     expect(calls('restoreAdvance').length).toBe(1);
     expect(calls('listAdvances').length).toBe(1);
     expect(calls('listBalances').length).toBe(1);
+  });
+
+  it('loads balances by page and records the total count', async () => {
+    const service = configure(() => page([{ person_id: 'pe1', balance_amount: 500 }], 24));
+
+    await service.loadBalances('p1', 3);
+
+    expect(service.balances().length).toBe(1);
+    expect(service.balancesTotal()).toBe(24);
+    expect(calls('listBalances')[0]['limit']).toBe(10);
+    expect(calls('listBalances')[0]['offset']).toBe(20);
   });
 
   it('loads advances by page and records the current page', async () => {
@@ -243,7 +254,9 @@ describe('AgreementService', () => {
   });
 
   it('reloads advances and balances after creating an advance', async () => {
-    const service = configure((name) => (name === 'listBalances' ? [] : page([{ id: 'ad1' }])));
+    const service = configure((name) =>
+      name === 'listBalances' ? page([]) : page([{ id: 'ad1' }]),
+    );
 
     await service.createAdvance('p1', { person_id: 'pe1', amount: 5_000 });
 
@@ -255,7 +268,7 @@ describe('AgreementService', () => {
     let rows: unknown[] = [{ id: 'ad1' }];
     const service = configure((name) => {
       if (name === 'listBalances') {
-        return [];
+        return page([]);
       }
       if (name === 'listAdvances') {
         const result = page(rows, 10);

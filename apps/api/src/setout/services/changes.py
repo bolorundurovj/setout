@@ -146,6 +146,30 @@ async def _write(
     )
 
 
+def _change_row(
+    model: type[Model],
+    row: Row,
+    action: ChangeAction,
+    changed: dict[str, Any],
+    project_id: str | None,
+) -> Change:
+    return Change(
+        entity=model._meta.db_table,
+        entity_id=str(row["id"]),
+        project_id=project_id,
+        action=action,
+        changed_fields=changed,
+        user_id=actor.get(),
+    )
+
+
+async def _category_projects(rows: list[Row]) -> dict[str, str]:
+    """Project id per category id, resolved with one query for the whole batch."""
+    category_ids = {str(row["category_id"]) for row in rows if row.get("category_id")}
+    pairs = await Category.filter(id__in=list(category_ids)).values_list("id", "project_id")
+    return {str(category_id): str(project_id) for category_id, project_id in pairs}
+
+
 async def _pre_save(
     sender: type[Model],
     instance: Model,
@@ -196,9 +220,17 @@ async def record_many(
     action: ChangeAction,
     after: Row | None = None,
 ) -> None:
-    """Records rows changed by a bulk statement. Each row is read before the statement runs."""
+    """Records rows changed by a bulk statement. Each row is read before the statement runs.
+
+    The change rows are written with one bulk insert, and a budget item's project
+    is resolved with a single category query instead of one per row.
+    """
     if paused.get():
         return
+    category_projects: dict[str, str] | None = None
+    if model is BudgetItem:
+        category_projects = await _category_projects(rows)
+    pending: list[Change] = []
     for row in rows:
         if action is ChangeAction.DELETE:
             changed = {
@@ -208,8 +240,15 @@ async def record_many(
             }
         else:
             changed = differences(row, {**row, **(after or {})})
-        if changed:
-            await _write(model, row, action, changed, None)
+        if not changed:
+            continue
+        if category_projects is not None:
+            project_id = category_projects.get(str(row["category_id"]))
+        else:
+            project_id = await TRACKED[model](row, None)
+        pending.append(_change_row(model, row, action, changed, project_id))
+    if pending:
+        await Change.bulk_create(pending)
 
 
 async def recorded_update(query: QuerySet[Any], **values: Any) -> int:

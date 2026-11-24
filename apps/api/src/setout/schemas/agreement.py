@@ -92,3 +92,10 @@ class PersonBalance(BaseModel):
     spent_amount: int
     # Positive when the person holds unspent money, negative when you owe the person.
     balance_amount: int
+
+
+class PersonBalancePage(BaseModel):
+    items: list[PersonBalance]
+    total: int
+    limit: int
+    offset: int

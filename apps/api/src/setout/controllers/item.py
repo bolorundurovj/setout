@@ -18,13 +18,14 @@ from setout.schemas.item import (
     ItemPage,
     ItemPricePoint,
     ItemPrices,
+    ItemPriceSeries,
     ItemPriceSummary,
     ItemRead,
     ItemUpdate,
 )
 from setout.services import changes
 from setout.utils.currencies import currency_exponents
-from setout.utils.items import price_change_percent, summarise_series
+from setout.utils.items import price_change_percent
 
 NOT_FOUND_ITEM = "Item not found"
 DUPLICATE_NAME = "An item with that name already exists"
@@ -91,21 +92,87 @@ class ItemController:
             await changes.recorded_update(Expense.filter(item_id=item.id), item_id=None)
             await item.delete()
 
-    async def prices(self, item_id: str) -> ItemPrices:
+    async def prices(self, item_id: str, *, limit: int, offset: int) -> ItemPrices:
+        """One series per currency: summary over every price, points by page.
+
+        The database groups the summary; only one page of points per series is
+        read, in the same (spent_on, expense id) order the full series uses.
+        """
         item = await self._item_or_404(item_id)
-        by_currency: dict[tuple[str, int], list[ItemPricePoint]] = {}
-        for expense in await self._priced_expenses(item_id):
-            key = (expense.project.currency_id, expense.project.currency.exponent)
-            by_currency.setdefault(key, []).append(self._point(expense))
-        return ItemPrices(
-            item_id=item.id,
-            name=item.name,
-            unit=item.unit,
-            series=[
-                summarise_series(code, exponent, points)
-                for (code, exponent), points in sorted(by_currency.items())
-            ],
+        groups = (
+            await Expense.filter(item_id=item.id, unit_rate__isnull=False, archived_at__isnull=True)
+            .group_by("project__currency_id")
+            .annotate(
+                n=Count("id"),
+                lowest=Min("unit_rate"),
+                highest=Max("unit_rate"),
+                first_on=Min("spent_on"),
+                last_on=Max("spent_on"),
+            )
+            .values("project__currency_id", "n", "lowest", "highest", "first_on", "last_on")
         )
+        if not groups:
+            return ItemPrices(item_id=item.id, name=item.name, unit=item.unit, series=[])
+        exponents = await currency_exponents({row["project__currency_id"] for row in groups})
+        dates = sorted({row["first_on"] for row in groups} | {row["last_on"] for row in groups})
+        edges = await Expense.filter(
+            item_id=item.id,
+            unit_rate__isnull=False,
+            archived_at__isnull=True,
+            spent_on__in=dates,
+        ).values("id", "project__currency_id", "spent_on", "unit_rate")
+        boundary: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for edge in edges:
+            boundary[str(edge["project__currency_id"])].append(edge)
+        series: list[ItemPriceSeries] = []
+        ordered = sorted(groups, key=lambda row: str(row["project__currency_id"]))
+        for row in ordered:
+            code = str(row["project__currency_id"])
+            group = boundary[code]
+            first = min(
+                (edge for edge in group if edge["spent_on"] == row["first_on"]),
+                key=lambda edge: str(edge["id"]),
+            )
+            last = max(
+                (edge for edge in group if edge["spent_on"] == row["last_on"]),
+                key=lambda edge: str(edge["id"]),
+            )
+            series.append(
+                ItemPriceSeries(
+                    currency_code=code,
+                    currency_exponent=exponents[code],
+                    count=int(row["n"]),
+                    first_price=int(first["unit_rate"]),
+                    first_paid_on=row["first_on"],
+                    last_price=int(last["unit_rate"]),
+                    last_paid_on=row["last_on"],
+                    lowest_price=int(row["lowest"]),
+                    highest_price=int(row["highest"]),
+                    change_percent=price_change_percent(
+                        int(first["unit_rate"]), int(last["unit_rate"]), int(row["n"])
+                    ),
+                    points_total=int(row["n"]),
+                    points=await self._points_page(item.id, code, limit, offset),
+                )
+            )
+        return ItemPrices(item_id=item.id, name=item.name, unit=item.unit, series=series)
+
+    async def _points_page(
+        self, item_id: str, currency_code: str, limit: int, offset: int
+    ) -> list[ItemPricePoint]:
+        rows = (
+            await Expense.filter(
+                item_id=item_id,
+                unit_rate__isnull=False,
+                archived_at__isnull=True,
+                project__currency_id=currency_code,
+            )
+            .order_by("spent_on", "id")
+            .offset(offset)
+            .limit(limit)
+            .prefetch_related("project", "vendor")
+        )
+        return [self._point(expense) for expense in rows]
 
     async def last_price(self, item_id: str, project_id: str) -> ItemLastPriceResponse:
         await self._item_or_404(item_id)

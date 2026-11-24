@@ -69,6 +69,9 @@ class ItemPricePoint(BaseModel):
 
 
 class ItemPriceSeries(ItemPriceSummary):
+    points_total: int = Field(
+        ..., description="Points in the whole series, of which this page carries a slice"
+    )
     points: list[ItemPricePoint]
 
 

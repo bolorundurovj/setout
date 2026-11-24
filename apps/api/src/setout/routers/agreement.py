@@ -16,7 +16,7 @@ from setout.schemas.agreement import (
     AgreementPage,
     AgreementRead,
     AgreementUpdate,
-    PersonBalance,
+    PersonBalancePage,
 )
 from setout.services.storage import Storage, get_storage
 
@@ -163,5 +163,10 @@ async def delete_advance(advance_id: str, user: CurrentUser) -> None:
 
 
 @router.get("/projects/{project_id}/balances", operation_id="listBalances", responses=NOT_FOUND)
-async def list_balances(project_id: str, user: CurrentUser) -> list[PersonBalance]:
-    return await controller.balances(project_id)
+async def list_balances(
+    project_id: str,
+    user: CurrentUser,
+    limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
+    offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
+) -> PersonBalancePage:
+    return await controller.balances(project_id, limit=limit, offset=offset)

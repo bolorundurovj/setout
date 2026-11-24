@@ -4029,6 +4029,33 @@
             }
           },
           {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Points per series per page",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Points per series per page"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Points to skip in each series",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Points to skip in each series"
+          },
+          {
             "name": "setout_session",
             "in": "cookie",
             "required": false,
@@ -6369,6 +6396,33 @@
             }
           },
           {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Rows per page",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Rows per page"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Rows to skip",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Rows to skip"
+          },
+          {
             "name": "setout_session",
             "in": "cookie",
             "required": false,
@@ -7923,6 +7977,33 @@
             }
           },
           {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Rows per page",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Rows per page"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Rows to skip",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Rows to skip"
+          },
+          {
             "name": "setout_session",
             "in": "cookie",
             "required": false,
@@ -7945,11 +8026,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PersonBalance"
-                  },
-                  "title": "Response Listbalances"
+                  "$ref": "#/components/schemas/PersonBalancePage"
                 }
               }
             }
@@ -10516,6 +10593,33 @@
               "title": "Currency"
             },
             "description": "Currency to report. Defaults to the base currency, then the first in use"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Rows per page",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Rows per page"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Rows to skip",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Rows to skip"
           },
           {
             "name": "setout_session",
@@ -13563,11 +13667,26 @@
             },
             "type": "array",
             "title": "Rows"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
           }
         },
         "type": "object",
         "required": [
-          "rows"
+          "rows",
+          "total",
+          "limit",
+          "offset"
         ],
         "title": "HomeProjects"
       },
@@ -14157,6 +14276,11 @@
             "title": "Change Percent",
             "description": "Null when there is only one price"
           },
+          "points_total": {
+            "type": "integer",
+            "title": "Points Total",
+            "description": "Points in the whole series, of which this page carries a slice"
+          },
           "points": {
             "items": {
               "$ref": "#/components/schemas/ItemPricePoint"
@@ -14177,6 +14301,7 @@
           "lowest_price",
           "highest_price",
           "change_percent",
+          "points_total",
           "points"
         ],
         "title": "ItemPriceSeries"
@@ -15678,6 +15803,37 @@
         ],
         "title": "PersonBalance"
       },
+      "PersonBalancePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PersonBalance"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "PersonBalancePage"
+      },
       "PersonCreate": {
         "properties": {
           "name": {
@@ -16838,6 +16994,19 @@
             "type": "string",
             "title": "Name"
           },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Agreements with this vendor, across every project"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
           "agreements": {
             "items": {
               "$ref": "#/components/schemas/VendorAgreement"
@@ -16851,6 +17020,9 @@
         "required": [
           "vendor_id",
           "name",
+          "total",
+          "limit",
+          "offset",
           "agreements"
         ],
         "title": "VendorAgreements"

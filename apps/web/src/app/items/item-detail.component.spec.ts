@@ -24,6 +24,7 @@ function series(overrides: Partial<ItemPriceSeries> = {}): ItemPriceSeries {
     currency_code: 'NGN',
     currency_exponent: 2,
     count: 3,
+    points_total: 3,
     first_price: 200_00,
     first_paid_on: '2026-01-05',
     last_price: 230_00,

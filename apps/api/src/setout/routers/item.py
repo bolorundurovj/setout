@@ -101,8 +101,13 @@ async def delete_item(item_id: str, user: CurrentUser) -> None:
 
 
 @router.get("/items/{item_id}/prices", operation_id="getItemPrices", responses=NOT_FOUND)
-async def get_item_prices(item_id: str, user: CurrentUser) -> ItemPrices:
-    return await controller.prices(item_id)
+async def get_item_prices(
+    item_id: str,
+    user: CurrentUser,
+    limit: Annotated[int, Query(ge=1, le=100, description="Points per series per page")] = 20,
+    offset: Annotated[int, Query(ge=0, description="Points to skip in each series")] = 0,
+) -> ItemPrices:
+    return await controller.prices(item_id, limit=limit, offset=offset)
 
 
 @router.get(

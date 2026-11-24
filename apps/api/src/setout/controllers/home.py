@@ -78,13 +78,16 @@ class HomeController:
             highest_month=max(months, key=lambda month: month.amount).month if months else None,
         )
 
-    async def projects(self, requested: str | None, base_currency: str | None) -> HomeProjects:
+    async def projects(
+        self, requested: str | None, base_currency: str | None, *, limit: int, offset: int
+    ) -> HomeProjects:
         projects = await self._projects()
         code = self._code(self._choices(projects), requested, base_currency)
         in_currency = [
             project for project in projects if code is None or project.currency_id == code
         ]
-        ids = [project.id for project in in_currency]
+        page = in_currency[offset : offset + limit]
+        ids = [project.id for project in page]
         budgeted = await budgeted_by_project(ids)
         spent = await spent_by_project(ids)
         counts = await self._counts(ids)
@@ -99,8 +102,11 @@ class HomeController:
                     spent_amount=spent.get(project.id, 0),
                     expense_count=counts.get(project.id, 0),
                 )
-                for project in in_currency
-            ]
+                for project in page
+            ],
+            total=len(in_currency),
+            limit=limit,
+            offset=offset,
         )
 
     async def latest(self, requested: str | None, base_currency: str | None) -> HomeLatest:

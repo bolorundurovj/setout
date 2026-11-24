@@ -37,6 +37,7 @@ from setout.utils.attachments import counts_for
 from setout.utils.cascade import archive_under_expense, restore_under_expense
 from setout.utils.categories import subtree_ids
 from setout.utils.expenses import derived_amount
+from setout.utils.iterables import chunked
 from setout.utils.months import month_range, to_months
 from setout.utils.uploads import delete_unreferenced
 
@@ -143,15 +144,19 @@ class ExpenseController:
     ) -> BulkCategoriseResult:
         await self._project_or_404(project_id)
         await self._categorisable_category(req.category_id, project_id)
-        categorised = await changes.recorded_update(
-            Expense.filter(
-                project_id=project_id,
-                id__in=req.expense_ids,
-                archived_at__isnull=True,
-                category_id__isnull=True,
-            ),
-            category_id=req.category_id,
-        )
+        # A request can carry any number of ids; the database takes an IN list
+        # in bounded batches.
+        categorised = 0
+        for batch in chunked(req.expense_ids):
+            categorised += await changes.recorded_update(
+                Expense.filter(
+                    project_id=project_id,
+                    id__in=batch,
+                    archived_at__isnull=True,
+                    category_id__isnull=True,
+                ),
+                category_id=req.category_id,
+            )
         return BulkCategoriseResult(categorised_count=categorised)
 
     async def _resolve_category(self, project_id: str, req: ExpenseCreate) -> str | None:

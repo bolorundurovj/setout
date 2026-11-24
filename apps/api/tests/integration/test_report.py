@@ -118,3 +118,30 @@ async def test_report_gathers_the_project_figures(client: AsyncClient) -> None:
     assert [(line.description, line.amount) for line in report.outstanding] == [
         ("17 bags of cement", 76_500_00)
     ]
+
+
+async def test_the_report_reads_each_table_once(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every section is computed from one read of each table, not one per section."""
+    from tortoise import Tortoise
+
+    project_id = await _filled_project(client)
+    connection = Tortoise.get_connection("default")
+    queries: list[str] = []
+
+    for name in ("execute_query", "execute_query_dict"):
+        original = getattr(connection, name)
+
+        async def counting(query: object, values: object = None, _original=original):  # type: ignore[no-untyped-def]
+            queries.append(str(query))
+            return await _original(query, values)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(connection, name, counting)
+
+    await ReportController().gather(project_id, date(2026, 10, 25))
+
+    reads = [query for query in queries if " FROM " in query]
+    for table in ("expense", "project", "budget_item"):
+        assert len([query for query in reads if f'FROM "{table}"' in query]) == 1, table
+    assert len(reads) <= 12

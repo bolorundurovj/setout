@@ -143,7 +143,7 @@ async def test_balance_is_advanced_less_spent(client: AsyncClient) -> None:
         json={"description": "Sand", "amount": 62_500_00, "paid_by_id": person_id},
     )
 
-    balances = (await client.get(f"/api/projects/{project_id}/balances")).json()
+    balances = (await client.get(f"/api/projects/{project_id}/balances")).json()["items"]
     assert len(balances) == 1
     assert balances[0]["person_name"] == "Mummy"
     assert balances[0]["advanced_amount"] == 100_000_00
@@ -160,17 +160,17 @@ async def test_spending_beyond_the_advance_gives_negative_balance(client: AsyncC
         json={"description": "Cement", "amount": 11_000_00, "paid_by_id": person_id},
     )
 
-    balances = (await client.get(f"/api/projects/{project_id}/balances")).json()
+    balances = (await client.get(f"/api/projects/{project_id}/balances")).json()["items"]
     assert balances[0]["balance_amount"] == -11_000_00
     assert (await client.post(f"/api/people/{person_id}/archive")).status_code == 204
-    assert (await client.get(f"/api/projects/{project_id}/balances")).json() == balances
+    assert (await client.get(f"/api/projects/{project_id}/balances")).json()["items"] == balances
 
 
 async def test_person_without_advances_or_expenses_is_omitted(client: AsyncClient) -> None:
     project_id = await _project(client)
     await _person(client, "Nobody")
 
-    assert (await client.get(f"/api/projects/{project_id}/balances")).json() == []
+    assert (await client.get(f"/api/projects/{project_id}/balances")).json()["items"] == []
 
 
 async def test_advance_with_unknown_person_returns_404(client: AsyncClient) -> None:
@@ -239,7 +239,7 @@ async def test_archived_advance_is_listed_with_include_archived_and_restorable(
     ).json()
 
     assert (await client.post(f"/api/advances/{advance['id']}/archive")).status_code == 204
-    assert (await client.get(f"/api/projects/{project_id}/balances")).json() == []
+    assert (await client.get(f"/api/projects/{project_id}/balances")).json()["items"] == []
 
     page = (
         await client.get(f"/api/projects/{project_id}/advances", params={"include_archived": True})
@@ -250,7 +250,7 @@ async def test_archived_advance_is_listed_with_include_archived_and_restorable(
     restored = await client.post(f"/api/advances/{advance['id']}/restore")
     assert restored.status_code == 200
     assert restored.json()["archived_at"] is None
-    balances = (await client.get(f"/api/projects/{project_id}/balances")).json()
+    balances = (await client.get(f"/api/projects/{project_id}/balances")).json()["items"]
     assert balances[0]["advanced_amount"] == 100_000_00
 
 
@@ -305,3 +305,21 @@ async def test_expense_cannot_use_another_vendors_agreement(client: AsyncClient)
         },
     )
     assert resp.status_code == 422
+
+
+async def test_balances_are_paginated(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    for name in ("Ada", "Bola", "Chidi"):
+        person_id = await _person(client, name)
+        await client.post(
+            f"/api/projects/{project_id}/advances",
+            json={"person_id": person_id, "amount": 10_000_00},
+        )
+
+    url = f"/api/projects/{project_id}/balances"
+    page = (await client.get(url, params={"limit": 2})).json()
+    assert page["total"] == 3
+    assert [row["person_name"] for row in page["items"]] == ["Ada", "Bola"]
+    tail = (await client.get(url, params={"limit": 2, "offset": 2})).json()
+    assert [row["person_name"] for row in tail["items"]] == ["Chidi"]
+    assert tail["total"] == 3

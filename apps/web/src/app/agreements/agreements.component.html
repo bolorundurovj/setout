@@ -372,10 +372,10 @@
       </div>
 
       <app-pagination
-        [total]="agreements.balances().length"
+        [total]="agreements.balancesTotal()"
         [page]="balancePage()"
         noun="people"
-        (pageChange)="balancePage.set($event)"
+        (pageChange)="goToBalancePage($event)"
       />
     }
 

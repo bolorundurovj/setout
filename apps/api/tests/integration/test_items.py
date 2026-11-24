@@ -275,3 +275,24 @@ async def test_an_item_nobody_has_bought_has_no_prices(client: AsyncClient) -> N
     row = (await client.get("/api/items")).json()["items"][0]
     assert row["prices"] == []
     assert row["purchase_count"] == 0
+
+
+async def test_item_prices_are_paginated_per_series(client: AsyncClient) -> None:
+    projects = await _setup(client)
+    item = await _item(client, "Cement")
+    for number, day in enumerate(
+        ("2026-01-05", "2026-02-05", "2026-03-05", "2026-04-05", "2026-05-05")
+    ):
+        await _buy(client, projects["NGN"], item["id"], (200 + number * 100) * 100, day)
+
+    url = f"/api/items/{item['id']}/prices"
+    page = (await client.get(url, params={"limit": 2})).json()
+    series = page["series"][0]
+    assert series["points_total"] == 5
+    assert series["count"] == 5
+    assert [point["unit_rate"] for point in series["points"]] == [200_00, 300_00]
+    assert series["first_price"] == 200_00
+    assert series["last_price"] == 600_00
+
+    tail = (await client.get(url, params={"limit": 2, "offset": 4})).json()
+    assert [point["unit_rate"] for point in tail["series"][0]["points"]] == [600_00]

@@ -112,5 +112,10 @@ async def get_vendor_expense_summary(vendor_id: str, user: CurrentUser) -> Vendo
 @router.get(
     "/vendors/{vendor_id}/agreements", operation_id="getVendorAgreements", responses=NOT_FOUND
 )
-async def get_vendor_agreements(vendor_id: str, user: CurrentUser) -> VendorAgreements:
-    return await controller.agreements(vendor_id)
+async def get_vendor_agreements(
+    vendor_id: str,
+    user: CurrentUser,
+    limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
+    offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
+) -> VendorAgreements:
+    return await controller.agreements(vendor_id, limit=limit, offset=offset)

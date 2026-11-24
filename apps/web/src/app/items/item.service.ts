@@ -4,6 +4,7 @@ import {
   Api,
   ItemCreate,
   ItemLastPrice,
+  ItemPricePoint,
   ItemPrices,
   ItemRead,
   ItemUpdate,
@@ -17,7 +18,7 @@ import {
   updateItem,
 } from '@setout/api-client';
 import { CountsService } from '../counts.service';
-import { CHOICE_LIMIT, PAGE_SIZE, offsetOf } from '../ui/paging';
+import { CHOICE_LIMIT, PAGE_SIZE, PICKER_PAGE_SIZE, offsetOf } from '../ui/paging';
 
 @Injectable({
   providedIn: 'root',
@@ -149,7 +150,37 @@ export class ItemService {
 
   async prices(itemId: string): Promise<ItemPrices | null> {
     try {
-      return await this.api.invoke(getItemPrices, { item_id: itemId });
+      let first: ItemPrices | null = null;
+      const pointsByCurrency: Record<string, ItemPricePoint[]> = {};
+      let offset = 0;
+      for (;;) {
+        const page = await this.api.invoke(getItemPrices, {
+          item_id: itemId,
+          limit: PICKER_PAGE_SIZE,
+          offset,
+        });
+        first ??= page;
+        for (const series of page.series) {
+          (pointsByCurrency[series.currency_code] ??= []).push(...series.points);
+        }
+        const exhausted = page.series.every(
+          (series) => (pointsByCurrency[series.currency_code]?.length ?? 0) >= series.points_total,
+        );
+        const empty = page.series.every((series) => series.points.length === 0);
+        if (exhausted || empty) {
+          break;
+        }
+        offset += PICKER_PAGE_SIZE;
+      }
+      return first
+        ? {
+            ...first,
+            series: first.series.map((series) => ({
+              ...series,
+              points: pointsByCurrency[series.currency_code] ?? [],
+            })),
+          }
+        : null;
     } catch {
       return null;
     }

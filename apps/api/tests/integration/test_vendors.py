@@ -292,3 +292,21 @@ async def test_a_vendor_with_no_agreements_says_so_plainly(client: AsyncClient) 
     body = (await client.get(f"/api/vendors/{vendor_id}/agreements")).json()
     assert body["agreements"] == []
     assert body["name"] == "Quiet Supplier"
+
+
+async def test_vendor_agreements_are_paginated(client: AsyncClient) -> None:
+    projects = await _setup(client)
+    vendor = await _vendor(client, "Kunle Bricklaying")
+    for number in range(3):
+        await client.post(
+            f"/api/projects/{projects['NGN']}/agreements",
+            json={"vendor_id": vendor["id"], "description": f"Job {number}", "agreed_amount": 100},
+        )
+
+    url = f"/api/vendors/{vendor['id']}/agreements"
+    page = (await client.get(url, params={"limit": 2})).json()
+    assert page["total"] == 3
+    assert len(page["agreements"]) == 2
+    tail = (await client.get(url, params={"limit": 2, "offset": 2})).json()
+    assert [row["description"] for row in tail["agreements"]] == ["Job 0"]
+    assert tail["total"] == 3

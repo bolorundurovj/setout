@@ -41,9 +41,14 @@ async def get_months(user: CurrentUser, currency: CurrencyQuery = None) -> HomeM
 
 
 @router.get("/projects", operation_id="getHomeProjects")
-async def get_projects(user: CurrentUser, currency: CurrencyQuery = None) -> HomeProjects:
+async def get_projects(
+    user: CurrentUser,
+    currency: CurrencyQuery = None,
+    limit: Annotated[int, Query(ge=1, le=100, description="Rows per page")] = 20,
+    offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
+) -> HomeProjects:
     """Projects that are not archived, in one currency, with budgeted and spent amounts."""
-    return await controller.projects(currency, user.base_currency)
+    return await controller.projects(currency, user.base_currency, limit=limit, offset=offset)
 
 
 @router.get("/latest", operation_id="getHomeLatest")

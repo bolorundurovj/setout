@@ -3,6 +3,7 @@ import {
   Api,
   HomeLatest,
   HomeMonths,
+  HomeProject,
   HomeProjects,
   HomeSummary,
   getHomeLatest,
@@ -11,6 +12,7 @@ import {
   getHomeSummary,
 } from '@setout/api-client';
 import { detailOf } from '../api-error';
+import { PICKER_PAGE_SIZE } from '../ui/paging';
 
 const LOAD_ERROR = 'Could not load Home.';
 
@@ -56,13 +58,37 @@ export class HomeService {
       this.read(() => this.api.invoke(getHomeMonths, this.currencyParams())).then((response) =>
         this.months.set(response),
       ),
-      this.read(() => this.api.invoke(getHomeProjects, this.currencyParams())).then((response) =>
-        this.projects.set(response),
-      ),
+      this.read(() => this.loadAllProjects()).then((response) => this.projects.set(response)),
       this.read(() => this.api.invoke(getHomeLatest, this.currencyParams())).then((response) =>
         this.recent.set(response),
       ),
     ]);
+  }
+
+  private async loadAllProjects(): Promise<HomeProjects> {
+    const params = this.currencyParams();
+    const rows: HomeProject[] = [];
+    let last: HomeProjects | null = null;
+    let total = Infinity;
+    while (rows.length < total) {
+      const response = await this.api.invoke(getHomeProjects, {
+        ...params,
+        limit: PICKER_PAGE_SIZE,
+        offset: rows.length,
+      });
+      last = response;
+      total = response.total;
+      rows.push(...response.rows);
+      if (response.rows.length === 0) {
+        break;
+      }
+    }
+    return {
+      rows,
+      total: last?.total ?? rows.length,
+      limit: last?.limit ?? PICKER_PAGE_SIZE,
+      offset: 0,
+    };
   }
 
   private currencyParams(): { currency: string | null } {

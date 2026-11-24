@@ -1,17 +1,30 @@
+"""The project PDF report.
+
+`gather` reads each table exactly once and computes every section from that
+shared data: the header totals, category lines, cost-type totals, month bars,
+agreements, advances and outstanding deliveries.
+"""
+
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import date
 
-from setout.controllers.agreement import AgreementController
-from setout.controllers.category import CategoryController
-from setout.controllers.expense import ExpenseController
-from setout.controllers.project import ProjectController
+from fastapi import HTTPException, status
+
+from setout.models.advance import Advance
 from setout.models.agreement import Agreement
 from setout.models.budget import BudgetItem
+from setout.models.category import Category
 from setout.models.delivery import Delivery
 from setout.models.expense import CostType, Expense
+from setout.models.person import Person
+from setout.models.project import Project
+from setout.models.vendor import Vendor
 from setout.services import report
-from setout.utils.balances import balance_of, paid_by_agreement
+from setout.utils.balances import balance_of
+from setout.utils.categories import rolled_up_totals
+from setout.utils.months import to_months
 
 COST_TYPE_NAMES = {
     CostType.LABOUR: "Labour",
@@ -21,100 +34,42 @@ COST_TYPE_NAMES = {
 
 
 class ReportController:
-    def __init__(self) -> None:
-        self.projects = ProjectController()
-        self.categories = CategoryController()
-        self.expenses = ExpenseController()
-        self.agreements = AgreementController()
-
     async def pdf(self, project_id: str) -> tuple[str, bytes]:
         built = await self.gather(project_id, date.today())
         return built.project_name, report.render(built)
 
     async def gather(self, project_id: str, generated_on: date) -> report.ProjectReport:
-        project = await self.projects.get(project_id)
-        built = report.ProjectReport(
-            project_name=project.name,
-            land_name=project.land_name,
-            currency_code=project.currency_code,
-            exponent=project.currency_exponent,
-            generated_on=generated_on,
-            budgeted_amount=project.budgeted_amount,
-            spent_amount=project.spent_amount,
-        )
-        await self._categories(project_id, built)
-        await self._cost_types(project_id, built)
-        months = await self.expenses.months(project_id)
-        built.months = [
-            report.MonthLine(month.month, month.amount, month.expense_count)
-            for month in months.months
-        ]
-        await self._agreements(project_id, built)
-        built.advances = [
-            report.AdvanceLine(
-                person_name=row.person_name,
-                advanced_amount=row.advanced_amount,
-                spent_amount=row.spent_amount,
-                balance_amount=row.balance_amount,
-            )
-            for row in await self.agreements.balances(project_id)
-            if row.advanced_amount or row.spent_amount
-        ]
-        await self._outstanding(project_id, built)
-        return built
-
-    async def _categories(self, project_id: str, built: report.ProjectReport) -> None:
-        budget = await self.categories.budget(project_id)
-        top_level = [category for category in budget.categories if category.parent_id is None]
-        built.categories = [
-            report.CategoryLine(category.name, category.budgeted_amount, category.spent_amount)
-            for category in top_level
-        ]
-        uncategorised = built.spent_amount - sum(category.spent_amount for category in top_level)
-        if uncategorised:
-            built.categories.append(report.CategoryLine("Uncategorised", 0, uncategorised))
-
-    async def _cost_types(self, project_id: str, built: report.ProjectReport) -> None:
-        budgeted: dict[CostType | None, int] = {}
-        for row in await BudgetItem.filter(
+        project = await Project.get_or_none(
+            id=project_id, archived_at__isnull=True
+        ).prefetch_related("currency", "land")
+        if project is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        categories = await Category.filter(project_id=project_id, archived_at__isnull=True)
+        items = await BudgetItem.filter(
+            category__project_id=project_id,
             archived_at__isnull=True,
             category__archived_at__isnull=True,
-            category__project_id=project_id,
-        ).values("cost_type", "budgeted_amount"):
-            key = row["cost_type"]
-            budgeted[key] = budgeted.get(key, 0) + int(row["budgeted_amount"])
-        spent: dict[CostType | None, int] = {}
-        for row in await Expense.filter(project_id=project_id, archived_at__isnull=True).values(
-            "cost_type", "amount"
-        ):
-            key = row["cost_type"]
-            spent[key] = spent.get(key, 0) + int(row["amount"])
-        built.cost_types = [
-            report.CostTypeLine(name, budgeted.get(cost_type, 0), spent.get(cost_type, 0))
-            for cost_type, name in [*COST_TYPE_NAMES.items(), (None, "Not set")]
-            if budgeted.get(cost_type) or spent.get(cost_type)
-        ]
-
-    async def _agreements(self, project_id: str, built: report.ProjectReport) -> None:
-        rows = (
+        ).only("category_id", "cost_type", "budgeted_amount")
+        expenses = await Expense.filter(project_id=project_id, archived_at__isnull=True).only(
+            "id",
+            "category_id",
+            "cost_type",
+            "amount",
+            "spent_on",
+            "agreement_id",
+            "paid_by_id",
+            "vendor_id",
+        )
+        agreements = (
             await Agreement.filter(project_id=project_id, archived_at__isnull=True)
             .order_by("created_at", "id")
-            .prefetch_related("vendor")
+            .only("id", "description", "agreed_amount", "vendor_id")
         )
-        paid = await paid_by_agreement([row.id for row in rows])
-        built.agreements = [
-            report.AgreementLine(
-                vendor_name=row.vendor.name,
-                description=row.description,
-                agreed_amount=row.agreed_amount,
-                paid_amount=paid.get(row.id, 0),
-                balance_amount=balance_of(row.agreed_amount, paid.get(row.id, 0)),
-            )
-            for row in rows
-        ]
-
-    async def _outstanding(self, project_id: str, built: report.ProjectReport) -> None:
-        rows = (
+        advances = await Advance.filter(project_id=project_id, archived_at__isnull=True).values(
+            "person_id", "amount"
+        )
+        people = await Person.all()
+        outstanding_rows = (
             await Delivery.filter(
                 project_id=project_id,
                 archived_at__isnull=True,
@@ -122,14 +77,141 @@ class ReportController:
                 expense__archived_at__isnull=True,
             )
             .order_by("expected", "created_at", "id")
-            .prefetch_related("expense__vendor")
+            .only("id", "description", "expected", "expense_id")
         )
-        built.outstanding = [
-            report.OutstandingLine(
-                description=row.description,
-                vendor_name=row.expense.vendor.name if row.expense.vendor else "",
-                expected=row.expected,
-                amount=row.expense.amount,
-            )
-            for row in rows
+        expense_by_id = {expense.id: expense for expense in expenses}
+        vendor_ids = {expense.vendor_id for expense in expenses if expense.vendor_id is not None}
+        vendor_ids.update(row.vendor_id for row in agreements)
+        vendors = {
+            str(row["id"]): str(row["name"])
+            for row in await Vendor.filter(id__in=list(vendor_ids)).values("id", "name")
+        }
+
+        spent_total = sum(expense.amount for expense in expenses)
+        land = project.land if project.land_id is not None else None
+        built = report.ProjectReport(
+            project_name=project.name,
+            land_name=land.name if land is not None else None,
+            currency_code=project.currency_id,
+            exponent=project.currency.exponent,
+            generated_on=generated_on,
+            budgeted_amount=sum(item.budgeted_amount for item in items),
+            spent_amount=spent_total,
+        )
+        self._categories(built, categories, items, expenses, spent_total)
+        self._cost_types(built, items, expenses)
+        built.months = [
+            report.MonthLine(month.month, month.amount, month.expense_count)
+            for month in to_months(expenses, categories)
         ]
+        self._agreements(built, agreements, expenses, vendors)
+        self._advances(built, advances, people, expenses)
+        built.outstanding = []
+        for row in outstanding_rows:
+            expense = expense_by_id.get(row.expense_id)
+            built.outstanding.append(
+                report.OutstandingLine(
+                    description=row.description,
+                    vendor_name=(
+                        vendors.get(expense.vendor_id, "") if expense and expense.vendor_id else ""
+                    ),
+                    expected=row.expected,
+                    amount=expense.amount if expense else 0,
+                )
+            )
+        return built
+
+    def _categories(
+        self,
+        built: report.ProjectReport,
+        categories: list[Category],
+        items: list[BudgetItem],
+        expenses: list[Expense],
+        spent_total: int,
+    ) -> None:
+        budgeted: dict[str, int] = defaultdict(int)
+        for item in items:
+            budgeted[item.category_id] += item.budgeted_amount
+        spent: dict[str, int] = defaultdict(int)
+        for expense in expenses:
+            if expense.category_id is not None:
+                spent[expense.category_id] += expense.amount
+        rolled = rolled_up_totals(categories, dict(budgeted))
+        spent_rolled = rolled_up_totals(categories, dict(spent))
+        top_level = [category for category in categories if category.parent_id is None]
+        built.categories = [
+            report.CategoryLine(category.name, rolled[category.id], spent_rolled[category.id])
+            for category in top_level
+        ]
+        uncategorised = spent_total - sum(spent_rolled[category.id] for category in top_level)
+        if uncategorised:
+            built.categories.append(report.CategoryLine("Uncategorised", 0, uncategorised))
+
+    def _cost_types(
+        self, built: report.ProjectReport, items: list[BudgetItem], expenses: list[Expense]
+    ) -> None:
+        budgeted: dict[CostType | None, int] = {}
+        for item in items:
+            budgeted[item.cost_type] = budgeted.get(item.cost_type, 0) + item.budgeted_amount
+        spent: dict[CostType | None, int] = {}
+        for expense in expenses:
+            spent[expense.cost_type] = spent.get(expense.cost_type, 0) + expense.amount
+        built.cost_types = [
+            report.CostTypeLine(name, budgeted.get(cost_type, 0), spent.get(cost_type, 0))
+            for cost_type, name in [*COST_TYPE_NAMES.items(), (None, "Not set")]
+            if budgeted.get(cost_type) or spent.get(cost_type)
+        ]
+
+    def _agreements(
+        self,
+        built: report.ProjectReport,
+        agreements: list[Agreement],
+        expenses: list[Expense],
+        vendors: dict[str, str],
+    ) -> None:
+        paid: dict[str, int] = defaultdict(int)
+        for expense in expenses:
+            if expense.agreement_id is not None:
+                paid[str(expense.agreement_id)] += expense.amount
+        built.agreements = [
+            report.AgreementLine(
+                vendor_name=vendors.get(row.vendor_id, ""),
+                description=row.description,
+                agreed_amount=row.agreed_amount,
+                paid_amount=paid.get(row.id, 0),
+                balance_amount=balance_of(row.agreed_amount, paid.get(row.id, 0)),
+            )
+            for row in agreements
+        ]
+
+    def _advances(
+        self,
+        built: report.ProjectReport,
+        advances: list[dict[str, int]],
+        people: list[Person],
+        expenses: list[Expense],
+    ) -> None:
+        advanced: dict[str, int] = defaultdict(int)
+        for row in advances:
+            advanced[str(row["person_id"])] += int(row["amount"])
+        spent: dict[str, int] = defaultdict(int)
+        for expense in expenses:
+            if expense.paid_by_id is not None:
+                spent[str(expense.paid_by_id)] += expense.amount
+        built.advances = []
+        for person in people:
+            given = advanced.get(person.id, 0)
+            used = spent.get(person.id, 0)
+            if not (given or used):
+                continue
+            # An archived person stays on the report only while a balance remains open.
+            if person.archived_at is not None and given - used == 0:
+                continue
+            built.advances.append(
+                report.AdvanceLine(
+                    person_name=person.name,
+                    advanced_amount=given,
+                    spent_amount=used,
+                    balance_amount=given - used,
+                )
+            )

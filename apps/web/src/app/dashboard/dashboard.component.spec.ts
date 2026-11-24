@@ -271,7 +271,7 @@ describe('DashboardComponent', () => {
   });
 
   it('routes each alert to its tab', () => {
-    const component = render({ projects: { rows: [project()] } });
+    const component = render({ projects: { rows: [project()], total: 1, limit: 100, offset: 0 } });
 
     component.openAlert({ kind: 'uncategorised', title: '', detail: '', amount: 0, urgent: true });
     component.openAlert({ kind: 'deliveries', title: '', detail: '', amount: 0, urgent: false });

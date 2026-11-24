@@ -16,7 +16,6 @@ import { ButtonComponent } from '../ui/button.component';
 import { InfiniteScrollDirective } from '../ui/infinite-scroll.directive';
 import { MoneyHintComponent } from '../ui/money-hint.component';
 import { PaginationComponent } from '../ui/pagination.component';
-import { pageOf } from '../ui/paging';
 import { formatDay } from '../shared/dates';
 import { ToggleComponent } from '../ui/toggle.component';
 import { currencySymbol } from '../ui/currency-pill.component';
@@ -86,7 +85,7 @@ export class AgreementsComponent {
   }
 
   readonly balancePage = signal(1);
-  readonly balanceRows = computed(() => pageOf(this.agreements.balances(), this.balancePage()));
+  readonly balanceRows = computed(() => this.agreements.balances());
 
   constructor() {
     queueMicrotask(() => {
@@ -104,6 +103,11 @@ export class AgreementsComponent {
 
   async goToAdvances(page: number): Promise<void> {
     await this.agreements.loadAdvances(this.project().id, page);
+  }
+
+  async goToBalancePage(page: number): Promise<void> {
+    this.balancePage.set(page);
+    await this.agreements.loadBalances(this.project().id, page);
   }
 
   value(event: Event): string {
