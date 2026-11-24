@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import io
 from datetime import date, datetime
 from decimal import Decimal
@@ -284,3 +285,15 @@ def test_expenses_csv_starts_with_a_byte_order_mark_and_the_header_row() -> None
 
 def test_csv_without_a_book_is_the_header_row_only() -> None:
     assert write.budget_csv().decode("utf-8-sig") == ",".join(write.BUDGET_HEAD) + "\n"
+
+
+@pytest.mark.parametrize("prefix", ["=", "+", "-", "@", "\t", "\r"])
+def test_export_escapes_spreadsheet_text(prefix: str) -> None:
+    value = prefix + "example"
+    book = a_book()
+    book.project_name = value
+    sheet = load_workbook(io.BytesIO(write.build(book)))["Project"]
+    assert sheet["A1"].value == "'" + value.replace("\r", "\n")
+    assert sheet["A1"].data_type == "s"
+    data = write.as_csv([[value, -7]]).decode("utf-8-sig")
+    assert next(csv.reader(io.StringIO(data, newline=""))) == ["'" + value, "-7"]

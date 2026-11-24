@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
@@ -168,6 +169,16 @@ def major(minor: int, exponent: int) -> Decimal:
     return Decimal(minor).scaleb(-exponent)
 
 
+def _safe_cell(value: object) -> object:
+    if isinstance(value, str) and value.startswith(("=", "+", "-", "@", "\t", "\r")):
+        return "'" + value
+    return value
+
+
+def _append(sheet: Worksheet, row: Sequence[object]) -> None:
+    sheet.append([_safe_cell(value) for value in row])
+
+
 def compose(book: ExportWorkbook) -> Workbook:
     wb = Workbook()
     wb.remove(wb.active)
@@ -198,14 +209,14 @@ CURRENCY_LABEL = "Currency code"
 
 
 def _project(sheet: Worksheet, book: ExportWorkbook) -> None:
-    sheet.append([f"{book.project_name}"])
-    sheet.append([])
+    _append(sheet, [f"{book.project_name}"])
+    _append(sheet, [])
     for label, value in [
         ("Project", book.project_name),
         (CURRENCY_LABEL, book.currency_code),
         ("Amounts", "Whole currency units, for example 1,500.00, not cents or kobo"),
     ]:
-        sheet.append([label, value])
+        _append(sheet, [label, value])
     sheet["A1"].font = TITLE_FONT
     for row in sheet.iter_rows(min_row=3):
         row[0].font = HEAD_FONT
@@ -217,9 +228,9 @@ def _money_format(book: ExportWorkbook) -> str:
 
 
 def _title(sheet: Worksheet, name: str, head: list[str]) -> None:
-    sheet.append([name])
-    sheet.append([])
-    sheet.append(head)
+    _append(sheet, [name])
+    _append(sheet, [])
+    _append(sheet, head)
     sheet["A1"].font = TITLE_FONT
     for column in range(1, len(head) + 1):
         cell = sheet.cell(row=3, column=column)
@@ -256,7 +267,8 @@ def _budget(sheet: Worksheet, book: ExportWorkbook) -> None:
 
     for category in book.categories:
         totals = _by_cost_type(category.lines)
-        sheet.append(
+        _append(
+            sheet,
             [
                 category.code,
                 category.name,
@@ -265,7 +277,7 @@ def _budget(sheet: Worksheet, book: ExportWorkbook) -> None:
                 to_major(totals["fixed"]) if totals["fixed"] else "",
                 to_major(category.budgeted_amount),
                 category.parent_code,
-            ]
+            ],
         )
         sheet.cell(row=sheet.max_row, column=1).font = CATEGORY_FONT
         sheet.cell(row=sheet.max_row, column=2).font = CATEGORY_FONT
@@ -274,7 +286,7 @@ def _budget(sheet: Worksheet, book: ExportWorkbook) -> None:
             cost_type_cells: list[object] = ["", "", ""]
             if line.cost_type in COST_COLUMN:
                 cost_type_cells[COST_COLUMN[line.cost_type]] = to_major(line.budgeted_amount)
-            sheet.append([line.code, line.name, *cost_type_cells, to_major(line.budgeted_amount)])
+            _append(sheet, [line.code, line.name, *cost_type_cells, to_major(line.budgeted_amount)])
 
     _widths(sheet, [14, 40, 15, 15, 15, 16, 12])
     _format(sheet, money=[2, 3, 4, 5], money_format=_money_format(book))
@@ -291,7 +303,8 @@ def _by_cost_type(lines: list[BudgetLine]) -> dict[str, int]:
 def _vendors(sheet: Worksheet, book: ExportWorkbook) -> None:
     _title(sheet, VENDORS_SHEET, VENDOR_HEAD)
     for vendor in book.vendors:
-        sheet.append(
+        _append(
+            sheet,
             [
                 vendor.name,
                 vendor.trade,
@@ -299,7 +312,7 @@ def _vendors(sheet: Worksheet, book: ExportWorkbook) -> None:
                 vendor.phone,
                 vendor.email,
                 vendor.notes,
-            ]
+            ],
         )
     _widths(sheet, [28, 20, 22, 18, 26, 30])
 
@@ -307,7 +320,7 @@ def _vendors(sheet: Worksheet, book: ExportWorkbook) -> None:
 def _expenses(sheet: Worksheet, book: ExportWorkbook) -> None:
     _title(sheet, EXPENSES_SHEET, EXPENSE_HEAD)
     for row in expense_rows(book):
-        sheet.append(row)
+        _append(sheet, row)
     _widths(sheet, [12, 28, 12, 34, 14, 14, 18, 18, 8, 14, 30, 12, 10, 14, 20, 10])
     _format(sheet, money=[5, 13], dates=[4, 9], money_format=_money_format(book))
 
@@ -319,14 +332,14 @@ def _outstanding(sheet: Worksheet, book: ExportWorkbook) -> None:
         expected_str = (
             row.expected.isoformat() if isinstance(row.expected, date) else (row.expected or "")
         )
-        sheet.append([row.description, row.vendor, "", expected_str, status])
+        _append(sheet, [row.description, row.vendor, "", expected_str, status])
     _widths(sheet, [34, 26, 10, 22, 22])
 
 
 def _people(sheet: Worksheet, book: ExportWorkbook) -> None:
     _title(sheet, "People", PEOPLE_HEAD)
     for person in book.people:
-        sheet.append([person.name, person.role, person.phone, person.notes])
+        _append(sheet, [person.name, person.role, person.phone, person.notes])
     _widths(sheet, [26, 20, 18, 30])
 
 
@@ -334,7 +347,8 @@ def _agreements(sheet: Worksheet, book: ExportWorkbook) -> None:
     _title(sheet, "Agreements", AGREEMENT_HEAD)
     for row in book.agreements:
         balance = row.agreed_amount - row.paid_amount
-        sheet.append(
+        _append(
+            sheet,
             [
                 row.vendor,
                 row.description,
@@ -342,7 +356,7 @@ def _agreements(sheet: Worksheet, book: ExportWorkbook) -> None:
                 major(row.paid_amount, book.exponent),
                 major(balance, book.exponent),
                 "",
-            ]
+            ],
         )
     _widths(sheet, [26, 34, 15, 15, 15, 30])
     _format(sheet, money=[2, 3, 4], money_format=_money_format(book))
@@ -352,7 +366,7 @@ def _prices(sheet: Worksheet, book: ExportWorkbook) -> None:
     _title(sheet, "Item prices", PRICE_HEAD)
     for row in book.prices:
         rate = "" if row.unit_rate is None else major(row.unit_rate, book.exponent)
-        sheet.append([row.name, row.unit, rate, row.vendor, row.spent_on])
+        _append(sheet, [row.name, row.unit, rate, row.vendor, row.spent_on])
     _widths(sheet, [28, 16, 15, 26, 16])
     _format(sheet, money=[2], dates=[4], money_format=_money_format(book))
 
@@ -360,7 +374,7 @@ def _prices(sheet: Worksheet, book: ExportWorkbook) -> None:
 def _attachments(sheet: Worksheet, book: ExportWorkbook) -> None:
     _title(sheet, "Attachments (files are not included in this workbook)", ATTACHMENT_HEAD)
     for row in book.attachments:
-        sheet.append([row.filename, row.attached_to, row.byte_size, row.checksum])
+        _append(sheet, [row.filename, row.attached_to, row.byte_size, row.checksum])
     _widths(sheet, [30, 34, 16, 66])
 
 
@@ -522,7 +536,7 @@ def template(filled: bool = False) -> bytes:
 
     instructions_sheet = wb.create_sheet("Instructions", 0)
     for line in INSTRUCTIONS:
-        instructions_sheet.append([line])
+        _append(instructions_sheet, [line])
     instructions_sheet["A1"].font = TITLE_FONT
     _widths(instructions_sheet, [96])
 
@@ -532,8 +546,11 @@ def template(filled: bool = False) -> bytes:
 def as_csv(rows: list[list[object]]) -> bytes:
     out = io.StringIO()
     writer = csv.writer(out, lineterminator="\n")
+    quoted = csv.writer(out, lineterminator="\n", quoting=csv.QUOTE_ALL)
     for row in rows:
-        writer.writerow(["" if cell is None else cell for cell in row])
+        # With LF line endings csv.writer otherwise leaves embedded CR unquoted.
+        row_writer = quoted if any(isinstance(v, str) and "\r" in v for v in row) else writer
+        row_writer.writerow(["" if cell is None else _safe_cell(cell) for cell in row])
     return out.getvalue().encode("utf-8-sig")
 
 
