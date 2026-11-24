@@ -3,6 +3,7 @@ from httpx import AsyncClient
 
 from setout.currencies import CURRENCIES
 from setout.models.budget import BudgetItem
+from setout.models.category import Category
 from setout.models.category_preset import CategoryPreset
 from setout.models.currency import Currency
 from setout.utils.category_presets import CATEGORY_PRESETS
@@ -510,6 +511,8 @@ async def test_delete_checks_active_grandchildren_below_archived_children(
     leaf = await _category(client, project_id, "Leaf", parent_id=child["id"])
     for category in (child, root):
         assert (await client.post(f"/api/categories/{category['id']}/archive")).status_code == 204
+    # Reproduce a partially archived subtree from an older installation.
+    await Category.filter(id=leaf["id"]).update(archived_at=None)
     url = f"/api/categories/{root['id']}"
     conflict = await client.delete(url)
     assert conflict.status_code == 409
@@ -521,3 +524,23 @@ async def test_delete_checks_active_grandchildren_below_archived_children(
     assert (
         await client.get(f"/api/projects/{project_id}/categories?include_archived=true")
     ).json() == []
+
+
+async def test_subtree_restore_preserves_previously_archived_rows(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    root = await _category(client, project_id, "Root")
+    child = await _category(client, project_id, "Child", parent_id=root["id"])
+    old = await _category(client, project_id, "Old", parent_id=root["id"])
+    item = await client.post(
+        f"/api/categories/{child['id']}/budget-items",
+        json={"description": "Parts", "budgeted_amount": 400},
+    )
+    assert item.status_code == 201
+    for category in (old, root):
+        assert (await client.post(f"/api/categories/{category['id']}/archive")).status_code == 204
+    budget_url = f"/api/projects/{project_id}/budget"
+    assert (await client.get(budget_url)).json()["budgeted_amount"] == 0
+    assert (await client.post(f"/api/categories/{root['id']}/restore")).status_code == 200
+    budget = (await client.get(budget_url)).json()
+    assert budget["budgeted_amount"] == 400
+    assert {c["id"] for c in budget["categories"]} == {root["id"], child["id"]}

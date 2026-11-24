@@ -113,7 +113,7 @@ class CategoryController:
             archived_at = datetime.now(UTC)
             category.archived_at = archived_at
             await category.save()
-            await archive_under_category(category.id, archived_at)
+            await archive_under_category(await self._subtree(category), archived_at)
 
     async def restore(self, category_id: str) -> CategoryRead:
         async with in_transaction():
@@ -122,7 +122,7 @@ class CategoryController:
                 archived_at = category.archived_at
                 category.archived_at = None
                 await category.save()
-                await restore_under_category(category.id, archived_at)
+                await restore_under_category(await self._subtree(category), archived_at)
             return self._find_category(await self.list_categories(category.project_id), category.id)
 
     async def delete(self, category_id: str) -> None:

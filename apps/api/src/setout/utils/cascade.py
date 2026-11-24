@@ -87,12 +87,14 @@ async def restore_under_land(land_id: str, archived_at: datetime) -> None:
         await _clear_archived(owned_model, archived_at, land_id=land_id)
 
 
-async def archive_under_category(category_id: str, archived_at: datetime) -> None:
-    await _mark_archived(BudgetItem, archived_at, category_id=category_id)
+async def archive_under_category(branch: list[str], archived_at: datetime) -> None:
+    await _mark_archived(BudgetItem, archived_at, category_id__in=branch)
+    await _mark_archived(Category, archived_at, id__in=branch)
 
 
-async def restore_under_category(category_id: str, archived_at: datetime) -> None:
-    await _clear_archived(BudgetItem, archived_at, category_id=category_id)
+async def restore_under_category(branch: list[str], archived_at: datetime) -> None:
+    await _clear_archived(BudgetItem, archived_at, category_id__in=branch)
+    await _clear_archived(Category, archived_at, id__in=branch)
 
 
 async def _mark_archived(
