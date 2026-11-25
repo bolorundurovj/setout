@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.5.2](https://github.com/bolorundurovj/setout/compare/v2.5.1...v2.5.2) (2026-11-24)
+
+
+### Bug Fixes
+
+* **accounting:** reconcile active totals, signed balances and purchase counts (SET-42) ([7ab2d79](https://github.com/bolorundurovj/setout/commit/7ab2d7959c78e846b22a935711c9c94ee307b42c))
+* **auth:** gate setup on confirmed status and handle expired sessions (SET-29) ([7785c6e](https://github.com/bolorundurovj/setout/commit/7785c6ee8940cb81334d190f99449b34a4746234))
+* **changes:** parse zoned timestamps and render objects readably (SET-27) ([aa6eb32](https://github.com/bolorundurovj/setout/commit/aa6eb3259e1229dd34531675097e2a469e1f3da2))
+* **expenses:** validate agreement vendors and category hierarchy (SET-40) ([e858d9b](https://github.com/bolorundurovj/setout/commit/e858d9bab0198943c06156bdeab029fbe6440877))
+* **storage:** serialize blob writes and unreferenced file cleanup (SET-49) ([3f34f46](https://github.com/bolorundurovj/setout/commit/3f34f46e70ac32e727bf55d92eee71fbf4a59b9f))
+* **web:** add server search and paging to pickers and capped lists (SET-72) ([07c3c60](https://github.com/bolorundurovj/setout/commit/07c3c60729ac0d0ba97e0c44ab1780096b1384af))
+* **web:** show date-only values on their own day in one locale (SET-32) ([f93bbd8](https://github.com/bolorundurovj/setout/commit/f93bbd858bcc4012032bc46201fdade64836ee8b))
+
+
+### Performance
+
+* **api:** aggregate totals in SQL instead of Python (SET-65) ([4705bf1](https://github.com/bolorundurovj/setout/commit/4705bf1cafcec9a4bbc57fdc34dc1dbc410487b5))
+* **api:** remove N+1 queries and paginate unbounded endpoints (SET-67) ([ed1f0aa](https://github.com/bolorundurovj/setout/commit/ed1f0aad35013ea483474c3c0488dae918688501))
+* **db:** index foreign-key, filter and sort columns (SET-64) ([c0eb7be](https://github.com/bolorundurovj/setout/commit/c0eb7bef40494ec2083e2a67371a55a25bb8652a))
+
 ## [2.5.1](https://github.com/bolorundurovj/setout/compare/v2.5.0...v2.5.1) (2026-11-24)
 
 
