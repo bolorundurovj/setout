@@ -9,8 +9,35 @@ permissions:
   contents: read
 
 jobs:
+  guard:
+    if: >-
+      startsWith(github.head_ref, 'release-please--branches--') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      regenerate: ${{ steps.head.outputs.regenerate }}
+    steps:
+      # The push below uses RELEASE_TOKEN, so it starts this workflow again
+      # under that token's owner rather than github-actions[bot]. Recognise
+      # the commit instead.
+      - name: Skip the commit this workflow pushed
+        id: head
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          commit=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA" \
+            --jq '[.commit.author.email, (.commit.message | split("\n")[0])] | @tsv')
+          if [ "$commit" = "$(printf '41898282+github-actions[bot]@users.noreply.github.com\tchore: regenerate lockfile and sdk')" ]; then
+            echo "Head commit was pushed by this workflow, nothing to do."
+            echo "regenerate=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "regenerate=true" >> "$GITHUB_OUTPUT"
+          fi
+
   regenerate:
-    if: startsWith(github.head_ref, 'release-please--branches--')
+    needs: guard
+    if: needs.guard.outputs.regenerate == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -44,9 +71,15 @@ jobs:
         run: make sdk
 
       - name: Commit regenerated files
+        env:
+          HEAD_REF: ${{ github.head_ref }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add apps/api/uv.lock packages/api-client/openapi.json
-          git diff --cached --quiet || git commit -m "chore: regenerate lockfile and sdk"
-          git push origin "HEAD:${{ github.head_ref }}"
+          if git diff --cached --quiet; then
+            echo "Lockfile and SDK are current, nothing to push."
+            exit 0
+          fi
+          git commit -m "chore: regenerate lockfile and sdk"
+          git push origin "HEAD:$HEAD_REF"

@@ -54,7 +54,9 @@ jobs:
           echo "| Tag | Digest | Result |" >> "$GITHUB_STEP_SUMMARY"
           echo "| --- | --- | --- |" >> "$GITHUB_STEP_SUMMARY"
 
-          for tag in $TAGS; do
+          # read -a splits on whitespace without expanding globs in the input.
+          read -ra tags <<< "$TAGS"
+          for tag in "${tags[@]}"; do
             # sha256-* tags are the provenance attestations, not images.
             case "$tag" in
               sha256-*)

@@ -1,10 +1,10 @@
 name: Publish
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [master]
-  release:
-    types: [published]
 
 env:
   REGISTRY: ghcr.io
@@ -13,12 +13,52 @@ env:
 permissions:
   contents: read
 
+# Release commits get their own group so a later push to master cannot cancel
+# the release image.
 concurrency:
-  group: publish-${{ github.ref }}
+  group: "publish-${{ startsWith(github.event.workflow_run.head_commit.message, 'chore(master): release ') && github.event.workflow_run.head_sha || 'edge' }}"
   cancel-in-progress: true
 
 jobs:
+  resolve:
+    # The branches filter also matches pull requests from forks whose branch is
+    # called master, so only accept pushes to this repository.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: Find the release for this commit
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MESSAGE: ${{ github.event.workflow_run.head_commit.message }}
+        run: |
+          version=$(printf '%s\n' "$MESSAGE" | head -n 1 \
+            | sed -nE 's/^chore\(master\): release ([0-9]+\.[0-9]+\.[0-9]+[0-9A-Za-z.+-]*).*/\1/p')
+          if [ -z "$version" ]; then
+            echo "Not a release commit, publishing edge only."
+            exit 0
+          fi
+
+          # release-please tags the release on the same push that started CI,
+          # so the release normally exists already. Wait briefly in case not.
+          for _ in $(seq 1 20); do
+            if gh api "repos/$GITHUB_REPOSITORY/releases/tags/v$version" --jq .tag_name >/dev/null 2>&1; then
+              echo "version=$version" >> "$GITHUB_OUTPUT"
+              echo "Publishing release $version."
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::Release v$version was not found."
+          exit 1
+
   build:
+    needs: resolve
     strategy:
       fail-fast: false
       matrix:
@@ -33,6 +73,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v4
@@ -52,8 +94,8 @@ jobs:
           file: docker/Dockerfile
           platforms: ${{ matrix.platform }}
           build-args: |
-            SETOUT_VERSION=${{ github.event_name == 'release' && github.event.release.tag_name || 'edge' }}
-            SETOUT_REVISION=${{ github.sha }}
+            SETOUT_VERSION=${{ needs.resolve.outputs.version || 'edge' }}
+            SETOUT_REVISION=${{ github.event.workflow_run.head_sha }}
           cache-from: type=gha,scope=${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
@@ -76,7 +118,7 @@ jobs:
           retention-days: 1
 
   merge:
-    needs: build
+    needs: [resolve, build]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -88,7 +130,7 @@ jobs:
       HAS_DOCKERHUB: ${{ secrets.DOCKERHUB_TOKEN != '' }}
     steps:
       - name: Collect the digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: /tmp/digests
           pattern: digest-*
@@ -120,10 +162,10 @@ jobs:
             name=${{ env.DOCKERHUB_IMAGE }},enable=${{ env.HAS_DOCKERHUB }}
           tags: |
             type=edge,branch=master
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest,enable=${{ github.event_name == 'release' }}
+            type=semver,pattern={{version}},value=${{ needs.resolve.outputs.version }},enable=${{ needs.resolve.outputs.version != '' }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.resolve.outputs.version }},enable=${{ needs.resolve.outputs.version != '' }}
+            type=semver,pattern={{major}},value=${{ needs.resolve.outputs.version }},enable=${{ needs.resolve.outputs.version != '' }}
+            type=raw,value=latest,enable=${{ needs.resolve.outputs.version != '' }}
           labels: |
             org.opencontainers.image.title=Setout
             org.opencontainers.image.description=Self-hosted tracker for construction expenses on personal building projects

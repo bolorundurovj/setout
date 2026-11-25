@@ -29,14 +29,24 @@ jobs:
             range="$TAG"
           fi
 
-          authors=$(git log --format='%an' "$range" | sort -u)
+          authors=$(git log --format='%an%x09%ae' "$range" \
+            | grep -viE '\[bot\]|^(dependabot|github-actions|renovate)[[:space:]]' \
+            | cut -f1 | sort -u)
           if [ -z "$authors" ]; then
-            echo "No commits in $range, release notes unchanged."
+            echo "No human commits in $range, release notes unchanged."
             exit 0
           fi
 
+          # Drop a Contributors section left by an earlier run, so a rerun or a
+          # re-published release does not list it twice.
           {
-            gh release view "$TAG" --json body --jq .body
+            gh release view "$TAG" --json body --jq .body | awk '
+              /^### Contributors[[:space:]]*$/ { skip = 1; next }
+              skip && /^(#|##|###) / { skip = 0 }
+              skip { next }
+              /^[[:space:]]*$/ { blank++; next }
+              { while (blank > 0) { print ""; blank-- } print }
+            '
             printf '\n### Contributors\n\n'
             echo "$authors" | sed 's/^/* /'
           } > notes.md

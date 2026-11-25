@@ -56,8 +56,22 @@ jobs:
             exit 0
           fi
 
-          lowest=$(printf '%s\n%s\n' "$released" "$wanted" | sort -V | head -1)
-          if [ "$lowest" = "$wanted" ]; then
+          # sort -V puts 1.0.0-rc.1 after 1.0.0, so compare by SemVer precedence.
+          if python3 - "$released" "$wanted" <<'PY'
+          import sys
+
+          def precedence(version):
+              core, _, pre = version.split("+")[0].partition("-")
+              numbers = tuple(int(part) for part in core.split("."))
+              if not pre:
+                  return numbers, 1, ()
+              ids = tuple((0, int(i), "") if i.isdigit() else (1, 0, i) for i in pre.split("."))
+              return numbers, 0, ids
+
+          released, wanted = sys.argv[1:]
+          sys.exit(0 if precedence(wanted) < precedence(released) else 1)
+          PY
+          then
             echo "VERSION ($wanted) is behind the last release ($released). Refusing to go backwards."
             exit 1
           fi
