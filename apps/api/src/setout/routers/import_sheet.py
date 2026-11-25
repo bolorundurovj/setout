@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
@@ -168,7 +169,7 @@ async def download_import_template(
     """Download an import template."""
     filename, media_type = SAMPLES[kind]
     return Response(
-        content=sample(kind),
+        content=await asyncio.to_thread(sample, kind),
         media_type=media_type,
         headers={"Content-Disposition": content_disposition("attachment", filename)},
     )

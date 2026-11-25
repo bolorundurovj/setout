@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Literal
 
 from fastapi import HTTPException, status
@@ -28,15 +29,15 @@ class ExportController:
         await self._outstanding(project, book)
         await self._agreements(project, book)
         await self._attachments(project, book)
-        return project.name, write.build(book)
+        return project.name, await asyncio.to_thread(write.build, book)
 
     async def csv(self, project_id: str, sheet: CsvSheet) -> tuple[str, bytes]:
         project, book = await self._empty_book(project_id)
         codes = await self._budget(project, book)
         if sheet == "budget":
-            return project.name, write.budget_csv(book)
+            return project.name, await asyncio.to_thread(write.budget_csv, book)
         await self._expenses(project, book, codes)
-        return project.name, write.expenses_csv(book)
+        return project.name, await asyncio.to_thread(write.expenses_csv, book)
 
     async def _empty_book(self, project_id: str) -> tuple[Project, write.ExportWorkbook]:
         project = await Project.get_or_none(

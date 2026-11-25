@@ -36,7 +36,7 @@ _restoring = asyncio.Lock()
 class InstallController:
     async def info(self) -> Install:
         data_dir = get_settings().data_dir
-        size, changed = self._data_dir_usage(data_dir)
+        size, changed = await asyncio.to_thread(self._data_dir_usage, data_dir)
         return Install(
             version=__version__,
             migration=await applied_migration(),

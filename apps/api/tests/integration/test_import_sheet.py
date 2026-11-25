@@ -791,3 +791,35 @@ async def test_invalid_cell_reports_its_row(
         )
         assert response.status_code == 422
         assert "Invoices, row 3" in response.json()["detail"]
+
+
+async def test_health_responds_while_import_parses(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import asyncio
+    import threading
+
+    from setout.controllers import import_sheet
+
+    await set_up_admin(client)
+    started = threading.Event()
+    release = threading.Event()
+    original = import_sheet.read_sheets
+
+    def slow_read(data: bytes, filename: str):
+        started.set()
+        assert release.wait(timeout=5)
+        return original(data, filename)
+
+    monkeypatch.setattr(import_sheet, "read_sheets", slow_read)
+    data = (
+        b"Cost Codes,Activities,Labor Costs,Material Costs,Fixed Costs,Budget\n1000,Admin,,,,0\n"
+        + b"1001,Materials,,1000,,1000\n" * 5000
+    )
+    importing = asyncio.create_task(run_import(client, data))
+    try:
+        assert await asyncio.to_thread(started.wait, 3)
+        assert (await asyncio.wait_for(client.get("/healthz"), timeout=2)).status_code == 200
+    finally:
+        release.set()
+        await importing

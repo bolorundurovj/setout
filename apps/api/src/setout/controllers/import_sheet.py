@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
@@ -127,9 +128,9 @@ class ImportController:
         currency_code: str,
     ) -> ImportReport:
         """Parse the file and report what an import would change. Writes nothing."""
-        sheets = read_sheets(data, filename)
+        sheets = await asyncio.to_thread(read_sheets, data, filename)
         target = await self._target(project_id, name, currency_code or detect_currency(sheets))
-        parsed = parse_workbook(sheets, target.exponent)
+        parsed = await asyncio.to_thread(parse_workbook, sheets, target.exponent)
         return await self._report(parsed, target)
 
     async def _target(self, project_id: str | None, name: str, currency_code: str) -> Target:
@@ -367,9 +368,9 @@ class ImportController:
         currency_code: str,
         answers: Answers,
     ) -> ImportResult:
-        sheets: list[Sheet] = read_sheets(data, filename)
+        sheets: list[Sheet] = await asyncio.to_thread(read_sheets, data, filename)
         target = await self._target(project_id, name, currency_code or detect_currency(sheets))
-        parsed = parse_workbook(sheets, target.exponent)
+        parsed = await asyncio.to_thread(parse_workbook, sheets, target.exponent)
 
         blocking = self._blocking(parsed)
         if blocking:

@@ -58,11 +58,6 @@ async def authentication_transaction() -> AsyncIterator[None]:
         raise error
 
 
-async def serialise_authentication() -> AsyncIterator[None]:
-    async with authentication_transaction():
-        yield
-
-
 async def get_current_user(
     response: Response,
     setout_session: Annotated[str | None, Cookie()] = None,
@@ -136,7 +131,6 @@ async def update_account(
 
 @router.post(
     "/passphrase",
-    dependencies=[Depends(serialise_authentication, scope="function")],
     operation_id="changePassphrase",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
@@ -154,11 +148,15 @@ async def change_passphrase(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="The current passphrase is incorrect"
         )
-    user.passphrase_hash = await run_in_threadpool(hash_passphrase, req.new_passphrase)
-    await user.save()
-    # Ends every other session; the session that made the change is kept.
-    current_session_id = read_session_id(setout_session or "")
-    await Session.filter(user_id=user.id).exclude(id=current_session_id or "").delete()
+    hashed = await run_in_threadpool(hash_passphrase, req.new_passphrase)
+    async with authentication_transaction():
+        current = await get_current_user(response, setout_session)
+        if current.passphrase_hash != user.passphrase_hash:
+            raise HTTPException(status_code=403, detail="The current passphrase is incorrect")
+        current.passphrase_hash = hashed
+        await current.save(update_fields=["passphrase_hash"])
+        current_session_id = read_session_id(setout_session or "")
+        await Session.filter(user_id=current.id).exclude(id=current_session_id or "").delete()
     security_logger.info("Passphrase changed for user_id=%s", user.id)
 
 
@@ -217,7 +215,6 @@ async def get_auth_status(
 
 @router.post(
     "/setup",
-    dependencies=[Depends(serialise_authentication, scope="function")],
     operation_id="setupAdmin",
     responses={status.HTTP_409_CONFLICT: {"description": "This server is already set up"}},
 )
@@ -228,11 +225,14 @@ async def setup_admin(req: SetupRequest, response: Response) -> UserResponse:
         )
 
     hashed = await run_in_threadpool(hash_passphrase, req.passphrase)
-    user = await User.create(name=req.name, email=req.email, passphrase_hash=hashed)
+    async with authentication_transaction():
+        if await User.all().exists():
+            raise HTTPException(status_code=409, detail="This server is already set up")
+        user = await User.create(name=req.name, email=req.email, passphrase_hash=hashed)
 
-    session_id = secrets.token_urlsafe(32)
-    expires = datetime.now(UTC) + session_window()
-    await Session.create(id=session_id, user=user, expires_at=expires)
+        session_id = secrets.token_urlsafe(32)
+        expires = datetime.now(UTC) + session_window()
+        await Session.create(id=session_id, user=user, expires_at=expires)
 
     set_session_cookie(response, session_id)
     return UserResponse.model_validate(user)
@@ -275,6 +275,9 @@ async def sign_in(req: SignInRequest, response: Response) -> UserResponse:
         if wait:
             await asyncio.sleep(wait)
 
+        checked_user_id = user.id
+        checked_hash = user.passphrase_hash
+        valid = await run_in_threadpool(verify_passphrase, req.passphrase, checked_hash)
         retry = False
         result: UserResponse | None = None
         async with authentication_transaction():
@@ -298,11 +301,13 @@ async def sign_in(req: SignInRequest, response: Response) -> UserResponse:
                     detail="Too many failed sign-in attempts. Try again later",
                     headers={"Retry-After": str(settings.sign_in_retry_after_seconds)},
                 )
-            if wait and failures > checked_failures:
-                retry = True
-            elif not await run_in_threadpool(
-                verify_passphrase, req.passphrase, user.passphrase_hash
+            if (
+                user.id != checked_user_id
+                or user.passphrase_hash != checked_hash
+                or (wait and failures > checked_failures)
             ):
+                retry = True
+            elif not valid:
                 user.failed_sign_ins = failures + 1
                 user.last_failed_at = now
                 await user.save()

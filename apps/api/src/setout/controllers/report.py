@@ -7,6 +7,7 @@ agreements, advances and outstanding deliveries.
 
 from __future__ import annotations
 
+import asyncio
 from collections import defaultdict
 from datetime import date
 
@@ -36,7 +37,7 @@ COST_TYPE_NAMES = {
 class ReportController:
     async def pdf(self, project_id: str) -> tuple[str, bytes]:
         built = await self.gather(project_id, date.today())
-        return built.project_name, report.render(built)
+        return built.project_name, await asyncio.to_thread(report.render, built)
 
     async def gather(self, project_id: str, generated_on: date) -> report.ProjectReport:
         project = await Project.get_or_none(
