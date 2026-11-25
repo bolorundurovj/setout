@@ -189,7 +189,9 @@ async def test_archived_attachment_is_hidden_and_restorable(client: AsyncClient)
     assert (await client.post(f"/api/attachments/{attachment['id']}/archive")).status_code == 204
     listing = (await client.get(f"/api/expenses/{expense['id']}/attachments")).json()
     assert listing["total"] == 0
-    assert (await client.get(f"/api/attachments/{attachment['id']}")).status_code == 404
+    fetched = await client.get(f"/api/attachments/{attachment['id']}")
+    assert fetched.status_code == 200
+    assert fetched.json()["archived_at"] is not None
 
     restored = await client.post(f"/api/attachments/{attachment['id']}/restore")
     assert restored.status_code == 200
@@ -368,10 +370,14 @@ async def test_archiving_an_expense_archives_its_delivery_attachments(
 
     await client.post(f"/api/expenses/{delivery['expense_id']}/archive")
 
-    assert (await client.get(f"/api/attachments/{attachment['id']}")).status_code == 404
+    archived = await client.get(f"/api/attachments/{attachment['id']}")
+    assert archived.status_code == 200
+    assert archived.json()["archived_at"] is not None
 
     await client.post(f"/api/expenses/{delivery['expense_id']}/restore")
-    assert (await client.get(f"/api/attachments/{attachment['id']}")).status_code == 200
+    restored = await client.get(f"/api/attachments/{attachment['id']}")
+    assert restored.status_code == 200
+    assert restored.json()["archived_at"] is None
 
 
 async def test_deleting_an_agreement_deletes_its_stored_files(

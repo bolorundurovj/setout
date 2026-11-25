@@ -159,10 +159,14 @@ async def test_archiving_the_land_takes_its_papers_and_gives_them_back(
     _, body = await _upload(client, land_id)
 
     await client.post(f"/api/lands/{land_id}/archive")
-    assert (await client.get(f"/api/land-documents/{body['id']}")).status_code == 404
+    archived = await client.get(f"/api/land-documents/{body['id']}")
+    assert archived.status_code == 200
+    assert archived.json()["archived_at"] is not None
 
     await client.post(f"/api/lands/{land_id}/restore")
-    assert (await client.get(f"/api/land-documents/{body['id']}")).status_code == 200
+    restored = await client.get(f"/api/land-documents/{body['id']}")
+    assert restored.status_code == 200
+    assert restored.json()["archived_at"] is None
 
 
 async def test_a_paper_removed_first_stays_removed_when_the_land_comes_back(
@@ -175,7 +179,9 @@ async def test_a_paper_removed_first_stays_removed_when_the_land_comes_back(
     await client.post(f"/api/lands/{land_id}/archive")
     await client.post(f"/api/lands/{land_id}/restore")
 
-    assert (await client.get(f"/api/land-documents/{body['id']}")).status_code == 404
+    fetched = await client.get(f"/api/land-documents/{body['id']}")
+    assert fetched.status_code == 200
+    assert fetched.json()["archived_at"] is not None
 
 
 async def test_an_other_paper_can_say_what_it_actually_is(client: AsyncClient) -> None:

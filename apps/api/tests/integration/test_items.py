@@ -87,7 +87,9 @@ async def test_archiving_hides_an_item_and_restoring_brings_it_back(client: Asyn
 
     await client.post(f"/api/items/{item['id']}/archive")
     assert (await client.get("/api/items")).json()["total"] == 0
-    assert (await client.get(f"/api/items/{item['id']}")).status_code == 404
+    fetched = await client.get(f"/api/items/{item['id']}")
+    assert fetched.status_code == 200
+    assert fetched.json()["archived_at"] is not None
 
     restored = await client.post(f"/api/items/{item['id']}/restore")
     assert restored.status_code == 200

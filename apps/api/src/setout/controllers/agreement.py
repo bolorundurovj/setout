@@ -62,7 +62,7 @@ class AgreementController:
         return self._read(agreement, 0, 0)
 
     async def get(self, agreement_id: str) -> AgreementRead:
-        agreement = await self._agreement_or_404(agreement_id)
+        agreement = await self._agreement_or_404(agreement_id, include_archived=True)
         paid = await paid_by_agreement([agreement.id])
         return await self._read_one(agreement, paid.get(agreement.id, 0))
 

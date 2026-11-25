@@ -77,7 +77,7 @@ class LandDocumentController:
 
     async def get(self, document_id: str) -> LandDocumentRead:
         return LandDocumentRead.model_validate(
-            await self._document_or_404(document_id), from_attributes=True
+            await self._document_or_404(document_id, include_archived=True), from_attributes=True
         )
 
     async def update(self, document_id: str, req: LandDocumentUpdate) -> LandDocumentRead:
@@ -89,7 +89,7 @@ class LandDocumentController:
         return LandDocumentRead.model_validate(row, from_attributes=True)
 
     async def read_file(self, document_id: str, storage: Storage) -> LandDocumentFile:
-        row = await self._document_or_404(document_id)
+        row = await self._document_or_404(document_id, include_archived=True)
         try:
             data = await storage.get(row.storage_key)
         except FileNotFoundError as e:
@@ -100,7 +100,7 @@ class LandDocumentController:
         return LandDocumentFile(filename=row.filename, content_type=row.content_type, data=data)
 
     async def link(self, document_id: str, storage: Storage) -> str | None:
-        row = await self._document_or_404(document_id)
+        row = await self._document_or_404(document_id, include_archived=True)
         return await storage.url(
             row.storage_key, filename=row.filename, content_type=row.content_type
         )

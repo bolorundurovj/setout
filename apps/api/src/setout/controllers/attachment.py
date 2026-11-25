@@ -107,11 +107,12 @@ class AttachmentController:
 
     async def get(self, attachment_id: str) -> AttachmentRead:
         return AttachmentRead.model_validate(
-            await self._attachment_or_404(attachment_id), from_attributes=True
+            await self._attachment_or_404(attachment_id, include_archived=True),
+            from_attributes=True,
         )
 
     async def read_file(self, attachment_id: str, storage: Storage) -> AttachmentFile:
-        row = await self._attachment_or_404(attachment_id)
+        row = await self._attachment_or_404(attachment_id, include_archived=True)
         try:
             data = await storage.get(row.storage_key)
         except FileNotFoundError as e:
@@ -122,7 +123,7 @@ class AttachmentController:
         return AttachmentFile(filename=row.filename, content_type=row.content_type, data=data)
 
     async def link(self, attachment_id: str, storage: Storage) -> str | None:
-        row = await self._attachment_or_404(attachment_id)
+        row = await self._attachment_or_404(attachment_id, include_archived=True)
         return await storage.url(
             row.storage_key, filename=row.filename, content_type=row.content_type
         )

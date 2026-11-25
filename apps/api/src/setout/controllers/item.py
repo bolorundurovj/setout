@@ -54,7 +54,7 @@ class ItemController:
         return self._read(item, [])
 
     async def get(self, item_id: str) -> ItemRead:
-        item = await self._item_or_404(item_id)
+        item = await self._item_or_404(item_id, include_archived=True)
         return (await self._reads([item]))[0]
 
     async def update(self, item_id: str, req: ItemUpdate) -> ItemRead:

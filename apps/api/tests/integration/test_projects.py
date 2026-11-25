@@ -115,7 +115,9 @@ async def test_a_archived_project_is_hidden_and_restorable(client: AsyncClient) 
     await client.post(f"/api/projects/{project['id']}/archive")
 
     assert (await client.get("/api/projects")).json()["items"] == []
-    assert (await client.get(f"/api/projects/{project['id']}")).status_code == 404
+    fetched = await client.get(f"/api/projects/{project['id']}")
+    assert fetched.status_code == 200
+    assert fetched.json()["archived_at"] is not None
 
     with_deleted = (await client.get("/api/projects", params={"include_archived": True})).json()
     assert [p["id"] for p in with_deleted["items"]] == [project["id"]]
@@ -153,7 +155,9 @@ async def test_failed_child_restore_leaves_project_archived(
         )
         with pytest.raises(RuntimeError, match="child restore failed"):
             await ProjectController().restore(project["id"])
-    assert (await client.get(url)).status_code == 404
+    fetched = await client.get(url)
+    assert fetched.status_code == 200
+    assert fetched.json()["archived_at"] is not None
     assert (await client.post(f"{url}/restore")).status_code == 200
 
 

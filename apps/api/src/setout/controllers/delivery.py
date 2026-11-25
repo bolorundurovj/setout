@@ -122,7 +122,7 @@ class DeliveryController:
         return await self._read_one(delivery)
 
     async def get(self, delivery_id: str) -> DeliveryRead:
-        return await self._read_one(await self._delivery_or_404(delivery_id))
+        return await self._read_one(await self._delivery_or_404(delivery_id, include_archived=True))
 
     async def update(self, delivery_id: str, req: DeliveryUpdate) -> DeliveryRead:
         delivery = await self._delivery_or_404(delivery_id)

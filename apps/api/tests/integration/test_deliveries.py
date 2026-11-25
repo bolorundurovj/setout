@@ -246,7 +246,9 @@ async def test_archiving_the_expense_archives_its_delivery(
     listing = (await client.get(f"/api/projects/{project_id}/deliveries")).json()
     assert listing["total"] == 0
     assert listing["outstanding_amount"] == 0
-    assert (await client.get(f"/api/deliveries/{delivery['id']}")).status_code == 404
+    fetched = await client.get(f"/api/deliveries/{delivery['id']}")
+    assert fetched.status_code == 200
+    assert fetched.json()["archived_at"] is not None
     assert (await client.post(f"/api/deliveries/{delivery['id']}/received")).status_code == 404
 
 

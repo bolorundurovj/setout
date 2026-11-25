@@ -89,7 +89,7 @@ class ProjectController:
         return to_read(project)
 
     async def get(self, project_id: str) -> ProjectRead:
-        project = await self._get_or_404(project_id)
+        project = await self._get_or_404(project_id, include_archived=True)
         budgeted = await budgeted_by_project([project.id])
         spent = await spent_by_project([project.id])
         return to_read(project, budgeted.get(project.id, 0), spent.get(project.id, 0))

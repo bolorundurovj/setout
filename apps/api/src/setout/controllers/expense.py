@@ -239,7 +239,7 @@ class ExpenseController:
         return winners[0] if max_count == total else None
 
     async def get(self, expense_id: str) -> ExpenseRead:
-        expense = await self._expense_or_404(expense_id)
+        expense = await self._expense_or_404(expense_id, include_archived=True)
         counts = await counts_for("expense_id", [expense.id])
         return self._read(expense, counts.get(expense.id, 0))
 
