@@ -155,3 +155,39 @@ async def test_a_recovery_file_with_a_passphrase_over_72_bytes_is_ignored(
 
     reloaded = await User.get(id=user.id)
     assert verify_passphrase("old-passphrase-123", reloaded.passphrase_hash) is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_recovery_file_is_kept_when_generate_or_passphrase_is_used(
+    client: AsyncClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user = await User.create(name="Admin", passphrase_hash=hash_passphrase("old-passphrase-123"))
+    recovery_file = tmp_path / cli.RECOVERY_FILE_NAME
+    recovery_file.write_text("file-passphrase-untouched\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    assert await cli.reset_passphrase(generate=True) == 0
+    assert recovery_file.exists()
+
+    assert await cli.reset_passphrase(passphrase="explicit-cli-passphrase") == 0
+    assert recovery_file.exists()
+    reloaded = await User.get(id=user.id)
+    assert verify_passphrase("explicit-cli-passphrase", reloaded.passphrase_hash) is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_reset_passphrase_from_file_preserves_colons_in_passphrase(
+    client: AsyncClient, tmp_path: Path
+) -> None:
+    user = await User.create(name="Admin", passphrase_hash=hash_passphrase("old-passphrase-123"))
+    recovery_file = tmp_path / "reset-passphrase.txt"
+    recovery_file.write_text("Admin:my:colon:passphrase\n", encoding="utf-8")
+
+    exit_code = await cli.reset_passphrase(file_path=recovery_file)
+    assert exit_code == 0
+
+    reloaded = await User.get(id=user.id)
+    assert verify_passphrase("my:colon:passphrase", reloaded.passphrase_hash) is True
+    assert not recovery_file.exists()

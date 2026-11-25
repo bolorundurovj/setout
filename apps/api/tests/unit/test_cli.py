@@ -55,6 +55,38 @@ def test_read_recovery_file_with_user_and_comments(tmp_path: Path) -> None:
     assert creds == ("AdminUser", "another-secret-passphrase")
 
 
+def test_read_recovery_file_splits_on_first_colon_only(tmp_path: Path) -> None:
+    rec_file = tmp_path / "reset-passphrase.txt"
+    rec_file.write_text("AdminUser:pass:with:many:colons\n", encoding="utf-8")
+
+    assert cli.read_recovery_file(rec_file) == ("AdminUser", "pass:with:many:colons")
+
+    anon_file = tmp_path / "anon-passphrase.txt"
+    anon_file.write_text(":pass:with:many:colons\n", encoding="utf-8")
+
+    assert cli.read_recovery_file(anon_file) == (None, "pass:with:many:colons")
+
+
+def test_find_recovery_file_at_repo_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Confirm cli.REPO_ROOT points to the real repository root, not apps/.
+    assert (cli.REPO_ROOT / "apps" / "api").is_dir()
+
+    fake_cwd = tmp_path / "cwd"
+    fake_data = tmp_path / "data"
+    fake_root = tmp_path / "repo"
+    fake_cwd.mkdir()
+    fake_data.mkdir()
+    fake_root.mkdir()
+    root_recovery = fake_root / cli.RECOVERY_FILE_NAME
+    root_recovery.write_text("repo-root-passphrase\n", encoding="utf-8")
+
+    monkeypatch.chdir(fake_cwd)
+    monkeypatch.setattr(cli, "REPO_ROOT", fake_root)
+    monkeypatch.setattr(cli, "get_settings", lambda: type("S", (), {"data_dir": fake_data})())
+
+    assert cli.find_recovery_file() == root_recovery
+
+
 def test_read_recovery_file_empty(tmp_path: Path) -> None:
     rec_file = tmp_path / "reset-passphrase.txt"
     rec_file.write_text("# Only comments\n\n", encoding="utf-8")

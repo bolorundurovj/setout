@@ -10,7 +10,7 @@ from pathlib import Path
 
 from tortoise import Tortoise
 
-from setout.config import get_settings
+from setout.config import REPO_ROOT, get_settings
 from setout.db import close_db, init_db
 from setout.models.user import Session, User
 from setout.services.auth import PASSPHRASE_TOO_LONG, hash_passphrase, passphrase_too_long
@@ -42,7 +42,7 @@ def find_recovery_file(custom_path: str | Path | None = None) -> Path | None:
     except Exception:  # noqa: BLE001
         pass
 
-    root_file = Path(__file__).resolve().parents[3] / RECOVERY_FILE_NAME
+    root_file = REPO_ROOT / RECOVERY_FILE_NAME
     if root_file.is_file():
         return root_file
 
@@ -50,7 +50,11 @@ def find_recovery_file(custom_path: str | Path | None = None) -> Path | None:
 
 
 def read_recovery_file(file_path: Path) -> tuple[str | None, str] | None:
-    """Format: the new passphrase, or account name:passphrase. Lines starting with # are ignored."""
+    """Format: the new passphrase, or account name:passphrase (splits on the first colon only).
+
+    Prefix with ':' (e.g. ':my:pass') to set a passphrase containing a colon without an account
+    name. Lines starting with # are ignored.
+    """
     try:
         content = file_path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -135,35 +139,41 @@ async def reset_passphrase(
     generate: bool = False,
     use_stdin: bool = False,
 ) -> int:
-    target_file = find_recovery_file(file_path)
-    if target_file and not passphrase and not generate and not use_stdin:
-        creds = read_recovery_file(target_file)
-        if not creds:
-            print(
-                f"Error: Could not read a valid passphrase from '{target_file}'.", file=sys.stderr
-            )
-            return 1
-        file_user, new_passphrase = creds
-        if not account_name and file_user:
-            account_name = file_user
-    elif generate:
-        new_passphrase = generate_passphrase()
-    elif passphrase is not None:
-        new_passphrase = passphrase
-    elif use_stdin or not sys.stdin.isatty():
-        new_passphrase = sys.stdin.readline().strip()
-    else:
-        try:
-            first_entry = getpass.getpass("Enter new passphrase: ")
-            confirm_entry = getpass.getpass("Confirm new passphrase: ")
-        except (KeyboardInterrupt, EOFError):
-            print("\nAborted.", file=sys.stderr)
-            return 1
+    used_recovery_file: Path | None = None
+    if passphrase is None and not generate and not use_stdin:
+        target_file = find_recovery_file(file_path)
+        if target_file:
+            creds = read_recovery_file(target_file)
+            if not creds:
+                print(
+                    f"Error: Could not read a valid passphrase from '{target_file}'.",
+                    file=sys.stderr,
+                )
+                return 1
+            file_user, new_passphrase = creds
+            if not account_name and file_user:
+                account_name = file_user
+            used_recovery_file = target_file
 
-        if first_entry != confirm_entry:
-            print("Error: Passphrases do not match.", file=sys.stderr)
-            return 1
-        new_passphrase = first_entry
+    if used_recovery_file is None:
+        if generate:
+            new_passphrase = generate_passphrase()
+        elif passphrase is not None:
+            new_passphrase = passphrase
+        elif use_stdin or not sys.stdin.isatty():
+            new_passphrase = sys.stdin.readline().strip()
+        else:
+            try:
+                first_entry = getpass.getpass("Enter new passphrase: ")
+                confirm_entry = getpass.getpass("Confirm new passphrase: ")
+            except (KeyboardInterrupt, EOFError):
+                print("\nAborted.", file=sys.stderr)
+                return 1
+
+            if first_entry != confirm_entry:
+                print("Error: Passphrases do not match.", file=sys.stderr)
+                return 1
+            new_passphrase = first_entry
 
     if len(new_passphrase) < MIN_PASSPHRASE_LENGTH:
         print(
@@ -187,13 +197,13 @@ async def reset_passphrase(
 
         await apply_passphrase_reset(user, new_passphrase)
 
-        if target_file and target_file.is_file():
+        if used_recovery_file and used_recovery_file.is_file():
             try:
-                target_file.unlink()
-                print(f"Deleted recovery file '{target_file}'.")
+                used_recovery_file.unlink()
+                print(f"Deleted recovery file '{used_recovery_file}'.")
             except OSError as exc:
                 print(
-                    f"Warning: Could not delete recovery file '{target_file}': {exc}",
+                    f"Warning: Could not delete recovery file '{used_recovery_file}': {exc}",
                     file=sys.stderr,
                 )
 
