@@ -1,6 +1,8 @@
-import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import type { DeliveryRead, ProjectRead } from '@setout/api-client';
 import { ToastService } from '../toast.service';
+import type { RequestStatus } from '../ui/request-status';
 import { DeliveriesComponent } from './deliveries.component';
 import { DeliveryService } from './delivery.service';
 
@@ -61,6 +63,10 @@ describe('DeliveriesComponent', () => {
   let deleted: string[];
   let changed: Record<string, unknown>[];
   let pagesAsked: number[];
+  let fixture: ComponentFixture<DeliveriesComponent>;
+  const outstandingStatus = signal<RequestStatus>('ready');
+
+  afterEach(() => outstandingStatus.set('ready'));
 
   function render(
     outstanding: ReturnType<typeof deliveryList> = deliveryList([]),
@@ -82,6 +88,7 @@ describe('DeliveriesComponent', () => {
           useValue: {
             error: () => null,
             outstanding: () => outstanding,
+            outstandingStatus: () => outstandingStatus(),
             received: () => received,
             loadOutstanding: async (_id: string, page = 1) => {
               pagesAsked.push(page);
@@ -112,7 +119,7 @@ describe('DeliveriesComponent', () => {
         { provide: ToastService, useValue: { show: () => undefined } },
       ],
     });
-    const fixture = TestBed.createComponent(DeliveriesComponent);
+    fixture = TestBed.createComponent(DeliveriesComponent);
     fixture.componentRef.setInput('project', project);
     fixture.detectChanges();
     return fixture.componentInstance;
@@ -132,6 +139,24 @@ describe('DeliveriesComponent', () => {
       deliveryList([delivery({ received_at: '2026-08-16T00:00:00Z' })]),
     );
     expect(component.outstandingSummary()).toBe('All paid items have been received.');
+  });
+
+  it('shows Loading instead of the empty state until the first load finishes', () => {
+    outstandingStatus.set('loading');
+    const component = render();
+    const text = (fixture.nativeElement as HTMLElement).textContent;
+    expect(component.outstandingSummary()).toBe('');
+    expect(text).toContain('Loading deliveries…');
+    expect(text).not.toContain('No outstanding items.');
+  });
+
+  it('does not report everything received when the load failed', () => {
+    outstandingStatus.set('error');
+    const component = render();
+    const text = (fixture.nativeElement as HTMLElement).textContent;
+    expect(component.outstandingSummary()).toBe('');
+    expect(text).not.toContain('All paid items have been received.');
+    expect(text).not.toContain('No outstanding items.');
   });
 
   it('loads the requested page', async () => {

@@ -17,6 +17,7 @@ import {
   updateDelivery,
 } from '@setout/api-client';
 import { PAGE_SIZE, offsetOf } from '../ui/paging';
+import { KeyedLoadTracker, type RequestStatus } from '../ui/request-status';
 
 export interface DeliveryList {
   readonly rows: DeliveryRead[];
@@ -40,6 +41,7 @@ export class DeliveryService {
   private readonly api = inject(Api);
 
   private readonly state = signal<Record<string, DeliveryList>>({});
+  private readonly tracker = new KeyedLoadTracker();
 
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
@@ -56,24 +58,53 @@ export class DeliveryService {
     return this.state()[`vendor:${vendorId}`] ?? EMPTY;
   }
 
-  async loadOutstanding(projectId: string, page = 1, includeArchived = false): Promise<void> {
-    await this.load(`project:${projectId}:outstanding`, page, {
-      project_id: projectId,
-      outstanding_only: true,
-      include_archived: includeArchived,
-    });
+  outstandingStatus(projectId: string): RequestStatus {
+    return this.tracker.status(`project:${projectId}:outstanding`);
   }
 
-  async loadReceived(projectId: string, page = 1, includeArchived = false): Promise<void> {
-    await this.load(`project:${projectId}:received`, page, {
-      project_id: projectId,
-      received_only: true,
-      include_archived: includeArchived,
-    });
+  receivedStatus(projectId: string): RequestStatus {
+    return this.tracker.status(`project:${projectId}:received`);
   }
 
-  async loadForVendor(vendorId: string, page = 1): Promise<void> {
-    await this.load(`vendor:${vendorId}`, page, { vendor_id: vendorId, outstanding_only: true });
+  vendorStatus(vendorId: string): RequestStatus {
+    return this.tracker.status(`vendor:${vendorId}`);
+  }
+
+  async loadOutstanding(
+    projectId: string,
+    page = 1,
+    includeArchived = false,
+    quiet = false,
+  ): Promise<void> {
+    await this.load(
+      `project:${projectId}:outstanding`,
+      page,
+      { project_id: projectId, outstanding_only: true, include_archived: includeArchived },
+      quiet,
+    );
+  }
+
+  async loadReceived(
+    projectId: string,
+    page = 1,
+    includeArchived = false,
+    quiet = false,
+  ): Promise<void> {
+    await this.load(
+      `project:${projectId}:received`,
+      page,
+      { project_id: projectId, received_only: true, include_archived: includeArchived },
+      quiet,
+    );
+  }
+
+  async loadForVendor(vendorId: string, page = 1, quiet = false): Promise<void> {
+    await this.load(
+      `vendor:${vendorId}`,
+      page,
+      { vendor_id: vendorId, outstanding_only: true },
+      quiet,
+    );
   }
 
   async add(projectId: string, body: DeliveryCreate): Promise<DeliveryRead | null> {
@@ -197,7 +228,9 @@ export class DeliveryService {
       received_only?: boolean;
       include_archived?: boolean;
     },
+    quiet: boolean,
   ): Promise<void> {
+    const requestId = this.tracker.start(key, quiet);
     this.error.set(null);
     const query = { ...params, limit: PAGE_SIZE, offset: offsetOf(page) };
     const projectId = params.project_id;
@@ -206,6 +239,9 @@ export class DeliveryService {
         projectId === undefined
           ? await this.api.invoke(listAllDeliveries, query)
           : await this.api.invoke(listDeliveries, { ...query, project_id: projectId });
+      if (!this.tracker.settle(key, requestId, 'ready')) {
+        return;
+      }
       this.put(key, {
         rows: response.items,
         total: response.total,
@@ -213,6 +249,9 @@ export class DeliveryService {
         currencyTotals: response.outstanding_by_currency,
       });
     } catch {
+      if (!this.tracker.settle(key, requestId, 'error')) {
+        return;
+      }
       this.error.set('Could not load the deliveries.');
       this.put(key, EMPTY);
     }

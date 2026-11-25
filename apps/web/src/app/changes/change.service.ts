@@ -1,5 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Api, ChangePage, ChangeRead, listChanges, listProjectChanges } from '@setout/api-client';
+import { KeyedLoadTracker, type RequestStatus } from '../ui/request-status';
 
 const PAGE_SIZE = 20;
 
@@ -20,6 +21,7 @@ export class ChangeService {
   private readonly api = inject(Api);
 
   private readonly state = signal<Record<string, ChangeList>>({});
+  private readonly tracker = new KeyedLoadTracker();
 
   readonly error = signal<string | null>(null);
 
@@ -27,9 +29,14 @@ export class ChangeService {
     return this.state()[this.key(target)] ?? EMPTY;
   }
 
+  status(target: ChangeTarget): RequestStatus {
+    return this.tracker.status(this.key(target));
+  }
+
   async load(target: ChangeTarget): Promise<void> {
+    const requestId = this.tracker.start(this.key(target));
     this.set(target, { ...this.forTarget(target), loading: true });
-    await this.fetch(target, 0, []);
+    await this.fetch(target, 0, [], requestId);
   }
 
   async loadMore(target: ChangeTarget): Promise<void> {
@@ -41,12 +48,24 @@ export class ChangeService {
     await this.fetch(target, current.rows.length, current.rows);
   }
 
-  private async fetch(target: ChangeTarget, offset: number, kept: ChangeRead[]): Promise<void> {
+  private async fetch(
+    target: ChangeTarget,
+    offset: number,
+    kept: ChangeRead[],
+    requestId?: number,
+  ): Promise<void> {
+    const key = this.key(target);
     this.error.set(null);
     try {
       const page = await this.page(target, offset);
+      if (requestId !== undefined && !this.tracker.settle(key, requestId, 'ready')) {
+        return;
+      }
       this.set(target, { rows: [...kept, ...page.items], total: page.total, loading: false });
     } catch {
+      if (requestId !== undefined && !this.tracker.settle(key, requestId, 'error')) {
+        return;
+      }
       this.error.set('Could not load the change history.');
       this.set(target, { rows: kept, total: kept.length, loading: false });
     }

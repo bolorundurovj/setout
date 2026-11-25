@@ -22,10 +22,14 @@
   }
 
   @if (vendorService.vendors().length === 0) {
-    <div class="card">
-      <p class="t-body">{{ search() ? 'No vendors match the search.' : 'No vendors yet.' }}</p>
-      <p class="t-small">Vendors can also be added from the expense form with only a name.</p>
-    </div>
+    @if (vendorService.status() === 'ready') {
+      <div class="card">
+        <p class="t-body">{{ search() ? 'No vendors match the search.' : 'No vendors yet.' }}</p>
+        <p class="t-small">Vendors can also be added from the expense form with only a name.</p>
+      </div>
+    } @else if (vendorService.status() !== 'error') {
+      <p class="t-small muted">Loading vendors…</p>
+    }
   } @else {
     <div class="table">
       <div class="row head">

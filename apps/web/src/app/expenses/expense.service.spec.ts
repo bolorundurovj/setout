@@ -325,4 +325,75 @@ describe('ExpenseService', () => {
     expect(service.error()).toBe('A category with children holds no expenses of its own');
     expect(service.saving()).toBe(false);
   });
+
+  describe('status', () => {
+    it('becomes ready only after the expense summary has loaded', async () => {
+      let releaseSummary!: () => void;
+      const service = configure((name) =>
+        name === 'getProjectExpenseSummary'
+          ? new Promise((resolve) => (releaseSummary = () => resolve(summary)))
+          : page([]),
+      );
+
+      const loading = service.load('p1');
+      expect(service.status()).toBe('loading');
+      await vi.waitFor(() => expect(names).toContain('getProjectExpenseSummary'));
+      expect(service.status()).toBe('loading');
+
+      releaseSummary();
+      await loading;
+      expect(service.status()).toBe('ready');
+    });
+
+    it('moves to error when the list fails to load', async () => {
+      const service = configure((name) => {
+        if (name === 'listExpenses') {
+          throw new Error('offline');
+        }
+        return summary;
+      });
+      await service.load('p1');
+      expect(service.status()).toBe('error');
+    });
+
+    it('tracks category and month pages separately and keeps no rows from a failed load', async () => {
+      const service = configure((_name, args) => {
+        if ((args as { month?: string }).month) {
+          throw new Error('offline');
+        }
+        return page([expense('e1')]);
+      });
+      expect(service.categoryStatus('p1', 's1')).toBe('idle');
+
+      await service.loadForCategory('p1', 's1');
+      await service.loadForMonth('p1', '2026-06');
+
+      expect(service.categoryStatus('p1', 's1')).toBe('ready');
+      expect(service.monthStatus('p1', '2026-06')).toBe('error');
+      expect(service.monthPage('p1', '2026-06')).toBeUndefined();
+    });
+
+    it('tracks the month summary', async () => {
+      const service = configure(() => ({ months: [] }));
+      const loading = service.loadMonths('p1');
+      expect(service.monthsStatus()).toBe('loading');
+      await loading;
+      expect(service.monthsStatus()).toBe('ready');
+    });
+
+    it('keeps the list status when creating an expense fails', async () => {
+      const service = configure((name) => {
+        if (name === 'createExpense') {
+          throw { error: { detail: 'Amount is required' } };
+        }
+        return defaultReply(name);
+      });
+      await service.load('p1');
+
+      await service.add('p1', {} as never);
+
+      expect(service.error()).toBe('Amount is required');
+      expect(service.status()).toBe('ready');
+    });
+  });
 });

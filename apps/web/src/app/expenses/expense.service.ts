@@ -23,6 +23,7 @@ import {
   updateExpense,
 } from '@setout/api-client';
 import { PAGE_SIZE, offsetOf } from '../ui/paging';
+import { KeyedLoadTracker, LoadTracker, type RequestStatus } from '../ui/request-status';
 
 /** Placeholder category id for expenses without a category. */
 export const UNCATEGORISED = 'uncategorised';
@@ -61,7 +62,14 @@ export class ExpenseService {
   private readonly filterState = signal<ExpenseFilters>({});
   private readonly totalAmountState = signal(0);
 
+  private readonly tracker = new LoadTracker();
+  private readonly monthsTracker = new LoadTracker();
+  private readonly categoryTracker = new KeyedLoadTracker();
+  private readonly monthTracker = new KeyedLoadTracker();
+
   readonly expenses = this.state.asReadonly();
+  readonly status = this.tracker.status;
+  readonly monthsStatus = this.monthsTracker.status;
   readonly summary = this.summaryState.asReadonly();
   readonly total = this.totalState.asReadonly();
   readonly months = this.monthsState.asReadonly();
@@ -81,13 +89,23 @@ export class ExpenseService {
     return this.byMonthState()[cacheKey(projectId, month)];
   }
 
+  categoryStatus(projectId: string, categoryId: string): RequestStatus {
+    return this.categoryTracker.status(cacheKey(projectId, categoryId));
+  }
+
+  monthStatus(projectId: string, month: string): RequestStatus {
+    return this.monthTracker.status(cacheKey(projectId, month));
+  }
+
   async load(projectId: string, filters: ExpenseFilters = {}): Promise<void> {
     this.filterState.set(filters);
     await this.goTo(projectId, 1);
   }
 
-  async goTo(projectId: string, page: number): Promise<void> {
+  async goTo(projectId: string, page: number, quiet = false): Promise<void> {
+    const requestId = this.tracker.start(quiet);
     this.error.set(null);
+    let loaded = false;
     try {
       const filters = this.filterState();
       const rows = await this.api.invoke(listExpenses, {
@@ -103,14 +121,21 @@ export class ExpenseService {
         limit: PAGE_SIZE,
         offset: offsetOf(page),
       });
-      this.state.set(rows.items);
-      this.totalState.set(rows.total);
-      this.totalAmountState.set(rows.total_amount);
-      this.pageState.set(page);
+      loaded = true;
+      if (this.tracker.isCurrent(requestId)) {
+        this.state.set(rows.items);
+        this.totalState.set(rows.total);
+        this.totalAmountState.set(rows.total_amount);
+        this.pageState.set(page);
+      }
     } catch {
-      this.error.set('Could not load expenses.');
+      if (this.tracker.isCurrent(requestId)) {
+        this.error.set('Could not load expenses.');
+      }
     }
+    // Settles after the summary, which can add an Uncategorised row to an empty list.
     await this.loadSummary(projectId);
+    this.tracker.settle(requestId, loaded ? 'ready' : 'error');
   }
 
   async loadSummary(projectId: string): Promise<void> {
@@ -123,8 +148,14 @@ export class ExpenseService {
     }
   }
 
-  async loadForCategory(projectId: string, categoryId: string, page = 1): Promise<void> {
+  async loadForCategory(
+    projectId: string,
+    categoryId: string,
+    page = 1,
+    quiet = false,
+  ): Promise<void> {
     const key = cacheKey(projectId, categoryId);
+    const requestId = this.categoryTracker.start(key, quiet);
     try {
       const rows = await this.api.invoke(listExpenses, {
         project_id: projectId,
@@ -133,27 +164,36 @@ export class ExpenseService {
         limit: PAGE_SIZE,
         offset: offsetOf(page),
       });
-      this.byCategoryState.update((all) => ({
-        ...all,
-        [key]: { rows: rows.items, total: rows.total, page },
-      }));
+      if (this.categoryTracker.settle(key, requestId, 'ready')) {
+        this.byCategoryState.update((all) => ({
+          ...all,
+          [key]: { rows: rows.items, total: rows.total, page },
+        }));
+      }
     } catch {
-      this.byCategoryState.update((all) => ({ ...all, [key]: { rows: [], total: 0, page: 1 } }));
+      this.categoryTracker.settle(key, requestId, 'error');
     }
   }
 
   async loadMonths(projectId: string): Promise<void> {
+    const requestId = this.monthsTracker.start();
     this.error.set(null);
     try {
-      this.monthsState.set(await this.api.invoke(getProjectMonths, { project_id: projectId }));
+      const months = await this.api.invoke(getProjectMonths, { project_id: projectId });
+      if (this.monthsTracker.settle(requestId, 'ready')) {
+        this.monthsState.set(months);
+      }
     } catch {
-      this.monthsState.set(null);
-      this.error.set('Could not load the expense summary.');
+      if (this.monthsTracker.settle(requestId, 'error')) {
+        this.monthsState.set(null);
+        this.error.set('Could not load the expense summary.');
+      }
     }
   }
 
-  async loadForMonth(projectId: string, month: string, page = 1): Promise<void> {
+  async loadForMonth(projectId: string, month: string, page = 1, quiet = false): Promise<void> {
     const key = cacheKey(projectId, month);
+    const requestId = this.monthTracker.start(key, quiet);
     try {
       const rows = await this.api.invoke(listExpenses, {
         project_id: projectId,
@@ -161,12 +201,14 @@ export class ExpenseService {
         limit: PAGE_SIZE,
         offset: offsetOf(page),
       });
-      this.byMonthState.update((all) => ({
-        ...all,
-        [key]: { rows: rows.items, total: rows.total, page },
-      }));
+      if (this.monthTracker.settle(key, requestId, 'ready')) {
+        this.byMonthState.update((all) => ({
+          ...all,
+          [key]: { rows: rows.items, total: rows.total, page },
+        }));
+      }
     } catch {
-      this.byMonthState.update((all) => ({ ...all, [key]: { rows: [], total: 0, page: 1 } }));
+      this.monthTracker.settle(key, requestId, 'error');
     }
   }
 
@@ -200,7 +242,7 @@ export class ExpenseService {
     this.error.set(null);
     try {
       const created = await this.api.invoke(createExpense, { project_id: projectId, body });
-      await this.goTo(projectId, this.pageState());
+      await this.goTo(projectId, this.pageState(), true);
       await this.reloadCached(projectId);
       return created;
     } catch (e: unknown) {
@@ -265,9 +307,9 @@ export class ExpenseService {
 
   private async refresh(projectId: string): Promise<void> {
     const currentPage = this.pageState();
-    await this.goTo(projectId, currentPage);
+    await this.goTo(projectId, currentPage, true);
     if (this.state().length === 0 && currentPage > 1) {
-      await this.goTo(projectId, currentPage - 1);
+      await this.goTo(projectId, currentPage - 1, true);
     }
     await this.reloadCached(projectId);
   }
@@ -278,12 +320,12 @@ export class ExpenseService {
     const reloads: Promise<void>[] = [];
     for (const [key, cached] of Object.entries(this.byCategoryState())) {
       if (key.startsWith(prefix)) {
-        reloads.push(this.loadForCategory(projectId, key.slice(prefix.length), cached.page));
+        reloads.push(this.loadForCategory(projectId, key.slice(prefix.length), cached.page, true));
       }
     }
     for (const [key, cached] of Object.entries(this.byMonthState())) {
       if (key.startsWith(prefix)) {
-        reloads.push(this.loadForMonth(projectId, key.slice(prefix.length), cached.page));
+        reloads.push(this.loadForMonth(projectId, key.slice(prefix.length), cached.page, true));
       }
     }
     await Promise.all(reloads);

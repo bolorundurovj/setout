@@ -176,7 +176,9 @@
         </p>
       }
 
-      @if (documents().length === 0) {
+      @if (documentsStatus() === 'error') {
+        <p class="banner warn t-small">Could not load the documents.</p>
+      } @else if (documents().length === 0) {
         <div class="card">
           <p class="t-body">No documents yet.</p>
           <p class="t-small">

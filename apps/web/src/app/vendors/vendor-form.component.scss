@@ -36,10 +36,6 @@
   gap: 8px;
 }
 
-.muted {
-  color: var(--ink-3);
-}
-
 @media (max-width: bp.$narrow) {
   .two-column {
     grid-template-columns: 1fr;

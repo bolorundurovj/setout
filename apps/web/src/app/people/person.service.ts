@@ -16,6 +16,7 @@ import {
 } from '@setout/api-client';
 import { CountsService } from '../counts.service';
 import { ChoiceStore } from '../ui/choice-store';
+import { LoadTracker } from '../ui/request-status';
 import { PAGE_SIZE, offsetOf } from '../ui/paging';
 import { detailOf } from '../api-error';
 
@@ -35,8 +36,11 @@ export class PersonService {
     this.api.invoke(listPeople, params),
   );
 
+  private readonly tracker = new LoadTracker();
+
   readonly people = this.peopleState.asReadonly();
   readonly total = this.totalState.asReadonly();
+  readonly status = this.tracker.status;
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
@@ -46,8 +50,6 @@ export class PersonService {
   readonly choicesTotal = this.choiceStore.total;
   readonly choicesHasMore = this.choiceStore.hasMore;
   readonly choicesLoading = this.choiceStore.loading;
-
-  private requestSeq = 0;
 
   async load(search?: string, includeArchived = false): Promise<void> {
     this.searchState.set(search ?? '');
@@ -63,8 +65,8 @@ export class PersonService {
     await this.choiceStore.loadMore();
   }
 
-  async goTo(page: number): Promise<void> {
-    const requestId = ++this.requestSeq;
+  async goTo(page: number, quiet = false): Promise<void> {
+    const requestId = this.tracker.start(quiet);
     this.loading.set(true);
     this.error.set(null);
     try {
@@ -74,19 +76,19 @@ export class PersonService {
         limit: PAGE_SIZE,
         offset: offsetOf(page),
       });
-      if (requestId !== this.requestSeq) {
+      if (!this.tracker.settle(requestId, 'ready')) {
         return;
       }
       this.peopleState.set(rows.items);
       this.totalState.set(rows.total);
       this.pageState.set(page);
     } catch {
-      if (requestId !== this.requestSeq) {
+      if (!this.tracker.settle(requestId, 'error')) {
         return;
       }
       this.error.set('Could not load the people.');
     } finally {
-      if (requestId === this.requestSeq) {
+      if (this.tracker.isCurrent(requestId)) {
         this.loading.set(false);
       }
     }
@@ -94,9 +96,9 @@ export class PersonService {
 
   private async refresh(): Promise<void> {
     const currentPage = this.pageState();
-    await this.goTo(currentPage);
+    await this.goTo(currentPage, true);
     if (this.peopleState().length === 0 && currentPage > 1) {
-      await this.goTo(currentPage - 1);
+      await this.goTo(currentPage - 1, true);
     }
   }
 

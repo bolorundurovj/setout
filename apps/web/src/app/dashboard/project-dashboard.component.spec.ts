@@ -79,7 +79,11 @@ describe('ProjectDashboardComponent', () => {
         },
         {
           provide: BudgetService,
-          useValue: { categories: () => categories, load: async () => undefined },
+          useValue: {
+            categories: () => categories,
+            status: () => 'ready',
+            load: async () => undefined,
+          },
         },
         {
           provide: ExpenseService,

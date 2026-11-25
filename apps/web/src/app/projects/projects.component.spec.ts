@@ -40,6 +40,7 @@ describe('ProjectsComponent', () => {
       hasProjects: () => projects.length > 0,
       hasMore: () => false,
       total: () => projects.length,
+      status: () => 'ready',
       loading: () => false,
       error: () => null,
       load: async () => undefined,

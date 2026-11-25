@@ -41,10 +41,6 @@
   gap: 8px;
 }
 
-.muted {
-  color: var(--ink-3);
-}
-
 @media (max-width: bp.$narrow) {
   .canvas {
     height: 260px;

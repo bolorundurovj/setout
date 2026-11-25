@@ -175,9 +175,15 @@
     </div>
 
     @if (uncategorised().length === 0) {
-      <div class="card">
-        <p class="t-body">No uncategorised expenses.</p>
-      </div>
+      @if (uncategorisedStatus() === 'ready') {
+        <div class="card">
+          <p class="t-body">No uncategorised expenses.</p>
+        </div>
+      } @else if (uncategorisedStatus() === 'error') {
+        <p class="t-small error">Could not load the uncategorised expenses.</p>
+      } @else {
+        <p class="t-small muted">Loading expenses…</p>
+      }
     } @else {
       <div class="table bulk">
         <div class="row head">
@@ -222,15 +228,19 @@
       />
     }
   } @else if (expenses.expenses().length === 0) {
-    <div class="card">
-      @if (filtered()) {
-        <p class="t-body">No expenses match the filters.</p>
-        <p class="t-small">Change or clear the filters.</p>
-      } @else {
-        <p class="t-body">No expenses yet.</p>
-        <p class="t-small">Recorded expenses are listed here.</p>
-      }
-    </div>
+    @if (expenses.status() === 'ready') {
+      <div class="card">
+        @if (filtered()) {
+          <p class="t-body">No expenses match the filters.</p>
+          <p class="t-small">Change or clear the filters.</p>
+        } @else {
+          <p class="t-body">No expenses yet.</p>
+          <p class="t-small">Recorded expenses are listed here.</p>
+        }
+      </div>
+    } @else if (expenses.status() !== 'error') {
+      <p class="t-small muted">Loading expenses…</p>
+    }
   } @else {
     <div class="table">
       <div class="row head">

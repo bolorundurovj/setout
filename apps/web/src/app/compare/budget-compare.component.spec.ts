@@ -1,8 +1,9 @@
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import type { ExpenseRead, ProjectRead, CategoryRead } from '@setout/api-client';
 import { BudgetService } from '../budget/budget.service';
 import { ExpenseService } from '../expenses/expense.service';
+import type { RequestStatus } from '../ui/request-status';
 import { BudgetCompareComponent, type CompareRow } from './budget-compare.component';
 
 const project: ProjectRead = {
@@ -57,7 +58,11 @@ function row(over: Partial<CompareRow> = {}): CompareRow {
 
 describe('BudgetCompareComponent', () => {
   const pageRevision = signal(0);
+  const budgetStatus = signal<RequestStatus>('ready');
+  const expenseStatus = signal<RequestStatus>('ready');
+  let categoryStatuses: Record<string, RequestStatus>;
   let loaded: string[];
+  let fixture: ComponentFixture<BudgetCompareComponent>;
 
   function render(
     categories: CategoryRead[] = [],
@@ -67,19 +72,26 @@ describe('BudgetCompareComponent', () => {
     openCategory = '',
   ) {
     loaded = [];
+    categoryStatuses = {};
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [BudgetCompareComponent],
       providers: [
         {
           provide: BudgetService,
-          useValue: { categories: () => categories, load: async () => undefined },
+          useValue: {
+            categories: () => categories,
+            status: budgetStatus,
+            load: async () => undefined,
+          },
         },
         {
           provide: ExpenseService,
           useValue: {
             summary: () => summary,
             total: () => expenseCount,
+            status: expenseStatus,
+            categoryStatus: (_p: string, id: string) => categoryStatuses[id] ?? 'ready',
             categoryPage: (_p: string, id: string) => {
               pageRevision();
               return byCategory[id];
@@ -92,7 +104,7 @@ describe('BudgetCompareComponent', () => {
         },
       ],
     });
-    const fixture = TestBed.createComponent(BudgetCompareComponent);
+    fixture = TestBed.createComponent(BudgetCompareComponent);
     fixture.componentRef.setInput('project', project);
     fixture.componentRef.setInput('openCategory', openCategory);
     fixture.detectChanges();
@@ -260,5 +272,49 @@ describe('BudgetCompareComponent', () => {
 
     expect(c.tint(categorised)).toMatch(/^#[0-9a-f]{6}$/);
     expect(c.tint(uncategorised)).toBe('var(--warn-surface)');
+  });
+
+  describe('load states', () => {
+    afterEach(() => {
+      budgetStatus.set('ready');
+      expenseStatus.set('ready');
+    });
+
+    const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    it('shows Loading instead of the empty state until both loads finish', () => {
+      budgetStatus.set('ready');
+      expenseStatus.set('loading');
+      render();
+      expect(text()).toContain('Loading…');
+      expect(text()).not.toContain('No categories yet');
+
+      expenseStatus.set('ready');
+      fixture.detectChanges();
+      expect(text()).toContain('No categories yet');
+    });
+
+    it('shows the load error instead of the empty state', () => {
+      budgetStatus.set('error');
+      render();
+      const banner = (fixture.nativeElement as HTMLElement).querySelector('.banner.warn');
+      expect(banner?.textContent).toContain('Could not load the budget.');
+      expect(text()).not.toContain('No categories yet');
+    });
+
+    it('shows an expense load error', () => {
+      expenseStatus.set('error');
+      render();
+      expect(text()).toContain('Could not load the expenses.');
+    });
+
+    it('shows an error for a category whose expenses failed to load', () => {
+      const c = render([category({ id: 'a' })], summary(1000, 500));
+      categoryStatuses['a'] = 'error';
+      c.toggle(c.rows()[0]);
+      fixture.detectChanges();
+      expect(text()).toContain('Could not load the expenses for this category.');
+      expect(text()).not.toContain('No expenses recorded');
+    });
   });
 });

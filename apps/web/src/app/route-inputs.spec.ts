@@ -63,6 +63,7 @@ describe('route inputs without a matching param', () => {
           provide: SearchService,
           useValue: {
             results: () => null,
+            status: () => 'idle',
             loading: () => false,
             error: () => null,
             search: async (term: string) => {

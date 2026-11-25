@@ -150,4 +150,23 @@ describe('HomeService', () => {
     const projectCalls = invocations.filter((call) => call.name === 'getHomeProjects');
     expect(projectCalls.map((call) => call.offset)).toEqual([0, 2]);
   });
+
+  it('is loading until the summary arrives, then ready', async () => {
+    const service = configure(stubReply);
+    expect(service.status()).toBe('idle');
+
+    const loading = service.load();
+    expect(service.status()).toBe('loading');
+    await loading;
+    expect(service.status()).toBe('ready');
+  });
+
+  it('moves to error when the summary fails to load', async () => {
+    const service = configure((name) =>
+      name === 'getHomeSummary' ? new Error('offline') : stubReply(name),
+    );
+    await service.load();
+    expect(service.status()).toBe('error');
+    expect(service.summary()).toBeNull();
+  });
 });

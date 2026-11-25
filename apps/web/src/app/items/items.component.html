@@ -66,15 +66,19 @@
   }
 
   @if (items.items().length === 0) {
-    <div class="card">
-      <p class="t-body">
-        {{ search() ? 'No items match the search.' : 'No items yet.' }}
-      </p>
-      <p class="t-small">
-        Create items you buy more than once. Assigning an expense to an item starts its price
-        history.
-      </p>
-    </div>
+    @if (items.status() === 'ready') {
+      <div class="card">
+        <p class="t-body">
+          {{ search() ? 'No items match the search.' : 'No items yet.' }}
+        </p>
+        <p class="t-small">
+          Create items you buy more than once. Assigning an expense to an item starts its price
+          history.
+        </p>
+      </div>
+    } @else if (items.status() !== 'error') {
+      <p class="t-small muted">Loading items…</p>
+    }
   } @else {
     <div class="table">
       <div class="row head">

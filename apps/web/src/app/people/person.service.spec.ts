@@ -151,4 +151,71 @@ describe('PersonService', () => {
     });
     expect(await service.expenseSummary('pe1')).toBeNull();
   });
+
+  describe('status', () => {
+    it('is idle, then loading, then ready', async () => {
+      const service = configure(() => page([]));
+      expect(service.status()).toBe('idle');
+
+      const loading = service.load();
+      expect(service.status()).toBe('loading');
+      await loading;
+      expect(service.status()).toBe('ready');
+    });
+
+    it('moves to error when the list fails to load', async () => {
+      const service = configure(() => {
+        throw new Error('offline');
+      });
+      const loading = service.load();
+      expect(service.status()).toBe('loading');
+      await loading;
+      expect(service.status()).toBe('error');
+    });
+
+    it('ignores a superseded response', async () => {
+      const releases: (() => void)[] = [];
+      const service = configure((_name, args) => {
+        const search = (args as { search?: string }).search;
+        return new Promise((resolve, reject) =>
+          releases.push(() =>
+            search === 'slow' ? reject(new Error('offline')) : resolve(page([person('pe2')])),
+          ),
+        );
+      });
+
+      const slow = service.load('slow');
+      const fast = service.load('fast');
+      releases[1]();
+      await fast;
+      releases[0]();
+      await slow;
+
+      expect(service.status()).toBe('ready');
+      expect(service.error()).toBeNull();
+      expect(service.people().map((row) => row.id)).toEqual(['pe2']);
+    });
+
+    it('keeps the status when a change fails or reloads the list', async () => {
+      let failList = false;
+      const service = configure((name) => {
+        if (name === 'createPerson') {
+          throw { error: { detail: 'A person with that name already exists' } };
+        }
+        if (name === 'listPeople' && failList) {
+          return new Promise(() => undefined);
+        }
+        return page([person('pe1')]);
+      });
+      await service.load();
+
+      expect(await service.add({ name: 'Mum' })).toBeNull();
+      expect(service.status()).toBe('ready');
+
+      failList = true;
+      void service.archive('pe1');
+      await vi.waitFor(() => expect(names.filter((n) => n === 'listPeople').length).toBe(2));
+      expect(service.status()).toBe('ready');
+    });
+  });
 });

@@ -5,18 +5,6 @@
   font-size: 13px;
 }
 
-.banner {
-  padding: 10px 14px;
-  border-radius: 9px;
-  margin: 0;
-}
-
-.banner.warn {
-  background: var(--warn-surface);
-  border: 1px solid var(--warn-edge);
-  color: var(--warn-ink);
-}
-
 .pin-warning {
   display: flex;
   align-items: center;
@@ -158,10 +146,6 @@
 
 .project:hover .t-body {
   color: var(--accent);
-}
-
-.muted {
-  color: var(--ink-3);
 }
 
 .offscreen {

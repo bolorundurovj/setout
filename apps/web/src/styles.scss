@@ -267,6 +267,53 @@ body {
   }
 }
 
+.muted {
+  color: var(--ink-3);
+}
+
+.banner {
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--field);
+  border: 1px solid var(--rule);
+  border-radius: 9px;
+  color: var(--ink-2);
+}
+
+.banner.warn {
+  background: var(--warn-surface);
+  border-color: var(--warn-edge);
+  color: var(--warn-ink);
+}
+
+// Zero specificity so screens with a plainer text action can restyle it with one class.
+:where(.link-action) {
+  background: none;
+  border: 1px solid transparent;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font:
+    400 13px/1.2 'DM Sans',
+    sans-serif;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+:where(.link-action:hover) {
+  background: var(--field);
+  border-color: var(--rule);
+  color: var(--ink);
+}
+
+:where(.link-action:focus-visible) {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--accent);
+}
+
 @media (max-width: bp.$tablet) {
   body.nav-locked {
     overflow: hidden;

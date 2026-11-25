@@ -28,6 +28,20 @@ export class AttachmentsComponent {
   private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
 
   readonly rows = computed(() => this.attachments.forParent(this.parent()));
+  readonly status = computed(() => this.attachments.status(this.parent()));
+  readonly addLabel = computed(() => {
+    if (this.rows().length > 0) {
+      return 'Another attachment';
+    }
+    switch (this.status()) {
+      case 'ready':
+        return 'No attachments';
+      case 'error':
+        return 'Attachments';
+      default:
+        return 'Loading attachments…';
+    }
+  });
   readonly lastArchived = signal<AttachmentRead | null>(null);
 
   constructor() {

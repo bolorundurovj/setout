@@ -37,10 +37,20 @@
     </div>
 
     @if (rows().length === 0) {
-      <div class="card">
-        <p class="t-body">No data to compare yet.</p>
-        <p class="t-small">Set a budget for a category, or add an expense.</p>
-      </div>
+      @switch (budget.status()) {
+        @case ('ready') {
+          <div class="card">
+            <p class="t-body">No data to compare yet.</p>
+            <p class="t-small">Set a budget for a category, or add an expense.</p>
+          </div>
+        }
+        @case ('error') {
+          <p class="banner warn t-small">Could not load the budget.</p>
+        }
+        @default {
+          <p class="t-small muted">Loading categories…</p>
+        }
+      }
     } @else {
       <div class="categories">
         @for (category of rows(); track category.id) {

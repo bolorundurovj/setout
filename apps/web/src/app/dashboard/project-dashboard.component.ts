@@ -52,6 +52,9 @@ export class ProjectDashboardComponent {
   });
 
   readonly varianceNote = computed(() => {
+    if (!this.expenses.summary()) {
+      return '';
+    }
     if (!this.budgeted()) {
       return 'No budget set.';
     }
@@ -63,11 +66,19 @@ export class ProjectDashboardComponent {
     return this.isOverBudget() ? `${percentLabel}% over budget.` : `${percentLabel}% under budget.`;
   });
 
-  readonly budgetNote = computed(() =>
-    this.budgeted() ? `Across ${this.budget.categories().length} categories.` : 'No budget set.',
-  );
+  readonly budgetNote = computed(() => {
+    if (!this.expenses.summary()) {
+      return '';
+    }
+    return this.budgeted()
+      ? `Across ${this.budget.categories().length} categories.`
+      : 'No budget set.';
+  });
 
   readonly spentNote = computed(() => {
+    if (!this.expenses.summary()) {
+      return '';
+    }
     const count = this.expenses.total();
     const uncategorised = this.uncategorised();
     const countLabel = `${count} ${count === 1 ? 'expense' : 'expenses'}`;

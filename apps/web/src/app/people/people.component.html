@@ -24,10 +24,14 @@
   }
 
   @if (personService.people().length === 0) {
-    <div class="card">
-      <p class="t-body">{{ search() ? 'No people match the search.' : 'No people yet.' }}</p>
-      <p class="t-small">Create a person, then select them under Paid By on an expense.</p>
-    </div>
+    @if (personService.status() === 'ready') {
+      <div class="card">
+        <p class="t-body">{{ search() ? 'No people match the search.' : 'No people yet.' }}</p>
+        <p class="t-small">Create a person, then select them under Paid By on an expense.</p>
+      </div>
+    } @else if (personService.status() !== 'error') {
+      <p class="t-small muted">Loading people…</p>
+    }
   } @else {
     <div class="table">
       <div class="row head">

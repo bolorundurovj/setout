@@ -19,6 +19,7 @@ import {
 import { CountsService } from '../counts.service';
 import { detailOf } from '../api-error';
 import { ChoiceStore } from '../ui/choice-store';
+import { LoadTracker } from '../ui/request-status';
 import { SCROLL_SIZE } from '../ui/paging';
 
 @Injectable({
@@ -37,6 +38,8 @@ export class ProjectService {
     this.api.invoke(listProjects, params),
   );
 
+  private readonly tracker = new LoadTracker();
+
   readonly projects = this.projectsState.asReadonly();
   readonly currencies = this.currencyState.asReadonly();
   readonly summary = this.summaryState.asReadonly();
@@ -44,6 +47,7 @@ export class ProjectService {
   readonly choicesTotal = this.choiceStore.total;
   readonly choicesHasMore = this.choiceStore.hasMore;
   readonly choicesLoading = this.choiceStore.loading;
+  readonly status = this.tracker.status;
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
@@ -61,6 +65,7 @@ export class ProjectService {
 
   async load(includeArchived = false): Promise<void> {
     this.includeArchivedState.set(includeArchived);
+    const requestId = this.tracker.start();
     this.loading.set(true);
     this.error.set(null);
     try {
@@ -69,12 +74,20 @@ export class ProjectService {
         limit: SCROLL_SIZE,
         offset: 0,
       });
+      if (!this.tracker.settle(requestId, 'ready')) {
+        return;
+      }
       this.projectsState.set(page.items);
       this.totalState.set(page.total);
     } catch {
+      if (!this.tracker.settle(requestId, 'error')) {
+        return;
+      }
       this.error.set('Could not load the projects.');
     } finally {
-      this.loading.set(false);
+      if (this.tracker.isCurrent(requestId)) {
+        this.loading.set(false);
+      }
     }
     await this.loadSummary();
   }

@@ -191,4 +191,56 @@ describe('DeliveryService', () => {
     expect(service.error()).toBe('Could not load the deliveries.');
     expect(service.outstanding('p1').rows).toEqual([]);
   });
+
+  it('tracks the load status of each list separately', async () => {
+    const service = configure((_name, params) => {
+      if (params['vendor_id']) {
+        throw new Error('offline');
+      }
+      return page([delivery('a')]);
+    });
+    expect(service.outstandingStatus('p1')).toBe('idle');
+
+    const loading = service.loadOutstanding('p1');
+    expect(service.outstandingStatus('p1')).toBe('loading');
+    await loading;
+    await service.loadForVendor('v1');
+
+    expect(service.outstandingStatus('p1')).toBe('ready');
+    expect(service.receivedStatus('p1')).toBe('idle');
+    expect(service.vendorStatus('v1')).toBe('error');
+  });
+
+  it('ignores a superseded response for the same list', async () => {
+    const releases: (() => void)[] = [];
+    const service = configure(
+      (_name, params) =>
+        new Promise((resolve, reject) =>
+          releases.push(() =>
+            params['offset'] === 0 ? reject(new Error('offline')) : resolve(page([delivery('b')])),
+          ),
+        ),
+    );
+
+    const first = service.loadOutstanding('p1', 1);
+    const second = service.loadOutstanding('p1', 2);
+    releases[1]();
+    await second;
+    releases[0]();
+    await first;
+
+    expect(service.outstandingStatus('p1')).toBe('ready');
+    expect(service.error()).toBeNull();
+    expect(service.outstanding('p1').rows.map((row) => row.id)).toEqual(['b']);
+  });
+
+  it('keeps the status during a quiet reload', async () => {
+    let hold = false;
+    const service = configure(() => (hold ? new Promise(() => undefined) : page([delivery('a')])));
+    await service.loadOutstanding('p1');
+
+    hold = true;
+    void service.loadOutstanding('p1', 1, false, true);
+    expect(service.outstandingStatus('p1')).toBe('ready');
+  });
 });

@@ -80,10 +80,14 @@
   }
 
   @if (projects.projects().length === 0) {
-    <div class="card">
-      <p class="t-body">No projects yet.</p>
-      <p class="t-small">Create one to start tracking project expenses.</p>
-    </div>
+    @if (projects.status() === 'ready') {
+      <div class="card">
+        <p class="t-body">No projects yet.</p>
+        <p class="t-small">Create one to start tracking project expenses.</p>
+      </div>
+    } @else if (projects.status() !== 'error') {
+      <p class="t-small muted">Loading projects…</p>
+    }
   } @else {
     @for (project of projects.projects(); track project.id) {
       <article class="project-card" [class.archived]="project.archived_at">

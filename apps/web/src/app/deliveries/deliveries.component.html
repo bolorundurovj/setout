@@ -30,10 +30,16 @@
     </div>
 
     @if (outstandingRows().length === 0) {
-      <div class="card">
-        <p class="t-body">No outstanding items.</p>
-        <p class="t-small">Select "Outstanding Delivery" when adding an expense to list it here.</p>
-      </div>
+      @if (outstandingStatus() === 'ready') {
+        <div class="card">
+          <p class="t-body">No outstanding items.</p>
+          <p class="t-small">
+            Select "Outstanding Delivery" when adding an expense to list it here.
+          </p>
+        </div>
+      } @else if (outstandingStatus() !== 'error') {
+        <p class="t-small muted">Loading deliveries…</p>
+      }
     } @else {
       @for (delivery of outstandingRows(); track delivery.id) {
         @if (editing() === delivery.id) {

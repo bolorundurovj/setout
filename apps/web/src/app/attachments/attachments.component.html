@@ -1,4 +1,7 @@
 <div class="attachments">
+  @if (status() === 'error') {
+    <p class="banner warn t-small">Could not load the attachments.</p>
+  }
   @for (file of rows(); track file.id) {
     <div class="attached">
       <a class="thumb" [href]="fileUrl(file)" target="_blank" rel="noopener">
@@ -24,7 +27,7 @@
     </p>
   }
   <button type="button" class="add" [disabled]="attachments.saving()" (click)="openFilePicker()">
-    <span class="t-body">{{ rows().length === 0 ? 'No attachments' : 'Another attachment' }}</span>
+    <span class="t-body">{{ addLabel() }}</span>
     <span class="t-mono action">Attach Image or PDF</span>
   </button>
   <input

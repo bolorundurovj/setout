@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import type {
   HomeLatest,
@@ -8,6 +8,7 @@ import type {
   HomeSummary,
 } from '@setout/api-client';
 import { AuthService } from '../auth/auth.service';
+import type { RequestStatus } from '../ui/request-status';
 import { DashboardComponent } from './dashboard.component';
 import { HomeService } from './home.service';
 
@@ -51,6 +52,7 @@ function project(over: Partial<HomeProject> = {}): HomeProject {
 describe('DashboardComponent', () => {
   let navigations: unknown[][];
   let selectedCurrencies: string[];
+  let fixture: ComponentFixture<DashboardComponent>;
 
   function render(
     fixtures: {
@@ -58,6 +60,8 @@ describe('DashboardComponent', () => {
       months?: HomeMonths;
       projects?: HomeProjects;
       recent?: HomeLatest;
+      status?: RequestStatus;
+      error?: string | null;
     } = {},
   ) {
     navigations = [];
@@ -75,8 +79,9 @@ describe('DashboardComponent', () => {
             projects: () => fixtures.projects ?? { rows: [] },
             recent: () => fixtures.recent ?? { rows: [] },
             currency: () => 'NGN',
+            status: () => fixtures.status ?? 'ready',
             loading: () => false,
-            error: () => null,
+            error: () => fixtures.error ?? null,
             load: async () => undefined,
             selectCurrency: async (code: string) => void selectedCurrencies.push(code),
           },
@@ -89,10 +94,24 @@ describe('DashboardComponent', () => {
       navigations.push(args);
       return true;
     };
-    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     return fixture.componentInstance;
   }
+
+  it('shows Loading while the summary loads', () => {
+    render({ summary: null, status: 'loading' });
+    const text = (fixture.nativeElement as HTMLElement).textContent;
+    expect(text).toContain('Loading…');
+    expect(text).not.toContain('No projects yet.');
+  });
+
+  it('shows the error and no Loading line when the summary fails', () => {
+    render({ summary: null, status: 'error', error: 'Could not load Home.' });
+    const text = (fixture.nativeElement as HTMLElement).textContent;
+    expect(text).toContain('Could not load Home.');
+    expect(text).not.toContain('Loading…');
+  });
 
   it('greets the signed-in account by name', () => {
     expect(render().greeting()).toBe('Welcome back, Vee');

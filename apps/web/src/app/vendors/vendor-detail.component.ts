@@ -23,6 +23,7 @@ import { DeliveryService } from '../deliveries/delivery.service';
 import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
 import { PaginationComponent } from '../ui/pagination.component';
+import type { RequestStatus } from '../ui/request-status';
 import { VendorService } from './vendor.service';
 import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
 
@@ -47,6 +48,8 @@ export class VendorDetailComponent {
   readonly vendor = signal<VendorRead | null>(null);
   readonly expenseSummary = signal<VendorExpenseSummary | null>(null);
   readonly agreements = signal<VendorAgreement[]>([]);
+  readonly agreementsStatus = signal<RequestStatus>('idle');
+  readonly deliveryStatus = computed(() => this.deliveries.vendorStatus(this.id()));
   readonly outstandingTotals = computed(() =>
     (this.deliveries.forVendor(this.id()).currencyTotals ?? [])
       .filter((total) => total.amount !== 0)
@@ -66,6 +69,8 @@ export class VendorDetailComponent {
 
   readonly notSet = '—';
 
+  private loadSeq = 0;
+
   constructor() {
     effect(() => {
       this.id();
@@ -82,14 +87,19 @@ export class VendorDetailComponent {
   }
 
   async load(): Promise<void> {
+    const requestId = ++this.loadSeq;
     const [vendor, expenseSummary, agreements] = await Promise.all([
       this.vendorService.get(this.id()),
       this.vendorService.expenseSummary(this.id()),
       this.vendorService.agreements(this.id()),
     ]);
+    if (requestId !== this.loadSeq) {
+      return;
+    }
     this.vendor.set(vendor);
     this.expenseSummary.set(expenseSummary);
-    this.agreements.set(agreements);
+    this.agreements.set(agreements ?? []);
+    this.agreementsStatus.set(agreements ? 'ready' : 'error');
     this.loading.set(false);
   }
 
@@ -117,7 +127,7 @@ export class VendorDetailComponent {
   async markReceived(delivery: DeliveryRead): Promise<void> {
     await this.deliveries.markReceived(delivery.id);
     const currentPage = this.deliveryPage();
-    await this.deliveries.loadForVendor(this.id(), currentPage);
+    await this.deliveries.loadForVendor(this.id(), currentPage, true);
     if (this.outstandingDeliveries().length === 0 && currentPage > 1) {
       await this.goToDeliveryPage(currentPage - 1);
     }

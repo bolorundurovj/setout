@@ -65,6 +65,7 @@ describe('VendorDetailComponent page title via the router', () => {
           useValue: {
             error: () => null,
             forVendor: () => ({ rows: [], total: 0, outstandingAmount: 0 }),
+            vendorStatus: () => 'ready',
             loadForVendor: async () => undefined,
           },
         },

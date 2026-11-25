@@ -94,6 +94,8 @@ describe('ExpensesComponent', () => {
 
     const expenseService = {
       expenses: () => expenses,
+      status: () => 'ready',
+      categoryStatus: () => 'ready',
       total: () => expenses.length,
       page: () => 1,
       categoryPage: (_p: string, id: string) =>
@@ -141,6 +143,7 @@ describe('ExpensesComponent', () => {
 
     const budgetService = {
       categories: () => categories,
+      status: () => 'ready',
       load: async () => undefined,
     };
 

@@ -18,6 +18,7 @@ import {
   restoreAttachment,
 } from '@setout/api-client';
 import { PICKER_PAGE_SIZE } from '../ui/paging';
+import { KeyedLoadTracker, type RequestStatus } from '../ui/request-status';
 
 export type AttachedTo = 'project' | 'expense' | 'agreement' | 'delivery';
 
@@ -34,6 +35,7 @@ export class AttachmentService {
   private readonly api = inject(Api);
 
   private readonly state = signal<Record<string, AttachmentRead[]>>({});
+  private readonly tracker = new KeyedLoadTracker();
 
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
@@ -42,7 +44,13 @@ export class AttachmentService {
     return this.state()[this.key(parent)] ?? [];
   }
 
+  status(parent: AttachmentParent): RequestStatus {
+    return this.tracker.status(this.key(parent));
+  }
+
   async load(parent: AttachmentParent): Promise<void> {
+    const key = this.key(parent);
+    const requestId = this.tracker.start(key);
     this.error.set(null);
     try {
       const rows: AttachmentRead[] = [];
@@ -55,10 +63,14 @@ export class AttachmentService {
           break;
         }
       }
-      this.set(parent, rows);
+      if (this.tracker.settle(key, requestId, 'ready')) {
+        this.set(parent, rows);
+      }
     } catch {
-      this.error.set('Could not load the attachments.');
-      this.set(parent, []);
+      if (this.tracker.settle(key, requestId, 'error')) {
+        this.error.set('Could not load the attachments.');
+        this.set(parent, []);
+      }
     }
   }
 

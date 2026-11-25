@@ -1,9 +1,10 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
 import type { DeliveryRead, VendorExpenseSummary, VendorRead } from '@setout/api-client';
 import { DeliveryService } from '../deliveries/delivery.service';
 import { ToastService } from '../toast.service';
+import type { RequestStatus } from '../ui/request-status';
 import { VendorDetailComponent } from './vendor-detail.component';
 import { VendorService } from './vendor.service';
 
@@ -72,8 +73,14 @@ describe('VendorDetailComponent', () => {
   let outstandingDeliveries: DeliveryRead[];
   let marked: string[];
   let reloads: { vendorId: string; page: number }[];
+  let deliveryStatus: RequestStatus;
+  let fixture: ComponentFixture<VendorDetailComponent>;
 
-  async function render(current: VendorRead | null = vendor(), outstanding: DeliveryRead[] = []) {
+  async function render(
+    current: VendorRead | null = vendor(),
+    outstanding: DeliveryRead[] = [],
+    loads: { agreements?: unknown[] | null; deliveries?: RequestStatus } = {},
+  ) {
     edits = [];
     archived = [];
     restored = [];
@@ -83,12 +90,13 @@ describe('VendorDetailComponent', () => {
     outstandingDeliveries = outstanding;
     marked = [];
     reloads = [];
+    deliveryStatus = loads.deliveries ?? 'ready';
 
     const vendors = {
       error: () => null,
       get: async () => current,
       expenseSummary: async () => (current ? summary : null),
-      agreements: async () => [],
+      agreements: async () => (loads.agreements === undefined ? [] : loads.agreements),
       edit: async (_id: string, body: unknown) => void edits.push(body),
       archive: async (id: string) => void archived.push(id),
       restore: async (id: string) => void restored.push(id),
@@ -105,6 +113,7 @@ describe('VendorDetailComponent', () => {
           provide: DeliveryService,
           useValue: {
             error: () => null,
+            vendorStatus: () => deliveryStatus,
             forVendor: () => ({
               rows: outstandingDeliveries,
               total: outstandingDeliveries.length,
@@ -127,7 +136,7 @@ describe('VendorDetailComponent', () => {
       return Promise.resolve(true);
     };
 
-    const fixture = TestBed.createComponent(VendorDetailComponent);
+    fixture = TestBed.createComponent(VendorDetailComponent);
     fixture.componentRef.setInput('id', 'v1');
     fixture.detectChanges();
     const component = fixture.componentInstance;
@@ -263,5 +272,31 @@ describe('VendorDetailComponent', () => {
     await render(null);
     TestBed.tick();
     expect(TestBed.inject(Title).getTitle()).toBe('Vendor · Setout');
+  });
+
+  it('shows an error instead of No agreements when the agreements fail to load', async () => {
+    const component = await render(vendor(), [], { agreements: null });
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent;
+    expect(component.agreementsStatus()).toBe('error');
+    expect(text).toContain('Could not load the agreements.');
+    expect(text).not.toContain('No agreements with this vendor.');
+  });
+
+  it('shows No agreements once the agreements load empty', async () => {
+    await render();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'No agreements with this vendor.',
+    );
+  });
+
+  it('shows an error when the outstanding deliveries fail to load', async () => {
+    await render(vendor(), [], { deliveries: 'error' });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Could not load the outstanding deliveries.',
+    );
   });
 });

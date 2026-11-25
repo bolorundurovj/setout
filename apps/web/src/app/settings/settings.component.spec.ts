@@ -5,6 +5,7 @@ import { AuthService } from '../auth/auth.service';
 import { ProjectService } from '../projects/project.service';
 import { ThemeService } from '../theme.service';
 import { ToastService } from '../toast.service';
+import type { RequestStatus } from '../ui/request-status';
 import { InstallService } from './install.service';
 import { SettingsComponent } from './settings.component';
 
@@ -47,12 +48,14 @@ describe('SettingsComponent', () => {
   let defaultCurrencyResult: boolean;
   let currencies: { code: string; name: string; exponent: number }[];
   let fixture: ReturnType<typeof TestBed.createComponent<SettingsComponent>>;
+  let installStatus: RequestStatus;
 
   function render(
     installation: Install | null = install(),
     authError = 'Could not save the account name.',
     defaultCurrency: string | null = null,
   ) {
+    installStatus = installation ? 'ready' : 'error';
     toasts = [];
     renamed = [];
     passphrases = [];
@@ -117,6 +120,7 @@ describe('SettingsComponent', () => {
           provide: InstallService,
           useValue: {
             install: () => installation,
+            status: () => installStatus,
             exporting: () => false,
             error: () => 'Could not create the backup.',
             loading: () => false,
@@ -278,6 +282,23 @@ describe('SettingsComponent', () => {
   it('shows when the data last changed, or that it has not changed', async () => {
     expect((await ready()).lastChanged()).toContain('2026');
     expect((await ready(install({ data_changed_at: null }))).lastChanged()).toBe('no changes yet');
+    expect((await ready(null)).lastChanged()).toBe('—');
+  });
+
+  it('shows an error when the server details fail to load', async () => {
+    await ready(null);
+    fixture.detectChanges();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.banner.warn')?.textContent,
+    ).toContain('Could not load the server details.');
+  });
+
+  it('shows no server error once the details load', async () => {
+    await ready();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
+      'Could not load the server details.',
+    );
   });
 
   it('asks for the passphrase before downloading or restoring a backup', async () => {

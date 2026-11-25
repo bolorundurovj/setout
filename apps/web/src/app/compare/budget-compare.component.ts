@@ -15,6 +15,7 @@ import { formatDay } from '../shared/dates';
 import { ExpenseService, UNCATEGORISED, type ExpensePage } from '../expenses/expense.service';
 import { currencySymbol } from '../ui/currency-pill.component';
 import { PaginationComponent } from '../ui/pagination.component';
+import type { RequestStatus } from '../ui/request-status';
 import { tintFor } from '../ui/tints';
 
 /** A category row, or the row for expenses without a category. */
@@ -68,6 +69,21 @@ export class BudgetCompareComponent {
       });
     }
     return rows;
+  });
+
+  readonly status = computed<RequestStatus>(() => {
+    const statuses = [this.budget.status(), this.expenses.status()];
+    if (statuses.includes('error')) {
+      return 'error';
+    }
+    return statuses.every((status) => status === 'ready') ? 'ready' : 'loading';
+  });
+
+  readonly loadError = computed(() => {
+    if (this.budget.status() === 'error') {
+      return 'Could not load the budget.';
+    }
+    return this.expenses.status() === 'error' ? 'Could not load the expenses.' : '';
   });
 
   readonly budgetedTotal = computed(() => this.expenses.summary()?.budgeted_amount ?? 0);
@@ -147,6 +163,10 @@ export class BudgetCompareComponent {
 
   rowExpenses(row: CompareRow): ExpensePage | undefined {
     return this.expenses.categoryPage(this.project().id, row.id);
+  }
+
+  categoryStatus(row: CompareRow): RequestStatus {
+    return this.expenses.categoryStatus(this.project().id, row.id);
   }
 
   async goTo(row: CompareRow, page: number): Promise<void> {

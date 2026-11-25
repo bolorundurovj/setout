@@ -46,7 +46,9 @@
               }
             </div>
 
-            @if (monthPage === undefined) {
+            @if (monthStatus(row) === 'error') {
+              <p class="empty">Could not load the expenses for this month.</p>
+            } @else if (monthPage === undefined) {
               <p class="empty">Loading…</p>
             } @else if (monthPage.total > 0) {
               <div class="entries">
@@ -73,7 +75,11 @@
     }
 
     @if (rows().length === 0) {
-      <p class="empty">No expenses yet.</p>
+      @if (expenses.monthsStatus() === 'ready') {
+        <p class="empty">No expenses yet.</p>
+      } @else if (expenses.monthsStatus() !== 'error') {
+        <p class="empty">Loading…</p>
+      }
     }
 
     <div class="row total">

@@ -1,7 +1,8 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import type { ExpenseRead, ProjectMonths, ProjectRead, CategoryRead } from '@setout/api-client';
 import { BudgetService } from '../budget/budget.service';
 import { ExpenseService } from '../expenses/expense.service';
+import type { RequestStatus } from '../ui/request-status';
 import { MonthsComponent, type MonthRow } from './months.component';
 
 const project: ProjectRead = {
@@ -91,11 +92,14 @@ const row = (overrides: Partial<MonthRow> = {}): MonthRow => ({
 describe('MonthsComponent', () => {
   let loaded: string[];
 
+  let fixture: ComponentFixture<MonthsComponent>;
+
   function render(
     payload: ProjectMonths | null = null,
     categories: CategoryRead[] = [],
     byMonth: Record<string, ExpenseRead[]> = {},
     error: string | null = null,
+    monthsStatus: RequestStatus = 'ready',
   ) {
     loaded = [];
     TestBed.resetTestingModule();
@@ -110,7 +114,9 @@ describe('MonthsComponent', () => {
           provide: ExpenseService,
           useValue: {
             months: () => payload,
+            monthsStatus: () => monthsStatus,
             monthPage: (_p: string, month: string) => byMonth[month],
+            monthStatus: () => 'ready',
             error: () => error,
             loadMonths: async () => undefined,
             loadForMonth: async (_p: string, month: string) => {
@@ -120,7 +126,7 @@ describe('MonthsComponent', () => {
         },
       ],
     });
-    const fixture = TestBed.createComponent(MonthsComponent);
+    fixture = TestBed.createComponent(MonthsComponent);
     fixture.componentRef.setInput('project', project);
     fixture.detectChanges();
     return fixture.componentInstance;
@@ -282,5 +288,20 @@ describe('MonthsComponent', () => {
     const c = render();
     expect(c.plainAmount(2_326_300)).toBe('23,263');
     expect(c.money(2_326_300)).toContain('23,263');
+  });
+
+  it('shows No expenses yet only after the months load', () => {
+    render(null, [], {}, null, 'loading');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('No expenses yet.');
+
+    render(null, [], {}, null, 'ready');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('No expenses yet.');
+  });
+
+  it('hides the empty state when the months fail to load', () => {
+    render(null, [], {}, 'Could not load the expense summary.', 'error');
+    const text = (fixture.nativeElement as HTMLElement).textContent;
+    expect(text).toContain('Could not load the expense summary.');
+    expect(text).not.toContain('No expenses yet.');
   });
 });

@@ -252,33 +252,6 @@
   }
 }
 
-.link-action {
-  background: none;
-  border: 1px solid transparent;
-  padding: 7px 10px;
-  border-radius: 8px;
-  font:
-    400 13px/1.2 'DM Sans',
-    sans-serif;
-  color: var(--ink-2);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s;
-
-  &:hover {
-    background: var(--field);
-    border-color: var(--rule);
-    color: var(--ink);
-  }
-
-  &:focus-visible {
-    outline: none;
-    box-shadow:
-      0 0 0 2px var(--surface),
-      0 0 0 4px var(--accent);
-  }
-}
-
 .plain-link {
   color: var(--accent);
 }

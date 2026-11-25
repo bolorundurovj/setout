@@ -185,4 +185,66 @@ describe('BudgetService', () => {
     expect(names).toContain('createBudgetItem');
     expect(names).toContain('getProjectBudget');
   });
+
+  describe('status', () => {
+    it('moves from loading to ready or error', async () => {
+      let fail = false;
+      const service = configure(() => {
+        if (fail) {
+          throw new Error('offline');
+        }
+        return { categories: [], budgeted_amount: 0 };
+      });
+      expect(service.status()).toBe('idle');
+
+      const loading = service.load('p1');
+      expect(service.status()).toBe('loading');
+      await loading;
+      expect(service.status()).toBe('ready');
+
+      fail = true;
+      await service.load('p1');
+      expect(service.status()).toBe('error');
+    });
+
+    it('ignores a superseded budget response', async () => {
+      const releases: (() => void)[] = [];
+      const service = configure(
+        (_name, args) =>
+          new Promise((resolve, reject) =>
+            releases.push(() =>
+              args['project_id'] === 'old'
+                ? reject(new Error('offline'))
+                : resolve({ categories: [category('s1')], budgeted_amount: 0 }),
+            ),
+          ),
+      );
+
+      const old = service.load('old');
+      const current = service.load('p1');
+      releases[1]();
+      await current;
+      releases[0]();
+      await old;
+
+      expect(service.status()).toBe('ready');
+      expect(service.error()).toBeNull();
+      expect(service.categories().length).toBe(1);
+    });
+
+    it('tracks budget items per category', async () => {
+      const service = configure((_name, args) => {
+        if (args['category_id'] === 's2') {
+          throw new Error('offline');
+        }
+        return { items: [], total: 0, limit: 100, offset: 0 };
+      });
+      await service.loadItems('s1');
+      await service.loadItems('s2');
+
+      expect(service.itemStatus('s1')).toBe('ready');
+      expect(service.itemStatus('s2')).toBe('error');
+      expect(service.itemStatus('s3')).toBe('idle');
+    });
+  });
 });

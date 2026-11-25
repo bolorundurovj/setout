@@ -4,6 +4,10 @@
     <p class="hint">Select a category to view its expenses.</p>
   </div>
 
+  @if (loadError(); as error) {
+    <p class="banner warn t-small">{{ error }}</p>
+  }
+
   <div class="head row">
     <span class="col">Category</span>
     <span class="col right">Budgeted {{ symbol() }}</span>
@@ -45,7 +49,9 @@
       @if (isOpen(row)) {
         @let categoryExpenses = rowExpenses(row);
         <div class="expenses">
-          @if (categoryExpenses === undefined) {
+          @if (categoryStatus(row) === 'error') {
+            <p class="empty">Could not load the expenses for this category.</p>
+          } @else if (categoryExpenses === undefined) {
             <p class="empty">Loading…</p>
           } @else if (categoryExpenses.total === 0) {
             <p class="empty">No expenses recorded for this category.</p>
@@ -84,7 +90,11 @@
   }
 
   @if (rows().length === 0) {
-    <p class="empty">No categories yet. Set a budget to compare expenses against it.</p>
+    @if (status() === 'ready') {
+      <p class="empty">No categories yet. Set a budget to compare expenses against it.</p>
+    } @else if (status() === 'loading') {
+      <p class="empty">Loading…</p>
+    }
   }
 
   <div class="row total">

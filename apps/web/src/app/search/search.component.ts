@@ -48,16 +48,12 @@ export class SearchComponent {
     return `${results.total} ${matches} for "${results.query}"`;
   });
 
-  readonly empty = computed(() => {
-    const results = this.search.results();
-    return (
-      !this.search.loading() &&
-      !this.search.error() &&
+  readonly empty = computed(
+    () =>
+      this.search.status() === 'ready' &&
       this.q().trim().length > 0 &&
-      results !== null &&
-      results.total === 0
-    );
-  });
+      this.search.results()?.total === 0,
+  );
 
   private initialized = false;
   private readonly debouncedSearch = debounce<string>((term) => {

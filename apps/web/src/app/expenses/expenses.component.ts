@@ -84,6 +84,9 @@ export class ExpensesComponent {
   readonly uncategorisedPage = computed(
     () => this.expenses.categoryPage(this.project().id, UNCATEGORISED)?.page ?? 1,
   );
+  readonly uncategorisedStatus = computed(() =>
+    this.expenses.categoryStatus(this.project().id, UNCATEGORISED),
+  );
   readonly allSelected = computed(
     () =>
       this.uncategorised().length > 0 &&

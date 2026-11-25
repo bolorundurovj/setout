@@ -175,4 +175,37 @@ describe('AttachmentService', () => {
     expect(service.formatSize(2048)).toBe('2 KiB');
     expect(service.formatSize(1_258_291)).toBe('1.2 MiB');
   });
+
+  it('tracks the load status per parent', async () => {
+    const service = configure((_name, params) => {
+      if (params['expense_id'] === 'e2') {
+        throw new Error('offline');
+      }
+      return { items: [], total: 0 };
+    });
+    expect(service.status(expense('e1'))).toBe('idle');
+
+    const loading = service.load(expense('e1'));
+    expect(service.status(expense('e1'))).toBe('loading');
+    await loading;
+    await service.load(expense('e2'));
+
+    expect(service.status(expense('e1'))).toBe('ready');
+    expect(service.status(expense('e2'))).toBe('error');
+  });
+
+  it('does not change the status when an upload fails', async () => {
+    const service = configure((name) => {
+      if (name.startsWith('list')) {
+        return { items: [], total: 0 };
+      }
+      throw { error: { detail: 'Too large' } };
+    });
+    await service.load(expense('e1'));
+
+    await service.add(expense('e1'), new File(['x'], 'big.pdf'));
+
+    expect(service.error()).toBe('Too large');
+    expect(service.status(expense('e1'))).toBe('ready');
+  });
 });

@@ -5,6 +5,7 @@ import { formatAmount, formatMoney } from '../budget/money';
 import { monthLabel } from '../shared/dates';
 import { ExpenseService, type ExpensePage } from '../expenses/expense.service';
 import { PaginationComponent } from '../ui/pagination.component';
+import type { RequestStatus } from '../ui/request-status';
 
 /** Number of category tints in the stylesheet before they repeat. */
 const TINTS = 5;
@@ -85,7 +86,9 @@ export class MonthsComponent {
     const highestMonth = this.expenses.months()?.highest_month;
     const row = this.rows().find((month) => month.month === highestMonth);
     if (!row) {
-      return 'No expenses yet. Months appear as expenses are added.';
+      return this.expenses.monthsStatus() === 'ready'
+        ? 'No expenses yet. Months appear as expenses are added.'
+        : '';
     }
     return `Highest month: ${row.label} at ${this.money(row.amount)}. Each expense is counted in the month it was spent, so the months add up to the project total.`;
   });
@@ -132,6 +135,10 @@ export class MonthsComponent {
 
   monthExpenses(row: MonthRow): ExpensePage | undefined {
     return this.expenses.monthPage(this.project().id, row.month);
+  }
+
+  monthStatus(row: MonthRow): RequestStatus {
+    return this.expenses.monthStatus(this.project().id, row.month);
   }
 
   async goToPage(row: MonthRow, page: number): Promise<void> {

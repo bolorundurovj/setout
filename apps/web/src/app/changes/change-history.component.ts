@@ -41,6 +41,7 @@ export class ChangeHistoryComponent {
   readonly changes = inject(ChangeService);
 
   readonly list = computed(() => this.changes.forTarget(this.target()));
+  readonly status = computed(() => this.changes.status(this.target()));
   readonly showsRecord = computed(() => 'projectId' in this.target());
   readonly hasMore = computed(() => this.list().rows.length < this.list().total);
 

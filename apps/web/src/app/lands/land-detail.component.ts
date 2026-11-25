@@ -19,6 +19,7 @@ import { ToastService } from '../toast.service';
 import { LandService } from './land.service';
 import { LandValuationsComponent } from './land-valuations.component';
 import { LandMapComponent, type LandPoint } from './land-map.component';
+import type { RequestStatus } from '../ui/request-status';
 import { TabsComponent, type Tab } from '../ui/tabs.component';
 import { formatAreaIn, pointInRing, ringOf } from './land-geo';
 import { DOCUMENT_KINDS, kindName, statedAreaLabel, unitName, valuationLabel } from './land-labels';
@@ -51,6 +52,7 @@ export class LandDetailComponent {
 
   readonly land = signal<LandRead | null>(null);
   readonly documents = signal<LandDocumentRead[]>([]);
+  readonly documentsStatus = signal<RequestStatus>('idle');
   readonly loading = signal(true);
   readonly pendingDelete = signal(false);
   readonly deleteConfirmationText = signal('');
@@ -88,7 +90,8 @@ export class LandDetailComponent {
       this.lands.documents(this.id()),
     ]);
     this.land.set(land);
-    this.documents.set(documents);
+    this.documentsStatus.set(documents ? 'ready' : 'error');
+    this.documents.set(documents ?? []);
     this.loading.set(false);
   }
 

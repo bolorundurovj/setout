@@ -123,7 +123,13 @@
     </div>
 
     @if (budget.categories().length === 0) {
-      <p class="t-small note">No categories yet. Create them on the Budget tab.</p>
+      @if (budget.status() === 'ready') {
+        <p class="t-small note">No categories yet. Create them on the Budget tab.</p>
+      } @else if (budget.status() === 'error') {
+        <p class="banner warn t-small">Could not load the budget.</p>
+      } @else {
+        <p class="t-small muted">Loading categories…</p>
+      }
     } @else {
       <div class="categories">
         @for (category of budget.categories(); track category.id) {

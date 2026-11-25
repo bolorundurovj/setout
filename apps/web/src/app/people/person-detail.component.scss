@@ -6,18 +6,6 @@
   font-size: 13px;
 }
 
-.banner {
-  padding: 10px 14px;
-  border-radius: 9px;
-  margin: 0;
-}
-
-.banner.warn {
-  background: var(--warn-surface);
-  border: 1px solid var(--warn-edge);
-  color: var(--warn-ink);
-}
-
 .head {
   display: flex;
   align-items: flex-start;
@@ -137,10 +125,6 @@
 
 .right {
   text-align: right;
-}
-
-.muted {
-  color: var(--ink-3);
 }
 
 .figure {

@@ -9,6 +9,7 @@ import {
   restoreBackup,
 } from '@setout/api-client';
 import { detailOf } from '../api-error';
+import { LoadTracker } from '../ui/request-status';
 
 @Injectable({
   providedIn: 'root',
@@ -18,22 +19,33 @@ export class InstallService {
 
   private readonly installState = signal<Install | null>(null);
 
+  private readonly tracker = new LoadTracker();
+
   readonly install = this.installState.asReadonly();
+  readonly status = this.tracker.status;
   readonly loading = signal(false);
   readonly exporting = signal(false);
   readonly restoring = signal(false);
   readonly error = signal<string | null>(null);
 
   async load(): Promise<void> {
+    const requestId = this.tracker.start();
     this.loading.set(true);
     this.error.set(null);
     try {
-      this.installState.set(await this.api.invoke(getInstall));
+      const install = await this.api.invoke(getInstall);
+      if (this.tracker.settle(requestId, 'ready')) {
+        this.installState.set(install);
+      }
     } catch {
-      this.installState.set(null);
-      this.error.set('Could not load the server details.');
+      if (this.tracker.settle(requestId, 'error')) {
+        this.installState.set(null);
+        this.error.set('Could not load the server details.');
+      }
     } finally {
-      this.loading.set(false);
+      if (this.tracker.isCurrent(requestId)) {
+        this.loading.set(false);
+      }
     }
   }
 

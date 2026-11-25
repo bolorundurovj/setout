@@ -23,6 +23,7 @@ import {
 } from '@setout/api-client';
 import { detailOf } from '../api-error';
 import { PICKER_PAGE_SIZE } from '../ui/paging';
+import { KeyedLoadTracker, LoadTracker, type RequestStatus } from '../ui/request-status';
 
 @Injectable({
   providedIn: 'root',
@@ -34,7 +35,11 @@ export class BudgetService {
   private readonly itemState = signal<Record<string, BudgetItemRead[]>>({});
   private readonly presetState = signal<CategoryPresetRead[]>([]);
 
+  private readonly tracker = new LoadTracker();
+  private readonly itemTracker = new KeyedLoadTracker();
+
   readonly budget = this.budgetState.asReadonly();
+  readonly status = this.tracker.status;
   readonly items = this.itemState.asReadonly();
   readonly presetNames = computed(() => this.presetState().map((preset) => preset.name));
   readonly loading = signal(false);
@@ -43,21 +48,31 @@ export class BudgetService {
   readonly categories = computed<CategoryRead[]>(() => this.budgetState()?.categories ?? []);
   readonly budgetedTotal = computed(() => this.budgetState()?.budgeted_amount ?? 0);
 
-  async load(projectId: string, includeArchived = false): Promise<void> {
+  async load(projectId: string, includeArchived = false, quiet = false): Promise<void> {
+    const requestId = this.tracker.start(quiet);
     this.loading.set(true);
     this.error.set(null);
     try {
-      this.budgetState.set(
-        await this.api.invoke(getProjectBudget, {
-          project_id: projectId,
-          include_archived: includeArchived,
-        }),
-      );
+      const budget = await this.api.invoke(getProjectBudget, {
+        project_id: projectId,
+        include_archived: includeArchived,
+      });
+      if (this.tracker.settle(requestId, 'ready')) {
+        this.budgetState.set(budget);
+      }
     } catch {
-      this.error.set('Could not load the budget.');
+      if (this.tracker.settle(requestId, 'error')) {
+        this.error.set('Could not load the budget.');
+      }
     } finally {
-      this.loading.set(false);
+      if (this.tracker.isCurrent(requestId)) {
+        this.loading.set(false);
+      }
     }
+  }
+
+  itemStatus(categoryId: string): RequestStatus {
+    return this.itemTracker.status(categoryId);
   }
 
   async loadPresets(): Promise<void> {
@@ -71,7 +86,8 @@ export class BudgetService {
     }
   }
 
-  async loadItems(categoryId: string, includeArchived = false): Promise<void> {
+  async loadItems(categoryId: string, includeArchived = false, quiet = false): Promise<void> {
+    const requestId = this.itemTracker.start(categoryId, quiet);
     try {
       const rows: BudgetItemRead[] = [];
       let total = Infinity;
@@ -88,22 +104,26 @@ export class BudgetService {
           break;
         }
       }
-      this.itemState.update((all) => ({ ...all, [categoryId]: rows }));
+      if (this.itemTracker.settle(categoryId, requestId, 'ready')) {
+        this.itemState.update((all) => ({ ...all, [categoryId]: rows }));
+      }
     } catch {
-      this.error.set('Could not load the budget items.');
+      if (this.itemTracker.settle(categoryId, requestId, 'error')) {
+        this.error.set('Could not load the budget items.');
+      }
     }
   }
 
   async addCategory(projectId: string, body: CategoryCreate): Promise<void> {
     await this.api.invoke(createCategory, { project_id: projectId, body });
-    await this.load(projectId);
+    await this.load(projectId, false, true);
   }
 
   async renameCategory(projectId: string, categoryId: string, name: string): Promise<boolean> {
     this.error.set(null);
     try {
       await this.api.invoke(updateCategory, { category_id: categoryId, body: { name } });
-      await this.load(projectId);
+      await this.load(projectId, false, true);
       return true;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not rename the category.');
@@ -119,7 +139,7 @@ export class BudgetService {
     this.error.set(null);
     try {
       await this.api.invoke(archiveCategory, { category_id: categoryId });
-      await this.load(projectId, includeArchived);
+      await this.load(projectId, includeArchived, true);
       return true;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not archive the category.');
@@ -130,7 +150,7 @@ export class BudgetService {
   async restoreCategory(projectId: string, categoryId: string): Promise<boolean> {
     try {
       await this.api.invoke(restoreCategory, { category_id: categoryId });
-      await this.load(projectId);
+      await this.load(projectId, false, true);
       return true;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not restore the category.');
@@ -146,7 +166,7 @@ export class BudgetService {
     this.error.set(null);
     try {
       await this.api.invoke(deleteCategory, { category_id: categoryId });
-      await this.load(projectId, includeArchived);
+      await this.load(projectId, includeArchived, true);
       return true;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not delete the category.');
@@ -167,8 +187,8 @@ export class BudgetService {
       body: { description, budgeted_amount: budgetedAmount, cost_type: costType },
     });
     await Promise.all([
-      this.load(projectId),
-      includeArchived === null ? undefined : this.loadItems(categoryId, includeArchived),
+      this.load(projectId, false, true),
+      includeArchived === null ? undefined : this.loadItems(categoryId, includeArchived, true),
     ]);
   }
 
@@ -184,8 +204,8 @@ export class BudgetService {
       body: { budgeted_amount: budgetedAmount },
     });
     await Promise.all([
-      this.load(projectId),
-      includeArchived === null ? undefined : this.loadItems(categoryId, includeArchived),
+      this.load(projectId, false, true),
+      includeArchived === null ? undefined : this.loadItems(categoryId, includeArchived, true),
     ]);
   }
 
@@ -196,14 +216,20 @@ export class BudgetService {
     includeArchived = false,
   ): Promise<void> {
     await this.api.invoke(archiveBudgetItem, { item_id: itemId });
-    await Promise.all([this.load(projectId), this.loadItems(categoryId, includeArchived)]);
+    await Promise.all([
+      this.load(projectId, false, true),
+      this.loadItems(categoryId, includeArchived, true),
+    ]);
   }
 
   async restoreItem(projectId: string, categoryId: string, itemId: string): Promise<boolean> {
     this.error.set(null);
     try {
       await this.api.invoke(restoreBudgetItem, { item_id: itemId });
-      await Promise.all([this.load(projectId), this.loadItems(categoryId, true)]);
+      await Promise.all([
+        this.load(projectId, false, true),
+        this.loadItems(categoryId, true, true),
+      ]);
       return true;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not restore that budget item.');
@@ -220,7 +246,10 @@ export class BudgetService {
     this.error.set(null);
     try {
       await this.api.invoke(deleteBudgetItem, { item_id: itemId });
-      await Promise.all([this.load(projectId), this.loadItems(categoryId, includeArchived)]);
+      await Promise.all([
+        this.load(projectId, false, true),
+        this.loadItems(categoryId, includeArchived, true),
+      ]);
       return true;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not delete that budget item.');

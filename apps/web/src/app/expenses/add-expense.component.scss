@@ -71,18 +71,6 @@
   color: var(--ink);
 }
 
-.banner {
-  margin: 0;
-  padding: 10px 14px;
-  border-radius: 9px;
-}
-
-.banner.warn {
-  background: var(--warn-surface);
-  border: 1px solid var(--warn-edge);
-  color: var(--warn-ink);
-}
-
 .disclose {
   align-self: flex-start;
   background: none;
@@ -297,10 +285,6 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-.muted {
-  color: var(--ink-3);
 }
 
 @media (max-width: 419px) {

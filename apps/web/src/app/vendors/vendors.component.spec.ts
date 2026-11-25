@@ -41,6 +41,7 @@ describe('VendorsComponent', () => {
       total: () => rows.length,
       page: () => 1,
       choices: () => rows,
+      status: () => 'ready',
       loading: () => false,
       saving: () => false,
       error: () => null,

@@ -75,10 +75,14 @@
   }
 
   @if (agreements.agreements().length === 0) {
-    <div class="card">
-      <p class="t-body">No agreements yet.</p>
-      <p class="t-small">Create an agreement, then assign its expenses.</p>
-    </div>
+    @if (agreements.status() === 'ready') {
+      <div class="card">
+        <p class="t-body">No agreements yet.</p>
+        <p class="t-small">Create an agreement, then assign its expenses.</p>
+      </div>
+    } @else if (agreements.status() !== 'error') {
+      <p class="t-small muted">Loading agreements…</p>
+    }
   } @else {
     @for (agreement of agreements.agreements(); track agreement.id) {
       <article class="agreement" [class.archived]="agreement.archived_at">
@@ -341,10 +345,16 @@
     }
 
     @if (agreements.balances().length === 0) {
-      <div class="card">
-        <p class="t-body">No advances yet.</p>
-        <p class="t-small">Record an advance, or select Paid By when recording an expense.</p>
-      </div>
+      @if (agreements.balancesStatus() === 'ready') {
+        <div class="card">
+          <p class="t-body">No advances yet.</p>
+          <p class="t-small">Record an advance, or select Paid By when recording an expense.</p>
+        </div>
+      } @else if (agreements.balancesStatus() === 'error') {
+        <p class="t-small error">Could not load the advances.</p>
+      } @else {
+        <p class="t-small muted">Loading advances…</p>
+      }
     } @else {
       <div class="table balances">
         <div class="row head">

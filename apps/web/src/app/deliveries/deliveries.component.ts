@@ -51,11 +51,17 @@ export class DeliveriesComponent {
   readonly outstandingList = computed(() => this.deliveries.outstanding(this.project().id));
   readonly receivedList = computed(() => this.deliveries.received(this.project().id));
 
+  readonly outstandingStatus = computed(() => this.deliveries.outstandingStatus(this.project().id));
+
   readonly outstandingRows = computed(() => this.outstandingList().rows);
   readonly receivedRows = computed(() => this.receivedList().rows);
 
   readonly outstandingSummary = computed(() => {
     const list = this.outstandingList();
+    const status = this.outstandingStatus();
+    if (status === 'error' || (status !== 'ready' && list.total === 0)) {
+      return '';
+    }
     if (this.includeArchived()) {
       return `${this.money(list.outstandingAmount)} outstanding, excluding archived items.`;
     }
@@ -143,7 +149,7 @@ export class DeliveriesComponent {
     }
     await this.deliveries.delete(delivery.id);
     this.cancelDelete();
-    await this.refresh();
+    await this.refresh(true);
     this.toast.show(`${delivery.description} deleted permanently.`);
   }
 
@@ -186,20 +192,20 @@ export class DeliveriesComponent {
 
   async markReceived(delivery: DeliveryRead): Promise<void> {
     await this.deliveries.markReceived(delivery.id);
-    await this.refresh();
+    await this.refresh(true);
     this.toast.show(`${delivery.description} marked received.`);
   }
 
   async markOutstanding(delivery: DeliveryRead): Promise<void> {
     await this.deliveries.markOutstanding(delivery.id);
-    await this.refresh();
+    await this.refresh(true);
     this.toast.show(`${delivery.description} marked outstanding.`);
   }
 
   async archive(delivery: DeliveryRead): Promise<void> {
     await this.deliveries.archive(delivery.id);
     this.lastArchived.set(delivery);
-    await this.refresh();
+    await this.refresh(true);
     this.toast.show(`${delivery.description} archived. The expense is unchanged.`);
   }
 
@@ -218,16 +224,16 @@ export class DeliveriesComponent {
       this.toast.show(this.deliveries.error() ?? 'Could not restore that delivery.', 'error');
       return;
     }
-    await this.refresh();
+    await this.refresh(true);
     this.toast.show(`${restored.description} restored.`);
   }
 
-  private async refresh(): Promise<void> {
+  private async refresh(quiet = false): Promise<void> {
     const projectId = this.project().id;
     const includeArchived = this.includeArchived();
     await Promise.all([
-      this.deliveries.loadOutstanding(projectId, this.outstandingPage(), includeArchived),
-      this.deliveries.loadReceived(projectId, this.receivedPage(), includeArchived),
+      this.deliveries.loadOutstanding(projectId, this.outstandingPage(), includeArchived, quiet),
+      this.deliveries.loadReceived(projectId, this.receivedPage(), includeArchived, quiet),
     ]);
   }
 }

@@ -22,14 +22,18 @@
   }
 
   @if (lands.lands().length === 0) {
-    <div class="card">
-      <p class="t-body">
-        {{ search() ? 'No land records match your search.' : 'No land records yet.' }}
-      </p>
-      <p class="t-small">
-        Create a land record to keep its documents together. A project can reference it later.
-      </p>
-    </div>
+    @if (lands.status() === 'ready') {
+      <div class="card">
+        <p class="t-body">
+          {{ search() ? 'No land records match your search.' : 'No land records yet.' }}
+        </p>
+        <p class="t-small">
+          Create a land record to keep its documents together. A project can reference it later.
+        </p>
+      </div>
+    } @else if (lands.status() !== 'error') {
+      <p class="t-small muted">Loading land records…</p>
+    }
   } @else {
     <div class="table">
       <div class="row head">

@@ -18,9 +18,9 @@
   }
   @if (list().loading) {
     <p class="t-small muted">Loading change history…</p>
-  } @else if (changes.error()) {
-    <p class="t-small muted">{{ changes.error() }}</p>
-  } @else if (list().rows.length === 0) {
+  } @else if (status() === 'error') {
+    <p class="t-small muted">Could not load the change history.</p>
+  } @else if (status() === 'ready' && list().rows.length === 0) {
     <p class="t-small muted">No changes recorded.</p>
   }
   @if (hasMore() && !list().loading) {

@@ -68,6 +68,10 @@
       </div>
     </div>
 
+    @if (deliveryStatus() === 'error') {
+      <p class="banner warn t-small">Could not load the outstanding deliveries.</p>
+    }
+
     @if (outstandingDeliveries().length > 0) {
       <section class="block">
         <h2 class="t-heading">Outstanding Deliveries</h2>
@@ -133,13 +137,15 @@
           </p>
         }
       } @else {
-        <p class="t-small muted">Could not load the expenses.</p>
+        <p class="banner warn t-small">Could not load the expenses.</p>
       }
     </section>
 
     <section class="block">
       <h2 class="t-heading">Agreements</h2>
-      @if (agreements().length === 0) {
+      @if (agreementsStatus() === 'error') {
+        <p class="banner warn t-small">Could not load the agreements.</p>
+      } @else if (agreements().length === 0) {
         <div class="card">
           <p class="t-body">No agreements with this vendor.</p>
           <p class="t-small">

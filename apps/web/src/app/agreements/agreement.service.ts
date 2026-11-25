@@ -26,6 +26,7 @@ import {
   updateAgreement,
 } from '@setout/api-client';
 import { CHOICE_LIMIT, PAGE_SIZE, SCROLL_SIZE, offsetOf } from '../ui/paging';
+import { LoadTracker } from '../ui/request-status';
 
 @Injectable({
   providedIn: 'root',
@@ -49,7 +50,12 @@ export class AgreementService {
   private loadingMore = false;
   private agreementRevision = 0;
 
+  private readonly tracker = new LoadTracker();
+  private readonly balanceTracker = new LoadTracker();
+
   readonly agreements = this.agreementState.asReadonly();
+  readonly status = this.tracker.status;
+  readonly balancesStatus = this.balanceTracker.status;
   readonly advances = this.advanceState.asReadonly();
   readonly balances = this.balanceState.asReadonly();
   readonly balancesTotal = this.balanceTotalState.asReadonly();
@@ -66,6 +72,8 @@ export class AgreementService {
       return;
     }
     this.loadedProjectId.set(projectId);
+    this.tracker.reset();
+    this.balanceTracker.reset();
     this.includeArchivedState.set(false);
     this.advanceArchived = false;
     this.agreementRevision++;
@@ -89,9 +97,10 @@ export class AgreementService {
     this.agreementState().reduce((total, row) => total + row.balance_amount, 0),
   );
 
-  async load(projectId: string): Promise<void> {
+  async load(projectId: string, quiet = false): Promise<void> {
     this.resetForProject(projectId);
     const revision = ++this.agreementRevision;
+    const requestId = this.tracker.start(quiet);
     this.error.set(null);
     try {
       const page = await this.api.invoke(listAgreements, {
@@ -100,10 +109,11 @@ export class AgreementService {
         limit: SCROLL_SIZE,
         offset: 0,
       });
-      if (revision !== this.agreementRevision) return;
+      if (revision !== this.agreementRevision || !this.tracker.settle(requestId, 'ready')) return;
       this.agreementState.set(page.items);
       this.agreementTotalState.set(page.total);
     } catch {
+      if (revision !== this.agreementRevision || !this.tracker.settle(requestId, 'error')) return;
       this.error.set('Could not load the agreements.');
     }
   }
@@ -183,8 +193,9 @@ export class AgreementService {
     }
   }
 
-  async loadBalances(projectId: string, page = 1): Promise<void> {
+  async loadBalances(projectId: string, page = 1, quiet = false): Promise<void> {
     this.resetForProject(projectId);
+    const requestId = this.balanceTracker.start(quiet);
     this.error.set(null);
     try {
       const body = await this.api.invoke(listBalances, {
@@ -192,10 +203,12 @@ export class AgreementService {
         limit: PAGE_SIZE,
         offset: offsetOf(page),
       });
+      if (!this.balanceTracker.settle(requestId, 'ready')) return;
       this.balanceState.set(body.items);
       this.balanceTotalState.set(body.total);
       this.balancePageState.set(page);
     } catch {
+      if (!this.balanceTracker.settle(requestId, 'error')) return;
       this.balanceState.set([]);
       this.balanceTotalState.set(0);
     }
@@ -240,7 +253,7 @@ export class AgreementService {
   async archive(agreementId: string): Promise<void> {
     await this.api.invoke(archiveAgreement, { agreement_id: agreementId });
     if (this.includeArchivedState()) {
-      await this.load(this.loadedProjectId());
+      await this.load(this.loadedProjectId(), true);
       return;
     }
     this.agreementState.update((rows) => rows.filter((row) => row.id !== agreementId));
@@ -264,7 +277,7 @@ export class AgreementService {
   async delete(agreementId: string): Promise<void> {
     await this.api.invoke(deleteAgreement, { agreement_id: agreementId });
     if (this.includeArchivedState()) {
-      await this.load(this.loadedProjectId());
+      await this.load(this.loadedProjectId(), true);
       return;
     }
     this.agreementState.update((rows) => rows.filter((row) => row.id !== agreementId));
@@ -277,7 +290,7 @@ export class AgreementService {
     try {
       const created = await this.api.invoke(createAdvance, { project_id: projectId, body });
       await this.loadAdvances(projectId, this.advancePageState());
-      await this.loadBalances(projectId, this.balancePageState());
+      await this.loadBalances(projectId, this.balancePageState(), true);
       return created;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not save the advance.');
@@ -297,7 +310,7 @@ export class AgreementService {
     try {
       const changed = await this.api.invoke(updateAdvance, { advance_id: advanceId, body });
       await this.loadAdvances(projectId, this.advancePageState());
-      await this.loadBalances(projectId, this.balancePageState());
+      await this.loadBalances(projectId, this.balancePageState(), true);
       return changed;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not update the advance.');
@@ -314,7 +327,7 @@ export class AgreementService {
     if (this.advanceState().length === 0 && currentPage > 1) {
       await this.loadAdvances(projectId, currentPage - 1);
     }
-    await this.loadBalances(projectId, this.balancePageState());
+    await this.loadBalances(projectId, this.balancePageState(), true);
   }
 
   async restoreAdvance(projectId: string, advanceId: string): Promise<AdvanceRead | null> {
@@ -322,7 +335,7 @@ export class AgreementService {
     try {
       const restored = await this.api.invoke(restoreAdvance, { advance_id: advanceId });
       await this.loadAdvances(projectId, this.advancePageState());
-      await this.loadBalances(projectId, this.balancePageState());
+      await this.loadBalances(projectId, this.balancePageState(), true);
       return restored;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not restore that advance.');
@@ -337,6 +350,6 @@ export class AgreementService {
     if (this.advanceState().length === 0 && currentPage > 1) {
       await this.loadAdvances(projectId, currentPage - 1);
     }
-    await this.loadBalances(projectId, this.balancePageState());
+    await this.loadBalances(projectId, this.balancePageState(), true);
   }
 }

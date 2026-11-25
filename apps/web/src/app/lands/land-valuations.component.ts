@@ -15,6 +15,7 @@ import { ButtonComponent } from '../ui/button.component';
 import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
 import { CurrencyPillComponent, currencySymbol } from '../ui/currency-pill.component';
 import { MoneyHintComponent } from '../ui/money-hint.component';
+import { LoadTracker } from '../ui/request-status';
 import { LandService } from './land.service';
 
 @Component({
@@ -32,7 +33,10 @@ export class LandValuationsComponent {
   readonly land = input.required<LandRead>();
   readonly changed = output<void>();
 
+  private readonly tracker = new LoadTracker();
+
   readonly rows = signal<LandValuationRead[]>([]);
+  readonly status = this.tracker.status;
   readonly lastArchived = signal<LandValuationRead | null>(null);
   readonly adding = signal(false);
   readonly amount = signal('');
@@ -71,7 +75,11 @@ export class LandValuationsComponent {
   }
 
   async load(): Promise<void> {
-    this.rows.set(await this.lands.valuations(this.land().id));
+    const requestId = this.tracker.start(true);
+    const rows = await this.lands.valuations(this.land().id);
+    if (this.tracker.settle(requestId, rows ? 'ready' : 'error') && rows) {
+      this.rows.set(rows);
+    }
   }
 
   exponent(): number {

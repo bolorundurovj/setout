@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { ChangeRead } from '@setout/api-client';
+import type { RequestStatus } from '../ui/request-status';
 import { ChangeList, ChangeService, ChangeTarget } from './change.service';
 import { ChangeHistoryComponent } from './change-history.component';
 
@@ -21,10 +22,12 @@ function change(over: Partial<ChangeRead> = {}): ChangeRead {
 
 describe('ChangeHistoryComponent', () => {
   let list: ReturnType<typeof signal<ChangeList>>;
+  let status: ReturnType<typeof signal<RequestStatus>>;
   let loads: ChangeTarget[];
 
   function render(target: ChangeTarget = { entity: 'expense', id: 'e1' }) {
     list = signal<ChangeList>({ rows: [], total: 0, loading: false });
+    status = signal<RequestStatus>('ready');
     loads = [];
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -35,6 +38,7 @@ describe('ChangeHistoryComponent', () => {
           useValue: {
             error: () => null,
             forTarget: () => list(),
+            status: () => status(),
             load: async (requested: ChangeTarget) => void loads.push(requested),
             loadMore: async () => undefined,
           },
@@ -59,6 +63,25 @@ describe('ChangeHistoryComponent', () => {
   it('shows No changes recorded when there are none', () => {
     const element = render().nativeElement as HTMLElement;
     expect(element.textContent).toContain('No changes recorded.');
+  });
+
+  it('shows nothing before the first load starts', () => {
+    const fixture = render();
+    status.set('idle');
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
+      'No changes recorded.',
+    );
+  });
+
+  it('shows the load error instead of No changes recorded', () => {
+    const fixture = render();
+    status.set('error');
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent;
+    expect(text).toContain('Could not load the change history.');
+    expect(text).not.toContain('No changes recorded.');
   });
 
   it('formats amounts with the currency exponent and labels fields', () => {

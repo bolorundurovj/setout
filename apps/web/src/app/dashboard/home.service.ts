@@ -13,6 +13,7 @@ import {
 } from '@setout/api-client';
 import { detailOf } from '../api-error';
 import { PICKER_PAGE_SIZE } from '../ui/paging';
+import { LoadTracker } from '../ui/request-status';
 
 const LOAD_ERROR = 'Could not load Home.';
 
@@ -22,18 +23,25 @@ const LOAD_ERROR = 'Could not load Home.';
 export class HomeService {
   private readonly api = inject(Api);
 
+  private readonly tracker = new LoadTracker();
+
   readonly currency = signal<string | null>(null);
   readonly summary = signal<HomeSummary | null>(null);
   readonly months = signal<HomeMonths | null>(null);
   readonly projects = signal<HomeProjects | null>(null);
   readonly recent = signal<HomeLatest | null>(null);
+  readonly status = this.tracker.status;
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
   async load(): Promise<void> {
+    const requestId = this.tracker.start();
     this.loading.set(true);
     this.error.set(null);
     const summary = await this.read(() => this.api.invoke(getHomeSummary, this.currencyParams()));
+    if (!this.tracker.settle(requestId, summary ? 'ready' : 'error')) {
+      return;
+    }
     this.summary.set(summary);
     if (summary?.currency_code && !this.currency()) {
       this.currency.set(summary.currency_code);

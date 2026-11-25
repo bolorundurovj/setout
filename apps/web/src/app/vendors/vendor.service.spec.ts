@@ -213,7 +213,7 @@ describe('VendorService', () => {
 
     const rows = await service.agreements('v1');
 
-    expect(rows.map((row) => row.id)).toEqual(['a1', 'a2', 'a3']);
+    expect(rows?.map((row) => row.id)).toEqual(['a1', 'a2', 'a3']);
     expect(calls.length).toBe(2);
     expect((calls[1] as { offset?: number }).offset).toBe(2);
   });

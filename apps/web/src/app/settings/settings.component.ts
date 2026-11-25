@@ -178,11 +178,14 @@ export class SettingsComponent {
   }
 
   lastChanged(): string {
-    const at = this.installService.install()?.data_changed_at;
-    if (!at) {
+    const installed = this.installService.install();
+    if (!installed) {
+      return this.notSet;
+    }
+    if (!installed.data_changed_at) {
       return 'no changes yet';
     }
-    return formatStampDay(at);
+    return formatStampDay(installed.data_changed_at);
   }
 
   async saveName(): Promise<void> {

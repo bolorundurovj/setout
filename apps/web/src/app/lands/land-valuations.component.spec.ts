@@ -59,7 +59,10 @@ describe('LandValuationsComponent', () => {
   let archived: string[];
   let restored: string[];
 
-  async function render(row: LandRead = land(), rows: LandValuationRead[] = []) {
+  async function render(
+    row: LandRead = land(),
+    rows: LandValuationRead[] | null | Promise<never> = [],
+  ) {
     recorded = [];
     archived = [];
     restored = [];
@@ -100,8 +103,10 @@ describe('LandValuationsComponent', () => {
     fixture.componentRef.setInput('land', row);
     fixture.detectChanges();
     const component = fixture.componentInstance;
-    await component.load();
-    fixture.detectChanges();
+    if (!(rows instanceof Promise)) {
+      await component.load();
+      fixture.detectChanges();
+    }
     return { component, element: fixture.nativeElement as HTMLElement };
   }
 
@@ -198,5 +203,25 @@ describe('LandValuationsComponent', () => {
     await component.restoreLastArchived();
     expect(restored).toEqual(['v1']);
     expect(component.lastArchived()).toBeNull();
+  });
+
+  it('shows Loading until the valuations arrive', async () => {
+    const { element } = await render(land(), new Promise<never>(() => undefined));
+    expect(element.textContent).toContain('Loading valuations…');
+    expect(element.textContent).not.toContain('No valuations yet');
+  });
+
+  it('shows No valuations yet once an empty list loads', async () => {
+    const { element } = await render();
+    expect(element.textContent).toContain('No valuations yet');
+  });
+
+  it('shows the load error instead of the empty state', async () => {
+    const { component, element } = await render(land(), null);
+    expect(component.status()).toBe('error');
+    expect(element.querySelector('.banner.warn')?.textContent).toContain(
+      'Could not load the valuations.',
+    );
+    expect(element.textContent).not.toContain('No valuations yet');
   });
 });

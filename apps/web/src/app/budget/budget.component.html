@@ -30,10 +30,14 @@
   </div>
 
   @if (budget.categories().length === 0) {
-    <div class="card">
-      <p class="t-body">No categories yet.</p>
-      <p class="t-small">Create categories for the parts of the project you want to track.</p>
-    </div>
+    @if (budget.status() === 'ready') {
+      <div class="card">
+        <p class="t-body">No categories yet.</p>
+        <p class="t-small">Create categories for the parts of the project you want to track.</p>
+      </div>
+    } @else if (budget.status() !== 'error') {
+      <p class="t-small muted">Loading the budget…</p>
+    }
   } @else {
     <div class="table">
       <div class="row head">
@@ -173,7 +177,17 @@
                 </div>
               }
               @if (itemsFor(category.id).length === 0) {
-                <p class="t-small muted">No budget items yet.</p>
+                @switch (budget.itemStatus(category.id)) {
+                  @case ('ready') {
+                    <p class="t-small muted">No budget items yet.</p>
+                  }
+                  @case ('error') {
+                    <p class="t-small error">Could not load the budget items.</p>
+                  }
+                  @default {
+                    <p class="t-small muted">Loading budget items…</p>
+                  }
+                }
               }
 
               <div class="add-item">

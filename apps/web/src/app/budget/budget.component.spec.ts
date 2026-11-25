@@ -84,6 +84,8 @@ describe('BudgetComponent', () => {
       presetNames: () => [],
       budgetedTotal: () => categories.reduce((t, s) => t + s.own_budgeted_amount, 0),
       error: () => null,
+      status: () => 'ready',
+      itemStatus: () => 'ready',
       loading: () => false,
       load: async () => undefined,
       loadItems: async () => undefined,

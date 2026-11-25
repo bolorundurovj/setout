@@ -1,6 +1,7 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import type { PersonRead } from '@setout/api-client';
+import type { RequestStatus } from '../ui/request-status';
 import { PeopleComponent } from './people.component';
 import { PersonService } from './person.service';
 
@@ -27,7 +28,9 @@ describe('PeopleComponent', () => {
   let loads: { search?: string; archived?: boolean }[];
   let navigations: unknown[][];
 
-  function render(initial: PersonRead[] = [person()]) {
+  let fixture: ComponentFixture<PeopleComponent>;
+
+  function render(initial: PersonRead[] = [person()], status: RequestStatus = 'ready') {
     rows = initial;
     loads = [];
     navigations = [];
@@ -37,6 +40,7 @@ describe('PeopleComponent', () => {
       total: () => rows.length,
       page: () => 1,
       choices: () => rows,
+      status: () => status,
       loading: () => false,
       saving: () => false,
       error: () => null,
@@ -60,7 +64,7 @@ describe('PeopleComponent', () => {
         { provide: PersonService, useValue: people },
       ],
     });
-    const fixture = TestBed.createComponent(PeopleComponent);
+    fixture = TestBed.createComponent(PeopleComponent);
     fixture.detectChanges();
     return fixture.componentInstance;
   }
@@ -104,5 +108,24 @@ describe('PeopleComponent', () => {
   it('formats a total in its own currency', () => {
     const component = render();
     expect(component.formatSpent(person().totals[0])).toContain('37,500');
+  });
+
+  it('shows Loading instead of No people yet until the first load finishes', () => {
+    render([], 'loading');
+    const text = (fixture.nativeElement as HTMLElement).textContent;
+    expect(text).toContain('Loading people…');
+    expect(text).not.toContain('No people yet.');
+  });
+
+  it('shows No people yet once an empty list loads', () => {
+    render([], 'ready');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('No people yet.');
+  });
+
+  it('shows neither the empty state nor Loading when the load fails', () => {
+    render([], 'error');
+    const text = (fixture.nativeElement as HTMLElement).textContent;
+    expect(text).not.toContain('No people yet.');
+    expect(text).not.toContain('Loading people…');
   });
 });

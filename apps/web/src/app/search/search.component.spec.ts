@@ -33,6 +33,7 @@ describe('SearchComponent', () => {
           provide: SearchService,
           useValue: {
             results: () => response,
+            status: () => (searchError ? 'error' : response ? 'ready' : 'idle'),
             loading: () => false,
             error: () => searchError,
             search: async (term: string) => {

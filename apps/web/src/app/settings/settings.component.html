@@ -128,6 +128,10 @@
       <span class="t-mono aside">{{ installService.install()?.version ?? notSet }}</span>
     </div>
 
+    @if (installService.status() === 'error') {
+      <p class="banner warn t-small">Could not load the server details.</p>
+    }
+
     <p class="prose">
       Download your Setout data. Attachments and land documents are not included. Store backups on a
       different machine from this server.

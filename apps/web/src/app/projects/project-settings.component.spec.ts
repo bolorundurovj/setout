@@ -87,6 +87,7 @@ describe('ProjectSettingsComponent', () => {
           provide: BudgetService,
           useValue: {
             categories: () => categories,
+            status: () => 'ready',
             error: () => budgetError,
             load: async () => undefined,
             renameCategory: async (_p: string, id: string, name: string) => {

@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { AttachmentRead } from '@setout/api-client';
 import { ToastService } from '../toast.service';
+import type { RequestStatus } from '../ui/request-status';
 import { AttachmentParent, AttachmentService } from './attachment.service';
 import { AttachmentsComponent } from './attachments.component';
 
@@ -27,6 +28,7 @@ function attachment(id: string, over: Partial<AttachmentRead> = {}): AttachmentR
 
 describe('AttachmentsComponent', () => {
   let rows: ReturnType<typeof signal<AttachmentRead[]>>;
+  let status: ReturnType<typeof signal<RequestStatus>>;
   let loaded: AttachmentParent[];
   let uploads: File[];
   let archived: string[];
@@ -34,6 +36,7 @@ describe('AttachmentsComponent', () => {
 
   function render() {
     rows = signal<AttachmentRead[]>([]);
+    status = signal<RequestStatus>('ready');
     loaded = [];
     uploads = [];
     archived = [];
@@ -48,6 +51,7 @@ describe('AttachmentsComponent', () => {
             saving: () => false,
             error: () => null,
             forParent: () => rows(),
+            status: () => status(),
             load: async (parent: AttachmentParent) => void loaded.push(parent),
             add: async (_parent: AttachmentParent, file: File) => {
               uploads.push(file);
@@ -120,5 +124,30 @@ describe('AttachmentsComponent', () => {
     await fixture.componentInstance.restoreLastArchived();
     expect(fixture.componentInstance.lastArchived()).toBeNull();
     expect(toasts.at(-1)).toBe('contract.pdf restored.');
+  });
+
+  it('says there are no attachments only once the load succeeds', () => {
+    const fixture = render();
+    const element = fixture.nativeElement as HTMLElement;
+    status.set('loading');
+    fixture.detectChanges();
+    expect(element.textContent).toContain('Loading attachments…');
+    expect(element.textContent).not.toContain('No attachments');
+
+    status.set('ready');
+    fixture.detectChanges();
+    expect(element.textContent).toContain('No attachments');
+  });
+
+  it('shows the load error instead of the empty state', () => {
+    const fixture = render();
+    status.set('error');
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.banner.warn')?.textContent).toContain(
+      'Could not load the attachments.',
+    );
+    expect(element.textContent).not.toContain('No attachments');
   });
 });

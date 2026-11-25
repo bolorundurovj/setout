@@ -1,7 +1,15 @@
 <h2 class="t-heading">Valuations</h2>
 
+@if (status() === 'error') {
+  <p class="banner warn t-small">Could not load the valuations.</p>
+}
+
 @if (rows().length === 0) {
-  <p class="t-small muted">No valuations yet. Start with the purchase price.</p>
+  @if (status() === 'ready') {
+    <p class="t-small muted">No valuations yet. Start with the purchase price.</p>
+  } @else if (status() === 'loading') {
+    <p class="t-small muted">Loading valuations…</p>
+  }
 } @else {
   <div class="entries">
     @for (row of rows(); track row.id; let i = $index) {
