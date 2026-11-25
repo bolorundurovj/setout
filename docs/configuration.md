@@ -84,20 +84,26 @@ background, so the shape of the land is shown without a connection.
 
 ## The compose stack
 
-These are read by `docker/docker-compose.yml`, not by the application. Copy
-`docker/.env.example` to `.env` beside the compose file and adjust.
+`docker/docker-compose.yml` uses three isolated per-service environment files: copy
+`docker/.env.setout.example`, `docker/.env.db.example`, and `docker/.env.s3.example` to
+`docker/.env.setout`, `docker/.env.db`, and `docker/.env.s3` and adjust them. Host port
+mappings and image tags can also be overridden from the shell or a `.env` file beside the
+compose file.
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `SETOUT_PORT` | `8474` | Host port the app is published on. The container always listens on 8474 |
-| `SETOUT_FORWARDED_ALLOW_IPS` | `127.0.0.1` | Comma-separated addresses of reverse proxies whose `X-Forwarded-*` headers are trusted |
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `setout` | Database credentials |
-| `STORAGE_ACCESS_KEY` / `MINIO_ROOT_USER` | `setout` | S3 / RustFS access key |
-| `STORAGE_SECRET_KEY` / `MINIO_ROOT_PASSWORD` | `setout-secret` | S3 / RustFS secret key |
-| `STORAGE_BUCKET` / `MINIO_BUCKET` | `setout` | Bucket the attachments go in |
-| `STORAGE_PORT` / `STORAGE_CONSOLE_PORT` | `9000` / `9001` | Published S3 API and RustFS console ports |
-| `POSTGRES_PORT` | `5433` | Host port for Postgres, not 5432, to avoid a conflict with an existing Postgres installation |
-| `SETOUT_SECRET_KEY` | `change-me` | Session signing key |
+| Variable | File | Default | Meaning |
+| --- | --- | --- | --- |
+| `SETOUT_PORT` | shell / `.env` | `8474` | Host port the app is published on. The container always listens on 8474 |
+| `SETOUT_IMAGE_TAG` | shell / `.env` | `latest` | Setout container image tag |
+| `SETOUT_FORWARDED_ALLOW_IPS` | `.env.setout` | `127.0.0.1` | Comma-separated addresses of reverse proxies whose `X-Forwarded-*` headers are trusted |
+| `SETOUT_SECRET_KEY` | `.env.setout` | `change-me` | Session signing key |
+| `SETOUT_DB_HOST` / `SETOUT_DB_PORT` / `SETOUT_DB_USER` / `SETOUT_DB_PASSWORD` / `SETOUT_DB_NAME` | `.env.setout` | `db` / `5432` / `setout` | Database connection parts used by the app |
+| `SETOUT_S3_ACCESS_KEY_ID` / `SETOUT_S3_SECRET_ACCESS_KEY` / `SETOUT_S3_BUCKET` | `.env.setout` | `setout` / `setout-secret` / `setout` | S3 credentials and bucket used by the app |
+| `SETOUT_S3_ENDPOINT_URL` / `SETOUT_S3_PUBLIC_URL` / `SETOUT_S3_REGION` | `.env.setout` | `http://s3:9000` / `http://localhost:9000` / `us-east-1` | Internal and browser-facing S3 URLs and region |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `.env.db` | `setout` | Postgres database credentials (match `SETOUT_DB_*`) |
+| `POSTGRES_PORT` | shell / `.env` | `5433` | Host port for Postgres, bound to `127.0.0.1` and kept off 5432 to avoid conflicts |
+| `RUSTFS_ACCESS_KEY` / `RUSTFS_SECRET_KEY` | `.env.s3` | `setout` / `setout-secret` | RustFS object storage credentials (match `SETOUT_S3_*`) |
+| `RUSTFS_ADDRESS` / `RUSTFS_CONSOLE_ADDRESS` / `RUSTFS_CONSOLE_ENABLE` | `.env.s3` | `:9000` / `:9001` / `true` | RustFS S3 API and console listener settings |
+| `STORAGE_PORT` / `STORAGE_CONSOLE_PORT` | shell / `.env` | `9000` / `9001` | Published S3 API and RustFS console host ports (bound to `127.0.0.1`) |
 
 ## Where attachments live
 

@@ -3,8 +3,10 @@
 ## The Makefile is the interface
 
 ```
+make help         show this help
 make setup        install everything, backend and frontend
 make dev          run API and web together with reload
+make watch-sdk    regenerate the SDK when the API source changes
 make api          run the API alone
 make web          run the web app alone
 make lint         ruff, mypy, eslint, prettier, all in check mode
@@ -13,7 +15,9 @@ make test         all backend tests and the frontend unit tests
 make test-unit    unit tests only, fast
 make test-int     integration tests against a real database
 make test-contract  schema and SDK contract tests
+make e2e          build the web app and run the Playwright suite in Firefox
 make sdk          regenerate the API client
+make sdk-check    fail when the committed OpenAPI schema differs from the API
 make migration    tortoise makemigrations, accepting an optional name=<name>
 make migrate      tortoise migrate
 make downgrade    roll back one migration
@@ -21,7 +25,7 @@ make seed         load the sample data
 make backup       write the database and uploaded files into one dated server backup file
 make restore      restore a server backup after confirmation (file=<backup>)
 make reset-passphrase  reset the admin passphrase (prompts or reads reset-passphrase.txt)
-make check        lint, typecheck, all tests, coverage floor, SDK drift
+make check        lint, typecheck, all tests, coverage floor
 make check-parallel  the same gate, with the backend suite spread across the cores
 make build        production build of both apps
 make docker-build build the single deployment image
@@ -29,9 +33,10 @@ make kill         stop anything left holding the dev ports
 make clean        remove build artefacts and caches
 ```
 
-`make check` is the required check. It runs lint and type checking, the whole test suite
-against a coverage floor of 80%, the frontend unit tests, and then regenerates
-the SDK and fails if the committed client differs from the schema. CI runs the same checks, so a local pass means a CI pass.
+`make check` is the required check. It regenerates the SDK, runs lint and type checking, runs the whole test suite
+against a coverage floor of 80%, and runs the frontend unit tests. Run `make sdk-check` to verify that the committed
+OpenAPI schema (`packages/api-client/openapi.json`) matches the API (`packages/api-client/src` is gitignored and
+generated on demand). CI runs the same checks, so a local pass means a CI pass.
 
 `make check-parallel` runs the same checks with the backend suite spread across every
 core. Most of the run time is spent building a fresh app and schema for each test, which can run concurrently: about two and a half minutes instead of six.
@@ -88,8 +93,8 @@ depending on the one before. The tests build their schema from the models rather
 
 Every operation needs an explicit `operation_id`. It becomes the SDK method name, and a contract test fixes the set so that a rename fails the tests.
 
-After changing routes or schemas, run `make sdk` and commit the regenerated
-client. Never edit `packages/api-client/src` by hand. It is generated output, and `make check` overwrites it and then rejects the change.
+After changing routes or schemas, run `make sdk` and commit the updated
+`packages/api-client/openapi.json`. Never edit `packages/api-client/src` by hand: it is gitignored generated output overwritten by `make sdk`, and `make sdk-check` fails when `openapi.json` drifts from the API.
 
 ## Cutting a release
 

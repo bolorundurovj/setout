@@ -4,6 +4,7 @@ The guides below cover running and developing Setout.
 
 ## Running it
 
+- [Showcase](showcase.md): screenshots and tour of the app.
 - [Installation](installation.md): Docker, bare metal, first run.
 - [Configuration](configuration.md): every environment variable, for the app and for the compose stack.
 - [Deployment](deployment.md): Postgres, S3 or RustFS, HTTPS, upgrades.
@@ -14,6 +15,7 @@ The guides below cover running and developing Setout.
 ## Working on it
 
 - [Architecture](architecture.md): request flow, and why the SDK is generated.
+- [Diagrams](diagrams/README.md): architecture, dataflow, lifecycle, and workflow diagrams.
 - [Development](development.md): the Makefile, the three test layers, migrations, the SDK.
 - [Roadmap](roadmap.md): designed but not yet built.
 

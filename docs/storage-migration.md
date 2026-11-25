@@ -44,12 +44,12 @@ services:
       
       # Target Storage: RustFS
       SETOUT_STORAGE_BACKEND: s3
-      SETOUT_S3_BUCKET: ${STORAGE_BUCKET:-${MINIO_BUCKET:-setout}}
+      SETOUT_S3_BUCKET: ${SETOUT_S3_BUCKET:-setout}
       SETOUT_S3_ENDPOINT_URL: http://s3:9000
       SETOUT_S3_PUBLIC_URL: ${SETOUT_S3_PUBLIC_URL:-http://localhost:9000}
-      SETOUT_S3_REGION: us-east-1
-      SETOUT_S3_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY:-${MINIO_ROOT_USER:-setout}}
-      SETOUT_S3_SECRET_ACCESS_KEY: ${STORAGE_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-setout-secret}}
+      SETOUT_S3_REGION: ${SETOUT_S3_REGION:-us-east-1}
+      SETOUT_S3_ACCESS_KEY_ID: ${SETOUT_S3_ACCESS_KEY_ID:-setout}
+      SETOUT_S3_SECRET_ACCESS_KEY: ${SETOUT_S3_SECRET_ACCESS_KEY:-setout-secret}
       SETOUT_S3_USE_PATH_STYLE: "true"
       SETOUT_S3_AUTO_CREATE_BUCKET: "true"
 
@@ -86,16 +86,16 @@ services:
     restart: unless-stopped
 
   s3:
-    image: rustfs/rustfs:${RUSTFS_IMAGE_TAG:-latest}
+    image: rustfs/rustfs:${RUSTFS_IMAGE_TAG:-1.0.5}
     environment:
-      RUSTFS_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-${MINIO_ROOT_USER:-setout}}
-      RUSTFS_SECRET_KEY: ${STORAGE_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-setout-secret}}
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:-setout}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:-setout-secret}
       RUSTFS_ADDRESS: ":9000"
       RUSTFS_CONSOLE_ADDRESS: ":9001"
       RUSTFS_CONSOLE_ENABLE: "true"
     ports:
-      - "${STORAGE_PORT:-9000}:9000"
-      - "${STORAGE_CONSOLE_PORT:-9001}:9001"
+      - "127.0.0.1:${STORAGE_PORT:-9000}:9000"
+      - "127.0.0.1:${STORAGE_CONSOLE_PORT:-9001}:9001"
     volumes:
       - setout-storage:/data
     restart: unless-stopped
@@ -141,17 +141,19 @@ POSTGRES_DB=setout
 POSTGRES_PORT=5433
 
 # RustFS (Target Storage)
-STORAGE_ACCESS_KEY=setout
-STORAGE_SECRET_KEY=setout-secret
-STORAGE_BUCKET=setout
+SETOUT_S3_BUCKET=setout
+SETOUT_S3_REGION=us-east-1
+SETOUT_S3_ACCESS_KEY_ID=setout
+SETOUT_S3_SECRET_ACCESS_KEY=setout-secret
+RUSTFS_ACCESS_KEY=setout
+RUSTFS_SECRET_KEY=setout-secret
 STORAGE_PORT=9000
 STORAGE_CONSOLE_PORT=9001
-RUSTFS_IMAGE_TAG=latest
+RUSTFS_IMAGE_TAG=1.0.5
 
 # Legacy MinIO Source (Used during migration)
 MINIO_ROOT_USER=setout
 MINIO_ROOT_PASSWORD=setout-secret
-MINIO_BUCKET=setout
 ```
 
 ### Running the Migration
@@ -193,12 +195,12 @@ services:
       SETOUT_DATABASE_URL: postgres://${POSTGRES_USER:-setout}:${POSTGRES_PASSWORD:-setout}@db:5432/${POSTGRES_DB:-setout}
       SETOUT_SECRET_KEY: ${SETOUT_SECRET_KEY:-change-me}
       SETOUT_STORAGE_BACKEND: s3
-      SETOUT_S3_BUCKET: ${STORAGE_BUCKET:-${MINIO_BUCKET:-setout}}
+      SETOUT_S3_BUCKET: ${SETOUT_S3_BUCKET:-setout}
       SETOUT_S3_ENDPOINT_URL: http://s3:9000
       SETOUT_S3_PUBLIC_URL: ${SETOUT_S3_PUBLIC_URL:-http://localhost:9000}
-      SETOUT_S3_REGION: us-east-1
-      SETOUT_S3_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY:-${MINIO_ROOT_USER:-setout}}
-      SETOUT_S3_SECRET_ACCESS_KEY: ${STORAGE_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-setout-secret}}
+      SETOUT_S3_REGION: ${SETOUT_S3_REGION:-us-east-1}
+      SETOUT_S3_ACCESS_KEY_ID: ${SETOUT_S3_ACCESS_KEY_ID:-setout}
+      SETOUT_S3_SECRET_ACCESS_KEY: ${SETOUT_S3_SECRET_ACCESS_KEY:-setout-secret}
       SETOUT_S3_USE_PATH_STYLE: "true"
       SETOUT_S3_AUTO_CREATE_BUCKET: "true"
     volumes:
@@ -228,16 +230,16 @@ services:
     restart: unless-stopped
 
   s3:
-    image: rustfs/rustfs:${RUSTFS_IMAGE_TAG:-latest}
+    image: rustfs/rustfs:${RUSTFS_IMAGE_TAG:-1.0.5}
     environment:
-      RUSTFS_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-${MINIO_ROOT_USER:-setout}}
-      RUSTFS_SECRET_KEY: ${STORAGE_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-setout-secret}}
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:-setout}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:-setout-secret}
       RUSTFS_ADDRESS: ":9000"
       RUSTFS_CONSOLE_ADDRESS: ":9001"
       RUSTFS_CONSOLE_ENABLE: "true"
     ports:
-      - "${STORAGE_PORT:-9000}:9000"
-      - "${STORAGE_CONSOLE_PORT:-9001}:9001"
+      - "127.0.0.1:${STORAGE_PORT:-9000}:9000"
+      - "127.0.0.1:${STORAGE_CONSOLE_PORT:-9001}:9001"
     volumes:
       - setout-storage:/data
     restart: unless-stopped

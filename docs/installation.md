@@ -4,7 +4,12 @@ Setout runs as one container on one port, or from a checkout on your own machine
 
 ## With Docker
 
+Copy the three service environment files from their examples, then pull and start the stack:
+
 ```bash
+cp docker/.env.setout.example docker/.env.setout
+cp docker/.env.db.example docker/.env.db
+cp docker/.env.s3.example docker/.env.s3
 docker compose -f docker/docker-compose.yml pull
 docker compose -f docker/docker-compose.yml up -d
 ```
@@ -32,10 +37,10 @@ SETOUT_IMAGE_TAG=1.2.3 docker compose -f docker/docker-compose.yml up -d
 The compose file also carries a `build:` block, so `docker compose build` builds your own image from the checkout.
 
 Two compose files are provided:
-- `docker/docker-compose.yml`: Uses `env_file: .env`. Copy `docker/.env.example` to `docker/.env` and adjust the variables.
-- `docker/docker-compose.embedded.yml`: Self-contained with embedded environment variables and defaults, requiring no `.env` file (`docker compose -f docker/docker-compose.embedded.yml up -d`).
+- `docker/docker-compose.yml`: Uses isolated per-service env files (`docker/.env.setout`, `docker/.env.db`, and `docker/.env.s3`). Copy each from its `.example` file and adjust the variables.
+- `docker/docker-compose.embedded.yml`: Self-contained with embedded environment variables and defaults, requiring no `.env` files (`docker compose -f docker/docker-compose.embedded.yml up -d`).
 
-The defaults exist so that the stack starts with one command. They are not suitable for production: **change `SETOUT_SECRET_KEY` and the S3/RustFS password before exposing this to anyone else.** See [Configuration](configuration.md) for the full
+The defaults exist so that the stack starts quickly for evaluation. They are not suitable for production: **change `SETOUT_SECRET_KEY`, `POSTGRES_PASSWORD`, `SETOUT_DB_PASSWORD`, `SETOUT_S3_SECRET_ACCESS_KEY`, and `RUSTFS_SECRET_KEY` before exposing this to anyone else.** See [Configuration](configuration.md) for the full
 list, and [Deployment](deployment.md) before exposing it.
 
 To run the container against SQLite and local files instead, unset

@@ -9,7 +9,7 @@ TypeScript SDK generated from the backend's OpenAPI schema.
 ```
 apps/api             FastAPI service (uv, pyproject.toml)
 apps/web             Angular application
-packages/api-client  generated TypeScript SDK, committed to the repository
+packages/api-client  OpenAPI schema (committed) and generated TypeScript SDK (gitignored)
 scripts              SDK generation, seed, backup, restore
 docker               Dockerfile and the compose stack
 docs                 this documentation
@@ -34,9 +34,10 @@ method names and a change there breaks callers, so a contract test fixes them.
 ## The generated SDK
 
 `scripts/generate_sdk.sh` imports the FastAPI app, writes
-`packages/api-client/openapi.json`, and runs `ng-openapi-gen` over it. The output
-is committed, and `make check` regenerates it and fails if the committed client
-has drifted from the schema.
+`packages/api-client/openapi.json`, and runs `ng-openapi-gen` over it. The OpenAPI
+schema (`packages/api-client/openapi.json`) is committed, while the generated TypeScript
+files under `packages/api-client/src` are gitignored and regenerated on demand by `make sdk`.
+`make sdk-check` regenerates the schema and fails if `packages/api-client/openapi.json` has drifted.
 
 The generator is `ng-openapi-gen` because it needs no Java runtime, so it runs in
 CI and in the Docker build, and because it generates a client that uses Angular's
@@ -61,7 +62,7 @@ a category can be assigned later.
 
 **Items, vendors and people belong to the installation, not a project**, because the same vendor and the same item are used across projects. Their amounts are always reported per project. An item holds no prices of its own; each expense assigned to it with a unit rate is added to its price history.
 
-**Removal is archiving, and it cascades to dependent rows.** An archived row is retained and can be restored; nothing in Setout is permanently deleted. Archiving a row archives its dependants. Every list that can contain archived rows accepts a flag to include them, and the screen that shows the list has a **Show archived** toggle that sets it, so an archived row can still be restored after the undo toast is dismissed or the page is refreshed. The column that stores it is `archived_at`, the flag is `include_archived`, and the operation is `POST /api/{resource}/{id}/archive`, paired with `POST /api/{resource}/{id}/restore`. `DELETE` is reserved for permanent deletion, which is not implemented.
+**Removal starts with archiving, and archived records can be permanently deleted.** Archiving a row sets `archived_at`, cascades to dependent rows, and hides the row by default so it can be restored. Every list that can contain archived rows accepts `include_archived`, and screens provide a **Show archived** toggle so an archived row can be restored after the undo toast is dismissed or the page is refreshed. Archiving uses `POST /api/{resource}/{id}/archive`, paired with `POST /api/{resource}/{id}/restore`. Once archived, records can be permanently deleted via `DELETE /api/{resource}/{id}` after explicit `DELETE` confirmation in the UI.
 
 **IDs are short and readable.** Twelve characters from an alphabet that excludes `0`/`O` and `1`/`l`/`I`, so an ID is unambiguous when read aloud or copied (`utils/ids.py`).
 

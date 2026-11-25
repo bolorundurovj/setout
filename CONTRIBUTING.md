@@ -33,8 +33,8 @@ runs the same checks, so a local pass means a CI pass.
 **The Makefile is the interface.** Add a target instead of documenting a long
 command.
 
-**Never edit `packages/api-client/src` by hand.** It is generated from the
-OpenAPI schema. Change the API, run `make sdk`, and commit the result.
+**Never edit `packages/api-client/src` by hand.** It is gitignored and generated from the
+OpenAPI schema. Change the API, run `make sdk`, and commit the updated `packages/api-client/openapi.json`.
 
 **Every operation needs an explicit `operation_id`.** It becomes the SDK method
 name, and a contract test fixes the set so that a rename fails the tests.

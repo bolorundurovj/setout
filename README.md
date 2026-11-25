@@ -32,9 +32,14 @@ See the product in action in the [full showcase](docs/showcase.md).
 With Docker:
 
 ```bash
+cp docker/.env.setout.example docker/.env.setout
+cp docker/.env.db.example docker/.env.db
+cp docker/.env.s3.example docker/.env.s3
 docker compose -f docker/docker-compose.yml pull
 docker compose -f docker/docker-compose.yml up -d
 ```
+
+For a single-command local trial with embedded defaults and no env files, run `docker compose -f docker/docker-compose.embedded.yml up -d` instead.
 
 This pulls the published image, `ghcr.io/bolorundurovj/setout` for amd64 and
 arm64, and starts the app on port 8474 with Postgres for the database and RustFS for S3 attachments. The same image is published to Docker Hub as `bolorundurovj/setout`. To run from a checkout instead:
@@ -66,9 +71,8 @@ Open a project and select **New Expense**. Only the description and amount are r
 - The list filters by description or notes, vendor, person, item and a date range, and sorts by date or
   by amount. The filters are stored in the URL, so a filtered view is kept after a refresh and can be
   shared as a link. The list shows the total of all matching expenses.
-- Archiving an expense keeps the row. **Show archived**
-  on the expenses list displays archived rows with a **Restore** button.
-  Archiving is the only way to remove data in Setout: nothing is permanently deleted.
+- Archiving an expense keeps the row and hides it by default. **Show archived**
+  on the expenses list displays archived rows with **Restore** and permanent **Delete** actions (permanent deletion requires typing `DELETE` to confirm).
 
 An expense can also record the **Item**, the **Vendor** and who paid (**Paid By**). All three are optional.
 
@@ -90,17 +94,19 @@ These three are shared by the whole installation, not owned by a project, becaus
 
 ## Documentation
 
-| Guide                                            | What it covers                                      |
-| ------------------------------------------------ | --------------------------------------------------- |
-| [Installation](docs/installation.md)             | Docker, bare metal, the first run                   |
-| [Configuration](docs/configuration.md)           | Every environment variable, app and compose         |
-| [Deployment](docs/deployment.md)                 | Postgres, S3 or RustFS, HTTPS, upgrades             |
-| [Backup and restore](docs/backup-and-restore.md) | The two kinds of backup, and when each applies      |
-| [Troubleshooting](docs/troubleshooting.md)       | Common failures and their fixes                     |
-| [Architecture](docs/architecture.md)             | Request flow, and why the SDK is generated          |
-| [Development](docs/development.md)               | The Makefile, the test layers, migrations, the SDK  |
-| [Roadmap](docs/roadmap.md)                       | Designed but not yet built                          |
-| [Changelog](CHANGELOG.md)                        | What changed in each release                        |
+| Guide                                                   | What it covers                                      |
+| ------------------------------------------------------- | --------------------------------------------------- |
+| [Showcase](docs/showcase.md)                            | Screenshots and tour of the app                     |
+| [Installation](docs/installation.md)                    | Docker, bare metal, the first run                   |
+| [Configuration](docs/configuration.md)                  | Every environment variable, app and compose         |
+| [Deployment](docs/deployment.md)                        | Postgres, S3 or RustFS, HTTPS, upgrades             |
+| [MinIO to RustFS Migration](docs/storage-migration.md)  | Migrating legacy MinIO object storage to RustFS     |
+| [Backup and restore](docs/backup-and-restore.md)        | The two kinds of backup, and when each applies      |
+| [Troubleshooting](docs/troubleshooting.md)              | Common failures and their fixes                     |
+| [Architecture](docs/architecture.md)                    | Request flow, and why the SDK is generated          |
+| [Development](docs/development.md)                      | The Makefile, the test layers, migrations, the SDK  |
+| [Roadmap](docs/roadmap.md)                              | Designed but not yet built                          |
+| [Changelog](CHANGELOG.md)                               | What changed in each release                        |
 
 ## Repository layout
 
@@ -115,7 +121,7 @@ docs                 documentation
 
 ## The Makefile
 
-`make setup`, `make dev`, `make check`. `make check` is the required check: lint, types, the full test suite against a coverage floor, and a check that the committed SDK still matches the schema. The full list of targets is in
+`make setup`, `make dev`, `make check`. `make check` is the required check: lint, types, the full test suite against a coverage floor, and regenerating the SDK. `make sdk-check` verifies that the committed OpenAPI schema (`packages/api-client/openapi.json`) matches the API; the generated TypeScript files under `packages/api-client/src` are gitignored and generated on demand. The full list of targets is in
 [development](docs/development.md), or run `make help`.
 
 ## Contributing

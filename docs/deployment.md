@@ -8,7 +8,7 @@ Setout ships as one image: the API serves the built frontend, applies migrations
 | --- | --- |
 | Set `SETOUT_SECRET_KEY` to a long random value | It signs session cookies, so anyone who knows it can forge a session. The app warns on startup while it is the default |
 | Set `SETOUT_COOKIE_SECURE=true` | Otherwise the session cookie is sent over plain HTTP |
-| Change `STORAGE_SECRET_KEY` (or `MINIO_ROOT_PASSWORD`) and the Postgres password | The compose defaults exist so that the stack starts with one command. They are not suitable for production |
+| Change `SETOUT_S3_SECRET_ACCESS_KEY`, `RUSTFS_SECRET_KEY`, `SETOUT_DB_PASSWORD`, and `POSTGRES_PASSWORD` | The compose defaults exist for local evaluation only. They are not suitable for production |
 | Put it behind HTTPS | See below |
 | Set `SETOUT_CORS_ORIGINS` to the origin you serve from | It defaults to the local dev server |
 | No action needed for passphrase guessing | Repeated wrong passphrases are already delayed and then refused with `429`. There is no account lockout, and the settings that control the delay are in [configuration](configuration.md). If you lose the passphrase, reset it with the recovery command in [troubleshooting](troubleshooting.md#i-forgot-the-admin-passphrase) |
@@ -49,14 +49,13 @@ Pull the new image and restart. Migrations run on startup and the log reports wh
 
 ### Upgrading from MinIO to RustFS
 
-If your deployment previously used MinIO in the compose stack, upgrading requires **no manual intervention**:
-1. When you run `docker compose up -d`, Setout automatically starts the new `s3` (RustFS) service and mounts your legacy `setout-minio` volume read-only.
-2. On boot, Setout verifies all existing attachments against the database, copies them to RustFS, and validates their SHA-256 checksums.
+Modern MinIO deployments (`RELEASE.2022+` / `xlMetaV2`) inline small objects inside binary `xl.meta` files, so direct volume mounting cannot read legacy objects. Migrating an existing MinIO deployment to RustFS requires running a temporary `minio` container alongside `s3` (RustFS) and pointing Setout at it via `SETOUT_LEGACY_S3_ENDPOINT_URL`:
+
+1. Follow the temporary migration compose template in the [MinIO to RustFS Migration Guide](storage-migration.md) so Setout reads legacy objects from MinIO over S3 and copies them into RustFS.
+2. On boot, Setout verifies every attachment and land document against its database SHA-256 checksum and writes them to RustFS.
 3. Check the startup log for:
    `[Storage Migration] 100% of assets verified (X/X, Y newly migrated). Legacy MinIO storage can now be safely removed.`
-4. Once verified, you can safely clean up the old volume: `docker volume rm setout-minio`.
-
-If your legacy MinIO deployment used inline erasure storage or logs report missing assets, see the dedicated [MinIO to RustFS Migration Guide](storage-migration.md) for compose templates before and after migration as well as troubleshooting tips.
+4. Switch back to the clean compose configuration (without the temporary `minio` service) and remove the old volume: `docker volume rm setout-minio`.
 
 Pin a version rather than tracking `latest`, so that upgrades are deliberate:
 
