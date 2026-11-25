@@ -211,11 +211,21 @@ export class AddExpenseComponent {
       void this.suggestCategory(itemId, vendorId);
     });
     queueMicrotask(() => {
-      void this.budget.load(this.project().id);
-      void this.agreements.load(this.project().id);
-      void this.items.loadChoices();
-      void this.vendors.loadChoices();
-      void this.people.loadChoices();
+      if (this.budget.categories().length === 0) {
+        void this.budget.load(this.project().id);
+      }
+      if (this.agreements.agreements().length === 0) {
+        void this.agreements.load(this.project().id);
+      }
+      if (this.items.choices().length === 0) {
+        void this.items.loadChoices();
+      }
+      if (this.vendors.choices().length === 0) {
+        void this.vendors.loadChoices();
+      }
+      if (this.people.choices().length === 0) {
+        void this.people.loadChoices();
+      }
     });
   }
 

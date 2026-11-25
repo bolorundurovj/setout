@@ -280,7 +280,6 @@ export class ExpenseService {
     try {
       const result = await this.api.invoke(categoriseExpenses, { project_id: projectId, body });
       await this.refresh(projectId);
-      await this.loadSummary(projectId);
       return result.categorised_count;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not assign a category to those expenses.');

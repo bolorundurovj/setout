@@ -318,4 +318,13 @@ describe('ProjectSettingsComponent', () => {
     expect(restored).toEqual(['a']);
     expect(component.lastArchived()).toBeNull();
   });
+
+  it('does not reload categories a second time when restoring', async () => {
+    const component = await ready();
+    const loadSpy = vi.spyOn(component.budget, 'load');
+
+    await component.restore(category({ id: 'a', name: 'Landscaping' }));
+
+    expect(loadSpy).not.toHaveBeenCalled();
+  });
 });

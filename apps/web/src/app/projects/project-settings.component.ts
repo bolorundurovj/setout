@@ -260,9 +260,12 @@ export class ProjectSettingsComponent {
   }
 
   async restore(category: CategoryRead): Promise<void> {
-    const done = await this.budget.restoreCategory(this.project().id, category.id);
+    const done = await this.budget.restoreCategory(
+      this.project().id,
+      category.id,
+      this.includeArchived(),
+    );
     this.lastArchived.set(null);
-    await this.budget.load(this.project().id, this.includeArchived());
     this.toast.show(
       done
         ? `${category.name} restored.`

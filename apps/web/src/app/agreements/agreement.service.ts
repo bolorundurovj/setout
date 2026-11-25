@@ -48,6 +48,7 @@ export class AgreementService {
 
   private advanceArchived = false;
   private loadingMore = false;
+  private agreementExpensesLoaded = false;
   private agreementRevision = 0;
 
   private readonly tracker = new LoadTracker();
@@ -76,6 +77,7 @@ export class AgreementService {
     this.balanceTracker.reset();
     this.includeArchivedState.set(false);
     this.advanceArchived = false;
+    this.agreementExpensesLoaded = false;
     this.agreementRevision++;
     this.agreementState.set([]);
     this.advanceState.set([]);
@@ -135,7 +137,9 @@ export class AgreementService {
       if (revision !== this.agreementRevision) return;
       this.agreementState.update((rows) => [...rows, ...page.items]);
       this.agreementTotalState.set(page.total);
-      await this.loadAgreementExpenses(projectId);
+      if (!this.agreementExpensesLoaded) {
+        await this.loadAgreementExpenses(projectId);
+      }
     } finally {
       this.loadingMore = false;
     }
@@ -162,6 +166,7 @@ export class AgreementService {
           break;
         }
       }
+      this.agreementExpensesLoaded = true;
     } catch {
       this.error.set('Could not load agreement expenses.');
     }

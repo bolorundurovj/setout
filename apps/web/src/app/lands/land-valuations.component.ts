@@ -45,6 +45,7 @@ export class LandValuationsComponent {
   readonly changed = output<void>();
 
   private readonly tracker = new LoadTracker();
+  private loadedLandId = '';
 
   readonly rows = signal<LandValuationRead[]>([]);
   readonly status = this.tracker.status;
@@ -89,7 +90,11 @@ export class LandValuationsComponent {
   constructor() {
     void this.projects.loadCurrencies();
     effect(() => {
-      this.land();
+      const landId = this.land().id;
+      if (landId === this.loadedLandId) {
+        return;
+      }
+      this.loadedLandId = landId;
       void this.load();
     });
   }

@@ -147,10 +147,14 @@ export class BudgetService {
     }
   }
 
-  async restoreCategory(projectId: string, categoryId: string): Promise<boolean> {
+  async restoreCategory(
+    projectId: string,
+    categoryId: string,
+    includeArchived = false,
+  ): Promise<boolean> {
     try {
       await this.api.invoke(restoreCategory, { category_id: categoryId });
-      await this.load(projectId, false, true);
+      await this.load(projectId, includeArchived, true);
       return true;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not restore the category.');

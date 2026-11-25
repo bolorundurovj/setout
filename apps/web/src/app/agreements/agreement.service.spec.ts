@@ -126,6 +126,27 @@ describe('AgreementService', () => {
     expect(service.agreementExpenses()['a1'].length).toBe(120);
   });
 
+  it('appends the next page of agreements without refetching agreement expenses', async () => {
+    const service = configure((name, params) => {
+      if (name === 'listAgreements') {
+        const offset = Number(params['offset'] ?? 0);
+        return offset === 0
+          ? { items: [agreement('a1')], total: 2, limit: 1, offset: 0 }
+          : { items: [agreement('a2')], total: 2, limit: 1, offset: 1 };
+      }
+      return page([{ id: 'e1', agreement_id: 'a1', amount: 100 }]);
+    });
+
+    await service.loadAll('p1');
+    expect(calls('listExpenses').length).toBe(1);
+
+    await service.loadMore('p1');
+
+    expect(service.agreements().map((row) => row.id)).toEqual(['a1', 'a2']);
+    expect(calls('listAgreements').length).toBe(2);
+    expect(calls('listExpenses').length).toBe(1);
+  });
+
   it('sets an error when loading agreement expenses fails', async () => {
     const service = configure((name) =>
       name === 'listExpenses' ? new Error('offline') : page([agreement('a1')]),

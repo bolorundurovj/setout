@@ -326,11 +326,8 @@ export class ExpensesComponent {
     }
   }
 
-  async onSaved(): Promise<void> {
-    await this.expenses.load(this.project().id, {
-      ...this.filters(),
-      includeArchived: this.includeArchived(),
-    });
+  onSaved(): void {
+    // ExpenseService.add() and update() already refresh the visible list and summary.
   }
 
   async goTo(page: number): Promise<void> {
@@ -390,7 +387,6 @@ export class ExpensesComponent {
     this.toast.show(`${count} expense${count === 1 ? '' : 's'} assigned.`, 'success');
     this.selected.set(new Set());
     this.bulkCategoryId.set('');
-    await this.expenses.loadForCategory(this.project().id, UNCATEGORISED, this.uncategorisedPage());
     if (this.uncategorisedTotal() === 0) {
       this.stopAssigning();
     }

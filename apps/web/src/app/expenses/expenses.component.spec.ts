@@ -299,4 +299,20 @@ describe('ExpensesComponent', () => {
     expect(fixture.componentInstance.drawerOpen()).toBe(true);
     expect(fixture.componentInstance.editingExpense()?.id).toBe('e99');
   });
+
+  it('does not trigger a duplicate load on save or bulk assignment', async () => {
+    const component = render();
+    await Promise.resolve();
+    const callsBeforeSave = loaded.length;
+
+    component.onSaved();
+    expect(loaded.length).toBe(callsBeforeSave);
+
+    component.startAssigning();
+    const callsBeforeAssign = loaded.length;
+    component.toggleOne('e1');
+    component.bulkCategoryId.set('s1');
+    await component.assignSelected();
+    expect(loaded.length).toBe(callsBeforeAssign);
+  });
 });

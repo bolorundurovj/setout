@@ -259,6 +259,16 @@ describe('LandValuationsComponent', () => {
     expect(deleted).toEqual(['v9']);
   });
 
+  it('fetches valuations once per action even when the parent updates the land reference', async () => {
+    const { component } = await render(land({ id: 'l1' }), [entry({ id: 'v1' })]);
+    const callsBefore = loadedArchived.length;
+
+    await component.archive(entry({ id: 'v1' }));
+    TestBed.tick();
+
+    expect(loadedArchived.length - callsBefore).toBe(1);
+  });
+
   it('shows the load error instead of the empty state', async () => {
     const { component, element } = await render(land(), null);
     expect(component.status()).toBe('error');
