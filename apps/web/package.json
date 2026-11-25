@@ -20,6 +20,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
+    "typecheck:e2e": "tsc -p tsconfig.e2e.json --noEmit",
     "e2e": "playwright test",
     "e2e:install": "playwright install firefox"
   },
@@ -44,6 +45,8 @@
     "@axe-core/playwright": "4.14.0",
     "@playwright/test": "1.64.0",
     "@types/leaflet": "^1.9.22",
+    "@types/node": "^26.6.10",
+    "@vitest/coverage-v8": "5.0.5",
     "angular-eslint": "22.2.0",
     "eslint": "10.9.1",
     "jsdom": "30.0.1",

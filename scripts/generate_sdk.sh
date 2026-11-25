@@ -13,15 +13,15 @@ OPENAPI_JSON="$SDK_DIR/openapi.json"
 
 echo "Writing OpenAPI schema to $OPENAPI_JSON"
 if command -v uv >/dev/null 2>&1; then
-  UV_CMD="uv"
+  UV_CMD=(uv)
 elif command -v uv.exe >/dev/null 2>&1; then
-  UV_CMD="uv.exe"
+  UV_CMD=(uv.exe)
 else
   # Fall back to running uv through PowerShell.
-  UV_CMD="powershell.exe -Command uv"
+  UV_CMD=(powershell.exe -Command uv)
 fi
 
-( cd "$API_DIR" && $UV_CMD run python -m setout.openapi_tools dump "$OPENAPI_JSON" )
+( cd "$API_DIR" && "${UV_CMD[@]}" run python -m setout.openapi_tools dump "$OPENAPI_JSON" )
 
 # Workspace dependencies install once at the root. Installing from inside a
 # workspace member re-links the shared node_modules/.bin and breaks it.

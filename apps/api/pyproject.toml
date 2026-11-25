@@ -99,10 +99,6 @@ disallow_untyped_defs = false
 module = ["boto3.*", "botocore.*", "openpyxl.*", "reportlab.*"]
 ignore_missing_imports = true
 
-# Pillow is installed for reportlab only. Held below 13.0.0, released 2026-10-16, until it is two weeks old.
-[tool.uv]
-constraint-dependencies = ["pillow<13"]
-
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

@@ -93,13 +93,20 @@
             "tsConfig": "tsconfig.spec.json",
             "buildTarget": "web:build",
             "runner": "vitest",
-            "runnerConfig": "vitest.config.ts"
+            "runnerConfig": "vitest.config.ts",
+            "coverageReporters": ["text-summary"],
+            "coverageThresholds": {
+              "statements": 65,
+              "branches": 70,
+              "functions": 55,
+              "lines": 70
+            }
           }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
+            "lintFilePatterns": ["src/**/*.ts", "src/**/*.html", "e2e/**/*.ts"]
           }
         }
       }

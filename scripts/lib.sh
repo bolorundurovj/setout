@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Helpers shared by backup.sh and restore.sh. Source this file; do not run it.
 
 # Export SETOUT_* settings from the repository .env, the file the app reads.

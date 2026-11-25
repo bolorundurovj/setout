@@ -107,12 +107,13 @@ api: require-uv ## Run the API alone with reload.
 web: require-yarn ## Run the web app alone.
 	cd $(WEB_DIR) && yarn start
 
-lint: require-uv require-yarn ## ruff, mypy, eslint, prettier, all in check mode.
+lint: require-uv require-yarn ## ruff, mypy, eslint, e2e typecheck, prettier, all in check mode.
 	@$(MAKE) line-endings
 	cd $(API_DIR) && uv run ruff check .
 	cd $(API_DIR) && uv run ruff format --check .
 	cd $(API_DIR) && uv run mypy
 	cd $(WEB_DIR) && yarn lint
+	cd $(WEB_DIR) && yarn typecheck:e2e
 	cd $(WEB_DIR) && yarn prettier --check .
 
 format: require-uv require-yarn ## Write mode for the same tools.
@@ -174,7 +175,7 @@ run-check: sdk
 	$(MAKE) lint
 	cd $(API_DIR) && uv run pytest $(PYTEST_PARALLEL) \
 		--cov=setout --cov-report=term-missing --cov-fail-under=80
-	cd $(WEB_DIR) && yarn test --watch=false
+	cd $(WEB_DIR) && yarn test --watch=false --coverage
 
 build: require-uv require-yarn sdk ## Production build of both apps.
 	cd $(API_DIR) && uv build
@@ -229,5 +230,5 @@ clean: ## Remove build artefacts and caches.
 	rm -rf $(API_DIR)/dist $(API_DIR)/.venv $(API_DIR)/.pytest_cache \
 		$(API_DIR)/.mypy_cache $(API_DIR)/.ruff_cache $(API_DIR)/htmlcov \
 		$(API_DIR)/.coverage $(WEB_DIR)/dist $(WEB_DIR)/.angular \
-		$(WEB_DIR)/node_modules $(SDK_DIR)/src
+		$(WEB_DIR)/coverage $(WEB_DIR)/node_modules $(SDK_DIR)/src
 	find . -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true

@@ -2,6 +2,7 @@
 
 FROM node:26-bookworm-slim AS web
 WORKDIR /build
+# hadolint ignore=DL3016
 RUN npm install -g corepack && corepack enable
 # Manifests first, so editing source does not invalidate the dependency install.
 COPY package.json yarn.lock ./
@@ -11,7 +12,7 @@ RUN yarn install --frozen-lockfile
 # The web app imports the SDK through a path alias, so both are copied.
 COPY packages/api-client ./packages/api-client
 COPY apps/web ./apps/web
-RUN cd packages/api-client && yarn generate
+RUN yarn --cwd packages/api-client generate
 WORKDIR /build/apps/web
 RUN yarn build
 

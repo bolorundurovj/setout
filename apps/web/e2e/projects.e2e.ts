@@ -57,7 +57,7 @@ test('switching project IDs refreshes the current tab', async ({ page, request }
     history.pushState({}, '', url);
     window.dispatchEvent(new PopStateEvent('popstate'));
   }, `/projects/${second.id}/budget`);
-  await expect(page.getByRole('heading', { name: String(second.name) })).toBeVisible();
+  await expect(page.getByRole('heading', { name: String(second['name']) })).toBeVisible();
   await expect(page.getByText(secondCategory, { exact: true }).first()).toBeVisible();
   await expect(page.getByText(firstCategory, { exact: true })).toHaveCount(0);
 });

@@ -21,6 +21,7 @@ apps/web/node_modules/
 apps/web/dist/
 apps/web/.angular/
 apps/web/out-tsc/
+apps/web/coverage/
 packages/api-client/node_modules/
 packages/api-client/src/
 .yarn/
