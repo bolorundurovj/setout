@@ -22,6 +22,7 @@
 
 .head-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -224,6 +225,7 @@
 .outstanding-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
 }
 

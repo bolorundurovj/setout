@@ -186,6 +186,7 @@ body {
 .summary {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 14px 16px;
   background: var(--field);

@@ -118,7 +118,8 @@ import { PAGE_SIZE, clampPage, offsetOf, pageCount, pageNumbers } from './paging
           justify-content: flex-start;
         }
 
-        .number:not(.current) {
+        .number:not(.current),
+        .gap {
           display: none;
         }
       }

@@ -38,11 +38,15 @@ export interface Tab {
       .tabs {
         display: flex;
         gap: 2px;
+        overflow-x: auto;
+        max-width: 100%;
         border-bottom: 1.5px solid var(--rule);
       }
 
       .tab {
         appearance: none;
+        flex-shrink: 0;
+        white-space: nowrap;
         background: none;
         border: 0;
         border-bottom: 2px solid transparent;
