@@ -110,16 +110,16 @@ class TestLocalStorage:
     @pytest.mark.skipif(os.name == "nt", reason="POSIX mode bits are not available on Windows")
     async def test_attachment_permissions_follow_the_process_umask(self, tmp_path: Path) -> None:
         reference = tmp_path / "reference"
-        descriptor = os.open(reference, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o666)
+        descriptor = os.open(reference, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o640)
         os.close(descriptor)
         store = LocalStorage(tmp_path)
         key = key_for(checksum_of(b"a receipt"), "receipt.jpg")
 
         await store.put(key, b"a receipt", content_type="image/jpeg")
 
-        assert stat.S_IMODE((tmp_path / key).stat().st_mode) == stat.S_IMODE(
-            reference.stat().st_mode
-        )
+        mode = stat.S_IMODE((tmp_path / key).stat().st_mode)
+        assert mode == stat.S_IMODE(reference.stat().st_mode)
+        assert mode & 0o007 == 0
 
     async def test_a_file_that_is_not_there_says_so_rather_than_answering_nothing(
         self, tmp_path: Path

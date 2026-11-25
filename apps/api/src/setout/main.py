@@ -13,7 +13,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
-from starlette.types import Scope
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from setout import __version__
 from setout.cli import consume_recovery_file
@@ -52,6 +52,38 @@ from setout.utils.security_headers import SecurityHeaders
 logger = logging.getLogger("setout")
 
 SERVER_PREFIXES = ("api", "docs", "redoc", "openapi.json", "healthz")
+
+
+class ResetActorMiddleware:
+    """Resets the change-log actor ContextVar after every request."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        token = changes.actor.set(None)
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            changes.actor.reset(token)
+
+
+def configure_logging(level_name: str) -> None:
+    """Apply SETOUT_LOG_LEVEL to Setout and Uvicorn loggers."""
+    level = getattr(logging, level_name.upper(), logging.INFO)
+    if not isinstance(level, int):
+        level = logging.INFO
+    logging.basicConfig(level=level)
+    for name in ("setout", "uvicorn", "uvicorn.error", "uvicorn.access"):
+        logging.getLogger(name).setLevel(level)
+
+
+def warn_if_default_secret(settings: Settings) -> None:
+    if settings.secret_key == Settings.model_fields["secret_key"].default:
+        logger.warning(
+            "SETOUT_SECRET_KEY is still the default, so anyone can forge a session. "
+            "Set it to a long random value."
+        )
 
 
 class SPAStaticFiles(StaticFiles):
@@ -101,7 +133,8 @@ def _install_openapi(app: FastAPI) -> Callable[[], dict[str, Any]]:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
-    logging.basicConfig(level=settings.log_level.upper())
+    configure_logging(settings.log_level)
+    warn_if_default_secret(settings)
     status = await apply_migrations()
     logger.info("Database status on start: %s", status)
     await init_db(enable_global_fallback=True)
@@ -128,11 +161,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 def create_app() -> FastAPI:
     changes.register()
     settings = get_settings()
-    if settings.secret_key == Settings.model_fields["secret_key"].default:
-        logger.warning(
-            "SETOUT_SECRET_KEY is still the default, so anyone can forge a session. "
-            "Set it to a long random value."
-        )
+    configure_logging(settings.log_level)
+    warn_if_default_secret(settings)
 
     app = FastAPI(
         title="Setout API",
@@ -140,6 +170,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    app.add_middleware(ResetActorMiddleware)
     app.add_middleware(
         BodyLimit,
         path="/api/install/restore",

@@ -343,4 +343,4 @@ async def sign_out(
         session_id = read_session_id(setout_session)
         if session_id:
             await Session.filter(id=session_id).delete()
-    response.delete_cookie(SESSION_COOKIE_NAME)
+    clear_session_cookie(response)

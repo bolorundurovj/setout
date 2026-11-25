@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from setout.config import Settings, get_settings
+from setout.config import Settings, StorageBackend, get_settings
 from setout.services.storage.base import Storage, checksum_of, key_for
 from setout.services.storage.local import LocalStorage
 from setout.services.storage.migrate import auto_migrate_legacy_storage
@@ -21,7 +21,7 @@ __all__ = [
 
 
 def build_storage(settings: Settings) -> Storage:
-    if settings.storage_backend == "s3":
+    if settings.storage_backend is StorageBackend.S3:
         return S3Storage(
             settings.s3_bucket,
             prefix=settings.s3_prefix,

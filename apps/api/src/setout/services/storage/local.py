@@ -93,7 +93,7 @@ def _open_scratch(directory: Path) -> tuple[Path, int]:
     for _ in range(100):
         scratch = directory / f".{secrets.token_hex(12)}.part"
         try:
-            return scratch, os.open(scratch, flags, 0o666)
+            return scratch, os.open(scratch, flags, 0o640)
         except FileExistsError:
             continue
     raise FileExistsError("Could not create a temporary attachment file")

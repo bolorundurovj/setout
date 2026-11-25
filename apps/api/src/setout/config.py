@@ -5,11 +5,18 @@ Data defaults to ./data, so local development needs no configuration.
 
 from __future__ import annotations
 
+from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class StorageBackend(StrEnum):
+    LOCAL = "local"
+    S3 = "s3"
+
 
 # The API runs from apps/api, so the repository root .env is resolved by absolute path.
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -65,7 +72,7 @@ class Settings(BaseSettings):
     geocoder_email: str = ""
 
     # Attachment storage: "local" for disk under data_dir, or "s3" for an S3-compatible bucket.
-    storage_backend: str = "local"
+    storage_backend: StorageBackend = StorageBackend.LOCAL
     s3_bucket: str = ""
     # Leave empty for AWS. Set for RustFS, R2, B2, Spaces and other S3-compatible services.
     s3_endpoint_url: str = ""
@@ -97,6 +104,16 @@ class Settings(BaseSettings):
     max_import_bytes: int = 25_000_000
     # Maximum backup size accepted by a restore, in bytes. Backups hold rows, not files.
     max_restore_bytes: int = 100_000_000
+
+    @field_validator("cors_origins")
+    @classmethod
+    def _reject_wildcard_cors(cls, value: str) -> str:
+        origins = [origin.strip() for origin in value.split(",") if origin.strip()]
+        if "*" in origins:
+            raise ValueError(
+                "SETOUT_CORS_ORIGINS cannot contain '*' when session credentials are enabled"
+            )
+        return value
 
     def allowed_origins(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
