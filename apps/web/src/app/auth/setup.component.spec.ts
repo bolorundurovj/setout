@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { AuthService } from './auth.service';
 import { SetupComponent } from './setup.component';
@@ -38,10 +38,12 @@ describe('SetupComponent', () => {
       navigations.push(args);
       return true;
     };
-    const fixture = TestBed.createComponent(SetupComponent);
+    fixture = TestBed.createComponent(SetupComponent);
     fixture.detectChanges();
     return fixture.componentInstance;
   }
+
+  let fixture: ComponentFixture<SetupComponent>;
 
   function filled(component: SetupComponent) {
     component.name.set('Vee');
@@ -106,5 +108,43 @@ describe('SetupComponent', () => {
     await component.onSubmit();
 
     expect(navigations).toEqual([]);
+  });
+
+  it('labels every input with its autocomplete purpose', () => {
+    render();
+    const element: HTMLElement = fixture.nativeElement;
+    const expected = {
+      'setup-name': 'name',
+      'setup-email': 'email',
+      'setup-passphrase': 'new-password',
+      'setup-confirmPassphrase': 'new-password',
+    };
+
+    expect(element.querySelector('h1')?.textContent).toContain('Set Up Setout');
+    for (const [id, autocomplete] of Object.entries(expected)) {
+      expect(element.querySelector(`label[for="${id}"]`)).not.toBeNull();
+      expect(element.querySelector<HTMLInputElement>(`#${id}`)?.autocomplete).toBe(autocomplete);
+    }
+  });
+
+  it('submits the form', async () => {
+    const component = filled(render());
+
+    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+
+    expect(setupCalls).toHaveLength(1);
+    expect(component.isValid()).toBeTruthy();
+  });
+
+  it('announces a passphrase mismatch', () => {
+    const component = render();
+    component.passphrase.set('a long passphrase');
+    component.confirmPassphrase.set('another one');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      'do not match',
+    );
   });
 });

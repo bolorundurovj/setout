@@ -12,44 +12,59 @@ import { ToastService } from '../toast.service';
   imports: [CommonModule, FormsModule, RouterModule, ButtonComponent],
   template: `
     <div class="setup-container">
-      <div class="setup-box">
+      <form class="setup-box" (ngSubmit)="onSubmit()">
         <div class="header">
-          <div class="t-display">Set Up Setout</div>
+          <h1 class="t-display">Set Up Setout</h1>
           <div class="t-body" style="color: var(--ink-2)">Create your account.</div>
         </div>
 
         <div class="form-section">
           <div class="form-group">
-            <div class="t-micro">Account Name</div>
-            <input type="text" [(ngModel)]="name" placeholder="Your name" class="input-field" />
-          </div>
-          <div class="form-group">
-            <div class="t-micro">Email (Optional)</div>
+            <label class="t-micro" for="setup-name">Account Name</label>
             <input
-              type="email"
-              [(ngModel)]="email"
-              placeholder="you@example.com"
+              type="text"
+              id="setup-name"
+              name="name"
+              autocomplete="name"
+              [(ngModel)]="name"
+              placeholder="Your name"
               class="input-field"
-              autocomplete="email"
             />
           </div>
           <div class="form-group">
-            <div class="t-micro">Passphrase</div>
+            <label class="t-micro" for="setup-email">Email (Optional)</label>
+            <input
+              type="email"
+              id="setup-email"
+              name="email"
+              autocomplete="email"
+              [(ngModel)]="email"
+              placeholder="you@example.com"
+              class="input-field"
+            />
+          </div>
+          <div class="form-group">
+            <label class="t-micro" for="setup-passphrase">Passphrase</label>
             <input
               type="password"
+              id="setup-passphrase"
+              name="passphrase"
+              autocomplete="new-password"
               [(ngModel)]="passphrase"
               placeholder="••••••••••"
               class="input-field"
             />
           </div>
           <div class="form-group">
-            <div class="t-micro">Confirm Passphrase</div>
+            <label class="t-micro" for="setup-confirmPassphrase">Confirm Passphrase</label>
             <input
               type="password"
+              id="setup-confirmPassphrase"
+              name="confirmPassphrase"
+              autocomplete="new-password"
               [(ngModel)]="confirmPassphrase"
               placeholder="••••••••••"
               class="input-field"
-              (keyup.enter)="onSubmit()"
             />
           </div>
 
@@ -62,18 +77,18 @@ import { ToastService } from '../toast.service';
           class="block"
           [disabled]="!isValid()"
           [loading]="authService.loading()"
-          (pressed)="onSubmit()"
+          type="submit"
         >
           {{ authService.loading() ? 'Setting up…' : 'Create Account' }}
         </app-button>
 
         @if (authService.error()) {
-          <div class="error-msg t-small">
+          <div role="alert" class="error-msg t-small">
             {{ authService.error() }}
           </div>
         }
         @if (passphraseMismatch()) {
-          <div class="error-msg t-small">Passphrases do not match.</div>
+          <div role="alert" class="error-msg t-small">Passphrases do not match.</div>
         }
 
         <div class="footer">
@@ -82,7 +97,7 @@ import { ToastService } from '../toast.service';
             <a routerLink="/login" class="link">Sign in</a>
           </div>
         </div>
-      </div>
+      </form>
     </div>
   `,
   styles: [
@@ -106,6 +121,9 @@ import { ToastService } from '../toast.service';
         display: flex;
         flex-direction: column;
         gap: 22px;
+      }
+      h1 {
+        margin: 0;
       }
       .header {
         display: flex;

@@ -12,23 +12,25 @@ import { LogoComponent } from '../ui/logo.component';
   imports: [CommonModule, FormsModule, RouterModule, ButtonComponent, LogoComponent],
   template: `
     <div class="auth-container">
-      <div class="auth-box">
+      <form class="auth-box" (ngSubmit)="onSubmit()">
         <div class="header">
           <app-logo [size]="44" />
           <div class="header-text">
             <div class="t-display">Setout</div>
-            <div class="t-small">Sign In</div>
+            <h1 class="t-small">Sign In</h1>
           </div>
         </div>
 
         <div class="form-group">
-          <div class="t-micro">Passphrase</div>
+          <label class="t-micro" for="login-passphrase">Passphrase</label>
           <input
             type="password"
+            id="login-passphrase"
+            name="passphrase"
+            autocomplete="current-password"
             [(ngModel)]="passphrase"
             placeholder="••••••••••"
             class="input-field"
-            (keyup.enter)="onSubmit()"
           />
         </div>
 
@@ -37,13 +39,13 @@ import { LogoComponent } from '../ui/logo.component';
           class="block"
           [disabled]="!passphrase()"
           [loading]="authService.loading()"
-          (pressed)="onSubmit()"
+          type="submit"
         >
           {{ authService.loading() ? 'Signing in…' : 'Sign In' }}
         </app-button>
 
         @if (authService.error()) {
-          <div class="error-msg t-small">
+          <div role="alert" class="error-msg t-small">
             {{ authService.error() }}
           </div>
         }
@@ -53,7 +55,7 @@ import { LogoComponent } from '../ui/logo.component';
             First time using Setout? <a routerLink="/setup" class="link">Set Up Setout</a>
           </div>
         </div>
-      </div>
+      </form>
     </div>
   `,
   styles: [
@@ -82,6 +84,9 @@ import { LogoComponent } from '../ui/logo.component';
         display: flex;
         align-items: center;
         gap: 13px;
+      }
+      h1 {
+        margin: 0;
       }
       .header-text {
         display: flex;

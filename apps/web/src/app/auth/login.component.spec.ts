@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { AuthService } from './auth.service';
 import { LoginComponent } from './login.component';
@@ -40,10 +40,12 @@ describe('LoginComponent', () => {
       navigations.push(args);
       return true;
     };
-    const fixture = TestBed.createComponent(LoginComponent);
+    fixture = TestBed.createComponent(LoginComponent);
     fixture.detectChanges();
     return fixture.componentInstance;
   }
+
+  let fixture: ComponentFixture<LoginComponent>;
 
   it('does not submit an empty passphrase', async () => {
     const component = render();
@@ -75,5 +77,24 @@ describe('LoginComponent', () => {
     expect(attempts).toEqual(['wrong']);
     expect(navigations).toEqual([]);
     expect(toasts).toEqual([]);
+  });
+
+  it('labels the passphrase input and submits the form', async () => {
+    const component = render();
+    const element: HTMLElement = fixture.nativeElement;
+    const input = element.querySelector<HTMLInputElement>('#login-passphrase')!;
+
+    expect(element.querySelector('h1')?.textContent).toContain('Sign In');
+    expect(element.querySelector('label[for="login-passphrase"]')?.textContent).toContain(
+      'Passphrase',
+    );
+    expect(input.autocomplete).toBe('current-password');
+    expect(element.querySelector('button')?.type).toBe('submit');
+
+    component.passphrase.set('from enter');
+    element.querySelector('form')!.dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+
+    expect(attempts).toEqual(['from enter']);
   });
 });
