@@ -8,6 +8,7 @@ from __future__ import annotations
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import quote
 
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -40,6 +41,12 @@ class Settings(BaseSettings):
     port: int = 8474
     data_dir: Path = Path("./data")
     database_url: str = ""
+    # Optional parts for building a Postgres URL safely when credentials hold URL characters.
+    db_host: str = ""
+    db_port: int = 5432
+    db_name: str = ""
+    db_user: str = ""
+    db_password: str = ""
     secret_key: str = "change-me"
     log_level: str = "info"
     # Directory of the built web app to serve. Set in the container image.
@@ -121,6 +128,12 @@ class Settings(BaseSettings):
     def resolved_database_url(self) -> str:
         if self.database_url:
             return self.database_url
+        if self.db_host:
+            user = quote(self.db_user, safe="")
+            password = quote(self.db_password, safe="")
+            name = quote(self.db_name, safe="")
+            auth = f"{user}:{password}@" if password else (f"{user}@" if user else "")
+            return f"postgres://{auth}{self.db_host}:{self.db_port}/{name}"
         self.data_dir.mkdir(parents=True, exist_ok=True)
         db_path = self.data_dir / "setout.sqlite3"
         return f"sqlite://{db_path.as_posix()}"

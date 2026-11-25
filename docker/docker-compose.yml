@@ -11,22 +11,22 @@ services:
     ports:
       - "${SETOUT_PORT:-8474}:8474"
     env_file:
-      - .env
+      - .env.setout
     volumes:
       - setout-data:/var/lib/setout
     depends_on:
       db:
         condition: service_healthy
       s3:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
 
   db:
     image: postgres:17.11
     env_file:
-      - .env
+      - .env.db
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - setout-postgres:/var/lib/postgresql/data
     healthcheck:
@@ -37,14 +37,19 @@ services:
     restart: unless-stopped
 
   s3:
-    image: rustfs/rustfs:${RUSTFS_IMAGE_TAG:-latest}
+    image: rustfs/rustfs:${RUSTFS_IMAGE_TAG:-1.0.5}
     env_file:
-      - .env
+      - .env.s3
     ports:
-      - "${STORAGE_PORT:-9000}:9000"
-      - "${STORAGE_CONSOLE_PORT:-9001}:9001"
+      - "127.0.0.1:${STORAGE_PORT:-9000}:9000"
+      - "127.0.0.1:${STORAGE_CONSOLE_PORT:-9001}:9001"
     volumes:
       - setout-storage:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:9000/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
 volumes:

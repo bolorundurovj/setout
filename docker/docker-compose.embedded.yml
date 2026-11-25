@@ -1,5 +1,5 @@
 # Self-contained Docker Compose configuration with embedded environment variables.
-# Runs directly without requiring an external .env file:
+# Runs directly without requiring external env files:
 #   docker compose -f docker/docker-compose.embedded.yml up -d
 
 name: setout
@@ -13,7 +13,11 @@ services:
     ports:
       - "${SETOUT_PORT:-8474}:8474"
     environment:
-      SETOUT_DATABASE_URL: postgres://${POSTGRES_USER:-setout}:${POSTGRES_PASSWORD:-setout}@db:5432/${POSTGRES_DB:-setout}
+      SETOUT_DB_HOST: db
+      SETOUT_DB_PORT: "5432"
+      SETOUT_DB_USER: ${POSTGRES_USER:-setout}
+      SETOUT_DB_PASSWORD: ${POSTGRES_PASSWORD:-setout}
+      SETOUT_DB_NAME: ${POSTGRES_DB:-setout}
       SETOUT_SECRET_KEY: ${SETOUT_SECRET_KEY:-change-me}
       SETOUT_STORAGE_BACKEND: s3
       SETOUT_S3_BUCKET: ${STORAGE_BUCKET:-${MINIO_BUCKET:-setout}}
@@ -30,7 +34,7 @@ services:
       db:
         condition: service_healthy
       s3:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
 
   db:
@@ -40,7 +44,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-setout}
       POSTGRES_DB: ${POSTGRES_DB:-setout}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - setout-postgres:/var/lib/postgresql/data
     healthcheck:
@@ -51,7 +55,7 @@ services:
     restart: unless-stopped
 
   s3:
-    image: rustfs/rustfs:${RUSTFS_IMAGE_TAG:-latest}
+    image: rustfs/rustfs:${RUSTFS_IMAGE_TAG:-1.0.5}
     environment:
       RUSTFS_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-${MINIO_ROOT_USER:-setout}}
       RUSTFS_SECRET_KEY: ${STORAGE_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-setout-secret}}
@@ -59,10 +63,15 @@ services:
       RUSTFS_CONSOLE_ADDRESS: ":9001"
       RUSTFS_CONSOLE_ENABLE: "true"
     ports:
-      - "${STORAGE_PORT:-9000}:9000"
-      - "${STORAGE_CONSOLE_PORT:-9001}:9001"
+      - "127.0.0.1:${STORAGE_PORT:-9000}:9000"
+      - "127.0.0.1:${STORAGE_CONSOLE_PORT:-9001}:9001"
     volumes:
       - setout-storage:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:9000/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
 volumes:

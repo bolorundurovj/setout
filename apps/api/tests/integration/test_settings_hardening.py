@@ -44,6 +44,21 @@ def test_default_secret_warning_is_logged(caplog: pytest.LogCaptureFixture) -> N
     assert any("SETOUT_SECRET_KEY" in record.getMessage() for record in caplog.records)
 
 
+@pytest.mark.unit
+def test_database_url_is_built_safely_from_parts() -> None:
+    settings = Settings(
+        db_host="db",
+        db_port=5432,
+        db_user="admin@org",
+        db_password="p@ss:w/rd#1?%",
+        db_name="setout_prod",
+    )
+    assert (
+        settings.resolved_database_url()
+        == "postgres://admin%40org:p%40ss%3Aw%2Frd%231%3F%25@db:5432/setout_prod"
+    )
+
+
 @pytest.mark.asyncio
 @pytest.mark.integration
 async def test_sign_out_cookie_attributes_and_actor_reset(
