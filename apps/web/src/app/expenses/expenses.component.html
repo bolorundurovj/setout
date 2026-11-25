@@ -157,6 +157,7 @@
       </label>
       <select
         class="bulk-category"
+        aria-label="Category for the selected expenses"
         [ngModel]="bulkCategoryId()"
         (ngModelChange)="bulkCategoryId.set($event)"
       >
@@ -190,6 +191,7 @@
           <div class="row">
             <input
               type="checkbox"
+              [attr.aria-label]="'Select ' + expense.description"
               [checked]="selected().has(expense.id)"
               (change)="toggleOne(expense.id)"
             />

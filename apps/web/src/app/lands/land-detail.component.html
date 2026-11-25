@@ -200,6 +200,7 @@
                     type="text"
                     autocomplete="off"
                     placeholder="Describe this document"
+                    aria-label="Document notes"
                     [value]="editNotes()"
                     (input)="editNotes.set(value($event))"
                   />
@@ -242,6 +243,8 @@
         #picker
         type="file"
         class="offscreen"
+        tabindex="-1"
+        aria-label="Document file"
         accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
         (change)="onPicked($event)"
       />
