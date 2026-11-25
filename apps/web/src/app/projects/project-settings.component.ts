@@ -208,23 +208,34 @@ export class ProjectSettingsComponent {
   }
 
   exportWorkbook(): void {
-    this.download(this.exportUrl(), 'Workbook download started.');
+    void this.download(this.exportUrl(), 'project.xlsx', 'Workbook download started.');
   }
 
   exportCsv(sheet: 'budget' | 'expenses'): void {
     const name = sheet === 'budget' ? 'Budget' : 'Expenses';
-    this.download(this.csvUrl(sheet), `${name} CSV download started.`);
+    void this.download(this.csvUrl(sheet), sheet + '.csv', `${name} CSV download started.`);
   }
 
   exportReport(): void {
-    this.download(this.reportUrl(), 'Report download started.');
+    void this.download(this.reportUrl(), 'report.pdf', 'Report download started.');
   }
 
-  private download(url: string, message: string): void {
-    const link = document.createElement('a');
-    link.href = url;
-    link.click();
-    this.toast.show(message);
+  private async download(url: string, fallback: string, message: string): Promise<void> {
+    try {
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) throw new Error();
+      const disposition = response.headers.get('content-disposition') ?? '';
+      const name = /filename="([^"]+)"/i.exec(disposition)?.[1] ?? fallback;
+      const link = document.createElement('a');
+      const objectUrl = URL.createObjectURL(await response.blob());
+      link.href = objectUrl;
+      link.download = name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
+      this.toast.show(message);
+    } catch {
+      this.toast.show('Could not download the export.', 'error');
+    }
   }
 
   importWorkbook(): void {

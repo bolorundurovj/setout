@@ -1,3 +1,4 @@
+import { ArchiveConfirmComponent } from '../ui/archive-confirm.component';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -31,7 +32,13 @@ import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.
   selector: 'app-vendor-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DeleteConfirmDirective, RouterLink, ButtonComponent, PaginationComponent],
+  imports: [
+    ArchiveConfirmComponent,
+    DeleteConfirmDirective,
+    RouterLink,
+    ButtonComponent,
+    PaginationComponent,
+  ],
   templateUrl: './vendor-detail.component.html',
   styleUrl: './vendor-detail.component.scss',
 })

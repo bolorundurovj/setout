@@ -167,14 +167,11 @@
                 </button>
               }
             } @else {
-              <button
-                type="button"
-                class="link-action t-mono"
-                [attr.aria-label]="'Archive ' + item.name"
-                (click)="archive(item.id)"
-              >
-                Archive
-              </button>
+              <app-archive-confirm
+                text="Archive"
+                [label]="'Archive ' + item.name"
+                (confirmed)="archive(item.id)"
+              />
             }
           </span>
         </div>

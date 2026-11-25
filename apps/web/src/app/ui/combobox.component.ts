@@ -193,7 +193,9 @@ export class ComboboxComponent {
 
   onKeydown(event: KeyboardEvent): void {
     const options = this.filtered();
-    if (event.key === 'Escape') {
+    if (event.key === 'Escape' && this.open()) {
+      event.preventDefault();
+      event.stopPropagation();
       this.open.set(false);
       return;
     }

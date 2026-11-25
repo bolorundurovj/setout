@@ -22,7 +22,7 @@
       <div class="head-actions">
         @if (!l.archived_at) {
           <app-button variant="secondary" (pressed)="edit()">Edit Land Record</app-button>
-          <app-button variant="danger" (pressed)="archive()">Archive</app-button>
+          <app-archive-confirm text="Archive" (confirmed)="archive()" />
         } @else if (pendingDelete()) {
           <div class="confirm-delete">
             <span class="t-small danger-text">Type DELETE to confirm:</span>
@@ -115,9 +115,9 @@
             [attr.aria-labelledby]="mapTabs(l).length ? shownMap(l) + '-tab' : null"
           >
             @if (shownMap(l) === 'pin') {
-              <app-land-map mode="pin" [point]="pinPoint(l)" />
+              <app-land-map mode="pin" [boundary]="l.boundary" [point]="pinPoint(l)" />
             } @else {
-              <app-land-map mode="boundary" [boundary]="l.boundary" />
+              <app-land-map mode="boundary" [point]="pinPoint(l)" [boundary]="l.boundary" />
             }
           </div>
         } @placeholder {
@@ -164,7 +164,13 @@
               (input)="notes.set(value($event))"
             />
           </label>
-          <app-button [loading]="lands.saving()" (pressed)="chooseFile()">Choose File</app-button>
+          @if (pendingUpload(); as file) {
+            <span>{{ file.name }}</span>
+            <app-button [loading]="lands.saving()" (pressed)="uploadDocument()">Upload</app-button>
+            <app-button variant="secondary" (pressed)="pendingUpload.set(null)">Cancel</app-button>
+          } @else {
+            <app-button (pressed)="chooseFile()">Choose File</app-button>
+          }
           <span class="t-small muted"> Image or PDF. Stored on this server. </span>
         </div>
       }
@@ -230,9 +236,7 @@
                     <button type="button" class="link t-mono" (click)="startEdit(document)">
                       Edit
                     </button>
-                    <button type="button" class="link t-mono" (click)="archiveDocument(document)">
-                      Archive
-                    </button>
+                    <app-archive-confirm text="Archive" (confirmed)="archiveDocument(document)" />
                   }
                 </span>
               }

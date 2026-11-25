@@ -322,14 +322,11 @@
               >
                 Edit
               </button>
-              <button
-                type="button"
-                class="link-action archive"
-                [attr.aria-label]="'Archive ' + expense.description"
-                (click)="archive(expense.id)"
-              >
-                Archive
-              </button>
+              <app-archive-confirm
+                text="Archive"
+                [label]="'Archive ' + expense.description"
+                (confirmed)="archive(expense.id)"
+              />
             }
           </span>
         </div>

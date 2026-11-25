@@ -1,3 +1,4 @@
+import { ArchiveConfirmComponent } from '../ui/archive-confirm.component';
 import { formatNumber } from '../budget/money';
 import {
   ChangeDetectionStrategy,
@@ -30,6 +31,7 @@ import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ArchiveConfirmComponent,
     DeleteConfirmDirective,
     ButtonComponent,
     ChipGroupComponent,
@@ -244,11 +246,18 @@ export class LandDetailComponent {
     this.filePicker()?.nativeElement.click();
   }
 
-  async onPicked(event: Event): Promise<void> {
+  readonly pendingUpload = signal<File | null>(null);
+
+  onPicked(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
-    if (!file) {
+    this.pendingUpload.set(file ?? null);
+  }
+
+  async uploadDocument(): Promise<void> {
+    const file = this.pendingUpload();
+    if (!file || this.lands.saving()) {
       return;
     }
     const saved = await this.lands.createDocument(
@@ -261,6 +270,7 @@ export class LandDetailComponent {
       this.toast.show(this.lands.error() ?? 'Could not upload the document.', 'error');
       return;
     }
+    this.pendingUpload.set(null);
     this.notes.set('');
     this.toast.show(`${kindName(saved.kind)} uploaded.`);
     await this.load();

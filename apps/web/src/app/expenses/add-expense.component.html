@@ -329,9 +329,7 @@
           <span class="receipt-text">
             <span class="t-body">{{ file.filename }}</span>
             <span class="t-small muted">{{ fileNote(file) }}</span>
-            <button type="button" class="receipt-action t-mono" (click)="archiveAttachment(file)">
-              Archive Attachment
-            </button>
+            <app-archive-confirm text="Archive Attachment" (confirmed)="archiveAttachment(file)" />
           </span>
         </div>
       }

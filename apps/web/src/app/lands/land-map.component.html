@@ -8,6 +8,10 @@
   (keydown.enter)="onCanvasEnter($event)"
 ></div>
 
+@if (locationError()) {
+  <p role="alert">{{ locationError() }}</p>
+}
+
 @if (tilesFailed()) {
   <p class="t-small muted">Map tiles unavailable. The pin and boundary are still shown.</p>
 }

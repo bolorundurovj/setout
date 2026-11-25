@@ -1,3 +1,4 @@
+import { ArchiveConfirmComponent } from '../ui/archive-confirm.component';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import type { AdvanceRead, AgreementRead, ExpenseRead, ProjectRead } from '@setout/api-client';
 import { AttachmentParent } from '../attachments/attachment.service';
@@ -30,6 +31,7 @@ import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ArchiveConfirmComponent,
     DeleteConfirmDirective,
     AttachmentsComponent,
     ChangeHistoryComponent,

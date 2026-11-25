@@ -112,7 +112,13 @@
           <button type="button" class="link-action" (click)="clearFile()">Choose Another</button>
         </div>
       } @else {
-        <button type="button" class="file-picker" (click)="openFilePicker()">
+        <button
+          type="button"
+          class="file-picker"
+          (dragover)="$event.preventDefault()"
+          (drop)="onDrop($event)"
+          (click)="openFilePicker()"
+        >
           <span class="t-body">Choose a .xlsx or .csv file</span>
           <span class="t-small muted">
             The file is read by your Setout server and not sent anywhere else.

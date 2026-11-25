@@ -8,15 +8,17 @@
         @if (isImage(file)) {
           <img [src]="fileUrl(file)" [alt]="file.filename" />
         } @else {
-          <span class="t-mono thumb-kind">PDF</span>
+          <span class="t-mono thumb-kind">{{
+            file.content_type === 'application/pdf' ? 'PDF' : 'Image'
+          }}</span>
         }
       </a>
       <span class="text">
-        <span class="t-body">{{ file.filename }}</span>
+        <a class="t-body" [href]="fileUrl(file)" target="_blank" rel="noopener">{{
+          file.filename
+        }}</a>
         <span class="t-small muted">{{ fileNote(file) }}</span>
-        <button type="button" class="action t-mono" (click)="archive(file)">
-          Archive Attachment
-        </button>
+        <app-archive-confirm text="Archive Attachment" (confirmed)="archive(file)" />
       </span>
     </div>
   }

@@ -1,3 +1,4 @@
+import { ArchiveConfirmComponent } from '../ui/archive-confirm.component';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import type { ItemPriceSummary, ItemRead } from '@setout/api-client';
@@ -16,6 +17,7 @@ import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ArchiveConfirmComponent,
     DeleteConfirmDirective,
     ButtonComponent,
     PaginationComponent,

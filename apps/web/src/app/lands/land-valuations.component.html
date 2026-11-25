@@ -28,7 +28,7 @@
           }
         </span>
         <span class="entry-actions">
-          <button type="button" class="link t-mono" (click)="archive(row)">Archive</button>
+          <app-archive-confirm text="Archive" (confirmed)="archive(row)" />
         </span>
       </div>
     }

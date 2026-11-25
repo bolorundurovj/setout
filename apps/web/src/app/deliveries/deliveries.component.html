@@ -135,7 +135,7 @@
                 }
               } @else {
                 <app-button variant="secondary" (pressed)="startEdit(delivery)">Edit</app-button>
-                <app-button variant="danger" (pressed)="archive(delivery)">Archive</app-button>
+                <app-archive-confirm text="Archive" (confirmed)="archive(delivery)" />
                 <app-button (pressed)="markReceived(delivery)">Mark Received</app-button>
               }
             </span>

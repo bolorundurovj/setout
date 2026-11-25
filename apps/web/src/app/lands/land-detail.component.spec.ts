@@ -160,6 +160,8 @@ describe('LandDetailComponent', () => {
       target: { files: [file], value: '' },
     } as unknown as Event);
 
+    expect(uploads).toEqual([]);
+    await component.uploadDocument();
     expect(uploads).toEqual([{ kind: 'survey_plan', file, notes: '' }]);
     expect(toasts[0].message).toBe('Survey Plan uploaded.');
   });

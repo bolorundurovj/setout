@@ -252,14 +252,11 @@
                 Edit
               </button>
               <span class="t-small hint"> Saves an expense assigned to this agreement. </span>
-              <button
-                type="button"
-                class="link-action archive-action"
-                [attr.aria-label]="'Archive the agreement with ' + agreement.vendor_name"
-                (click)="archive(agreement.id)"
-              >
-                Archive
-              </button>
+              <app-archive-confirm
+                text="Archive"
+                [label]="'Archive the agreement with ' + agreement.vendor_name"
+                (confirmed)="archive(agreement.id)"
+              />
             }
           </div>
         </div>
@@ -487,14 +484,11 @@
                 >
                   Edit
                 </button>
-                <button
-                  type="button"
-                  class="link-action archive-action"
-                  [attr.aria-label]="'Archive the advance to ' + advance.person_name"
-                  (click)="archiveAdvance(advance.id)"
-                >
-                  Archive
-                </button>
+                <app-archive-confirm
+                  text="Archive"
+                  [label]="'Archive the advance to ' + advance.person_name"
+                  (confirmed)="archiveAdvance(advance.id)"
+                />
               </span>
             }
           </div>

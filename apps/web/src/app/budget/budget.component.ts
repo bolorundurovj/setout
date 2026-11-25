@@ -1,3 +1,4 @@
+import { ArchiveConfirmComponent } from '../ui/archive-confirm.component';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type { BudgetItemRead, CostType, ProjectRead, CategoryRead } from '@setout/api-client';
@@ -20,6 +21,7 @@ import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ArchiveConfirmComponent,
     DeleteConfirmDirective,
     FormsModule,
     ButtonComponent,

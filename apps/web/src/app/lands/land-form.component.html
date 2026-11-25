@@ -105,6 +105,7 @@
           @if (mapTab() === 'pin') {
             <app-land-map
               mode="pin"
+              [boundary]="boundary()"
               [point]="pin()"
               [editable]="true"
               (pointChange)="setPin($event)"
@@ -112,6 +113,7 @@
           } @else {
             <app-land-map
               mode="boundary"
+              [point]="pin()"
               [boundary]="boundary()"
               [editable]="true"
               (boundaryChange)="boundary.set($event)"
@@ -152,9 +154,9 @@
         </div>
       }
 
-      @if (mapTab() === 'boundary' && boundaryMethod() === 'survey') {
+      <div [hidden]="mapTab() !== 'boundary' || boundaryMethod() !== 'survey'">
         <app-land-survey (boundaryChange)="boundary.set($event)" />
-      }
+      </div>
 
       @if (mapTab() === 'boundary' && boundaryMethod() === 'points') {
         @if (editingPoints()) {

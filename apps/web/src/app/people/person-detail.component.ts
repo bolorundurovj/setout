@@ -1,3 +1,4 @@
+import { ArchiveConfirmComponent } from '../ui/archive-confirm.component';
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
@@ -17,7 +18,7 @@ import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.
   selector: 'app-person-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DeleteConfirmDirective, RouterLink, ButtonComponent],
+  imports: [ArchiveConfirmComponent, DeleteConfirmDirective, RouterLink, ButtonComponent],
   templateUrl: './person-detail.component.html',
   styleUrl: './person-detail.component.scss',
 })

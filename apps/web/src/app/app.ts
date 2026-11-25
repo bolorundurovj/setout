@@ -165,7 +165,8 @@ export class App {
   onSearch(): void {
     this.debouncedSearch.cancel();
     const term = this.query().trim();
-    void this.router.navigate(term ? ['/search'] : ['/'], {
+    if (!term) return;
+    void this.router.navigate(['/search'], {
       queryParams: term ? { q: term } : {},
     });
   }
@@ -203,6 +204,8 @@ export class App {
   async signOut(): Promise<void> {
     if (await this.auth.logout()) {
       await this.router.navigate(['/login']);
+    } else {
+      this.toast.show('Could not sign out. Try again.', 'error');
     }
   }
 }

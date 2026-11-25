@@ -1,3 +1,4 @@
+import { ArchiveConfirmComponent } from '../ui/archive-confirm.component';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -40,6 +41,7 @@ const SORTS: Chip[] = [
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ArchiveConfirmComponent,
     DeleteConfirmDirective,
     AddExpenseComponent,
     ButtonComponent,
@@ -181,7 +183,10 @@ export class ExpensesComponent {
         return;
       }
       this.openedExpenseId = expenseId;
-      untracked(() => void this.openExpenseById(expenseId));
+      untracked(() => {
+        if (expenseId === 'new') this.openDrawer();
+        else void this.openExpenseById(expenseId);
+      });
     });
     queueMicrotask(() => {
       void this.budget.load(this.project().id);

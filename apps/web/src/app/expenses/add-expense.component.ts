@@ -1,3 +1,4 @@
+import { ArchiveConfirmComponent } from '../ui/archive-confirm.component';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -41,7 +42,13 @@ import { isoDay } from '../shared/dates';
   selector: 'app-add-expense',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChangeHistoryComponent, ChipGroupComponent, MoneyHintComponent],
+  imports: [
+    ArchiveConfirmComponent,
+    ButtonComponent,
+    ChangeHistoryComponent,
+    ChipGroupComponent,
+    MoneyHintComponent,
+  ],
   templateUrl: './add-expense.component.html',
   styleUrl: './add-expense.component.scss',
 })

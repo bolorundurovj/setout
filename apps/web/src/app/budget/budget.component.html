@@ -165,13 +165,10 @@
                         </button>
                       }
                     } @else {
-                      <button
-                        type="button"
-                        class="link-action t-mono"
-                        (click)="archiveItem(category, item.id)"
-                      >
-                        Archive
-                      </button>
+                      <app-archive-confirm
+                        text="Archive"
+                        (confirmed)="archiveItem(category, item.id)"
+                      />
                     }
                   </span>
                 </div>

@@ -1,3 +1,4 @@
+import { ArchiveConfirmComponent } from '../ui/archive-confirm.component';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -22,7 +23,13 @@ import { LandService } from './land.service';
   selector: 'app-land-valuations',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChipGroupComponent, CurrencyPillComponent, MoneyHintComponent],
+  imports: [
+    ArchiveConfirmComponent,
+    ButtonComponent,
+    ChipGroupComponent,
+    CurrencyPillComponent,
+    MoneyHintComponent,
+  ],
   templateUrl: './land-valuations.component.html',
   styleUrl: './land-valuations.component.scss',
 })

@@ -435,6 +435,12 @@ export class OptionPickerComponent {
   }
 
   onTriggerKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && this.open()) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.close();
+      return;
+    }
     if (event.key === 'ArrowDown' && !this.open()) {
       event.preventDefault();
       this.toggle();
@@ -443,7 +449,8 @@ export class OptionPickerComponent {
 
   onFilterKeydown(event: KeyboardEvent): void {
     const matches = this.matches();
-    if (event.key === 'Escape') {
+    if (event.key === 'Escape' && this.open()) {
+      event.stopPropagation();
       event.preventDefault();
       this.close();
       this.trigger().nativeElement.focus();

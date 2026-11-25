@@ -19,7 +19,7 @@
       <div class="head-actions">
         @if (!p.archived_at) {
           <app-button variant="secondary" (pressed)="edit()">Edit</app-button>
-          <app-button variant="danger" (pressed)="archive()">Archive</app-button>
+          <app-archive-confirm text="Archive" (confirmed)="archive()" />
         } @else if (pendingDelete()) {
           <div class="confirm-delete">
             <span class="t-small danger-text">Type DELETE to confirm:</span>

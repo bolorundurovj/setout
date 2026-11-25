@@ -1,3 +1,4 @@
+import { ArchiveConfirmComponent } from '../ui/archive-confirm.component';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -16,6 +17,7 @@ import { AttachmentParent, AttachmentService } from './attachment.service';
 @Component({
   selector: 'app-attachments',
   standalone: true,
+  imports: [ArchiveConfirmComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './attachments.component.html',
   styleUrl: './attachments.component.scss',

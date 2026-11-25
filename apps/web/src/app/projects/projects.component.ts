@@ -119,7 +119,9 @@ export class ProjectsComponent {
   }
 
   addExpense(id: string): void {
-    void this.router.navigate(['/projects', id, 'expense']);
+    void this.router.navigate(['/projects', id, 'expense'], {
+      queryParams: { expense: 'new' },
+    });
   }
 
   importWorkbook(): void {

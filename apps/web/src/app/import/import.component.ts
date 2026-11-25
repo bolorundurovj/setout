@@ -178,6 +178,15 @@ export class ImportComponent {
     this.report.set(null);
   }
 
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    const file = event.dataTransfer?.files[0];
+    if (file) {
+      this.file.set(file);
+      this.report.set(null);
+    }
+  }
+
   clearFile(): void {
     this.file.set(null);
     this.report.set(null);

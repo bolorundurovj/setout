@@ -135,6 +135,12 @@ export class ProjectDetailComponent {
       .join('');
   }
 
+  newExpense(): void {
+    void this.router.navigate(['/projects', this.id(), 'expense'], {
+      queryParams: { expense: 'new' },
+    });
+  }
+
   selectTab(key: string): void {
     this.activeTab.set(key);
     void this.router.navigate(['/projects', this.id(), key]);

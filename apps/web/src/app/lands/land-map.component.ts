@@ -56,6 +56,8 @@ export class LandMapComponent {
   readonly boundaryChange = output<LandBoundary | null>();
 
   readonly hintId = `land-map-hint-${nextMapId++}`;
+  private fitted = false;
+  readonly locationError = signal('');
   readonly tilesFailed = signal(false);
   readonly points = signal<Position[]>([]);
 
@@ -137,7 +139,7 @@ export class LandMapComponent {
     const pinPoint = this.point();
     if (pinPoint) {
       this.pin = L.marker([pinPoint.lat, pinPoint.lon], {
-        draggable: this.editable(),
+        draggable: this.editable() && this.mode() === 'pin',
         icon: L.divIcon({ html: PIN, className: 'pin', iconSize: [24, 32], iconAnchor: [12, 32] }),
       }).addTo(map);
       this.pin.on('dragend', () => {
@@ -155,10 +157,13 @@ export class LandMapComponent {
         { color: 'var(--accent, #b4530a)', weight: 2, fillOpacity: 0.12 },
       ).addTo(map);
     }
-    if (this.editable()) {
+    if (this.editable() && this.mode() === 'boundary') {
       ring.forEach(([lon, lat], index) => this.handleAt(map, lat, lon, index));
     }
-    this.fitView();
+    if (!this.fitted && (this.shape || pinPoint)) {
+      this.fitView();
+      this.fitted = true;
+    }
   }
 
   private handleAt(map: L.Map, lat: number, lon: number, index: number): void {
@@ -217,12 +222,20 @@ export class LandMapComponent {
   }
 
   locate(): void {
-    navigator.geolocation?.getCurrentPosition((position) => {
-      this.pointChange.emit({
-        lat: round(position.coords.latitude),
-        lon: round(position.coords.longitude),
-      });
-    });
+    this.locationError.set('');
+    if (!navigator.geolocation) {
+      this.locationError.set('Location is unavailable.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        this.pointChange.emit({
+          lat: round(position.coords.latitude),
+          lon: round(position.coords.longitude),
+        });
+      },
+      () => this.locationError.set('Could not find your location. Check location permissions.'),
+    );
   }
 
   dropPin(): void {

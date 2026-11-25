@@ -217,7 +217,9 @@ export class DashboardComponent {
   }
 
   newExpense(row: HomeProject): void {
-    void this.router.navigate(['/projects', row.id, 'expense']);
+    void this.router.navigate(['/projects', row.id, 'expense'], {
+      queryParams: { expense: 'new' },
+    });
   }
 
   openExpense(row: HomeExpenseSummary): void {
