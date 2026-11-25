@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { ExpenseRead, ProjectRead, CategoryRead } from '@setout/api-client';
 import { BudgetService } from '../budget/budget.service';
@@ -55,6 +56,7 @@ function row(over: Partial<CompareRow> = {}): CompareRow {
 }
 
 describe('BudgetCompareComponent', () => {
+  const pageRevision = signal(0);
   let loaded: string[];
 
   function render(
@@ -78,7 +80,10 @@ describe('BudgetCompareComponent', () => {
           useValue: {
             summary: () => summary,
             total: () => expenseCount,
-            categoryPage: (_p: string, id: string) => byCategory[id],
+            categoryPage: (_p: string, id: string) => {
+              pageRevision();
+              return byCategory[id];
+            },
             load: async () => undefined,
             loadForCategory: async (_p: string, categoryId: string) => {
               loaded.push(categoryId);
@@ -100,6 +105,16 @@ describe('BudgetCompareComponent', () => {
     uncategorised_amount: uncategorised,
     uncategorised_count: uncategorisedCount,
     variance_percent: null,
+  });
+
+  it('keeps the user selection when the deep-linked category finishes loading', () => {
+    const component = render([], null, {}, 0, 'first');
+    expect(component.expanded()).toBe('first');
+    component.toggle(row({ id: 'second' }));
+    pageRevision.update((revision) => revision + 1);
+    TestBed.tick();
+    expect(component.expanded()).toBe('second');
+    expect(loaded).toEqual(['first', 'second']);
   });
 
   it('lists every category in budget order', () => {

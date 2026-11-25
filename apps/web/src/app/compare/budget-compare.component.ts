@@ -6,6 +6,7 @@ import {
   inject,
   input,
   signal,
+  untracked,
 } from '@angular/core';
 import type { ExpenseRead, ProjectRead } from '@setout/api-client';
 import { BudgetService } from '../budget/budget.service';
@@ -103,7 +104,7 @@ export class BudgetCompareComponent {
     effect(() => {
       const categoryId = this.openCategory();
       if (categoryId) {
-        this.expand(categoryId);
+        untracked(() => this.expand(categoryId));
       }
     });
   }
