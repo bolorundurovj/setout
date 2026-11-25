@@ -15,7 +15,6 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from setout.services.geocoder import close_client
 from setout import __version__
 from setout.cli import consume_recovery_file
 from setout.config import Settings, get_settings
@@ -46,6 +45,7 @@ from setout.routers import (
     vendor,
 )
 from setout.services import changes
+from setout.services.geocoder import close_client
 from setout.services.storage import S3Storage, auto_migrate_legacy_storage, get_storage
 from setout.utils.body_limit import BodyLimit
 from setout.utils.security_headers import SecurityHeaders
