@@ -13474,6 +13474,17 @@
           "urgent": {
             "type": "boolean",
             "title": "Urgent"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
           }
         },
         "type": "object",

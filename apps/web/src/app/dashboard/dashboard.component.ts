@@ -221,19 +221,29 @@ export class DashboardComponent {
   }
 
   openExpense(row: HomeExpenseSummary): void {
-    void this.router.navigate(['/projects', row.project_id, 'expense']);
+    void this.router.navigate(['/projects', row.project_id, 'expense'], {
+      queryParams: { expense: row.id },
+    });
   }
 
   openAlert(alert: HomeAlert): void {
-    const row = this.rows()[0];
-    if (!row) {
+    const projectId = alert.project_id ?? this.rows()[0]?.id;
+    if (!projectId) {
       return;
     }
-    void this.router.navigate([
-      '/projects',
-      row.id,
-      alert.kind === 'uncategorised' ? 'table' : 'deliveries',
-    ]);
+    let tab: string;
+    switch (alert.kind) {
+      case 'uncategorised':
+        tab = 'table';
+        break;
+      case 'deliveries':
+        tab = 'deliveries';
+        break;
+      default:
+        tab = 'dashboard';
+        break;
+    }
+    void this.router.navigate(['/projects', projectId, tab]);
   }
 
   openProjects(): void {

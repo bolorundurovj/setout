@@ -274,15 +274,65 @@ describe('DashboardComponent', () => {
     ]);
   });
 
-  it('routes each alert to its tab', () => {
-    const component = render({ projects: { rows: [project()], total: 1, limit: 100, offset: 0 } });
+  it('routes each alert to its own project and tab', () => {
+    const component = render({
+      projects: {
+        rows: [project({ id: 'p1' }), project({ id: 'p2' })],
+        total: 2,
+        limit: 100,
+        offset: 0,
+      },
+    });
 
-    component.openAlert({ kind: 'uncategorised', title: '', detail: '', amount: 0, urgent: true });
-    component.openAlert({ kind: 'deliveries', title: '', detail: '', amount: 0, urgent: false });
+    component.openAlert({
+      kind: 'uncategorised',
+      title: '',
+      detail: '',
+      amount: 0,
+      urgent: true,
+      project_id: 'p2',
+    });
+    component.openAlert({
+      kind: 'deliveries',
+      title: '',
+      detail: '',
+      amount: 0,
+      urgent: false,
+      project_id: 'p2',
+    });
+    component.openAlert({
+      kind: 'other',
+      title: '',
+      detail: '',
+      amount: 0,
+      urgent: false,
+      project_id: 'p2',
+    });
 
     expect(navigations.map((call) => call[0])).toEqual([
-      ['/projects', 'p1', 'table'],
-      ['/projects', 'p1', 'deliveries'],
+      ['/projects', 'p2', 'table'],
+      ['/projects', 'p2', 'deliveries'],
+      ['/projects', 'p2', 'dashboard'],
+    ]);
+  });
+
+  it('opens a recent expense with its expense query parameter', () => {
+    const component = render();
+    component.openExpense({
+      id: 'e42',
+      project_id: 'p2',
+      project_name: 'Palm Ridge',
+      currency_code: 'NGN',
+      currency_exponent: 2,
+      category_name: 'Foundation',
+      description: 'Cement',
+      amount: 100,
+      spent_on: '2026-08-14',
+    });
+
+    expect(navigations[0]).toEqual([
+      ['/projects', 'p2', 'expense'],
+      { queryParams: { expense: 'e42' } },
     ]);
   });
 

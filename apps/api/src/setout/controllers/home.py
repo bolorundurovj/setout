@@ -211,6 +211,7 @@ class HomeController:
         if uncategorised:
             count = sum(int(row["n"]) for row in uncategorised)
             projects = len(uncategorised)
+            top = max(uncategorised, key=lambda row: (int(row["n"]), int(row["total"] or 0)))
             alerts.append(
                 HomeAlert(
                     kind="uncategorised",
@@ -222,6 +223,7 @@ class HomeController:
                     ),
                     amount=sum(int(row["total"] or 0) for row in uncategorised),
                     urgent=True,
+                    project_id=str(top["project_id"]),
                 )
             )
 
@@ -232,18 +234,21 @@ class HomeController:
                 received_at__isnull=True,
                 expense__archived_at__isnull=True,
             )
+            .group_by("project_id")
             .annotate(n=Count("id"), total=Sum("expense__amount"))
-            .values("n", "total")
+            .values("project_id", "n", "total")
         )
-        if outstanding and int(outstanding[0]["n"] or 0):
-            count = int(outstanding[0]["n"])
+        if outstanding:
+            count = sum(int(row["n"]) for row in outstanding)
+            top = max(outstanding, key=lambda row: (int(row["n"]), int(row["total"] or 0)))
             alerts.append(
                 HomeAlert(
                     kind="deliveries",
                     title="Outstanding Deliveries",
                     detail=(f"{count} paid {'expense' if count == 1 else 'expenses'} outstanding"),
-                    amount=int(outstanding[0]["total"] or 0),
+                    amount=sum(int(row["total"] or 0) for row in outstanding),
                     urgent=False,
+                    project_id=str(top["project_id"]),
                 )
             )
         return alerts

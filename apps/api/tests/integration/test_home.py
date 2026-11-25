@@ -261,6 +261,26 @@ async def test_outstanding_deliveries_alert(client: AsyncClient) -> None:
     assert alert["detail"] == "1 paid expense outstanding"
     assert alert["amount"] == 76_500_00
     assert alert["urgent"] is False
+    assert alert["project_id"] == project_id
+
+
+async def test_alert_targets_its_own_project_not_first_project(client: AsyncClient) -> None:
+    await _set_up_admin(client)
+    first = await _project(client, "Clean Project")
+    second = await _project(client, "Alert Project")
+    category = (
+        await client.post(f"/api/projects/{first}/categories", json={"name": "Foundation"})
+    ).json()
+    await _expense(client, first, amount=5_000_00, category_id=category["id"])
+    exp = await _expense(client, second, amount=10_000_00)
+    await client.post(
+        f"/api/projects/{second}/deliveries",
+        json={"expense_id": exp["id"], "description": "Steel"},
+    )
+
+    alerts = {a["kind"]: a for a in (await _read(client, "summary"))["alerts"]}
+    assert alerts["uncategorised"]["project_id"] == second
+    assert alerts["deliveries"]["project_id"] == second
 
 
 async def test_no_alerts_when_nothing_needs_attention(client: AsyncClient) -> None:

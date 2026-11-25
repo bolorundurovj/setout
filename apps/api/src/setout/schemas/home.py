@@ -17,6 +17,7 @@ class HomeAlert(BaseModel):
     detail: str
     amount: int
     urgent: bool
+    project_id: str | None = None
 
 
 class HomeSummary(BaseModel):
