@@ -1,5 +1,37 @@
 # Changelog
 
+## [2.5.3](https://github.com/bolorundurovj/setout/compare/v2.5.2...v2.5.3) (2026-11-25)
+
+
+### Bug Fixes
+
+* **api:** report database outages and stabilize geocoding and delivery order (SET-54) ([2687768](https://github.com/bolorundurovj/setout/commit/2687768b63fabeb47474040881bc4d37645b8fc0))
+* **audit:** resolve currency/valuation/o2o names, clean vendor files, log security events (SET-43) ([aa7cfed](https://github.com/bolorundurovj/setout/commit/aa7cfedd8f143d62c90c139f34c9059d2b46d38d))
+* **backup:** export parent categories before their children (SET-12) ([f47924a](https://github.com/bolorundurovj/setout/commit/f47924aa8c83deec0d73541040f544c9358d7cea))
+* **backup:** log successful export after streaming completes (SET-12) ([9d6d086](https://github.com/bolorundurovj/setout/commit/9d6d086482ff26d177157c2351356289d1af04d9))
+* **cli:** resolve repo root recovery file, keep file on explicit flags, split first colon (SET-52) ([851cd9d](https://github.com/bolorundurovj/setout/commit/851cd9da49466cc44f4cd3032c527c0be46f65fd))
+* **compare:** preserve the selected category after expense loads (SET-28) ([0877963](https://github.com/bolorundurovj/setout/commit/08779639e736cb6eddb0795144abbdc7e3744516))
+* **docker:** harden compose ports, rustfs healthcheck, env files and DB URL (SET-48) ([37b7068](https://github.com/bolorundurovj/setout/commit/37b70689e58fa4736617e6563e256827cbc6e5bb))
+* **export:** preserve currency precision, agreement notes and advance recipients (SET-61) ([1ca9657](https://github.com/bolorundurovj/setout/commit/1ca96572cd942d16a800e51f9ebaa2d111ed487b))
+* **home:** route alerts to their own project and recent expenses to their drawer (SET-33) ([138ad72](https://github.com/bolorundurovj/setout/commit/138ad726948cc15b73ab754a87034a5485368df4))
+* **import:** count participating people and distinguish duplicate sources (SET-59) ([c97a304](https://github.com/bolorundurovj/setout/commit/c97a30475c775ce1840e255c68adf0a36767c0a8))
+* **import:** synchronize currency selection and expose expenses csv sample (SET-63) ([378b7f6](https://github.com/bolorundurovj/setout/commit/378b7f606206b70537c4d4c1ad80464af6ceff65))
+* **land:** validate LandUpdate paired size and coordinate fields against merged state (SET-51) ([1bf1e0b](https://github.com/bolorundurovj/setout/commit/1bf1e0b029056b7a4aace35533657aa9062e68fc))
+* **lint:** type delivery sorting and format import summary (SET-54, SET-59) ([ac51fd4](https://github.com/bolorundurovj/setout/commit/ac51fd4cb5a969c1102a375bc6429e4430974cc1))
+* **search:** link lands and expenses, debounce queries, and drop stale results (SET-26) ([5520b73](https://github.com/bolorundurovj/setout/commit/5520b73c5a9851fc9fc5769cc734ae2e3252c3aa))
+* **security:** harden CORS, cookies, actor context, file mode, storage enum and logging (SET-47) ([21c2e68](https://github.com/bolorundurovj/setout/commit/21c2e687ca103689a5b55c8a1b8ea5494c852f53))
+* **storage:** pass S3 LocationConstraint, defer migration marker, use legacy source settings (SET-50) ([102ee59](https://github.com/bolorundurovj/setout/commit/102ee59d2b2a85255e725cfa62751405b33f7e16))
+* **web:** scale over-budget bar segments against max(budget, spent) (SET-23) ([188a5c6](https://github.com/bolorundurovj/setout/commit/188a5c69a97a5f67cf670bd7e382e403177ba9ca))
+
+
+### Performance
+
+* **api:** offload blocking work and shorten authentication transactions (SET-66) ([441c08b](https://github.com/bolorundurovj/setout/commit/441c08b71aa416c87d77621875b21ad72d3cd86d))
+* **backup:** stream paged export and close s3 reads (SET-12) ([f8c1d0c](https://github.com/bolorundurovj/setout/commit/f8c1d0c833965ae41410ab7f9edbfe4da491adec))
+* **budget:** load expanded items and refresh only the edited category (SET-69) ([c958643](https://github.com/bolorundurovj/setout/commit/c958643df42b39ffb458ad1c92f7f0ad7aff21f9))
+* **import:** batch expense and budget item inserts (SET-62) ([d0b1e34](https://github.com/bolorundurovj/setout/commit/d0b1e3428d9a2fa9b630608d63db90368708dddc))
+* **web:** lazy-load route components and map styles (SET-68) ([5a973c6](https://github.com/bolorundurovj/setout/commit/5a973c6b8268e0ad7dfec56b4cb5c0a7debf8aea))
+
 ## [2.5.2](https://github.com/bolorundurovj/setout/compare/v2.5.1...v2.5.2) (2026-11-24)
 
 
