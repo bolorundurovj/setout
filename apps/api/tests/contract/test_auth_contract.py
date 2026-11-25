@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 import pytest
-from fastapi.routing import APIRoute
+from fastapi import HTTPException
 from httpx import AsyncClient
 
 from setout.config import get_settings
 from setout.main import create_app
-from setout.routers.auth import router as auth_router
+from setout.routers import auth
 
 pytestmark = pytest.mark.contract
 
@@ -27,15 +29,26 @@ def test_authentication_operations_preserve_response_contract(path, method, oper
 
 
 @pytest.mark.parametrize("path", ["/setup", "/passphrase"])
-def test_authentication_transactions_finish_before_responses(path: str) -> None:
-    route = next(
-        route
-        for route in auth_router.routes
-        if isinstance(route, APIRoute) and route.path == f"/auth{path}"
-    )
+async def test_authentication_transactions_finish_before_responses(
+    path: str, client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    body = {"name": "Admin", "passphrase": "password123"}
+    if path == "/passphrase":
+        assert (await client.post("/api/auth/setup", json=body)).status_code == 200
+        body = {"current_passphrase": "password123", "new_passphrase": "replacement123"}
 
-    assert route.dependencies
-    assert all(dependency.scope == "function" for dependency in route.dependencies)
+    transaction = auth.authentication_transaction
+
+    @asynccontextmanager
+    async def fail_at_exit():
+        async with transaction():
+            yield
+        raise HTTPException(status_code=503, detail="Transaction exit failed")
+
+    monkeypatch.setattr(auth, "authentication_transaction", fail_at_exit)
+    response = await client.post(f"/api/auth{path}", json=body)
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Transaction exit failed"
 
 
 async def test_null_name_returns_documented_validation_status(client: AsyncClient) -> None:
