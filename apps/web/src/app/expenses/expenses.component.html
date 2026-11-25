@@ -27,6 +27,8 @@
           type="search"
           placeholder="Search expenses"
           [value]="search()"
+          (focus)="searchFocused = true"
+          (blur)="searchFocused = false"
           (input)="onSearch($event)"
         />
       </label>

@@ -255,13 +255,19 @@ export class ProjectsComponent {
   }
 
   async close(id: string): Promise<void> {
-    await this.projects.update(id, { status: 'closed' });
+    if (!(await this.projects.update(id, { status: 'closed' }))) {
+      this.toast.show(this.projects.error() ?? 'Could not update the project.', 'error');
+      return;
+    }
     this.pending.set(null);
     this.toast.show('Project closed. It can be reopened or archived.');
   }
 
   async reopen(id: string): Promise<void> {
-    await this.projects.update(id, { status: 'active' });
+    if (!(await this.projects.update(id, { status: 'active' }))) {
+      this.toast.show(this.projects.error() ?? 'Could not update the project.', 'error');
+      return;
+    }
     this.toast.show('Project reopened.');
   }
 

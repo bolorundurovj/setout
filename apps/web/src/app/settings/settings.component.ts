@@ -314,6 +314,7 @@ export class SettingsComponent {
     this.toast.show('Data restored. Sign in with the passphrase from the backup.');
     await this.auth.checkStatus();
     await this.router.navigate(['/login']);
+    window.location.reload();
   }
 
   private downloadFile(body: string, name: string): void {
@@ -322,7 +323,7 @@ export class SettingsComponent {
     link.href = url;
     link.download = name;
     link.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
   }
 
   private total(counts: number[]): number {

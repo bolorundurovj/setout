@@ -26,7 +26,7 @@ const CHIP_LIMIT = 8;
         [total]="total()"
         [hasMore]="hasMore()"
         [loading]="loading()"
-        (valueChange)="valueChange.emit($event)"
+        (valueChange)="pick($event)"
         (searchChange)="onSearch($event)"
         (loadMore)="loadMore.emit()"
       />

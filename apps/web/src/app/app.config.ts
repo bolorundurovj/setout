@@ -1,5 +1,7 @@
 import {
   ApplicationConfig,
+  ErrorHandler,
+  Injectable,
   inject,
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
@@ -12,8 +14,22 @@ import { environment } from '../environments/environment';
 import { Router, provideRouter, withComponentInputBinding, TitleStrategy } from '@angular/router';
 import { tap } from 'rxjs';
 import { AuthService } from './auth/auth.service';
+import { HttpErrorResponse } from '@angular/common/http';
+import { detailOf } from './api-error';
+import { ToastService } from './toast.service';
 import { routes } from './app.routes';
 import { SetoutTitleStrategy } from './title.strategy';
+
+@Injectable()
+class RequestErrorHandler extends ErrorHandler {
+  private readonly toast = inject(ToastService);
+  override handleError(error: unknown): void {
+    if (error instanceof HttpErrorResponse) {
+      this.toast.show(detailOf(error) ?? 'The request failed. Please try again.', 'error');
+    }
+    super.handleError(error);
+  }
+}
 
 const credentialsInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
@@ -51,6 +67,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, routeInputBinding),
     { provide: TitleStrategy, useClass: SetoutTitleStrategy },
     provideBrowserGlobalErrorListeners(),
+    { provide: ErrorHandler, useClass: RequestErrorHandler },
     provideZonelessChangeDetection(),
     provideHttpClient(withInterceptors([credentialsInterceptor])),
     {

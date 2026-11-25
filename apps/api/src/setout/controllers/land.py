@@ -60,7 +60,7 @@ class LandController:
         ids = [land.id for land in lands]
         document_kinds = await self._document_kinds(ids)
         projects = await self._projects_of(ids)
-        countries = await self._country_names(lands)
+        countries = await self._location_names(lands)
         exponents = await self._exponents(lands)
         valuations = await self._valuation_summaries(ids)
         return LandPage(
@@ -82,7 +82,7 @@ class LandController:
             code, values["state"]
         )
         land = await Land.create(**values)
-        names = await self._country_names([land])
+        names = await self._location_names([land])
         return self._read(land, {}, {}, names, {}, {})
 
     async def get(self, land_id: str) -> LandRead:
@@ -167,7 +167,7 @@ class LandController:
             land,
             await self._document_kinds(ids),
             await self._projects_of(ids),
-            await self._country_names([land]),
+            await self._location_names([land]),
             await self._exponents([land]),
             await self._valuation_summaries(ids),
         )
@@ -190,17 +190,20 @@ class LandController:
         requested = state.strip()
         for row in await State.filter(country_id=code):
             if requested.casefold() in (row.name.casefold(), row.code.casefold()):
-                return code, row.name
+                return code, row.code
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"{state} is not a state in {country.name}",
         )
 
-    async def _country_names(self, lands: list[Land]) -> dict[str, str]:
+    async def _location_names(self, lands: list[Land]) -> dict[str, str]:
         codes = {land.country_id for land in lands if land.country_id is not None}
         if not codes:
             return {}
-        return {c.code: c.name for c in await Country.filter(code__in=list(codes))}
+        names = {c.code: c.name for c in await Country.filter(code__in=list(codes))}
+        state_codes = [land.state for land in lands if land.state and land.country_id]
+        names.update({s.code: s.name for s in await State.filter(code__in=state_codes)})
+        return names
 
     async def _exponents(self, lands: list[Land]) -> dict[str, int]:
         codes = {land.currency_id for land in lands if land.currency_id is not None}
@@ -274,7 +277,9 @@ class LandController:
             address=land.address,
             geocoded_address=land.geocoded_address,
             city=land.city,
-            state=land.state,
+            state=countries.get(land.state, land.state)
+            if land.state and land.country_id
+            else land.state,
             country_code=land.country_id,
             country_name=countries.get(land.country_id) if land.country_id else None,
             purchased_on=land.purchased_on,

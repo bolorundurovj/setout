@@ -205,6 +205,8 @@ export function parseCoordinate(line: string): Position | null {
 
 function splitPair(text: string): [string, string] | null {
   // A latitude hemisphere letter ends the first half, before or after its number.
+  const leading = /^([NS]\s*[\d.?\s'?"?-]+)[,;\s]+([EW]\s*.+)$/i.exec(text);
+  if (leading) return [leading[1], leading[2]];
   const marked = /^(.*?[NSns])[\s,]*(.*[EWew].*)$/.exec(text);
   if (marked) {
     return [marked[1], marked[2]];

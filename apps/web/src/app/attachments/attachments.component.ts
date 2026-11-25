@@ -56,7 +56,7 @@ export class AttachmentsComponent {
   }
 
   isImage(file: AttachmentRead): boolean {
-    return file.content_type.startsWith('image/');
+    return ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.content_type);
   }
 
   fileNote(file: AttachmentRead): string {

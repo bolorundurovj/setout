@@ -212,11 +212,12 @@ export class LandFormComponent {
 
   /** Discards responses from superseded requests so a dragged pin shows no stale address. */
   private async reverseGeocodePin(pin: LandPoint | null): Promise<void> {
+    const requestId = ++this.latestGeocodeRequest;
+    this.geocodedAddress.set('');
+    this.geocoded.set(null);
     if (!pin) {
-      this.geocoded.set(null);
       return;
     }
-    const requestId = ++this.latestGeocodeRequest;
     const geocoded = await this.lands.reverseGeocode(pin.lat, pin.lon);
     if (requestId !== this.latestGeocodeRequest) {
       return;
@@ -241,7 +242,19 @@ export class LandFormComponent {
     if (geocoded.country_code) {
       void this.pickCountry(geocoded.country_code).then(() => {
         if (geocoded.state) {
-          this.state.set(geocoded.state);
+          const normalise = (name: string) =>
+            name
+              .trim()
+              .toLowerCase()
+              .replace(/\s+state$/, '');
+          const found = this.countries
+            .states(this.country())
+            .find(
+              (state) =>
+                state.code === geocoded.state ||
+                normalise(state.name) === normalise(geocoded.state ?? ''),
+            );
+          if (found) this.state.set(found.name);
         }
       });
       return;

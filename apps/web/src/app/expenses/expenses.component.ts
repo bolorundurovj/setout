@@ -101,6 +101,7 @@ export class ExpensesComponent {
   readonly notSet = '—';
 
   readonly showFilters = signal(false);
+  searchFocused = false;
   readonly search = signal('');
   readonly vendorId = signal('');
   readonly paidById = signal('');
@@ -158,7 +159,7 @@ export class ExpensesComponent {
   constructor() {
     effect(() => {
       const filters = this.filters();
-      this.search.set(filters.search ?? '');
+      if (!this.searchFocused) this.search.set(filters.search ?? '');
       this.vendorId.set(filters.vendorId ?? '');
       this.paidById.set(filters.paidById ?? '');
       this.itemId.set(filters.itemId ?? '');
@@ -196,7 +197,8 @@ export class ExpensesComponent {
   }
 
   onSearch(event: Event): void {
-    this.debouncedSearch.call(this.value(event));
+    this.search.set(this.value(event));
+    this.debouncedSearch.call(this.search());
   }
 
   setFilter(field: 'vendorId' | 'paidById' | 'itemId', value: string): void {
