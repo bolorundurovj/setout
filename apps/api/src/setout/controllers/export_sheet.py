@@ -4,6 +4,7 @@ from typing import Literal
 
 from fastapi import HTTPException, status
 
+from setout.models.advance import Advance
 from setout.models.agreement import Agreement
 from setout.models.attachment import Attachment
 from setout.models.budget import BudgetItem
@@ -164,6 +165,15 @@ class ExportController:
             )
 
         book.vendors.extend(vendors.values())
+        advances = await Advance.filter(
+            project_id=project.id, archived_at__isnull=True
+        ).prefetch_related("person")
+        for advance in advances:
+            person = advance.person
+            if person.id not in people:
+                people[person.id] = write.PersonRow(
+                    person.name, person.role or "", person.phone or "", person.notes or ""
+                )
         book.people.extend(people.values())
         book.prices.extend(prices.values())
 
@@ -194,6 +204,7 @@ class ExportController:
                     description=row.description,
                     agreed_amount=row.agreed_amount,
                     paid_amount=paid.get(row.id, 0),
+                    notes=row.notes or "",
                 )
             )
             if not any(v.name == row.vendor.name for v in book.vendors):

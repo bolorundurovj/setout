@@ -131,6 +131,7 @@ class AgreementRow:
     description: str
     agreed_amount: int
     paid_amount: int
+    notes: str = ""
 
 
 @dataclass
@@ -224,7 +225,9 @@ def _project(sheet: Worksheet, book: ExportWorkbook) -> None:
 
 
 def _money_format(book: ExportWorkbook) -> str:
-    return f'"{book.currency_code} "#,##0.00' if book.currency_code else MONEY_FORMAT
+    digits = "." + "0" * book.exponent if book.exponent else ""
+    prefix = f'"{book.currency_code} "' if len(book.currency_code) == 3 else ""
+    return f"{prefix}#,##0{digits}"
 
 
 def _title(sheet: Worksheet, name: str, head: list[str]) -> None:
@@ -355,7 +358,7 @@ def _agreements(sheet: Worksheet, book: ExportWorkbook) -> None:
                 major(row.agreed_amount, book.exponent),
                 major(row.paid_amount, book.exponent),
                 major(balance, book.exponent),
-                "",
+                row.notes,
             ],
         )
     _widths(sheet, [26, 34, 15, 15, 15, 30])
@@ -615,7 +618,7 @@ def expenses_csv(book: ExportWorkbook | None = None) -> bytes:
 def filename_for(
     project_name: str, when: datetime, *, part: str = "", extension: str = "xlsx"
 ) -> str:
-    keep = [c if c.isalnum() or c in " -_" else "" for c in project_name]
+    keep = [c if (c.isascii() and c.isalnum()) or c in " -_" else "" for c in project_name]
     stem = "".join(keep).strip().replace(" ", "-").lower() or "project"
     if part:
         stem = f"{stem}-{part}"
