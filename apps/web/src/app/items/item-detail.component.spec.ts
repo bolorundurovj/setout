@@ -42,13 +42,27 @@ function series(overrides: Partial<ItemPriceSeries> = {}): ItemPriceSeries {
 }
 
 describe('ItemDetailComponent', () => {
+  let updates: unknown[];
+
   async function render(prices: ItemPrices | null) {
+    updates = [];
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [ItemDetailComponent],
       providers: [
         provideRouter([]),
-        { provide: ItemService, useValue: { prices: async () => prices } },
+        {
+          provide: ItemService,
+          useValue: {
+            prices: async () => prices,
+            saving: () => false,
+            error: () => null,
+            update: async (_id: string, body: unknown) => {
+              updates.push(body);
+              return { id: 'i1', ...(body as object) };
+            },
+          },
+        },
       ],
     });
     const fixture = TestBed.createComponent(ItemDetailComponent);
@@ -133,6 +147,17 @@ describe('ItemDetailComponent', () => {
     await render(prices({ name: 'Six inch blocks' }));
     TestBed.tick();
     expect(TestBed.inject(Title).getTitle()).toBe('Six inch blocks · Setout');
+  });
+
+  it('edits the item name and unit using update()', async () => {
+    const component = await render(prices({ name: 'Six inch blocks', unit: 'each' }));
+    component.startEdit();
+    component.editName.set('Nine inch blocks');
+    component.editUnit.set('pallet');
+    await component.saveEdit();
+
+    expect(updates).toEqual([{ name: 'Nine inch blocks', unit: 'pallet' }]);
+    expect(component.editing()).toBe(false);
   });
 
   it('leaves the page title unchanged for a missing item', async () => {

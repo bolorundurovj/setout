@@ -56,6 +56,7 @@ function entry(over: Partial<LandValuationRead> = {}): LandValuationRead {
 
 describe('LandValuationsComponent', () => {
   let recorded: LandValuationCreate[];
+  let edited: { id: string; body: unknown }[];
   let archived: string[];
   let restored: string[];
   let deleted: string[];
@@ -66,6 +67,7 @@ describe('LandValuationsComponent', () => {
     rows: LandValuationRead[] | null | Promise<never> = [],
   ) {
     recorded = [];
+    edited = [];
     archived = [];
     restored = [];
     deleted = [];
@@ -81,6 +83,10 @@ describe('LandValuationsComponent', () => {
       createValuation: async (_id: string, body: LandValuationCreate) => {
         recorded.push(body);
         return entry();
+      },
+      editValuation: async (id: string, body: unknown) => {
+        edited.push({ id, body });
+        return entry({ id });
       },
       archiveValuation: async (id: string) => {
         archived.push(id);
@@ -224,6 +230,21 @@ describe('LandValuationsComponent', () => {
   it('shows No valuations yet once an empty list loads', async () => {
     const { element } = await render();
     expect(element.textContent).toContain('No valuations yet');
+  });
+
+  it('edits an existing valuation via editValuation()', async () => {
+    const row = entry({ id: 'v2', amount: 4500000, valued_on: '2023-03-11', notes: 'Old' });
+    const { component } = await render(land({ currency_code: 'NGN', currency_exponent: 2 }), [row]);
+    component.startEdit(row);
+    component.editAmount.set('50000');
+    component.editValuedOn.set('2024-06-01');
+    component.editNotes.set('Revised');
+    await component.saveEdit(row);
+
+    expect(edited).toEqual([
+      { id: 'v2', body: { amount: 5000000, valued_on: '2024-06-01', notes: 'Revised' } },
+    ]);
+    expect(component.editing()).toBeNull();
   });
 
   it('shows archived valuations and permanently deletes after DELETE confirmation', async () => {

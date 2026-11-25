@@ -11,6 +11,8 @@ import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import type { ItemPricePoint, ItemPriceSeries, ItemPrices } from '@setout/api-client';
 import { formatMoney } from '../budget/money';
+import { ToastService } from '../toast.service';
+import { ButtonComponent } from '../ui/button.component';
 import { PaginationComponent } from '../ui/pagination.component';
 import { pageOf } from '../ui/paging';
 import { ItemService } from './item.service';
@@ -19,12 +21,13 @@ import { ItemService } from './item.service';
   selector: 'app-item-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, PaginationComponent],
+  imports: [ButtonComponent, RouterLink, PaginationComponent],
   templateUrl: './item-detail.component.html',
   styleUrl: './item-detail.component.scss',
 })
 export class ItemDetailComponent {
-  private readonly items = inject(ItemService);
+  readonly items = inject(ItemService);
+  private readonly toast = inject(ToastService);
 
   private readonly title = inject(Title);
 
@@ -32,6 +35,9 @@ export class ItemDetailComponent {
 
   readonly prices = signal<ItemPrices | null>(null);
   readonly loading = signal(true);
+  readonly editing = signal(false);
+  readonly editName = signal('');
+  readonly editUnit = signal('');
 
   readonly notSet = '—';
 
@@ -53,6 +59,46 @@ export class ItemDetailComponent {
   async load(): Promise<void> {
     this.prices.set(await this.items.prices(this.id()));
     this.loading.set(false);
+  }
+
+  value(event: Event): string {
+    return (event.target as HTMLInputElement).value;
+  }
+
+  startEdit(): void {
+    const detail = this.prices();
+    if (!detail) {
+      return;
+    }
+    this.editName.set(detail.name);
+    this.editUnit.set(detail.unit ?? '');
+    this.editing.set(true);
+  }
+
+  cancelEdit(): void {
+    this.editing.set(false);
+  }
+
+  canSaveEdit(): boolean {
+    return this.editName().trim().length > 0;
+  }
+
+  async saveEdit(): Promise<void> {
+    if (!this.canSaveEdit()) {
+      return;
+    }
+    const unit = this.editUnit().trim();
+    const updated = await this.items.update(this.id(), {
+      name: this.editName().trim(),
+      unit: unit || null,
+    });
+    if (!updated) {
+      this.toast.show(this.items.error() ?? 'Could not save the item.', 'error');
+      return;
+    }
+    this.editing.set(false);
+    this.toast.show(`${updated.name} updated.`);
+    await this.load();
   }
 
   money(minor: number, series: ItemPriceSeries): string {

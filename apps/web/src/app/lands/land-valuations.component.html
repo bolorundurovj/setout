@@ -19,54 +19,105 @@
   <div class="entries">
     @for (row of rows(); track row.id; let i = $index) {
       <div class="entry" [class.archived]="row.archived_at">
-        <span class="entry-info">
-          <span class="t-body">
-            {{ label(row) }}
-            @if (row.archived_at) {
-              <span class="t-small muted">&middot; archived</span>
+        @if (editing() === row.id) {
+          <div class="add">
+            <label class="field">
+              <span class="t-micro">Amount (required)</span>
+              <span class="amount">
+                <span class="amount-prefix t-mono">{{ symbol() }}</span>
+                <input
+                  class="amount-input t-mono"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  aria-label="Edit valuation amount"
+                  [value]="editAmount()"
+                  (input)="editAmount.set(value($event))"
+                />
+              </span>
+            </label>
+            <label class="field">
+              <span class="t-micro">Date (required)</span>
+              <input
+                class="input-field t-mono"
+                type="date"
+                aria-label="Edit valuation date"
+                [value]="editValuedOn()"
+                (input)="editValuedOn.set(value($event))"
+              />
+            </label>
+            <label class="field">
+              <span class="t-micro">Notes</span>
+              <input
+                class="input-field"
+                type="text"
+                autocomplete="off"
+                aria-label="Edit valuation notes"
+                [value]="editNotes()"
+                (input)="editNotes.set(value($event))"
+              />
+            </label>
+            <div class="form-actions">
+              <app-button
+                [disabled]="!canSaveEdit(row)"
+                [loading]="lands.saving()"
+                (pressed)="saveEdit(row)"
+              >
+                Save
+              </app-button>
+              <app-button variant="secondary" (pressed)="cancelEdit()">Cancel</app-button>
+            </div>
+          </div>
+        } @else {
+          <span class="entry-info">
+            <span class="t-body">
+              {{ label(row) }}
+              @if (row.archived_at) {
+                <span class="t-small muted">&middot; archived</span>
+              }
+            </span>
+            <span class="t-small muted">{{ row.valued_on }}</span>
+            @if (row.notes) {
+              <span class="t-micro">{{ row.notes }}</span>
             }
           </span>
-          <span class="t-small muted">{{ row.valued_on }}</span>
-          @if (row.notes) {
-            <span class="t-micro">{{ row.notes }}</span>
-          }
-        </span>
-        <span class="entry-amount">
-          <span class="t-body t-mono">{{ amountLabel(row) }}</span>
-          @if (percentChange(i)) {
-            <span class="t-micro entry-change">{{ percentChange(i) }}</span>
-          }
-        </span>
-        <span class="entry-actions">
-          @if (row.archived_at) {
-            @if (pendingDelete() === row.id) {
-              <span class="confirm-inline">
-                <input
-                  appDeleteConfirm
-                  class="input-field delete-input"
-                  [value]="deleteConfirmationText()"
-                  (input)="deleteConfirmationText.set(value($event))"
-                />
-                <button
-                  type="button"
-                  class="link t-mono"
-                  [disabled]="!canConfirmDelete()"
-                  (click)="deletePermanently(row)"
-                >
+          <span class="entry-amount">
+            <span class="t-body t-mono">{{ amountLabel(row) }}</span>
+            @if (percentChange(i)) {
+              <span class="t-micro entry-change">{{ percentChange(i) }}</span>
+            }
+          </span>
+          <span class="entry-actions">
+            @if (row.archived_at) {
+              @if (pendingDelete() === row.id) {
+                <span class="confirm-inline">
+                  <input
+                    appDeleteConfirm
+                    class="input-field delete-input"
+                    [value]="deleteConfirmationText()"
+                    (input)="deleteConfirmationText.set(value($event))"
+                  />
+                  <button
+                    type="button"
+                    class="link t-mono"
+                    [disabled]="!canConfirmDelete()"
+                    (click)="deletePermanently(row)"
+                  >
+                    Delete
+                  </button>
+                  <button type="button" class="link t-mono" (click)="cancelDelete()">Cancel</button>
+                </span>
+              } @else {
+                <button type="button" class="link t-mono" (click)="restore(row)">Restore</button>
+                <button type="button" class="link t-mono" (click)="requestDelete(row.id)">
                   Delete
                 </button>
-                <button type="button" class="link t-mono" (click)="cancelDelete()">Cancel</button>
-              </span>
+              }
             } @else {
-              <button type="button" class="link t-mono" (click)="restore(row)">Restore</button>
-              <button type="button" class="link t-mono" (click)="requestDelete(row.id)">
-                Delete
-              </button>
+              <button type="button" class="link t-mono" (click)="startEdit(row)">Edit</button>
+              <app-archive-confirm text="Archive" (confirmed)="archive(row)" />
             }
-          } @else {
-            <app-archive-confirm text="Archive" (confirmed)="archive(row)" />
-          }
-        </span>
+          </span>
+        }
       </div>
     }
   </div>

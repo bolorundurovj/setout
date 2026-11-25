@@ -10,7 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import type { LandRead, LandValuationKind, LandValuationRead } from '@setout/api-client';
-import { formatMoney, parseMoney } from '../budget/money';
+import { formatAmountInput, formatMoney, parseMoney } from '../budget/money';
 import { ProjectService } from '../projects/project.service';
 import { ButtonComponent } from '../ui/button.component';
 import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
@@ -53,6 +53,10 @@ export class LandValuationsComponent {
   readonly deleteConfirmationText = signal('');
   readonly lastArchived = signal<LandValuationRead | null>(null);
   readonly adding = signal(false);
+  readonly editing = signal<string | null>(null);
+  readonly editAmount = signal('');
+  readonly editValuedOn = signal('');
+  readonly editNotes = signal('');
   readonly amount = signal('');
   readonly currency = signal('');
   readonly valuedOn = signal('');
@@ -152,6 +156,45 @@ export class LandValuationsComponent {
 
   cancel(): void {
     this.adding.set(false);
+  }
+
+  startEdit(row: LandValuationRead): void {
+    this.adding.set(false);
+    this.editing.set(row.id);
+    this.editAmount.set(formatAmountInput(row.amount, row.currency_exponent));
+    this.editValuedOn.set(row.valued_on);
+    this.editNotes.set(row.notes ?? '');
+  }
+
+  cancelEdit(): void {
+    this.editing.set(null);
+  }
+
+  canSaveEdit(row: LandValuationRead): boolean {
+    return (
+      this.editValuedOn().length > 0 &&
+      parseMoney(this.editAmount(), row.currency_exponent) !== null
+    );
+  }
+
+  async saveEdit(row: LandValuationRead): Promise<void> {
+    if (!this.canSaveEdit(row)) {
+      return;
+    }
+    const minor = parseMoney(this.editAmount(), row.currency_exponent);
+    if (minor === null) {
+      return;
+    }
+    const saved = await this.lands.editValuation(row.id, {
+      amount: minor,
+      valued_on: this.editValuedOn(),
+      notes: this.editNotes().trim() || null,
+    });
+    if (saved) {
+      this.editing.set(null);
+      await this.load();
+      this.changed.emit();
+    }
   }
 
   isValid(): boolean {

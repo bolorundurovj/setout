@@ -8,8 +8,34 @@
 
 .head {
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.identity {
+  display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 520px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .series {

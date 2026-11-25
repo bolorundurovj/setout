@@ -94,6 +94,30 @@ describe('PersonDetailComponent', () => {
     expect(component.loading()).toBe(false);
   });
 
+  it('displays the person phone number on person detail', async () => {
+    const people = {
+      error: () => null,
+      get: async () => person({ phone: '+234 800 123 4567' }),
+      expenseSummary: async () => summary,
+      edit: async () => undefined,
+      archive: async () => undefined,
+      restore: async () => undefined,
+      delete: async () => undefined,
+    };
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [PersonDetailComponent],
+      providers: [provideRouter([]), { provide: PersonService, useValue: people }],
+    });
+    const fixture = TestBed.createComponent(PersonDetailComponent);
+    fixture.componentRef.setInput('id', 'pe1');
+    fixture.detectChanges();
+    await fixture.componentInstance.load();
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('+234 800 123 4567');
+  });
+
   it('opens the edit form', async () => {
     (await render()).edit();
     expect(navigations[0][0]).toEqual(['/people', 'pe1', 'edit']);

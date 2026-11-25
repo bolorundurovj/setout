@@ -4,10 +4,45 @@
   @if (loading()) {
     <div class="card"><p class="t-body">Loading price history…</p></div>
   } @else if (prices(); as detail) {
-    <div class="head">
-      <h1 class="t-display">{{ detail.name }}</h1>
-      <p class="t-small">{{ unitLabel() }}</p>
-    </div>
+    @if (editing()) {
+      <div class="card edit-form">
+        <label class="field">
+          <span class="t-micro">Name (required)</span>
+          <input
+            class="input-field"
+            type="text"
+            autocomplete="off"
+            [value]="editName()"
+            (input)="editName.set(value($event))"
+          />
+        </label>
+        <label class="field">
+          <span class="t-micro">Unit</span>
+          <input
+            class="input-field"
+            type="text"
+            autocomplete="off"
+            placeholder="bag, each, tonne"
+            [value]="editUnit()"
+            (input)="editUnit.set(value($event))"
+          />
+        </label>
+        <div class="form-actions">
+          <app-button [disabled]="!canSaveEdit()" [loading]="items.saving()" (pressed)="saveEdit()">
+            Save
+          </app-button>
+          <app-button variant="secondary" (pressed)="cancelEdit()">Cancel</app-button>
+        </div>
+      </div>
+    } @else {
+      <div class="head">
+        <div class="identity">
+          <h1 class="t-display">{{ detail.name }}</h1>
+          <p class="t-small">{{ unitLabel() }}</p>
+        </div>
+        <app-button variant="secondary" (pressed)="startEdit()">Edit Item</app-button>
+      </div>
+    }
 
     @if (series().length === 0) {
       <div class="card">

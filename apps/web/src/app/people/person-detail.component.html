@@ -47,6 +47,10 @@
 
     <div class="facts">
       <div class="fact">
+        <span class="t-micro">Phone</span>
+        <span class="t-body t-mono">{{ p.phone ?? notSet }}</span>
+      </div>
+      <div class="fact">
         <span class="t-micro">Spent</span>
         @if (expenseSummary(); as s) {
           @if (spentTotals(s).length === 0) {
