@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections import OrderedDict
 
 import httpx
 
@@ -23,7 +24,9 @@ MIN_SECONDS_BETWEEN = 1.0
 TIMEOUT_SECONDS = 5.0
 
 _lock = asyncio.Lock()
-_cache: dict[tuple[float, float], GeocodedPlace | None] = {}
+CACHE_SIZE = 1024
+_cache: OrderedDict[tuple[float, float], GeocodedPlace] = OrderedDict()
+_client: httpx.AsyncClient | None = None
 _last_call = 0.0
 
 
@@ -36,10 +39,14 @@ async def reverse(latitude: float, longitude: float) -> GeocodedPlace | None:
     key = (round(latitude, COORDINATE_DECIMALS), round(longitude, COORDINATE_DECIMALS))
     async with _lock:
         if key in _cache:
+            _cache.move_to_end(key)
             return _cache[key]
         await _throttle()
         place = await _request_reverse(settings.geocoder_url, settings.geocoder_email, key)
-        _cache[key] = place
+        if place is not None:
+            _cache[key] = place
+            if len(_cache) > CACHE_SIZE:
+                _cache.popitem(last=False)
         return place
 
 
@@ -65,12 +72,12 @@ async def _request_reverse(
         params["email"] = email
     headers = {"User-Agent": f"Setout/{__version__} (self-hosted construction expense tracker)"}
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
-            response = await client.get(
-                f"{url.rstrip('/')}/reverse", params=params, headers=headers
-            )
-            response.raise_for_status()
-            return _read(response.json())
+        global _client
+        if _client is None:
+            _client = httpx.AsyncClient(timeout=TIMEOUT_SECONDS)
+        response = await _client.get(f"{url.rstrip('/')}/reverse", params=params, headers=headers)
+        response.raise_for_status()
+        return _read(response.json())
     except (httpx.HTTPError, ValueError):
         # Geocoding is optional, so network and parse failures return no address.
         return None
@@ -104,3 +111,10 @@ def _first(address: dict[str, object], *keys: str) -> str | None:
 def clear_cache() -> None:
     """Clears the lookup cache between tests."""
     _cache.clear()
+
+
+async def close_client() -> None:
+    global _client
+    if _client is not None:
+        await _client.aclose()
+        _client = None

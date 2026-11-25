@@ -15,6 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from setout.services.geocoder import close_client
 from setout import __version__
 from setout.cli import consume_recovery_file
 from setout.config import Settings, get_settings
@@ -155,6 +156,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        await close_client()
         await close_db()
 
 

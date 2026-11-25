@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, date, datetime
 
 from fastapi import HTTPException, status
+from tortoise.expressions import Case, When
 from tortoise.functions import Sum
 from tortoise.transactions import in_transaction
 
@@ -71,11 +72,10 @@ class DeliveryController:
             )
             for row in grouped
         }
-        order = (
-            ("expected", "-created_at", "id")
-            if sort == DeliverySort.EXPECTED
-            else ("-created_at", "id")
-        )
+        order = ("-created_at", "id")
+        if sort == DeliverySort.EXPECTED:
+            query = query.annotate(undated=Case(When(expected__isnull=True, then=1), default=0))
+            order = ("undated", "expected", *order)
         rows = (
             await query.order_by(*order)
             .offset(offset)
