@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -47,8 +48,13 @@ async def get_install(user: CurrentUser) -> Install:
 )
 async def export_backup(req: ExportRequest, user: CurrentUser) -> StreamingResponse:
     await _require_passphrase(req.passphrase, user)
-    security_logger.info("Backup export started by user_id=%s", user.id)
-    return StreamingResponse(controller.export(), media_type="application/json")
+
+    async def stream() -> AsyncIterator[str]:
+        async for chunk in controller.export():
+            yield chunk
+        security_logger.info("Backup exported by user_id=%s", user.id)
+
+    return StreamingResponse(stream(), media_type="application/json")
 
 
 @router.post(
