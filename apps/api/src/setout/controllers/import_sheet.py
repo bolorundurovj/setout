@@ -485,6 +485,7 @@ class ImportController:
 
         category_ids: set[str] = set()
         created_with_parent: list[tuple[Category, str]] = []
+        pending_items: list[BudgetItem] = []
         items = 0
         budgeted = 0
         for order, heading in enumerate(parsed.budget.categories):
@@ -504,15 +505,23 @@ class ImportController:
             category_ids.add(category_id)
 
             for line in heading.lines:
-                await BudgetItem.create(
-                    category_id=category_id,
-                    description=line.description,
-                    budgeted_amount=line.budgeted_amount,
-                    cost_type=line.cost_type,
-                    set_at=datetime.now(UTC),
+                pending_items.append(
+                    BudgetItem(
+                        category_id=category_id,
+                        description=line.description,
+                        budgeted_amount=line.budgeted_amount,
+                        cost_type=line.cost_type,
+                        set_at=datetime.now(UTC),
+                    )
                 )
+                if len(pending_items) == 250:
+                    await BudgetItem.bulk_create(pending_items)
+                    pending_items.clear()
                 items += 1
                 budgeted += line.budgeted_amount
+
+        if pending_items:
+            await BudgetItem.bulk_create(pending_items)
 
         # Parents are linked after every row is read, since a parent can follow its child.
         for child, parent_code in created_with_parent:
@@ -532,6 +541,7 @@ class ImportController:
         categories: dict[str, str],
         answers: Answers,
     ) -> tuple[int, int, int]:
+        pending: list[Expense] = []
         imported = 0
         total = 0
         skipped = 0
@@ -549,20 +559,27 @@ class ImportController:
                 first = line.codes[0]
                 category_id = categories.get(first) or categories.get(category_code_for(first))
 
-            await Expense.create(
-                project_id=project.id,
-                category_id=category_id,
-                vendor_id=vendors.get(line.vendor.casefold()),
-                paid_by_id=people.get(line.paid_by.casefold()),
-                spent_on=row.spent_on,
-                description=line.description,
-                amount=line.amount,
-                notes=line.notes or None,
-                cost_type=line.cost_type,
-                quantity=line.quantity,
-                unit_rate=line.unit_rate,
-                item_id=catalogue.get(line.item.casefold()) if line.item else None,
+            pending.append(
+                Expense(
+                    project_id=project.id,
+                    category_id=category_id,
+                    vendor_id=vendors.get(line.vendor.casefold()),
+                    paid_by_id=people.get(line.paid_by.casefold()),
+                    spent_on=row.spent_on,
+                    description=line.description,
+                    amount=line.amount,
+                    notes=line.notes or None,
+                    cost_type=line.cost_type,
+                    quantity=line.quantity,
+                    unit_rate=line.unit_rate,
+                    item_id=catalogue.get(line.item.casefold()) if line.item else None,
+                )
             )
+            if len(pending) == 250:
+                await Expense.bulk_create(pending)
+                pending.clear()
             imported += 1
             total += line.amount
+        if pending:
+            await Expense.bulk_create(pending)
         return imported, total, skipped
