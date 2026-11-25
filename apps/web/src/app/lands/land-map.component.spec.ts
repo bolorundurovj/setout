@@ -18,7 +18,11 @@ const SQUARE: LandBoundary = {
 };
 
 describe('LandMapComponent', () => {
-  function render(boundary: LandBoundary | null = null, editable = true) {
+  function render(
+    boundary: LandBoundary | null = null,
+    editable = true,
+    mode: 'pin' | 'boundary' = 'boundary',
+  ) {
     const maps = {
       settings: () => ({ tile_url: 'http://tiles.test/{z}/{x}/{y}.png', attribution: 'test' }),
       load: async () => undefined,
@@ -32,6 +36,7 @@ describe('LandMapComponent', () => {
     const fixture = TestBed.createComponent(LandMapComponent);
     fixture.componentRef.setInput('boundary', boundary);
     fixture.componentRef.setInput('editable', editable);
+    fixture.componentRef.setInput('mode', mode);
     fixture.detectChanges();
     return { fixture, component: fixture.componentInstance };
   }
@@ -130,5 +135,54 @@ describe('LandMapComponent', () => {
     component.clearPin();
 
     expect(sent).toBeNull();
+  });
+
+  function pressEnter(fixture: { nativeElement: HTMLElement }): KeyboardEvent {
+    const canvas = fixture.nativeElement.querySelector<HTMLElement>('.canvas')!;
+    const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
+    canvas.dispatchEvent(event);
+    return event;
+  }
+
+  it('places the pin at the map centre when Enter is pressed on the map', () => {
+    const { fixture, component } = render(null, true, 'pin');
+    let sent: unknown;
+    component.pointChange.subscribe((value) => (sent = value));
+
+    const event = pressEnter(fixture);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(sent).toEqual({ lat: 9, lon: 8 });
+  });
+
+  it('adds a boundary point at the map centre when Enter is pressed on the map', () => {
+    const { fixture, component } = render();
+
+    pressEnter(fixture);
+    component.addPointAtCentre();
+
+    expect(component.points()).toEqual([
+      [8, 9],
+      [8, 9],
+    ]);
+  });
+
+  it('ignores Enter on a read-only map', () => {
+    const { fixture, component } = render(null, false, 'pin');
+    let sent: unknown = 'untouched';
+    component.pointChange.subscribe((value) => (sent = value));
+
+    pressEnter(fixture);
+
+    expect(sent).toBe('untouched');
+  });
+
+  it('describes the keyboard controls on an editable map', () => {
+    const { fixture, component } = render();
+    const element = fixture.nativeElement as HTMLElement;
+    const canvas = element.querySelector('.canvas')!;
+
+    expect(canvas.getAttribute('aria-describedby')).toBe(component.hintId);
+    expect(element.querySelector(`#${component.hintId}`)?.textContent).toContain('Enter');
   });
 });

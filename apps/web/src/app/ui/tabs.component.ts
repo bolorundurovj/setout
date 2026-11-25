@@ -84,22 +84,37 @@ export class TabsComponent {
 
   onKey(event: KeyboardEvent, index: number): void {
     const tabs = this.tabs();
-    const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
-    const to =
-      event.key === 'Home'
-        ? 0
-        : event.key === 'End'
-          ? tabs.length - 1
-          : step === 0
-            ? -1
-            : (index + step + tabs.length) % tabs.length;
+    const to = tabKeyTarget(event.key, index, tabs.length);
     if (to < 0) {
       return;
     }
     event.preventDefault();
     this.valueChange.emit(tabs[to].value);
-    // Selection moves focus with it, per the WAI-ARIA tabs pattern.
-    const strip = (event.target as HTMLElement).parentElement;
-    (strip?.children[to] as HTMLElement | undefined)?.focus();
+    focusTab(event, to);
   }
+}
+
+/** The tab index a key press moves to, or -1 when the key does not move selection. */
+export function tabKeyTarget(key: string, index: number, count: number): number {
+  if (count === 0) {
+    return -1;
+  }
+  switch (key) {
+    case 'Home':
+      return 0;
+    case 'End':
+      return count - 1;
+    case 'ArrowRight':
+      return (index + 1) % count;
+    case 'ArrowLeft':
+      return (index - 1 + count) % count;
+    default:
+      return -1;
+  }
+}
+
+/** Selection moves focus with it, per the WAI-ARIA tabs pattern. */
+export function focusTab(event: KeyboardEvent, to: number): void {
+  const strip = (event.target as HTMLElement).parentElement;
+  (strip?.children[to] as HTMLElement | undefined)?.focus();
 }

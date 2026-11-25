@@ -171,6 +171,33 @@ describe('ProjectDetailComponent', () => {
     expect(dashboard.querySelector('app-project-dashboard')).toBeTruthy();
   });
 
+  it('links the open tab to its panel and keeps only it in the tab order', async () => {
+    const element = await body('budget');
+    const tabs = Array.from(element.querySelectorAll<HTMLElement>('[role="tab"]'));
+    const selected = tabs.filter((tab) => tab.getAttribute('tabindex') === '0');
+    const panel = element.querySelector('[role="tabpanel"]');
+
+    expect(selected.map((tab) => tab.id)).toEqual(['project-budget-tab']);
+    expect(selected[0].getAttribute('aria-controls')).toBe('project-budget-panel');
+    expect(panel?.id).toBe('project-budget-panel');
+    expect(panel?.getAttribute('aria-labelledby')).toBe('project-budget-tab');
+  });
+
+  it('moves between tabs with the arrow keys and focuses the new tab', async () => {
+    const element = await body();
+    TestBed.inject(Router).navigate = async () => true;
+    const tabs = () => Array.from(element.querySelectorAll<HTMLElement>('[role="tab"]'));
+
+    tabs()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.activeTab()).toBe('expense');
+    expect(document.activeElement).toBe(tabs()[1]);
+
+    tabs()[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'End' }));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.activeTab()).toBe('psettings');
+  });
+
   it('writes the selected tab to the URL', () => {
     const component = render();
     const router = TestBed.inject(Router);

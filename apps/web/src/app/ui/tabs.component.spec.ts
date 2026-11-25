@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { TabsComponent, type Tab } from './tabs.component';
+import { TabsComponent, tabKeyTarget, type Tab } from './tabs.component';
 
 const TABS: Tab[] = [
   { value: 'pin', label: 'Pin' },
@@ -96,5 +96,21 @@ describe('TabsComponent', () => {
     buttons[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
     fixture.detectChanges();
     expect(host.selected()).toBe('pin');
+  });
+
+  it('moves focus to the newly selected tab', () => {
+    const { buttons, fixture } = render();
+    buttons[0].focus();
+
+    buttons[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    fixture.detectChanges();
+
+    expect(document.activeElement).toBe(buttons[1]);
+  });
+
+  it('ignores keys when there are no tabs', () => {
+    expect(tabKeyTarget('ArrowRight', 0, 0)).toBe(-1);
+    expect(tabKeyTarget('End', 0, 0)).toBe(-1);
+    expect(tabKeyTarget('Home', 0, 0)).toBe(-1);
   });
 });

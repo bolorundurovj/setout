@@ -1,4 +1,12 @@
-<div #canvas class="canvas" role="application" [attr.aria-label]="ariaLabel()"></div>
+<div
+  #canvas
+  class="canvas"
+  role="application"
+  [class.placing]="editable()"
+  [attr.aria-label]="ariaLabel()"
+  [attr.aria-describedby]="editable() ? hintId : null"
+  (keydown.enter)="onCanvasEnter($event)"
+></div>
 
 @if (tilesFailed()) {
   <p class="t-small muted">Map tiles unavailable. The pin and boundary are still shown.</p>
@@ -7,26 +15,31 @@
 @if (editable()) {
   @if (mode() === 'pin') {
     <div class="tools">
+      <app-button variant="secondary" (pressed)="dropPin()">Place Pin at Map Centre</app-button>
       <app-button variant="secondary" (pressed)="locate()">Use My Location</app-button>
       @if (point()) {
         <app-button variant="secondary" (pressed)="clearPin()">Remove Pin</app-button>
       }
     </div>
-    <p class="t-small muted">
+    <p class="t-small muted" [id]="hintId">
       @if (point()) {
         Tap the map or drag the pin to move it.
       } @else {
         Tap the map to place the location pin.
       }
+      With a keyboard, pan with the arrow keys and press Enter to place the pin at the centre.
     </p>
   } @else {
-    @if (points().length) {
-      <div class="tools">
+    <div class="tools">
+      <app-button variant="secondary" (pressed)="addPointAtCentre()">
+        Add Point at Map Centre
+      </app-button>
+      @if (points().length) {
         <app-button variant="secondary" (pressed)="undo()">Undo Last Point</app-button>
         <app-button variant="secondary" (pressed)="clear()">Clear Boundary</app-button>
-      </div>
-    }
-    <p class="t-small muted">
+      }
+    </div>
+    <p class="t-small muted" [id]="hintId">
       @if (points().length === 0) {
         Tap the map to mark the first boundary point.
       } @else if (points().length < 3) {
@@ -35,6 +48,7 @@
       } @else {
         {{ points().length }} boundary points. Drag one to move it.
       }
+      With a keyboard, pan with the arrow keys and press Enter to add a point at the centre.
     </p>
   }
 }

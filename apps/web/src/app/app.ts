@@ -1,4 +1,14 @@
-import { Component, DestroyRef, HostListener, effect, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  HostListener,
+  afterRenderEffect,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
@@ -9,6 +19,8 @@ import { debounce } from './ui/debounce';
 import { IconComponent, type IconName } from './ui/icon.component';
 import { LogoComponent } from './ui/logo.component';
 import { ToastComponent } from './ui/toast.component';
+
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex="0"]';
 
 interface NavItem {
   key: string;
@@ -39,6 +51,9 @@ export class App {
   private readonly counts = inject(CountsService);
 
   readonly navOpen = signal(false);
+  private readonly sidebar = viewChild<ElementRef<HTMLElement>>('sidebar');
+  private returnFocus: HTMLElement | null = null;
+  private focusedOpen = false;
   readonly query = signal('');
   private readonly router = inject(Router);
   readonly host = location.host;
@@ -104,6 +119,24 @@ export class App {
       document.body.classList.toggle('nav-locked', this.navOpen());
     });
 
+    afterRenderEffect(() => {
+      const open = this.navOpen();
+      if (open === this.focusedOpen) {
+        return;
+      }
+      this.focusedOpen = open;
+      if (open) {
+        this.returnFocus = document.activeElement as HTMLElement | null;
+        this.sidebarFocusables()[0]?.focus();
+        return;
+      }
+      const target = this.returnFocus;
+      this.returnFocus = null;
+      if (target?.isConnected) {
+        target.focus();
+      }
+    });
+
     this.router.events
       .pipe(
         filter((event) => event instanceof NavigationEnd),
@@ -143,6 +176,28 @@ export class App {
 
   closeNav(): void {
     this.navOpen.set(false);
+  }
+
+  @HostListener('keydown', ['$event'])
+  onSidebarKey(event: KeyboardEvent): void {
+    if (!this.navOpen() || event.key !== 'Tab') {
+      return;
+    }
+    const focusables = this.sidebarFocusables();
+    const first = focusables[0];
+    const last = focusables.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  }
+
+  private sidebarFocusables(): HTMLElement[] {
+    const sidebar = this.sidebar()?.nativeElement;
+    return sidebar ? Array.from(sidebar.querySelectorAll<HTMLElement>(FOCUSABLE)) : [];
   }
 
   async signOut(): Promise<void> {

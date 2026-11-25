@@ -12,22 +12,31 @@
     <app-button (pressed)="selectTab('expense')">New Expense</app-button>
   </div>
 
-  <div class="tabs" role="tablist">
-    @for (tab of tabs; track tab.key) {
+  <div class="tabs" role="tablist" aria-label="Project sections">
+    @for (tab of tabs; track tab.key; let i = $index) {
       <button
         type="button"
         role="tab"
         class="tab"
+        [id]="'project-' + tab.key + '-tab'"
         [class.active]="tab.key === activeTab()"
         [attr.aria-selected]="tab.key === activeTab()"
+        [attr.aria-controls]="'project-' + tab.key + '-panel'"
+        [attr.tabindex]="tab.key === activeTab() ? 0 : -1"
         (click)="selectTab(tab.key)"
+        (keydown)="onTabKey($event, i)"
       >
         <span class="tab-name">{{ tab.name }}</span>
       </button>
     }
   </div>
 
-  <div class="page">
+  <div
+    class="page"
+    role="tabpanel"
+    [id]="'project-' + activeTab() + '-panel'"
+    [attr.aria-labelledby]="'project-' + activeTab() + '-tab'"
+  >
     @if (activeTab() === 'table') {
       <app-budget-compare [project]="p" [openCategory]="category()" />
     } @else if (activeTab() === 'budget') {

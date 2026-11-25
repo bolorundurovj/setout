@@ -33,6 +33,8 @@ const PIN = `<svg viewBox="0 0 24 32" width="24" height="32" aria-hidden="true">
   <circle cx="12" cy="12" r="4.5" fill="white"/>
 </svg>`;
 
+let nextMapId = 0;
+
 @Component({
   selector: 'app-land-map',
   standalone: true,
@@ -53,6 +55,7 @@ export class LandMapComponent {
   readonly pointChange = output<LandPoint | null>();
   readonly boundaryChange = output<LandBoundary | null>();
 
+  readonly hintId = `land-map-hint-${nextMapId++}`;
   readonly tilesFailed = signal(false);
   readonly points = signal<Position[]>([]);
 
@@ -226,6 +229,26 @@ export class LandMapComponent {
     const centre = this.map?.getCenter();
     if (centre) {
       this.pointChange.emit({ lat: round(centre.lat), lon: round(centre.lng) });
+    }
+  }
+
+  addPointAtCentre(): void {
+    const centre = this.map?.getCenter();
+    if (centre) {
+      this.onClick(centre);
+    }
+  }
+
+  /** Leaflet pans and zooms the focused map with the keyboard; Enter places at its centre. */
+  onCanvasEnter(event: Event): void {
+    if (!this.editable() || event.target !== this.host().nativeElement) {
+      return;
+    }
+    event.preventDefault();
+    if (this.mode() === 'pin') {
+      this.dropPin();
+    } else {
+      this.addPointAtCentre();
     }
   }
 

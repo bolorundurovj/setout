@@ -22,6 +22,7 @@ import type { ExpenseFilters } from '../expenses/expense.service';
 import { MonthsComponent } from '../months/months.component';
 import { ButtonComponent } from '../ui/button.component';
 import { CurrencyPillComponent } from '../ui/currency-pill.component';
+import { focusTab, tabKeyTarget } from '../ui/tabs.component';
 import { ProjectService } from './project.service';
 import { ProjectSettingsComponent } from './project-settings.component';
 
@@ -137,6 +138,16 @@ export class ProjectDetailComponent {
   selectTab(key: string): void {
     this.activeTab.set(key);
     void this.router.navigate(['/projects', this.id(), key]);
+  }
+
+  onTabKey(event: KeyboardEvent, index: number): void {
+    const to = tabKeyTarget(event.key, index, this.tabs.length);
+    if (to < 0) {
+      return;
+    }
+    event.preventDefault();
+    this.selectTab(this.tabs[to].key);
+    focusTab(event, to);
   }
 
   openCategory(categoryId: string): void {

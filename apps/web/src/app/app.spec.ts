@@ -195,5 +195,64 @@ describe('App', () => {
       expect(fixture.componentInstance.navOpen()).toBe(false);
       expect(document.body.classList.contains('nav-locked')).toBe(false);
     });
+
+    it('moves focus into the menu and returns it to the toggle on close', () => {
+      const fixture = render();
+      const element = fixture.nativeElement as HTMLElement;
+      const toggle = element.querySelector<HTMLButtonElement>('.sidebar-toggle')!;
+      toggle.focus();
+
+      toggle.click();
+      fixture.detectChanges();
+      expect(element.querySelector('.sidebar')?.contains(document.activeElement)).toBe(true);
+      expect(element.querySelector('.content')?.hasAttribute('inert')).toBe(true);
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      fixture.detectChanges();
+      expect(document.activeElement).toBe(toggle);
+      expect(element.querySelector('.content')?.hasAttribute('inert')).toBe(false);
+    });
+
+    it('keeps Tab inside the open menu', () => {
+      const fixture = render();
+      const element = fixture.nativeElement as HTMLElement;
+      fixture.componentInstance.toggleNav();
+      fixture.detectChanges();
+      const sidebar = element.querySelector<HTMLElement>('.sidebar')!;
+      const focusables = Array.from(
+        sidebar.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input'),
+      );
+      const first = focusables[0];
+      const last = focusables.at(-1)!;
+
+      last.focus();
+      const forward = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+      last.dispatchEvent(forward);
+      expect(forward.defaultPrevented).toBe(true);
+      expect(document.activeElement).toBe(first);
+
+      const back = new KeyboardEvent('keydown', {
+        key: 'Tab',
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      first.dispatchEvent(back);
+      expect(document.activeElement).toBe(last);
+    });
+
+    it('does not trap Tab while the menu is closed', () => {
+      const fixture = render();
+      const sidebar = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
+        '.sidebar',
+      )!;
+      const last = Array.from(sidebar.querySelectorAll<HTMLElement>('button')).at(-1)!;
+      last.focus();
+      const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+
+      last.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+    });
   });
 });
