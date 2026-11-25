@@ -215,6 +215,7 @@ class TestS3Storage:
         prefix: str = "attachments",
         public_url: str | None = None,
         presign_client: FakeS3 | None = None,
+        region: str | None = None,
     ) -> S3Storage:
         return S3Storage(
             "a-bucket",
@@ -222,6 +223,7 @@ class TestS3Storage:
             client=client,
             public_url=public_url,
             presign_client=presign_client,
+            region=region,
         )
 
     async def test_a_file_written_comes_back_whole(self) -> None:
@@ -304,6 +306,28 @@ class TestS3Storage:
 
         assert ("head_bucket", {"Bucket": "a-bucket"}) in client.calls
         assert not any(call[0] == "create_bucket" for call in client.calls)
+
+    async def test_ensure_bucket_sends_location_constraint_outside_us_east_1(self) -> None:
+        client = FakeS3(bucket_exists=False)
+        store = self.store(client, region="eu-west-1")
+
+        await store.ensure_bucket()
+
+        assert (
+            "create_bucket",
+            {
+                "Bucket": "a-bucket",
+                "CreateBucketConfiguration": {"LocationConstraint": "eu-west-1"},
+            },
+        ) in client.calls
+
+    async def test_ensure_bucket_omits_location_constraint_in_us_east_1(self) -> None:
+        client = FakeS3(bucket_exists=False)
+        store = self.store(client, region="us-east-1")
+
+        await store.ensure_bucket()
+
+        assert ("create_bucket", {"Bucket": "a-bucket"}) in client.calls
 
 
 class TestPickingABackend:

@@ -102,6 +102,9 @@ class Settings(BaseSettings):
     # migrate legacy MinIO/S3 attachments to the active storage on boot.
     legacy_storage_dir: Path | None = None
     legacy_s3_endpoint_url: str = ""
+    legacy_s3_bucket: str = ""
+    legacy_s3_prefix: str | None = None
+    legacy_s3_region: str = ""
     legacy_s3_access_key_id: str = ""
     legacy_s3_secret_access_key: str = ""
 

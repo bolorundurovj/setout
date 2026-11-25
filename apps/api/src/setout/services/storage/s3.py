@@ -52,6 +52,7 @@ class S3Storage(Storage):
     ) -> None:
         self.bucket = bucket
         self.prefix = prefix.strip("/")
+        self.region = region or None
         self.link_seconds = link_seconds
         self.public_url = public_url.rstrip("/") if public_url else None
         self.client = client or _s3_client(
@@ -82,7 +83,12 @@ class S3Storage(Storage):
                 code = str(details.get("Code", ""))
                 if code in ("404", "NoSuchBucket", "NotFound") or self._is_missing(e):
                     try:
-                        self.client.create_bucket(Bucket=self.bucket)
+                        create_kwargs: dict[str, Any] = {"Bucket": self.bucket}
+                        if self.region and self.region != "us-east-1":
+                            create_kwargs["CreateBucketConfiguration"] = {
+                                "LocationConstraint": self.region
+                            }
+                        self.client.create_bucket(**create_kwargs)
                     except ClientError as ce:
                         ce_code = str(ce.response.get("Error", {}).get("Code", ""))
                         if ce_code not in ("BucketAlreadyOwnedByYou", "BucketAlreadyExists"):

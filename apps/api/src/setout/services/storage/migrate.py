@@ -54,11 +54,17 @@ def _read_legacy_file_from_dir(
 def _read_legacy_file_from_s3(
     client: Any, bucket: str, prefix: str, storage_key: str
 ) -> bytes | None:
-    object_key = f"{prefix}/{storage_key}" if prefix else storage_key
+    clean_prefix = prefix.strip("/")
+    object_key = f"{clean_prefix}/{storage_key}" if clean_prefix else storage_key
     try:
         response = client.get_object(Bucket=bucket, Key=object_key)
-        data: bytes = response["Body"].read()
-        return data
+        body = response["Body"]
+        try:
+            data: bytes = body.read()
+            return data
+        finally:
+            if hasattr(body, "close"):
+                body.close()
     except ClientError as e:
         code = str(e.response.get("Error", {}).get("Code", ""))
         if code in ("404", "NoSuchKey", "NotFound"):
@@ -72,7 +78,6 @@ async def auto_migrate_legacy_storage(storage: Storage, settings: Settings) -> N
     Runs automatically during app startup with zero user intervention. Verifies
     100% of assets before writing the completion marker.
     """
-    settings.data_dir.mkdir(parents=True, exist_ok=True)
     marker_path = settings.data_dir / MARKER_FILENAME
     if marker_path.exists():
         return
@@ -84,8 +89,6 @@ async def auto_migrate_legacy_storage(storage: Storage, settings: Settings) -> N
     has_legacy_s3 = bool(legacy_s3_url)
 
     if not has_legacy_dir and not has_legacy_s3:
-        # No legacy source detected; mark complete so future boots skip immediately.
-        marker_path.write_text("no-legacy-source\n", encoding="utf-8")
         return
 
     logger.info("[Storage Migration] Checking for legacy assets to migrate...")
@@ -103,15 +106,20 @@ async def auto_migrate_legacy_storage(storage: Storage, settings: Settings) -> N
 
     total = len(distinct_assets)
     if total == 0:
-        marker_path.write_text("no-assets\n", encoding="utf-8")
-        logger.info("[Storage Migration] No assets found in database. Migration marked complete.")
+        logger.info("[Storage Migration] No assets found in database; skipping migration.")
         return
+
+    legacy_bucket = settings.legacy_s3_bucket or settings.s3_bucket
+    legacy_prefix = (
+        settings.legacy_s3_prefix if settings.legacy_s3_prefix is not None else settings.s3_prefix
+    )
 
     legacy_s3_client: Any | None = None
     if has_legacy_s3:
         legacy_s3_client = boto3.client(
             "s3",
             endpoint_url=legacy_s3_url,
+            region_name=settings.legacy_s3_region or None,
             aws_access_key_id=settings.legacy_s3_access_key_id or None,
             aws_secret_access_key=settings.legacy_s3_secret_access_key or None,
             config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
@@ -132,16 +140,16 @@ async def auto_migrate_legacy_storage(storage: Storage, settings: Settings) -> N
                 _read_legacy_file_from_dir,
                 legacy_dir,
                 key,
-                bucket=settings.s3_bucket,
-                prefix=settings.s3_prefix,
+                bucket=legacy_bucket,
+                prefix=legacy_prefix,
             )
 
         if data is None and legacy_s3_client is not None:
             data = await asyncio.to_thread(
                 _read_legacy_file_from_s3,
                 legacy_s3_client,
-                settings.s3_bucket,
-                settings.s3_prefix,
+                legacy_bucket,
+                legacy_prefix,
                 key,
             )
 
@@ -169,6 +177,7 @@ async def auto_migrate_legacy_storage(storage: Storage, settings: Settings) -> N
             failed += 1
 
     if failed == 0 and verified == total:
+        settings.data_dir.mkdir(parents=True, exist_ok=True)
         marker_path.write_text(f"migrated={migrated},total={total}\n", encoding="utf-8")
         logger.info(
             "[Storage Migration] 100%% of assets verified (%d/%d, %d newly migrated). "
