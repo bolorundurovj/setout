@@ -1,117 +1,152 @@
 import { Routes } from '@angular/router';
-import { DashboardComponent } from './dashboard/dashboard.component';
-import { LoginComponent } from './auth/login.component';
-import { SetupComponent } from './auth/setup.component';
-import { ItemsComponent } from './items/items.component';
-import { ItemDetailComponent } from './items/item-detail.component';
-import { PeopleComponent } from './people/people.component';
-import { PersonDetailComponent } from './people/person-detail.component';
-import { ImportComponent } from './import/import.component';
-import { SearchComponent } from './search/search.component';
-import { ProjectsComponent } from './projects/projects.component';
-import { LandsComponent } from './lands/lands.component';
-import { LandDetailComponent } from './lands/land-detail.component';
-import { LandFormComponent } from './lands/land-form.component';
-import { VendorsComponent } from './vendors/vendors.component';
-import { VendorDetailComponent } from './vendors/vendor-detail.component';
-import { VendorFormComponent } from './vendors/vendor-form.component';
-import { PersonFormComponent } from './people/person-form.component';
-import { ProjectDetailComponent } from './projects/project-detail.component';
-import { SettingsComponent } from './settings/settings.component';
 import { authGuard, guestGuard, setupGuard } from './auth/auth.guard';
 
 export const routes: Routes = [
-  { path: 'login', component: LoginComponent, canActivate: [guestGuard], title: 'Sign In' },
-  { path: 'setup', component: SetupComponent, canActivate: [setupGuard], title: 'Setup' },
-  { path: '', component: DashboardComponent, canActivate: [authGuard], title: 'Home' },
+  {
+    path: 'login',
+    loadComponent: () => import('./auth/login.component').then((m) => m.LoginComponent),
+    canActivate: [guestGuard],
+    title: 'Sign In',
+  },
+  {
+    path: 'setup',
+    loadComponent: () => import('./auth/setup.component').then((m) => m.SetupComponent),
+    canActivate: [setupGuard],
+    title: 'Setup',
+  },
+  {
+    path: '',
+    loadComponent: () =>
+      import('./dashboard/dashboard.component').then((m) => m.DashboardComponent),
+    canActivate: [authGuard],
+    title: 'Home',
+  },
   {
     path: 'projects',
-    component: ProjectsComponent,
+    loadComponent: () => import('./projects/projects.component').then((m) => m.ProjectsComponent),
     canActivate: [authGuard],
     title: 'Projects',
   },
   {
     path: 'search',
-    component: SearchComponent,
+    loadComponent: () => import('./search/search.component').then((m) => m.SearchComponent),
     canActivate: [authGuard],
     title: 'Search',
   },
   {
     path: 'import',
-    component: ImportComponent,
+    loadComponent: () => import('./import/import.component').then((m) => m.ImportComponent),
     canActivate: [authGuard],
     title: 'Import Spreadsheet',
   },
   {
     path: 'projects/:id',
-    component: ProjectDetailComponent,
+    loadComponent: () =>
+      import('./projects/project-detail.component').then((m) => m.ProjectDetailComponent),
     canActivate: [authGuard],
     title: 'Project',
   },
   {
     path: 'projects/:id/:tab',
-    component: ProjectDetailComponent,
+    loadComponent: () =>
+      import('./projects/project-detail.component').then((m) => m.ProjectDetailComponent),
     canActivate: [authGuard],
     title: 'Project',
   },
-  { path: 'items', component: ItemsComponent, canActivate: [authGuard], title: 'Items' },
-  { path: 'items/:id', component: ItemDetailComponent, canActivate: [authGuard], title: 'Item' },
-  { path: 'lands', component: LandsComponent, canActivate: [authGuard], title: 'Land' },
+  {
+    path: 'items',
+    loadComponent: () => import('./items/items.component').then((m) => m.ItemsComponent),
+    canActivate: [authGuard],
+    title: 'Items',
+  },
+  {
+    path: 'items/:id',
+    loadComponent: () => import('./items/item-detail.component').then((m) => m.ItemDetailComponent),
+    canActivate: [authGuard],
+    title: 'Item',
+  },
+  {
+    path: 'lands',
+    loadComponent: () => import('./lands/lands.component').then((m) => m.LandsComponent),
+    canActivate: [authGuard],
+    title: 'Land',
+  },
   {
     path: 'lands/new',
-    component: LandFormComponent,
+    loadComponent: () => import('./lands/land-form.component').then((m) => m.LandFormComponent),
     canActivate: [authGuard],
     title: 'New Land',
   },
   {
     path: 'lands/:id/edit',
-    component: LandFormComponent,
+    loadComponent: () => import('./lands/land-form.component').then((m) => m.LandFormComponent),
     canActivate: [authGuard],
     title: 'Edit Land',
   },
   {
     path: 'lands/:id',
-    component: LandDetailComponent,
+    loadComponent: () => import('./lands/land-detail.component').then((m) => m.LandDetailComponent),
     canActivate: [authGuard],
     title: 'Land',
   },
-  { path: 'vendors', component: VendorsComponent, canActivate: [authGuard], title: 'Vendors' },
+  {
+    path: 'vendors',
+    loadComponent: () => import('./vendors/vendors.component').then((m) => m.VendorsComponent),
+    canActivate: [authGuard],
+    title: 'Vendors',
+  },
   {
     path: 'vendors/new',
-    component: VendorFormComponent,
+    loadComponent: () =>
+      import('./vendors/vendor-form.component').then((m) => m.VendorFormComponent),
     canActivate: [authGuard],
     title: 'New Vendor',
   },
   {
     path: 'vendors/:id/edit',
-    component: VendorFormComponent,
+    loadComponent: () =>
+      import('./vendors/vendor-form.component').then((m) => m.VendorFormComponent),
     canActivate: [authGuard],
     title: 'Edit Vendor',
   },
   {
     path: 'vendors/:id',
-    component: VendorDetailComponent,
+    loadComponent: () =>
+      import('./vendors/vendor-detail.component').then((m) => m.VendorDetailComponent),
     canActivate: [authGuard],
     title: 'Vendor',
   },
-  { path: 'people', component: PeopleComponent, canActivate: [authGuard], title: 'People' },
+  {
+    path: 'people',
+    loadComponent: () => import('./people/people.component').then((m) => m.PeopleComponent),
+    canActivate: [authGuard],
+    title: 'People',
+  },
   {
     path: 'people/new',
-    component: PersonFormComponent,
+    loadComponent: () =>
+      import('./people/person-form.component').then((m) => m.PersonFormComponent),
     canActivate: [authGuard],
     title: 'New Person',
   },
   {
     path: 'people/:id/edit',
-    component: PersonFormComponent,
+    loadComponent: () =>
+      import('./people/person-form.component').then((m) => m.PersonFormComponent),
     canActivate: [authGuard],
     title: 'Edit Person',
   },
   {
     path: 'people/:id',
-    component: PersonDetailComponent,
+    loadComponent: () =>
+      import('./people/person-detail.component').then((m) => m.PersonDetailComponent),
     canActivate: [authGuard],
     title: 'Person',
   },
-  { path: 'settings', component: SettingsComponent, canActivate: [authGuard], title: 'Settings' },
+  {
+    path: 'settings',
+    loadComponent: () => import('./settings/settings.component').then((m) => m.SettingsComponent),
+    canActivate: [authGuard],
+    title: 'Settings',
+  },
 ];

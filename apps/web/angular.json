@@ -29,6 +29,11 @@
               "@fontsource/dm-sans/500.css",
               "@fontsource/dm-mono/400.css",
               "@fontsource/dm-mono/500.css",
+              {
+                "input": "leaflet/dist/leaflet.css",
+                "bundleName": "leaflet",
+                "inject": false
+              },
               "src/styles.scss"
             ],
             "scripts": [],

@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   DestroyRef,
+  DOCUMENT,
   effect,
   inject,
   input,
@@ -61,9 +62,15 @@ export class LandMapComponent {
   private handles: L.Marker[] = [];
 
   constructor() {
+    const document = inject(DOCUMENT);
+    const styles = document.createElement('link');
+    styles.rel = 'stylesheet';
+    styles.href = 'leaflet.css';
+    document.head.append(styles);
     void this.maps.load();
     // Tabs recreate the map on each switch, so the Leaflet instance is removed on destroy.
     inject(DestroyRef).onDestroy(() => {
+      styles.remove();
       this.map?.remove();
       this.map = null;
     });
