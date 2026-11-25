@@ -561,6 +561,7 @@ async def test_export_round_trip_keeps_cost_types(client: AsyncClient) -> None:
         ("blank", "setout-blank-sheet.xlsx"),
         ("example", "setout-example-sheet.xlsx"),
         ("budget-csv", "setout-budget-example.csv"),
+        ("expenses-csv", "setout-expenses-example.csv"),
         ("spending-csv", "setout-spending-example.csv"),
     ],
 )

@@ -629,6 +629,7 @@ SAMPLES: dict[str, tuple[str, str]] = {
     "blank": ("setout-blank-sheet.xlsx", XLSX_TYPE),
     "example": ("setout-example-sheet.xlsx", XLSX_TYPE),
     "budget-csv": ("setout-budget-example.csv", "text/csv"),
+    "expenses-csv": ("setout-expenses-example.csv", "text/csv"),
     "spending-csv": ("setout-spending-example.csv", "text/csv"),
 }
 
@@ -638,6 +639,6 @@ def sample(kind: str) -> bytes:
         return template(filled=True)
     if kind == "budget-csv":
         return budget_csv(example_book())
-    if kind == "spending-csv":
+    if kind in ("expenses-csv", "spending-csv"):
         return expenses_csv(example_book())
     return template()

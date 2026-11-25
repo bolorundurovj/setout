@@ -153,7 +153,7 @@ export class ImportComponent {
     { kind: 'example', name: 'Filled example', detail: 'The same layout with example rows' },
     { kind: 'budget-csv', name: 'Budget as a CSV', detail: 'A single sheet for a budget only' },
     {
-      kind: 'spending-csv',
+      kind: 'expenses-csv',
       name: 'Expenses as a CSV',
       detail: 'A single sheet for expenses only',
     },

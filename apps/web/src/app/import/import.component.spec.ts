@@ -283,7 +283,7 @@ describe('ImportComponent', () => {
       'blank',
       'example',
       'budget-csv',
-      'spending-csv',
+      'expenses-csv',
     ]);
     expect(component.templateUrl('example')).toBe('/api/import/sample?kind=example');
   });

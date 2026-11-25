@@ -160,7 +160,7 @@ async def download_import_template(
     kind: Annotated[
         str,
         Query(
-            pattern="^(blank|example|budget-csv|spending-csv)$",
+            pattern="^(blank|example|budget-csv|expenses-csv|spending-csv)$",
             description="An empty workbook, a workbook with example rows, or either sheet as a CSV",
         ),
     ] = "blank",
