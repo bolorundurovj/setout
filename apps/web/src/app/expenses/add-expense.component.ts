@@ -35,13 +35,7 @@ import { MoneyHintComponent } from '../ui/money-hint.component';
 import { VendorService } from '../vendors/vendor.service';
 import { ExpenseService } from './expense.service';
 
-function isoDay(offsetDays = 0): string {
-  const day = new Date();
-  day.setDate(day.getDate() - offsetDays);
-  const month = `${day.getMonth() + 1}`.padStart(2, '0');
-  const date = `${day.getDate()}`.padStart(2, '0');
-  return `${day.getFullYear()}-${month}-${date}`;
-}
+import { isoDay } from '../shared/dates';
 
 @Component({
   selector: 'app-add-expense',
@@ -303,6 +297,7 @@ export class AddExpenseComponent {
       return;
     }
     const last = await this.items.lastPrice(this.project().id, itemId);
+    if (this.itemId() !== itemId) return;
     this.lastPrice.set(last);
     if (last && !this.unitRate().trim()) {
       const exponent = this.project().currency_exponent;
@@ -322,7 +317,13 @@ export class AddExpenseComponent {
       itemId || undefined,
       vendorId || undefined,
     );
-    if (suggestion?.category_id && !this.categoryId()) {
+    if (
+      suggestion?.category_id &&
+      !this.categoryId() &&
+      !this.categoryExplicitlyCleared() &&
+      itemId === this.itemId() &&
+      vendorId === this.vendorId()
+    ) {
       this.categoryId.set(suggestion.category_id);
       this.suggestedCategoryId.set(suggestion.category_id);
       this.categoryExplicitlyCleared.set(false);
@@ -548,6 +549,19 @@ export class AddExpenseComponent {
   private reset(): void {
     this.pendingExpense = null;
     this.saveError.set('');
+    this.categoryId.set('');
+    this.vendorId.set('');
+    this.agreementId.set('');
+    this.paidById.set('');
+    this.costType.set('');
+    this.spentOn.set(isoDay());
+    this.addingItem.set(false);
+    this.addingVendor.set(false);
+    this.newItemName.set('');
+    this.newItemUnit.set('');
+    this.newVendorName.set('');
+    this.lastArchived.set(null);
+    this.fileInput().nativeElement.value = '';
     this.description.set('');
     this.amount.set('');
     this.quantity.set('');

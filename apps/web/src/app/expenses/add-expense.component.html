@@ -60,7 +60,6 @@
     <span class="t-micro">Amount (required)</span>
     @if (calculatedAmount() !== null) {
       <span class="amount calculated">
-        <span class="amount-prefix t-mono">{{ symbol() }}</span>
         <output class="amount-input t-mono" aria-label="Amount spent">
           {{ money(calculatedAmount() ?? 0) }}
         </output>

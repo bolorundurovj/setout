@@ -63,3 +63,11 @@ export function parseTimestamp(value: string): Date {
   const text = value.trim();
   return new Date(hasZone(text) ? text : `${text}Z`);
 }
+
+export function isoDay(offsetDays = 0): string {
+  const day = new Date();
+  day.setDate(day.getDate() - offsetDays);
+  const month = `${day.getMonth() + 1}`.padStart(2, '0');
+  const date = `${day.getDate()}`.padStart(2, '0');
+  return `${day.getFullYear()}-${month}-${date}`;
+}

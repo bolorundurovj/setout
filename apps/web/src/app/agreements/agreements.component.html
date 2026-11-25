@@ -212,6 +212,10 @@
                 </button>
               }
             } @else if (expenseAgreementId() === agreement.id) {
+              <label
+                >Date paid
+                <input type="date" [value]="expenseDate()" (input)="expenseDate.set(value($event))"
+              /></label>
               <span class="amount">
                 <span class="amount-prefix t-mono">{{ symbol() }}</span>
                 <input

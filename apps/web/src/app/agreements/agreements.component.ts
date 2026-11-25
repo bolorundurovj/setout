@@ -17,7 +17,7 @@ import { InfiniteScrollDirective } from '../ui/infinite-scroll.directive';
 import { MoneyHintComponent } from '../ui/money-hint.component';
 import { Option, OptionPickerComponent } from '../ui/option-picker.component';
 import { PaginationComponent } from '../ui/pagination.component';
-import { formatDay } from '../shared/dates';
+import { formatDay, isoDay } from '../shared/dates';
 import { ToggleComponent } from '../ui/toggle.component';
 import { currencySymbol } from '../ui/currency-pill.component';
 import { PersonService } from '../people/person.service';
@@ -70,6 +70,7 @@ export class AgreementsComponent {
   readonly editingAdvance = signal<string | null>(null);
   readonly editAdvanceAmount = signal('');
   readonly expenseAmount = signal('');
+  readonly expenseDate = signal(isoDay());
   readonly vendorId = signal('');
   readonly description = signal('');
   readonly agreedAmount = signal('');
@@ -204,6 +205,7 @@ export class AgreementsComponent {
 
   startExpense(agreementId: string): void {
     this.expenseAgreementId.set(agreementId);
+    this.expenseDate.set(isoDay());
     this.expenseAmount.set('');
   }
 
@@ -214,7 +216,7 @@ export class AgreementsComponent {
 
   canSaveExpense(): boolean {
     const amount = parseMoney(this.expenseAmount(), this.project().currency_exponent);
-    return amount !== null && amount > 0;
+    return !!this.expenseDate() && amount !== null && amount > 0;
   }
 
   /** Recorded as an expense linked to the agreement, so the server recalculates paid_amount. */
@@ -223,12 +225,15 @@ export class AgreementsComponent {
     if (!this.canSaveExpense() || amount === null) {
       return;
     }
+    const previous = this.expensesFor(agreement.id)[0];
     const created = await this.expenses.add(this.project().id, {
       description: agreement.description,
       amount,
       agreement_id: agreement.id,
       vendor_id: agreement.vendor_id,
-      cost_type: 'labour',
+      spent_on: this.expenseDate(),
+      category_id: previous?.category_id ?? null,
+      cost_type: previous?.cost_type ?? null,
     });
     if (!created) {
       this.toast.show(this.expenses.error() ?? 'Could not save the expense.', 'error');
