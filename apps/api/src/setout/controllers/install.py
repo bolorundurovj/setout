@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -18,9 +20,9 @@ from setout.utils.backup import (
     BackupError,
     Rows,
     applied_migration,
+    export_pages,
     forward,
     forward_counts,
-    read_all,
     required_tables,
     write_all,
 )
@@ -42,16 +44,26 @@ class InstallController:
             data_changed_at=changed,
         )
 
-    async def export(self) -> Backup:
-        tables = await read_all()
-        return Backup(
-            format=FORMAT,
-            app_version=__version__,
-            migration=await applied_migration(),
-            exported_at=datetime.now(UTC),
-            row_counts={table: len(rows) for table, rows in tables.items()},
-            tables=tables,
-        )
+    async def export(self) -> AsyncIterator[str]:
+        metadata = {
+            "format": FORMAT,
+            "app_version": __version__,
+            "migration": await applied_migration(),
+            "exported_at": datetime.now(UTC).isoformat(),
+        }
+        yield json.dumps(metadata)[:-1] + ',"tables":{'
+        counts: dict[str, int] = {}
+        async with in_transaction() as conn:
+            if conn.capabilities.dialect == "postgres":
+                await conn.execute_query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
+            for table in TABLES:
+                yield ("," if counts else "") + json.dumps(table) + ":["
+                counts[table] = 0
+                async for page in export_pages(conn, table):
+                    yield ("," if counts[table] else "") + json.dumps(page)[1:-1]
+                    counts[table] += len(page)
+                yield "]"
+        yield '},"row_counts":' + json.dumps(counts) + "}"
 
     async def restore(self, req: RestoreRequest) -> RestoreResult:
         if _restoring.locked():

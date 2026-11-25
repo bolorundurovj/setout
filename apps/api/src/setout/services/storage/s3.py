@@ -116,8 +116,12 @@ class S3Storage(Storage):
             if self._is_missing(e):
                 raise FileNotFoundError(key) from e
             raise
-        body: bytes = await asyncio.to_thread(response["Body"].read)
-        return body
+        stream = response["Body"]
+        try:
+            body: bytes = await asyncio.to_thread(stream.read)
+            return body
+        finally:
+            await asyncio.to_thread(stream.close)
 
     async def delete(self, key: str) -> None:
         await asyncio.to_thread(

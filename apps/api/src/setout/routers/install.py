@@ -4,6 +4,7 @@ import logging
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from setout.controllers.install import InstallController
@@ -41,12 +42,13 @@ async def get_install(user: CurrentUser) -> Install:
     return await controller.info()
 
 
-@router.post("/export", operation_id="exportBackup", responses=WRONG_PASSPHRASE)
-async def export_backup(req: ExportRequest, user: CurrentUser) -> Backup:
+@router.post(
+    "/export", operation_id="exportBackup", response_model=Backup, responses=WRONG_PASSPHRASE
+)
+async def export_backup(req: ExportRequest, user: CurrentUser) -> StreamingResponse:
     await _require_passphrase(req.passphrase, user)
-    backup = await controller.export()
-    security_logger.info("Backup exported by user_id=%s (%d tables)", user.id, len(backup.tables))
-    return backup
+    security_logger.info("Backup export started by user_id=%s", user.id)
+    return StreamingResponse(controller.export(), media_type="application/json")
 
 
 @router.post(

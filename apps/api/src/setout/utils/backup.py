@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -8,6 +9,7 @@ from itertools import groupby
 from typing import Any
 
 from tortoise import Tortoise
+from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.fields import DateField, DatetimeField, DecimalField, Field, JSONField
 
 from setout.utils.placeholders import bound
@@ -183,6 +185,21 @@ def parents_first(rows: list[dict[str, Any]], parent_column: str) -> list[dict[s
             placed.add(ancestor["id"])
             ordered.append(ancestor)
     return ordered
+
+
+async def export_pages(conn: BaseDBAsyncClient, table: str) -> AsyncIterator[list[dict[str, Any]]]:
+    primary_key = next(name for name, field in fields_of(table).items() if field.pk)
+    cursor = None
+    while True:
+        where = bound(f'WHERE "{primary_key}" > ?', conn) if cursor is not None else ""
+        rows = await conn.execute_query_dict(
+            f'SELECT * FROM "{table}" {where} ORDER BY "{primary_key}" LIMIT 256',
+            [cursor] if cursor is not None else [],
+        )
+        if not rows:
+            break
+        yield [{key: to_json_value(value) for key, value in row.items()} for row in rows]
+        cursor = rows[-1][primary_key]
 
 
 async def read_all() -> dict[str, list[dict[str, Any]]]:
