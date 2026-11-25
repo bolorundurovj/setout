@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import HTTPException, status
+from tortoise import Tortoise
 from tortoise.functions import Count, Sum
 from tortoise.queryset import QuerySet
 from tortoise.transactions import in_transaction
@@ -17,6 +18,7 @@ from setout.schemas.category import (
     BudgetItemCreate,
     BudgetItemPage,
     BudgetItemRead,
+    BudgetItemSummary,
     BudgetItemUpdate,
     CategoryCreate,
     CategoryPresetRead,
@@ -27,6 +29,7 @@ from setout.schemas.category import (
 from setout.services import changes
 from setout.utils.cascade import archive_under_category, restore_under_category
 from setout.utils.categories import subtree_ids, to_reads
+from setout.utils.placeholders import bound
 
 NOT_FOUND_CATEGORY = "Category not found"
 NOT_FOUND_ITEM = "Budget item not found"
@@ -63,7 +66,26 @@ class CategoryController:
                 if category.archived_at is None
             ),
             categories=categories,
+            item_summaries=await self._item_summaries(project_id),
         )
+
+    async def _item_summaries(self, project_id: str) -> dict[str, BudgetItemSummary]:
+        conn = Tortoise.get_connection("default")
+        query = """
+            SELECT category_id, id AS first_item_id, set_at, item_count, changed_at
+            FROM (
+                SELECT b.category_id, b.id, b.set_at,
+                       COUNT(*) OVER (PARTITION BY b.category_id) AS item_count,
+                       ROW_NUMBER() OVER (PARTITION BY b.category_id ORDER BY b.id) AS position,
+                       FIRST_VALUE(CASE WHEN b.updated_at <> b.created_at THEN b.updated_at END)
+                           OVER (PARTITION BY b.category_id ORDER BY b.updated_at DESC, b.id)
+                           AS changed_at
+                FROM budget_item b JOIN category c ON c.id = b.category_id
+                WHERE c.project_id = ? AND b.archived_at IS NULL
+            ) ranked WHERE position = 1
+        """
+        rows = await conn.execute_query_dict(bound(query, conn), [project_id])
+        return {row["category_id"]: BudgetItemSummary.model_validate(row) for row in rows}
 
     async def _archived_reads(self, project_id: str) -> list[CategoryRead]:
         # Archived categories total only the rows archived with them and are excluded

@@ -89,7 +89,15 @@ class BudgetItemPage(BaseModel):
     offset: int
 
 
+class BudgetItemSummary(BaseModel):
+    item_count: int
+    first_item_id: str
+    set_at: datetime
+    changed_at: datetime | None
+
+
 class ProjectBudget(BaseModel):
+    item_summaries: dict[str, BudgetItemSummary] = Field(default_factory=dict)
     project_id: str
     currency_code: str
     currency_exponent: int

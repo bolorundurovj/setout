@@ -11744,6 +11744,43 @@
         ],
         "title": "BudgetItemRead"
       },
+      "BudgetItemSummary": {
+        "properties": {
+          "item_count": {
+            "type": "integer",
+            "title": "Item Count"
+          },
+          "first_item_id": {
+            "type": "string",
+            "title": "First Item Id"
+          },
+          "set_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Set At"
+          },
+          "changed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_count",
+          "first_item_id",
+          "set_at",
+          "changed_at"
+        ],
+        "title": "BudgetItemSummary"
+      },
       "BudgetItemUpdate": {
         "properties": {
           "description": {
@@ -16192,6 +16229,13 @@
       },
       "ProjectBudget": {
         "properties": {
+          "item_summaries": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/BudgetItemSummary"
+            },
+            "type": "object",
+            "title": "Item Summaries"
+          },
           "project_id": {
             "type": "string",
             "title": "Project Id"

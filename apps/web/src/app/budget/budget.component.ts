@@ -67,15 +67,13 @@ export class BudgetComponent {
 
   private async load(): Promise<void> {
     await this.budget.load(this.project().id);
-    for (const category of this.budget.categories()) {
-      await this.budget.loadItems(category.id, this.includeArchived());
-    }
     this.syncDrafts();
   }
 
   async setIncludeArchived(on: boolean): Promise<void> {
     this.includeArchived.set(on);
-    await this.load();
+    const categoryId = this.openCategory();
+    if (categoryId) await this.budget.loadItems(categoryId, on);
   }
 
   archivedLabel(): string {
@@ -123,11 +121,12 @@ export class BudgetComponent {
       this.itemDescription().trim(),
       budgeted,
       (this.itemCostType() as CostType) || null,
+      this.includeArchived(),
     );
     this.itemDescription.set('');
     this.itemAmount.set('');
     this.itemCostType.set('');
-    await this.load();
+    this.syncDrafts();
     this.toast.show('Budget item added.');
   }
 
@@ -144,29 +143,19 @@ export class BudgetComponent {
     return this.budget.items()[categoryId] ?? [];
   }
 
-  /** Archived items are displayed but excluded from totals. */
-  private activeItemsFor(categoryId: string): BudgetItemRead[] {
-    return this.itemsFor(categoryId).filter((item) => !item.archived_at);
-  }
-
   draftFor(categoryId: string): string {
     return this.drafts()[categoryId] ?? '';
   }
 
   setDate(categoryId: string): string {
-    const items = this.activeItemsFor(categoryId);
-    return items.length ? this.formatDate(items[0].set_at) : '—';
+    const summary = this.budget.budget()?.item_summaries?.[categoryId];
+    return summary ? this.formatDate(summary.set_at) : '?';
   }
 
   lastChangedDate(categoryId: string): string {
-    const items = this.activeItemsFor(categoryId);
-    if (!items.length) {
-      return '—';
-    }
-    const latest = items.reduce((a, b) => (a.updated_at > b.updated_at ? a : b));
-    return latest.updated_at === latest.created_at
-      ? 'Not changed'
-      : this.formatDate(latest.updated_at);
+    const summary = this.budget.budget()?.item_summaries?.[categoryId];
+    if (!summary) return '?';
+    return summary.changed_at ? this.formatDate(summary.changed_at) : 'Not changed';
   }
 
   private formatDate(value: string): string {
@@ -183,6 +172,7 @@ export class BudgetComponent {
       this.openCategory.set(null);
       return;
     }
+    if (category.is_group) return;
     this.openCategory.set(category.id);
     this.itemDescription.set('');
     this.itemAmount.set('');
@@ -195,7 +185,7 @@ export class BudgetComponent {
 
   async commit(category: CategoryRead): Promise<void> {
     const typed = this.draftFor(category.id).trim();
-    const items = this.activeItemsFor(category.id);
+    const summary = this.budget.budget()?.item_summaries?.[category.id];
     if (this.pendingCommits.has(category.id) || typed === '') {
       return;
     }
@@ -208,7 +198,7 @@ export class BudgetComponent {
     if (budgeted === category.own_budgeted_amount) {
       return;
     }
-    if (items.length > 1) {
+    if (summary && summary.item_count > 1) {
       this.toast.show('This category has several budget items. Open it to edit them.', 'info');
       this.syncDrafts();
       return;
@@ -216,12 +206,26 @@ export class BudgetComponent {
 
     this.pendingCommits.add(category.id);
     try {
-      if (items.length === 1) {
-        await this.budget.updateItem(this.project().id, category.id, items[0].id, budgeted);
+      const archived = this.openCategory() === category.id ? this.includeArchived() : null;
+      if (summary) {
+        await this.budget.updateItem(
+          this.project().id,
+          category.id,
+          summary.first_item_id,
+          budgeted,
+          archived,
+        );
       } else {
-        await this.budget.addItem(this.project().id, category.id, category.name, budgeted);
+        await this.budget.addItem(
+          this.project().id,
+          category.id,
+          category.name,
+          budgeted,
+          null,
+          archived,
+        );
       }
-      await this.load();
+      this.syncDrafts();
       this.toast.show(`${category.name} budgeted at ${this.money(budgeted)}.`);
     } finally {
       this.pendingCommits.delete(category.id);
@@ -235,19 +239,19 @@ export class BudgetComponent {
     }
     await this.budget.addCategory(this.project().id, { name });
     this.newCategoryName.set('');
-    await this.load();
+    this.syncDrafts();
     this.toast.show(`${name} added.`);
   }
 
   async archiveItem(category: CategoryRead, itemId: string): Promise<void> {
     await this.budget.archiveItem(this.project().id, category.id, itemId, this.includeArchived());
-    await this.load();
+    this.syncDrafts();
     this.toast.show('Budget item archived. Show archived to restore it.');
   }
 
   async restoreItem(category: CategoryRead, itemId: string): Promise<void> {
     const restored = await this.budget.restoreItem(this.project().id, category.id, itemId);
-    await this.load();
+    this.syncDrafts();
     this.toast.show(
       restored
         ? 'Budget item restored.'
@@ -285,7 +289,7 @@ export class BudgetComponent {
       this.includeArchived(),
     );
     this.cancelDelete();
-    await this.load();
+    this.syncDrafts();
     this.toast.show(
       done
         ? 'Budget item deleted permanently.'

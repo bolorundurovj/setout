@@ -70,6 +70,11 @@ async def test_budget_item_adds_to_its_category_total(client: AsyncClient) -> No
     listed = (await client.get(f"/api/projects/{project_id}/categories")).json()
     assert listed[0]["budgeted_amount"] == 150_000_00
     assert listed[0]["own_budgeted_amount"] == 150_000_00
+    budget = (await client.get(f"/api/projects/{project_id}/budget")).json()
+    summary = budget["item_summaries"][category["id"]]
+    assert summary["item_count"] == 1
+    assert summary["first_item_id"] == resp.json()["id"]
+    assert summary["set_at"] == resp.json()["set_at"]
 
 
 async def test_child_total_rolls_up_to_the_parent(client: AsyncClient) -> None:

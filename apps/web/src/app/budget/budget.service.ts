@@ -160,13 +160,16 @@ export class BudgetService {
     description: string,
     budgetedAmount: number,
     costType: CostType | null = null,
+    includeArchived: boolean | null = false,
   ): Promise<void> {
     await this.api.invoke(createBudgetItem, {
       category_id: categoryId,
       body: { description, budgeted_amount: budgetedAmount, cost_type: costType },
     });
-    await this.loadItems(categoryId);
-    await this.load(projectId);
+    await Promise.all([
+      this.load(projectId),
+      includeArchived === null ? undefined : this.loadItems(categoryId, includeArchived),
+    ]);
   }
 
   async updateItem(
@@ -174,13 +177,16 @@ export class BudgetService {
     categoryId: string,
     itemId: string,
     budgetedAmount: number,
+    includeArchived: boolean | null = false,
   ): Promise<void> {
     await this.api.invoke(updateBudgetItem, {
       item_id: itemId,
       body: { budgeted_amount: budgetedAmount },
     });
-    await this.loadItems(categoryId);
-    await this.load(projectId);
+    await Promise.all([
+      this.load(projectId),
+      includeArchived === null ? undefined : this.loadItems(categoryId, includeArchived),
+    ]);
   }
 
   async archiveItem(
@@ -190,16 +196,14 @@ export class BudgetService {
     includeArchived = false,
   ): Promise<void> {
     await this.api.invoke(archiveBudgetItem, { item_id: itemId });
-    await this.loadItems(categoryId, includeArchived);
-    await this.load(projectId);
+    await Promise.all([this.load(projectId), this.loadItems(categoryId, includeArchived)]);
   }
 
   async restoreItem(projectId: string, categoryId: string, itemId: string): Promise<boolean> {
     this.error.set(null);
     try {
       await this.api.invoke(restoreBudgetItem, { item_id: itemId });
-      await this.loadItems(categoryId, true);
-      await this.load(projectId);
+      await Promise.all([this.load(projectId), this.loadItems(categoryId, true)]);
       return true;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not restore that budget item.');
@@ -216,8 +220,7 @@ export class BudgetService {
     this.error.set(null);
     try {
       await this.api.invoke(deleteBudgetItem, { item_id: itemId });
-      await this.loadItems(categoryId, includeArchived);
-      await this.load(projectId);
+      await Promise.all([this.load(projectId), this.loadItems(categoryId, includeArchived)]);
       return true;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not delete that budget item.');

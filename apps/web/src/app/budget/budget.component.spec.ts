@@ -67,6 +67,18 @@ describe('BudgetComponent', () => {
     updated = [];
     toasts = [];
     const budget = {
+      budget: () => ({
+        item_summaries: items.length
+          ? {
+              s1: {
+                item_count: items.length,
+                first_item_id: items[0].id,
+                set_at: items[0].set_at,
+                changed_at: null,
+              },
+            }
+          : {},
+      }),
       categories: () => categories,
       items: () => ({ s1: items }),
       presetNames: () => [],
@@ -104,7 +116,7 @@ describe('BudgetComponent', () => {
     await Promise.all([component.commit(category()), component.commit(category())]);
 
     expect(added.length).toBe(1);
-    expect(added[0]).toEqual(['p1', 's1', 'Concrete foundation', 1_100_000]);
+    expect(added[0]).toEqual(['p1', 's1', 'Concrete foundation', 1_100_000, null, null]);
     expect(updated.length).toBe(0);
   });
 
@@ -114,7 +126,7 @@ describe('BudgetComponent', () => {
     component.onAmountInput('s1', { target: { value: '250' } } as unknown as Event);
     await component.commit(category({ own_budgeted_amount: 100_00 }));
 
-    expect(updated[0]).toEqual(['p1', 's1', 'i1', 25_000]);
+    expect(updated[0]).toEqual(['p1', 's1', 'i1', 25_000, null]);
     expect(added.length).toBe(0);
   });
 
@@ -162,7 +174,7 @@ describe('BudgetComponent', () => {
     expect(component.canAddItem()).toBe(true);
 
     await component.addItem(category());
-    expect(added[0]).toEqual(['p1', 's1', '600 nine inch blocks', 15_000_000, null]);
+    expect(added[0]).toEqual(['p1', 's1', '600 nine inch blocks', 15_000_000, null, false]);
     expect(component.itemDescription()).toBe('');
   });
 
@@ -174,7 +186,7 @@ describe('BudgetComponent', () => {
 
     await component.addItem(category());
 
-    expect(added[0]).toEqual(['p1', 's1', 'Block work', 15_000_000, 'labour']);
+    expect(added[0]).toEqual(['p1', 's1', 'Block work', 15_000_000, 'labour', false]);
     expect(component.itemCostType()).toBe('');
   });
 

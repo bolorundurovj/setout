@@ -148,6 +148,19 @@ describe('BudgetService', () => {
     expect(calls.map((call) => call['offset'])).toEqual([0, 2]);
   });
 
+  it('refreshes only the edited category and the summary on a 15-category budget', async () => {
+    const categories = Array.from({ length: 15 }, (_, index) => category(String(index)));
+    const service = configure((name) =>
+      name === 'getProjectBudget' ? { categories } : { items: [], total: 0 },
+    );
+    await service.updateItem('p1', '8', 'item-8', 500);
+    expect(names).toEqual(['updateBudgetItem', 'getProjectBudget', 'listBudgetItems']);
+    expect(calls[2]['category_id']).toBe('8');
+    names.length = 0;
+    await service.updateItem('p1', '9', 'item-9', 800, null);
+    expect(names).toEqual(['updateBudgetItem', 'getProjectBudget']);
+  });
+
   it('fetches the presets once', async () => {
     const service = configure(() => [{ id: 'sp1', name: 'Roofing', sort_order: 0 }]);
     await service.loadPresets();
