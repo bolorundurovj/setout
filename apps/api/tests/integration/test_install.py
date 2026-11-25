@@ -7,6 +7,7 @@ from setout import __version__
 from setout.config import get_settings
 from setout.controllers import install as install_controller
 from setout.currencies import CURRENCIES
+from setout.models.category import Category
 from setout.models.currency import Currency
 from setout.utils.backup import FORMAT, forward
 
@@ -339,11 +340,20 @@ async def test_an_export_lists_parent_categories_before_their_children(
     client: AsyncClient,
 ) -> None:
     await _signed_in(client)
-    await _child_created_before_its_parent(client)
+    project = await _project(client)
+    parent = await Category.create(id="z-parent", project_id=project["id"], name="Structure")
+    # Every child sorts before the parent by ID, including children on a second page.
+    await Category.bulk_create(
+        [
+            Category(id=f"a-{i:03}", project_id=project["id"], name=f"Child {i}", parent=parent)
+            for i in range(257)
+        ]
+    )
 
     rows = (await _export(client))["tables"]["category"]
 
     position = {row["id"]: index for index, row in enumerate(rows)}
+    assert len(rows) == len(position) == 258
     for row in rows:
         if row["parent_id"]:
             assert position[row["parent_id"]] < position[row["id"]]

@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from itertools import groupby
+from itertools import batched, groupby
 from typing import Any
 
 from tortoise import Tortoise
@@ -70,6 +70,7 @@ SELF_REFERENCES: dict[str, str] = {"category": "parent_id"}
 EXCLUDED_TABLES: tuple[str, ...] = ("session", "tortoise_migrations")
 
 FORMAT = 3
+EXPORT_PAGE_SIZE = 256
 
 Rows = dict[str, list[dict[str, Any]]]
 
@@ -177,7 +178,7 @@ def parents_first(rows: list[dict[str, Any]], parent_column: str) -> list[dict[s
         chain: list[dict[str, Any]] = []
         in_chain: set[Any] = set()
         current: dict[str, Any] | None = row
-        while current is not None and current["id"] not in placed | in_chain:
+        while current is not None and current["id"] not in placed and current["id"] not in in_chain:
             chain.append(current)
             in_chain.add(current["id"])
             current = by_id.get(current.get(parent_column))
@@ -188,12 +189,26 @@ def parents_first(rows: list[dict[str, Any]], parent_column: str) -> list[dict[s
 
 
 async def export_pages(conn: BaseDBAsyncClient, table: str) -> AsyncIterator[list[dict[str, Any]]]:
+    if parent_column := SELF_REFERENCES.get(table):
+        # A parent can sort onto a later page. Order the links across the whole
+        # table first, then fetch the full records one page at a time.
+        links = await conn.execute_query_dict(f'SELECT id, "{parent_column}" FROM "{table}"')
+        for page in batched(parents_first(links, parent_column), EXPORT_PAGE_SIZE):
+            ids = [link["id"] for link in page]
+            placeholders = ", ".join("?" for _ in ids)
+            rows = await conn.execute_query_dict(
+                bound(f'SELECT * FROM "{table}" WHERE id IN ({placeholders})', conn), ids
+            )
+            by_id = {row["id"]: row for row in rows}
+            yield [{k: to_json_value(v) for k, v in by_id[row_id].items()} for row_id in ids]
+        return
+
     primary_key = next(name for name, field in fields_of(table).items() if field.pk)
     cursor = None
     while True:
         where = bound(f'WHERE "{primary_key}" > ?', conn) if cursor is not None else ""
         rows = await conn.execute_query_dict(
-            f'SELECT * FROM "{table}" {where} ORDER BY "{primary_key}" LIMIT 256',
+            f'SELECT * FROM "{table}" {where} ORDER BY "{primary_key}" LIMIT {EXPORT_PAGE_SIZE}',
             [cursor] if cursor is not None else [],
         )
         if not rows:
