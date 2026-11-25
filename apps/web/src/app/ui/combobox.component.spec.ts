@@ -62,6 +62,22 @@ describe('ComboboxComponent', () => {
     expect(emitted).toBe('Borehole and water tank');
   });
 
+  it('announces the highlighted option as the arrow keys move it', async () => {
+    const view = await render(['Roof', 'Walls']);
+    for (const [key, name] of [
+      ['ArrowDown', 'Walls'],
+      ['ArrowUp', 'Roof'],
+    ]) {
+      view.input.dispatchEvent(new KeyboardEvent('keydown', { key }));
+      view.fixture.detectChanges();
+      const id = view.input.getAttribute('aria-activedescendant');
+      expect(view.element.querySelector('#' + id)?.textContent?.trim()).toBe(name);
+    }
+    view.input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    view.fixture.detectChanges();
+    expect(view.input.hasAttribute('aria-activedescendant')).toBe(false);
+  });
+
   it('submits on Enter when the list is closed', async () => {
     const view = await render(['Interior work']);
     let submitted = 0;

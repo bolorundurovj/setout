@@ -4,6 +4,7 @@ import {
   ElementRef,
   HostListener,
   computed,
+  afterRenderEffect,
   inject,
   input,
   output,
@@ -25,7 +26,8 @@ let nextId = 0;
         role="combobox"
         autocomplete="off"
         [id]="inputId"
-        [attr.aria-expanded]="open()"
+        [attr.aria-expanded]="open() && filtered().length > 0"
+        [attr.aria-activedescendant]="activeOptionId()"
         [attr.aria-controls]="listId"
         [attr.placeholder]="placeholder()"
         [attr.aria-label]="placeholder()"
@@ -51,6 +53,7 @@ let nextId = 0;
       <ul class="options" role="listbox" [id]="listId">
         @for (option of filtered(); track option; let i = $index) {
           <li
+            [id]="listId + '-' + i"
             role="option"
             class="option"
             [class.active]="i === activeIndex()"
@@ -129,7 +132,7 @@ let nextId = 0;
   ],
 })
 export class ComboboxComponent {
-  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
 
   readonly options = input<string[]>([]);
   readonly value = input('');
@@ -142,6 +145,22 @@ export class ComboboxComponent {
   protected readonly activeIndex = signal(0);
   protected readonly inputId = `combobox-input-${nextId}`;
   protected readonly listId = `combobox-list-${nextId++}`;
+
+  protected readonly activeOptionId = computed(() =>
+    this.open() && this.filtered()[this.activeIndex()] !== undefined
+      ? this.listId + '-' + this.activeIndex()
+      : null,
+  );
+
+  constructor() {
+    afterRenderEffect(() => {
+      const id = this.activeOptionId();
+      if (id)
+        this.host.nativeElement
+          .querySelector<HTMLElement>('#' + id)
+          ?.scrollIntoView?.({ block: 'nearest' });
+    });
+  }
 
   // Typed text filters the suggestions; free text is still accepted.
   protected readonly filtered = computed(() => {
