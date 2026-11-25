@@ -29,9 +29,10 @@ function attachment(id: string, over: Partial<AttachmentRead> = {}): AttachmentR
 describe('AttachmentsComponent', () => {
   let rows: ReturnType<typeof signal<AttachmentRead[]>>;
   let status: ReturnType<typeof signal<RequestStatus>>;
-  let loaded: AttachmentParent[];
+  let loaded: { parent: AttachmentParent; includeArchived: boolean }[];
   let uploads: File[];
   let archived: string[];
+  let deleted: string[];
   let toasts: string[];
 
   function render() {
@@ -40,6 +41,7 @@ describe('AttachmentsComponent', () => {
     loaded = [];
     uploads = [];
     archived = [];
+    deleted = [];
     toasts = [];
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -52,7 +54,8 @@ describe('AttachmentsComponent', () => {
             error: () => null,
             forParent: () => rows(),
             status: () => status(),
-            load: async (parent: AttachmentParent) => void loaded.push(parent),
+            load: async (parent: AttachmentParent, includeArchived = false) =>
+              void loaded.push({ parent, includeArchived }),
             add: async (_parent: AttachmentParent, file: File) => {
               uploads.push(file);
               const created = attachment('a2', { filename: file.name });
@@ -61,6 +64,10 @@ describe('AttachmentsComponent', () => {
             },
             archive: async (_parent: AttachmentParent, id: string) => {
               archived.push(id);
+              rows.update((all) => all.filter((row) => row.id !== id));
+            },
+            delete: async (_parent: AttachmentParent, id: string) => {
+              deleted.push(id);
               rows.update((all) => all.filter((row) => row.id !== id));
             },
             restore: async (_parent: AttachmentParent, id: string) => attachment(id),
@@ -79,7 +86,23 @@ describe('AttachmentsComponent', () => {
 
   it('loads the attachments of its parent', () => {
     render();
-    expect(loaded).toEqual([PARENT]);
+    expect(loaded).toEqual([{ parent: PARENT, includeArchived: false }]);
+  });
+
+  it('toggles archived attachments and permanently deletes after DELETE confirmation', async () => {
+    const fixture = render();
+    fixture.componentInstance.setIncludeArchived(true);
+    fixture.detectChanges();
+    expect(loaded.at(-1)).toEqual({ parent: PARENT, includeArchived: true });
+
+    const old = attachment('a9', { archived_at: '2026-08-17T00:00:00Z' });
+    rows.set([old]);
+    fixture.detectChanges();
+
+    fixture.componentInstance.requestDelete('a9');
+    fixture.componentInstance.deleteConfirmationText.set('delete');
+    await fixture.componentInstance.deletePermanently(old);
+    expect(deleted).toEqual(['a9']);
   });
 
   it('shows No attachments when the parent has none', () => {

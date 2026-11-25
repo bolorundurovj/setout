@@ -63,8 +63,13 @@ export class AgreementsComponent {
   readonly advanceAmount = signal('');
   readonly expenseAgreementId = signal<string | null>(null);
   readonly editing = signal<string | null>(null);
+  readonly inspecting = signal<string | null>(null);
   readonly editingParent = computed<AttachmentParent | null>(() => {
     const id = this.editing();
+    return id ? { attachedTo: 'agreement', id, projectId: this.project().id } : null;
+  });
+  readonly inspectingParent = computed<AttachmentParent | null>(() => {
+    const id = this.inspecting();
     return id ? { attachedTo: 'agreement', id, projectId: this.project().id } : null;
   });
   readonly editDescription = signal('');
@@ -147,11 +152,16 @@ export class AgreementsComponent {
   }
 
   startEdit(agreement: AgreementRead): void {
+    this.inspecting.set(null);
     this.editing.set(agreement.id);
     this.editDescription.set(agreement.description);
     this.editAgreed.set(
       formatAmountInput(agreement.agreed_amount, this.project().currency_exponent),
     );
+  }
+
+  toggleInspect(id: string): void {
+    this.inspecting.update((current) => (current === id ? null : id));
   }
 
   cancelEdit(): void {

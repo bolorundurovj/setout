@@ -1,4 +1,9 @@
-<h2 class="t-heading">Valuations</h2>
+<div class="head">
+  <h2 class="t-heading">Valuations</h2>
+  <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
+    {{ archivedLabel() }}
+  </app-toggle>
+</div>
 
 @if (status() === 'error') {
   <p class="banner warn t-small">Could not load the valuations.</p>
@@ -13,9 +18,14 @@
 } @else {
   <div class="entries">
     @for (row of rows(); track row.id; let i = $index) {
-      <div class="entry">
+      <div class="entry" [class.archived]="row.archived_at">
         <span class="entry-info">
-          <span class="t-body">{{ label(row) }}</span>
+          <span class="t-body">
+            {{ label(row) }}
+            @if (row.archived_at) {
+              <span class="t-small muted">&middot; archived</span>
+            }
+          </span>
           <span class="t-small muted">{{ row.valued_on }}</span>
           @if (row.notes) {
             <span class="t-micro">{{ row.notes }}</span>
@@ -28,7 +38,34 @@
           }
         </span>
         <span class="entry-actions">
-          <app-archive-confirm text="Archive" (confirmed)="archive(row)" />
+          @if (row.archived_at) {
+            @if (pendingDelete() === row.id) {
+              <span class="confirm-inline">
+                <input
+                  appDeleteConfirm
+                  class="input-field delete-input"
+                  [value]="deleteConfirmationText()"
+                  (input)="deleteConfirmationText.set(value($event))"
+                />
+                <button
+                  type="button"
+                  class="link t-mono"
+                  [disabled]="!canConfirmDelete()"
+                  (click)="deletePermanently(row)"
+                >
+                  Delete
+                </button>
+                <button type="button" class="link t-mono" (click)="cancelDelete()">Cancel</button>
+              </span>
+            } @else {
+              <button type="button" class="link t-mono" (click)="restore(row)">Restore</button>
+              <button type="button" class="link t-mono" (click)="requestDelete(row.id)">
+                Delete
+              </button>
+            }
+          } @else {
+            <app-archive-confirm text="Archive" (confirmed)="archive(row)" />
+          }
         </span>
       </div>
     }

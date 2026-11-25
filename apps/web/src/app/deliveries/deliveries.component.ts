@@ -40,8 +40,13 @@ export class DeliveriesComponent {
   readonly includeArchived = signal(false);
 
   readonly editing = signal<string | null>(null);
+  readonly inspecting = signal<string | null>(null);
   readonly editingParent = computed<AttachmentParent | null>(() => {
     const id = this.editing();
+    return id ? { attachedTo: 'delivery', id, projectId: this.project().id } : null;
+  });
+  readonly inspectingParent = computed<AttachmentParent | null>(() => {
+    const id = this.inspecting();
     return id ? { attachedTo: 'delivery', id, projectId: this.project().id } : null;
   });
   readonly editDescription = signal('');
@@ -160,9 +165,14 @@ export class DeliveriesComponent {
   }
 
   startEdit(delivery: DeliveryRead): void {
+    this.inspecting.set(null);
     this.editing.set(delivery.id);
     this.editDescription.set(delivery.description);
     this.editExpected.set(delivery.expected ?? '');
+  }
+
+  toggleInspect(id: string): void {
+    this.inspecting.update((current) => (current === id ? null : id));
   }
 
   cancelEdit(): void {

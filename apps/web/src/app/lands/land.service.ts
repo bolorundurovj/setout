@@ -181,9 +181,12 @@ export class LandService {
     }
   }
 
-  async documents(landId: string): Promise<LandDocumentRead[] | null> {
+  async documents(landId: string, includeArchived = false): Promise<LandDocumentRead[] | null> {
     try {
-      const body = await this.api.invoke(listLandDocuments, { land_id: landId });
+      const body = await this.api.invoke(listLandDocuments, {
+        land_id: landId,
+        include_archived: includeArchived || undefined,
+      });
       return body.items;
     } catch {
       return null;
@@ -242,9 +245,12 @@ export class LandService {
     }
   }
 
-  async valuations(landId: string): Promise<LandValuationRead[] | null> {
+  async valuations(landId: string, includeArchived = false): Promise<LandValuationRead[] | null> {
     try {
-      const body = await this.api.invoke(listLandValuations, { land_id: landId });
+      const body = await this.api.invoke(listLandValuations, {
+        land_id: landId,
+        include_archived: includeArchived || undefined,
+      });
       return body.items;
     } catch {
       return null;

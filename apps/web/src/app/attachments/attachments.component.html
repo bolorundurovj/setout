@@ -1,9 +1,19 @@
 <div class="attachments">
+  @if (!readonly()) {
+    <div class="attachments-bar">
+      <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
+        {{ archivedLabel() }}
+      </app-toggle>
+    </div>
+  }
   @if (status() === 'error') {
     <p class="banner warn t-small">Could not load the attachments.</p>
   }
+  @if (readonly() && status() === 'ready' && rows().length === 0) {
+    <p class="t-small muted">No attachments.</p>
+  }
   @for (file of rows(); track file.id) {
-    <div class="attached">
+    <div class="attached" [class.archived]="file.archived_at">
       <a class="thumb" [href]="fileUrl(file)" target="_blank" rel="noopener">
         @if (isImage(file)) {
           <img [src]="fileUrl(file)" [alt]="file.filename" />
@@ -18,7 +28,38 @@
           file.filename
         }}</a>
         <span class="t-small muted">{{ fileNote(file) }}</span>
-        <app-archive-confirm text="Archive Attachment" (confirmed)="archive(file)" />
+        @if (file.archived_at) {
+          @if (!readonly()) {
+            @if (pendingDelete() === file.id) {
+              <span class="confirm-inline">
+                <input
+                  appDeleteConfirm
+                  class="input-field delete-input"
+                  [value]="deleteConfirmationText()"
+                  (input)="deleteConfirmationText.set(value($event))"
+                />
+                <button
+                  type="button"
+                  class="action t-mono"
+                  [disabled]="!canConfirmDelete()"
+                  (click)="deletePermanently(file)"
+                >
+                  Delete
+                </button>
+                <button type="button" class="action t-mono" (click)="cancelDelete()">Cancel</button>
+              </span>
+            } @else {
+              <span class="attachment-actions">
+                <button type="button" class="action t-mono" (click)="restore(file)">Restore</button>
+                <button type="button" class="action t-mono" (click)="requestDelete(file.id)">
+                  Delete
+                </button>
+              </span>
+            }
+          }
+        } @else if (!readonly()) {
+          <app-archive-confirm text="Archive Attachment" (confirmed)="archive(file)" />
+        }
       </span>
     </div>
   }
@@ -28,15 +69,17 @@
       <button type="button" class="action t-mono" (click)="restoreLastArchived()">Restore</button>
     </p>
   }
-  <button type="button" class="add" [disabled]="attachments.saving()" (click)="openFilePicker()">
-    <span class="t-body">{{ addLabel() }}</span>
-    <span class="t-mono action">Attach Image or PDF</span>
-  </button>
-  <input
-    #fileInput
-    type="file"
-    class="offscreen"
-    accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
-    (change)="onFileSelected($event)"
-  />
+  @if (!readonly()) {
+    <button type="button" class="add" [disabled]="attachments.saving()" (click)="openFilePicker()">
+      <span class="t-body">{{ addLabel() }}</span>
+      <span class="t-mono action">Attach Image or PDF</span>
+    </button>
+    <input
+      #fileInput
+      type="file"
+      class="offscreen"
+      accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
+      (change)="onFileSelected($event)"
+    />
+  }
 </div>

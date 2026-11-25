@@ -54,7 +54,7 @@ class AttachmentController:
         offset: int,
         include_archived: bool,
     ) -> AttachmentPage:
-        await self._parent_or_404(attached_to, parent_id)
+        await self._parent_or_404(attached_to, parent_id, include_archived=include_archived)
         query = Attachment.filter(**self._parent_filter(attached_to, parent_id))
         if not include_archived:
             query = query.filter(archived_at__isnull=True)
@@ -163,10 +163,12 @@ class AttachmentController:
             }
         return {f"{attached_to.value}_id": parent_id}
 
-    async def _parent_or_404(self, attached_to: AttachedTo, parent_id: str) -> Parent:
+    async def _parent_or_404(
+        self, attached_to: AttachedTo, parent_id: str, *, include_archived: bool = False
+    ) -> Parent:
         model, not_found = PARENTS[attached_to]
-        parent = await model.get_or_none(id=parent_id, archived_at__isnull=True)
-        if parent is None:
+        parent = await model.get_or_none(id=parent_id)
+        if parent is None or (parent.archived_at is not None and not include_archived):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=not_found)
         return parent
 

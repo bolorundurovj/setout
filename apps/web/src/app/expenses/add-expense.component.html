@@ -317,8 +317,16 @@
 
   <div class="receipt">
     @if (isEditing()) {
+      <div class="receipt-bar">
+        <app-toggle
+          [checked]="showArchivedAttachments()"
+          (toggled)="setShowArchivedAttachments($event)"
+        >
+          {{ showArchivedAttachments() ? 'Hide archived' : 'Show archived' }}
+        </app-toggle>
+      </div>
       @for (file of expenseAttachments(); track file.id) {
-        <div class="receipt-attached">
+        <div class="receipt-attached" [class.archived]="file.archived_at">
           <a class="receipt-thumb" [href]="fileUrl(file)" target="_blank" rel="noopener">
             @if (isImage(file)) {
               <img [src]="fileUrl(file)" [alt]="file.filename" />
@@ -327,9 +335,64 @@
             }
           </a>
           <span class="receipt-text">
-            <span class="t-body">{{ file.filename }}</span>
-            <span class="t-small muted">{{ fileNote(file) }}</span>
-            <app-archive-confirm text="Archive Attachment" (confirmed)="archiveAttachment(file)" />
+            <a class="t-body" [href]="fileUrl(file)" target="_blank" rel="noopener">{{
+              file.filename
+            }}</a>
+            <span class="t-small muted">
+              {{ fileNote(file) }}
+              @if (file.archived_at) {
+                &middot; archived
+              }
+            </span>
+            @if (file.archived_at) {
+              @if (pendingDeleteAttachment() === file.id) {
+                <span class="confirm-inline">
+                  <input
+                    appDeleteConfirm
+                    class="input-field delete-input"
+                    [value]="deleteAttachmentText()"
+                    (input)="deleteAttachmentText.set(value($event))"
+                  />
+                  <button
+                    type="button"
+                    class="receipt-action t-mono"
+                    [disabled]="!canConfirmDeleteAttachment()"
+                    (click)="deleteAttachmentPermanently(file)"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    type="button"
+                    class="receipt-action t-mono"
+                    (click)="cancelDeleteAttachment()"
+                  >
+                    Cancel
+                  </button>
+                </span>
+              } @else {
+                <span class="receipt-actions">
+                  <button
+                    type="button"
+                    class="receipt-action t-mono"
+                    (click)="restoreAttachment(file)"
+                  >
+                    Restore
+                  </button>
+                  <button
+                    type="button"
+                    class="receipt-action t-mono"
+                    (click)="requestDeleteAttachment(file.id)"
+                  >
+                    Delete
+                  </button>
+                </span>
+              }
+            } @else {
+              <app-archive-confirm
+                text="Archive Attachment"
+                (confirmed)="archiveAttachment(file)"
+              />
+            }
           </span>
         </div>
       }

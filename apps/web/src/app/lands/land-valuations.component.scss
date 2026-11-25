@@ -7,6 +7,33 @@
   align-items: flex-start;
 }
 
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.entry.archived {
+  opacity: 0.72;
+}
+
+.confirm-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.delete-input {
+  width: 90px;
+  padding: 3px 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
 .entries {
   width: 100%;
   border: 1.5px solid var(--rule);

@@ -25,7 +25,7 @@ class LandValuationController:
     async def list(
         self, land_id: str, *, limit: int, offset: int, include_archived: bool
     ) -> LandValuationPage:
-        await self._land_or_404(land_id)
+        await self._land_or_404(land_id, include_archived=include_archived)
         query = LandValuation.filter(land_id=land_id)
         if not include_archived:
             query = query.filter(archived_at__isnull=True)
@@ -157,9 +157,9 @@ class LandValuationController:
             archived_at=row.archived_at,
         )
 
-    async def _land_or_404(self, land_id: str) -> Land:
-        land = await Land.get_or_none(id=land_id, archived_at__isnull=True)
-        if land is None:
+    async def _land_or_404(self, land_id: str, *, include_archived: bool = False) -> Land:
+        land = await Land.get_or_none(id=land_id)
+        if land is None or (land.archived_at is not None and not include_archived):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND_LAND)
         return land
 

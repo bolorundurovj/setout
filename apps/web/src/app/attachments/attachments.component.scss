@@ -98,4 +98,33 @@
   border: 0;
   text-decoration: underline;
   cursor: pointer;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.attachments-bar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.attached.archived {
+  opacity: 0.72;
+}
+
+.attachment-actions,
+.confirm-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.delete-input {
+  width: 90px;
+  padding: 3px 6px;
+  font-size: 12px;
+  text-transform: uppercase;
 }

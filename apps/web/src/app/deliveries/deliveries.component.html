@@ -128,6 +128,9 @@
                     <app-button variant="secondary" (pressed)="cancelDelete()">Cancel</app-button>
                   </div>
                 } @else {
+                  <app-button variant="secondary" (pressed)="toggleInspect(delivery.id)">
+                    {{ inspecting() === delivery.id ? 'Hide Details' : 'Details' }}
+                  </app-button>
                   <app-button variant="secondary" (pressed)="restore(delivery)">Restore</app-button>
                   <app-button variant="danger" (pressed)="requestDelete(delivery.id)"
                     >Delete</app-button
@@ -140,6 +143,21 @@
               }
             </span>
           </div>
+          @if (inspecting() === delivery.id && inspectingParent(); as parent) {
+            <div class="outstanding editing">
+              <app-attachments
+                class="attachments"
+                [parent]="parent"
+                [readonly]="!!delivery.archived_at"
+                [initialIncludeArchived]="!!delivery.archived_at"
+              />
+              <app-change-history
+                class="changes"
+                [target]="{ entity: 'delivery', id: parent.id }"
+                [exponent]="project().currency_exponent"
+              />
+            </div>
+          }
         }
       }
 
@@ -189,18 +207,39 @@
                   <app-button variant="secondary" (pressed)="cancelDelete()">Cancel</app-button>
                 </div>
               } @else {
+                <app-button variant="secondary" (pressed)="toggleInspect(delivery.id)">
+                  {{ inspecting() === delivery.id ? 'Hide Details' : 'Details' }}
+                </app-button>
                 <app-button variant="secondary" (pressed)="restore(delivery)">Restore</app-button>
                 <app-button variant="danger" (pressed)="requestDelete(delivery.id)"
                   >Delete</app-button
                 >
               }
             } @else {
+              <app-button variant="secondary" (pressed)="toggleInspect(delivery.id)">
+                {{ inspecting() === delivery.id ? 'Hide Details' : 'Details' }}
+              </app-button>
               <app-button variant="secondary" (pressed)="markOutstanding(delivery)"
                 >Mark Outstanding</app-button
               >
             }
           </span>
         </div>
+        @if (inspecting() === delivery.id && inspectingParent(); as parent) {
+          <div class="outstanding editing">
+            <app-attachments
+              class="attachments"
+              [parent]="parent"
+              [readonly]="!!delivery.archived_at"
+              [initialIncludeArchived]="!!delivery.archived_at"
+            />
+            <app-change-history
+              class="changes"
+              [target]="{ entity: 'delivery', id: parent.id }"
+              [exponent]="project().currency_exponent"
+            />
+          </div>
+        }
       }
 
       <app-pagination

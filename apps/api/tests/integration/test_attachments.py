@@ -352,7 +352,9 @@ async def test_archiving_an_agreement_archives_and_restores_its_attachments(
     listing = await client.get(
         f"/api/agreements/{agreement['id']}/attachments", params={"include_archived": True}
     )
-    assert listing.status_code == 404
+    assert listing.status_code == 200
+    assert listing.json()["total"] == 1
+    assert listing.json()["items"][0]["archived_at"] is not None
 
     await client.post(f"/api/agreements/{agreement['id']}/restore")
     restored = (await client.get(f"/api/agreements/{agreement['id']}/attachments")).json()

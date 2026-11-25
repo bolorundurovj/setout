@@ -35,6 +35,7 @@ export class AttachmentService {
   private readonly api = inject(Api);
 
   private readonly state = signal<Record<string, AttachmentRead[]>>({});
+  private readonly archivedModes = new Map<string, boolean>();
   private readonly tracker = new KeyedLoadTracker();
 
   readonly saving = signal(false);
@@ -48,15 +49,16 @@ export class AttachmentService {
     return this.tracker.status(this.key(parent));
   }
 
-  async load(parent: AttachmentParent): Promise<void> {
+  async load(parent: AttachmentParent, includeArchived = false): Promise<void> {
     const key = this.key(parent);
+    this.archivedModes.set(key, includeArchived);
     const requestId = this.tracker.start(key);
     this.error.set(null);
     try {
       const rows: AttachmentRead[] = [];
       let total = Infinity;
       while (rows.length < total) {
-        const page = await this.list(parent, PICKER_PAGE_SIZE, rows.length);
+        const page = await this.list(parent, PICKER_PAGE_SIZE, rows.length, includeArchived);
         total = page.total;
         rows.push(...page.items);
         if (page.items.length === 0) {
@@ -91,6 +93,10 @@ export class AttachmentService {
 
   async archive(parent: AttachmentParent, attachmentId: string): Promise<void> {
     await this.api.invoke(archiveAttachment, { attachment_id: attachmentId });
+    if (this.archivedModes.get(this.key(parent))) {
+      await this.load(parent, true);
+      return;
+    }
     this.set(
       parent,
       this.forParent(parent).filter((row) => row.id !== attachmentId),
@@ -108,7 +114,11 @@ export class AttachmentService {
   async restore(parent: AttachmentParent, attachmentId: string): Promise<AttachmentRead | null> {
     try {
       const restored = await this.api.invoke(restoreAttachment, { attachment_id: attachmentId });
-      this.set(parent, [restored, ...this.forParent(parent)]);
+      const existing = this.forParent(parent);
+      const next = existing.some((row) => row.id === restored.id)
+        ? existing.map((row) => (row.id === restored.id ? restored : row))
+        : [restored, ...existing];
+      this.set(parent, next);
       return restored;
     } catch (e: unknown) {
       this.error.set(detailOf(e) ?? 'Could not restore the attachment.');
@@ -131,27 +141,41 @@ export class AttachmentService {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
   }
 
-  private list(parent: AttachmentParent, limit: number, offset: number): Promise<AttachmentPage> {
+  private list(
+    parent: AttachmentParent,
+    limit: number,
+    offset: number,
+    includeArchived = false,
+  ): Promise<AttachmentPage> {
+    const include_archived = includeArchived || undefined;
     switch (parent.attachedTo) {
       case 'project':
         return this.api.invoke(listProjectAttachments, {
           project_id: parent.id,
           limit,
           offset,
+          include_archived,
         });
       case 'expense':
-        return this.api.invoke(listAttachments, { expense_id: parent.id, limit, offset });
+        return this.api.invoke(listAttachments, {
+          expense_id: parent.id,
+          limit,
+          offset,
+          include_archived,
+        });
       case 'agreement':
         return this.api.invoke(listAgreementAttachments, {
           agreement_id: parent.id,
           limit,
           offset,
+          include_archived,
         });
       case 'delivery':
         return this.api.invoke(listDeliveryAttachments, {
           delivery_id: parent.id,
           limit,
           offset,
+          include_archived,
         });
     }
   }

@@ -22,6 +22,7 @@ import { LandValuationsComponent } from './land-valuations.component';
 import { LandMapComponent, type LandPoint } from './land-map.component';
 import type { RequestStatus } from '../ui/request-status';
 import { TabsComponent, type Tab } from '../ui/tabs.component';
+import { ToggleComponent } from '../ui/toggle.component';
 import { formatAreaIn, pointInRing, ringOf } from './land-geo';
 import { DOCUMENT_KINDS, kindName, statedAreaLabel, unitName, valuationLabel } from './land-labels';
 import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
@@ -38,6 +39,7 @@ import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.
     LandMapComponent,
     LandValuationsComponent,
     TabsComponent,
+    ToggleComponent,
     RouterLink,
   ],
   templateUrl: './land-detail.component.html',
@@ -61,6 +63,9 @@ export class LandDetailComponent {
   readonly kind = signal<LandDocumentKind>('certificate_of_occupancy');
   readonly notes = signal('');
   readonly lastArchived = signal<LandDocumentRead | null>(null);
+  readonly showArchivedDocuments = signal(false);
+  readonly pendingDeleteDocument = signal<string | null>(null);
+  readonly deleteDocumentText = signal('');
   readonly editing = signal<string | null>(null);
   readonly editNotes = signal('');
   readonly editKind = signal<LandDocumentKind>('other');
@@ -89,12 +94,57 @@ export class LandDetailComponent {
   async load(): Promise<void> {
     const [land, documents] = await Promise.all([
       this.lands.get(this.id()),
-      this.lands.documents(this.id()),
+      this.lands.documents(this.id(), this.showArchivedDocuments()),
     ]);
     this.land.set(land);
     this.documentsStatus.set(documents ? 'ready' : 'error');
     this.documents.set(documents ?? []);
     this.loading.set(false);
+  }
+
+  archivedDocumentsLabel(): string {
+    return this.showArchivedDocuments() ? 'Hide archived' : 'Show archived';
+  }
+
+  async setShowArchivedDocuments(on: boolean): Promise<void> {
+    this.showArchivedDocuments.set(on);
+    this.cancelDeleteDocument();
+    const documents = await this.lands.documents(this.id(), on);
+    this.documentsStatus.set(documents ? 'ready' : 'error');
+    this.documents.set(documents ?? []);
+  }
+
+  async restoreDocument(document: LandDocumentRead): Promise<void> {
+    await this.lands.restoreDocument(document.id);
+    if (this.lastArchived()?.id === document.id) {
+      this.lastArchived.set(null);
+    }
+    this.toast.show(`${document.filename} restored.`);
+    await this.load();
+  }
+
+  requestDeleteDocument(id: string): void {
+    this.pendingDeleteDocument.set(id);
+    this.deleteDocumentText.set('');
+  }
+
+  cancelDeleteDocument(): void {
+    this.pendingDeleteDocument.set(null);
+    this.deleteDocumentText.set('');
+  }
+
+  canConfirmDeleteDocument(): boolean {
+    return isDeleteConfirmed(this.deleteDocumentText());
+  }
+
+  async deleteDocumentPermanently(document: LandDocumentRead): Promise<void> {
+    if (!this.canConfirmDeleteDocument()) {
+      return;
+    }
+    await this.lands.deleteDocument(document.id);
+    this.cancelDeleteDocument();
+    this.toast.show(`${document.filename} deleted permanently.`);
+    await this.load();
   }
 
   /** Empty when the geocoded address matches the entered address. */

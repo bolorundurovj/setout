@@ -152,6 +152,18 @@
             [target]="{ entity: 'agreement', id: parent.id }"
             [exponent]="project().currency_exponent"
           />
+        } @else if (inspecting() === agreement.id && inspectingParent(); as parent) {
+          <app-attachments
+            class="attachments"
+            [parent]="parent"
+            [readonly]="true"
+            [initialIncludeArchived]="true"
+          />
+          <app-change-history
+            class="changes"
+            [target]="{ entity: 'agreement', id: parent.id }"
+            [exponent]="project().currency_exponent"
+          />
         }
 
         <div class="agreement-expenses">
@@ -198,6 +210,14 @@
                   <button type="button" class="link-action" (click)="cancelDelete()">Cancel</button>
                 </span>
               } @else {
+                <button
+                  type="button"
+                  class="link-action"
+                  [attr.aria-label]="'Details for the agreement with ' + agreement.vendor_name"
+                  (click)="toggleInspect(agreement.id)"
+                >
+                  {{ inspecting() === agreement.id ? 'Hide Details' : 'Details' }}
+                </button>
                 <button
                   type="button"
                   class="link-action"

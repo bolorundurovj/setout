@@ -58,6 +58,8 @@ describe('LandValuationsComponent', () => {
   let recorded: LandValuationCreate[];
   let archived: string[];
   let restored: string[];
+  let deleted: string[];
+  let loadedArchived: boolean[];
 
   async function render(
     row: LandRead = land(),
@@ -66,11 +68,16 @@ describe('LandValuationsComponent', () => {
     recorded = [];
     archived = [];
     restored = [];
+    deleted = [];
+    loadedArchived = [];
 
     const lands = {
       saving: () => false,
       error: () => null,
-      valuations: async () => rows,
+      valuations: async (_id: string, includeArchived = false) => {
+        loadedArchived.push(includeArchived);
+        return rows;
+      },
       createValuation: async (_id: string, body: LandValuationCreate) => {
         recorded.push(body);
         return entry();
@@ -80,6 +87,9 @@ describe('LandValuationsComponent', () => {
       },
       restoreValuation: async (id: string) => {
         restored.push(id);
+      },
+      deleteValuation: async (id: string) => {
+        deleted.push(id);
       },
     };
 
@@ -214,6 +224,18 @@ describe('LandValuationsComponent', () => {
   it('shows No valuations yet once an empty list loads', async () => {
     const { element } = await render();
     expect(element.textContent).toContain('No valuations yet');
+  });
+
+  it('shows archived valuations and permanently deletes after DELETE confirmation', async () => {
+    const old = entry({ id: 'v9', archived_at: '2026-02-01T00:00:00Z' });
+    const { component } = await render(land(), [old]);
+    await component.setIncludeArchived(true);
+    expect(loadedArchived.at(-1)).toBe(true);
+
+    component.requestDelete('v9');
+    component.deleteConfirmationText.set('DELETE');
+    await component.deletePermanently(old);
+    expect(deleted).toEqual(['v9']);
   });
 
   it('shows the load error instead of the empty state', async () => {

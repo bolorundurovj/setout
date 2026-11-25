@@ -15,8 +15,10 @@ import { ProjectService } from '../projects/project.service';
 import { ButtonComponent } from '../ui/button.component';
 import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
 import { CurrencyPillComponent, currencySymbol } from '../ui/currency-pill.component';
+import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
 import { MoneyHintComponent } from '../ui/money-hint.component';
 import { LoadTracker } from '../ui/request-status';
+import { ToggleComponent } from '../ui/toggle.component';
 import { LandService } from './land.service';
 
 @Component({
@@ -28,7 +30,9 @@ import { LandService } from './land.service';
     ButtonComponent,
     ChipGroupComponent,
     CurrencyPillComponent,
+    DeleteConfirmDirective,
     MoneyHintComponent,
+    ToggleComponent,
   ],
   templateUrl: './land-valuations.component.html',
   styleUrl: './land-valuations.component.scss',
@@ -44,6 +48,9 @@ export class LandValuationsComponent {
 
   readonly rows = signal<LandValuationRead[]>([]);
   readonly status = this.tracker.status;
+  readonly includeArchived = signal(false);
+  readonly pendingDelete = signal<string | null>(null);
+  readonly deleteConfirmationText = signal('');
   readonly lastArchived = signal<LandValuationRead | null>(null);
   readonly adding = signal(false);
   readonly amount = signal('');
@@ -63,7 +70,9 @@ export class LandValuationsComponent {
 
   readonly symbol = computed(() => currencySymbol(this.landCurrency() || this.currency()));
 
-  readonly hasPurchasePrice = computed(() => this.rows().some((row) => row.kind === 'purchase'));
+  readonly hasPurchasePrice = computed(() =>
+    this.rows().some((row) => row.kind === 'purchase' && !row.archived_at),
+  );
 
   readonly kindChips = computed<Chip[]>(() => {
     const chips: Chip[] = [{ value: 'valuation', label: 'Valuation' }];
@@ -81,9 +90,19 @@ export class LandValuationsComponent {
     });
   }
 
+  archivedLabel(): string {
+    return this.includeArchived() ? 'Hide archived' : 'Show archived';
+  }
+
+  async setIncludeArchived(on: boolean): Promise<void> {
+    this.includeArchived.set(on);
+    this.cancelDelete();
+    await this.load();
+  }
+
   async load(): Promise<void> {
     const requestId = this.tracker.start(true);
-    const rows = await this.lands.valuations(this.land().id);
+    const rows = await this.lands.valuations(this.land().id, this.includeArchived());
     if (this.tracker.settle(requestId, rows ? 'ready' : 'error') && rows) {
       this.rows.set(rows);
     }
@@ -98,14 +117,18 @@ export class LandValuationsComponent {
     return formatMoney(row.amount, row.currency_code, row.currency_exponent);
   }
 
-  /** Percentage change from the previous entry; valid because all entries share one currency. */
+  /** Percentage change from the previous active entry; valid because all entries share one currency. */
   percentChange(index: number): string {
     const rows = this.rows();
-    const previous = rows[index + 1];
+    const current = rows[index];
+    if (!current || current.archived_at) {
+      return '';
+    }
+    const previous = rows.slice(index + 1).find((row) => !row.archived_at);
     if (!previous || previous.amount === 0) {
       return '';
     }
-    const percent = ((rows[index].amount - previous.amount) / previous.amount) * 100;
+    const percent = ((current.amount - previous.amount) / previous.amount) * 100;
     const rounded = Math.round(percent * 10) / 10;
     return `${rounded > 0 ? '+' : ''}${rounded}%`;
   }
@@ -170,13 +193,43 @@ export class LandValuationsComponent {
     this.changed.emit();
   }
 
+  async restore(row: LandValuationRead): Promise<void> {
+    await this.lands.restoreValuation(row.id);
+    if (this.lastArchived()?.id === row.id) {
+      this.lastArchived.set(null);
+    }
+    await this.load();
+    this.changed.emit();
+  }
+
   async restoreLastArchived(): Promise<void> {
     const archived = this.lastArchived();
     if (!archived) {
       return;
     }
-    await this.lands.restoreValuation(archived.id);
-    this.lastArchived.set(null);
+    await this.restore(archived);
+  }
+
+  requestDelete(id: string): void {
+    this.pendingDelete.set(id);
+    this.deleteConfirmationText.set('');
+  }
+
+  cancelDelete(): void {
+    this.pendingDelete.set(null);
+    this.deleteConfirmationText.set('');
+  }
+
+  canConfirmDelete(): boolean {
+    return isDeleteConfirmed(this.deleteConfirmationText());
+  }
+
+  async deletePermanently(row: LandValuationRead): Promise<void> {
+    if (!this.canConfirmDelete()) {
+      return;
+    }
+    await this.lands.deleteValuation(row.id);
+    this.cancelDelete();
     await this.load();
     this.changed.emit();
   }

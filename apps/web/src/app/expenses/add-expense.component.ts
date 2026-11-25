@@ -32,7 +32,9 @@ import { ToastService } from '../toast.service';
 import { ButtonComponent } from '../ui/button.component';
 import { Chip, ChipGroupComponent } from '../ui/chip-group.component';
 import { currencySymbol } from '../ui/currency-pill.component';
+import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
 import { MoneyHintComponent } from '../ui/money-hint.component';
+import { ToggleComponent } from '../ui/toggle.component';
 import { VendorService } from '../vendors/vendor.service';
 import { ExpenseService } from './expense.service';
 
@@ -47,7 +49,9 @@ import { isoDay } from '../shared/dates';
     ButtonComponent,
     ChangeHistoryComponent,
     ChipGroupComponent,
+    DeleteConfirmDirective,
     MoneyHintComponent,
+    ToggleComponent,
   ],
   templateUrl: './add-expense.component.html',
   styleUrl: './add-expense.component.scss',
@@ -101,6 +105,9 @@ export class AddExpenseComponent {
   readonly submitting = signal(false);
   private pendingExpense: ExpenseRead | null = null;
   readonly lastArchived = signal<AttachmentRead | null>(null);
+  readonly showArchivedAttachments = signal(false);
+  readonly pendingDeleteAttachment = signal<string | null>(null);
+  readonly deleteAttachmentText = signal('');
 
   readonly symbol = computed(() => currencySymbol(this.project().currency_code));
 
@@ -186,6 +193,8 @@ export class AddExpenseComponent {
       const expense = this.expenseToEdit();
       if (expense) {
         this.prefill(expense);
+        this.showArchivedAttachments.set(false);
+        this.cancelDeleteAttachment();
         void this.attachments.load(this.parentOf(expense.id));
       }
     });
@@ -450,20 +459,62 @@ export class AddExpenseComponent {
     this.toast.show('Attachment archived. The expense is unchanged.');
   }
 
-  async restoreLastArchived(): Promise<void> {
+  async setShowArchivedAttachments(on: boolean): Promise<void> {
+    this.showArchivedAttachments.set(on);
+    this.cancelDeleteAttachment();
     const existing = this.expenseToEdit();
-    const archived = this.lastArchived();
-    if (!existing || !archived) {
+    if (existing) {
+      await this.attachments.load(this.parentOf(existing.id), on);
+    }
+  }
+
+  async restoreAttachment(file: AttachmentRead): Promise<void> {
+    const existing = this.expenseToEdit();
+    if (!existing) {
       return;
     }
-    const restored = await this.attachments.restore(this.parentOf(existing.id), archived.id);
-    this.lastArchived.set(null);
+    const restored = await this.attachments.restore(this.parentOf(existing.id), file.id);
+    if (this.lastArchived()?.id === file.id) {
+      this.lastArchived.set(null);
+    }
     this.toast.show(
       restored
         ? `${restored.filename} restored.`
         : (this.attachments.error() ?? 'Could not restore the attachment.'),
       restored ? 'success' : 'error',
     );
+  }
+
+  requestDeleteAttachment(id: string): void {
+    this.pendingDeleteAttachment.set(id);
+    this.deleteAttachmentText.set('');
+  }
+
+  cancelDeleteAttachment(): void {
+    this.pendingDeleteAttachment.set(null);
+    this.deleteAttachmentText.set('');
+  }
+
+  canConfirmDeleteAttachment(): boolean {
+    return isDeleteConfirmed(this.deleteAttachmentText());
+  }
+
+  async deleteAttachmentPermanently(file: AttachmentRead): Promise<void> {
+    const existing = this.expenseToEdit();
+    if (!existing || !this.canConfirmDeleteAttachment()) {
+      return;
+    }
+    await this.attachments.delete(this.parentOf(existing.id), file.id);
+    this.cancelDeleteAttachment();
+    this.toast.show(`${file.filename} deleted permanently.`);
+  }
+
+  async restoreLastArchived(): Promise<void> {
+    const archived = this.lastArchived();
+    if (!archived) {
+      return;
+    }
+    await this.restoreAttachment(archived);
   }
 
   async save(another: boolean): Promise<void> {

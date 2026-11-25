@@ -139,8 +139,20 @@
     }
 
     <section class="block">
-      <h2 class="t-heading">Documents</h2>
-      <p class="t-small" [class.muted]="missing().length === 0">{{ missingDocumentsLabel() }}</p>
+      <div class="head">
+        <div>
+          <h2 class="t-heading">Documents</h2>
+          <p class="t-small" [class.muted]="missing().length === 0">
+            {{ missingDocumentsLabel() }}
+          </p>
+        </div>
+        <app-toggle
+          [checked]="showArchivedDocuments()"
+          (toggled)="setShowArchivedDocuments($event)"
+        >
+          {{ archivedDocumentsLabel() }}
+        </app-toggle>
+      </div>
 
       @if (!l.archived_at) {
         <div class="card upload">
@@ -221,7 +233,12 @@
                 </span>
               } @else {
                 <span class="document-info">
-                  <span class="t-body">{{ kindLabel(document) }}</span>
+                  <span class="t-body">
+                    {{ kindLabel(document) }}
+                    @if (document.archived_at) {
+                      <span class="t-small muted">&middot; archived</span>
+                    }
+                  </span>
                   @if (document.notes) {
                     <span class="t-small">{{ document.notes }}</span>
                   }
@@ -232,7 +249,40 @@
                   <a class="link t-mono" [href]="href(document)" target="_blank" rel="noopener">
                     Open
                   </a>
-                  @if (!l.archived_at) {
+                  @if (document.archived_at) {
+                    @if (pendingDeleteDocument() === document.id) {
+                      <span class="confirm-delete">
+                        <input
+                          appDeleteConfirm
+                          class="input-field delete-input"
+                          [value]="deleteDocumentText()"
+                          (input)="deleteDocumentText.set(value($event))"
+                        />
+                        <button
+                          type="button"
+                          class="link t-mono"
+                          [disabled]="!canConfirmDeleteDocument()"
+                          (click)="deleteDocumentPermanently(document)"
+                        >
+                          Delete
+                        </button>
+                        <button type="button" class="link t-mono" (click)="cancelDeleteDocument()">
+                          Cancel
+                        </button>
+                      </span>
+                    } @else {
+                      <button type="button" class="link t-mono" (click)="restoreDocument(document)">
+                        Restore
+                      </button>
+                      <button
+                        type="button"
+                        class="link t-mono"
+                        (click)="requestDeleteDocument(document.id)"
+                      >
+                        Delete
+                      </button>
+                    }
+                  } @else if (!l.archived_at) {
                     <button type="button" class="link t-mono" (click)="startEdit(document)">
                       Edit
                     </button>
