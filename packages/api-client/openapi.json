@@ -13951,6 +13951,11 @@
           "skipped_duplicates": {
             "type": "integer",
             "title": "Skipped Duplicates"
+          },
+          "skipped_file_duplicates": {
+            "type": "integer",
+            "title": "Skipped File Duplicates",
+            "default": 0
           }
         },
         "type": "object",

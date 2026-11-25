@@ -46,7 +46,7 @@ class Target:
 class ClassifiedExpense:
     line: ExpenseLine
     spent_on: date
-    duplicate: bool
+    duplicate: str | None
 
 
 def vendor_names(entries: list[tuple[str, str | None]]) -> dict[str, str]:
@@ -86,6 +86,7 @@ async def classify_rows(
             )
             for e in expenses
         )
+    seen: set[tuple[date, int, str, str, str]] = set()
     today = date.today()
     rows = []
     for line in parsed.expenses.expenses:
@@ -100,8 +101,9 @@ async def classify_rows(
             aliases.get(vendor, vendor),
             line.paid_by.casefold(),
         )
-        rows.append(ClassifiedExpense(line, spent_on, key in existing))
-        existing.add(key)
+        source = "project" if key in existing else "file" if key in seen else None
+        rows.append(ClassifiedExpense(line, spent_on, source))
+        seen.add(key)
     return rows
 
 
@@ -137,7 +139,8 @@ class ImportController:
             ).prefetch_related("currency")
             if project is None:
                 raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND, detail="Project not parsed"
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="The selected project could not be found.",
                 )
             return Target(
                 project=project,
@@ -392,7 +395,9 @@ class ImportController:
         await self._exclude_existing_budget_lines(parsed, project)
         classified = await classify_rows(parsed, project, take_unpaid=answers.take_unpaid)
         vendors, vendors_created = await self._vendors(parsed)
-        people = await self._people(parsed)
+        people = await self._people(
+            [r.line for r in classified if not (answers.skip_duplicates and r.duplicate)]
+        )
         catalogue = await self._items(parsed)
         categories, category_ids, items, budgeted = await self._import_budget(
             parsed, project, answers
@@ -412,6 +417,9 @@ class ImportController:
             vendor_count=vendors_created,
             person_count=len(people),
             skipped_duplicates=skipped,
+            skipped_file_duplicates=sum(r.duplicate == "file" for r in classified)
+            if answers.skip_duplicates
+            else 0,
         )
 
     async def _vendors(self, parsed: ParsedWorkbook) -> tuple[dict[str, str], int]:
@@ -444,16 +452,14 @@ class ImportController:
                 created_count += 1
         return resolved, created_count
 
-    async def _people(self, parsed: ParsedWorkbook) -> dict[str, str]:
-        payer_names = {
-            line.paid_by.strip() for line in parsed.expenses.expenses if line.paid_by.strip()
-        }
+    async def _people(self, lines: list[ExpenseLine]) -> dict[str, str]:
+        payer_names = {line.paid_by.strip() for line in lines if line.paid_by.strip()}
         by_name = {p.name.casefold(): p.id for p in await Person.filter(archived_at__isnull=True)}
         for payer_name in sorted(payer_names):
             if payer_name.casefold() not in by_name:
                 created = await Person.create(name=payer_name)
                 by_name[payer_name.casefold()] = created.id
-        return by_name
+        return {name.casefold(): by_name[name.casefold()] for name in payer_names}
 
     async def _items(self, parsed: ParsedWorkbook) -> dict[str, str]:
         units = {

@@ -98,3 +98,4 @@ class ImportResult(BaseModel):
     vendor_count: int
     person_count: int
     skipped_duplicates: int
+    skipped_file_duplicates: int = 0

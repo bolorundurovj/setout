@@ -214,7 +214,7 @@
                 (valueChange)="answer(decision, $event)"
               />
               <span class="t-small muted">{{ consequenceFor(decision) }}</span>
-            } @else {
+            } @else if (!decision.blocking) {
               <span class="t-small muted">No action required.</span>
             }
           </div>
@@ -294,9 +294,12 @@
         </div>
       </div>
 
-      @if (result.skipped_duplicates > 0) {
+      @if (result.skipped_file_duplicates) {
+        <p>{{ result.skipped_file_duplicates }} repeated rows in the file were skipped.</p>
+      }
+      @if (result.skipped_duplicates > (result.skipped_file_duplicates ?? 0)) {
         <p class="t-small note">
-          {{ result.skipped_duplicates }} rows were already in the project and were skipped.
+          {{ result.skipped_duplicates - (result.skipped_file_duplicates ?? 0) }} rows were already in the project and were skipped.
         </p>
       }
 
