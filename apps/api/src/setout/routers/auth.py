@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -32,6 +33,7 @@ from setout.services.auth import (
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+security_logger = logging.getLogger("setout.security")
 
 SESSION_COOKIE_NAME = "setout_session"
 
@@ -157,6 +159,7 @@ async def change_passphrase(
     # Ends every other session; the session that made the change is kept.
     current_session_id = read_session_id(setout_session or "")
     await Session.filter(user_id=user.id).exclude(id=current_session_id or "").delete()
+    security_logger.info("Passphrase changed for user_id=%s", user.id)
 
 
 def session_window() -> timedelta:
@@ -259,6 +262,11 @@ async def sign_in(req: SignInRequest, response: Response) -> UserResponse:
         checked_failures = _recent_failure_count(user, now, settings.sign_in_retry_after_seconds)
         wait = delay_for(checked_failures, settings)
         if wait is None:
+            security_logger.warning(
+                "Sign-in locked out for user_id=%s after %d failed attempts",
+                user.id,
+                checked_failures,
+            )
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Too many failed sign-in attempts. Try again later",
@@ -280,6 +288,11 @@ async def sign_in(req: SignInRequest, response: Response) -> UserResponse:
             failures = _recent_failure_count(user, now, settings.sign_in_retry_after_seconds)
             wait = delay_for(failures, settings)
             if wait is None:
+                security_logger.warning(
+                    "Sign-in locked out for user_id=%s after %d failed attempts",
+                    user.id,
+                    failures,
+                )
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail="Too many failed sign-in attempts. Try again later",

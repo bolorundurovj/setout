@@ -1,11 +1,17 @@
+import logging
+from pathlib import Path
 from typing import Any
 
 import pytest
 from httpx import AsyncClient
 
+from setout.config import get_settings
 from setout.currencies import CURRENCIES
+from setout.models.attachment import Attachment
 from setout.models.change import Change, ChangeAction
 from setout.models.currency import Currency
+from setout.models.user import User
+from setout.services.storage import LocalStorage
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
@@ -265,3 +271,121 @@ async def test_unknown_record_type_returns_404(client: AsyncClient) -> None:
 async def test_project_changes_of_an_unknown_project_return_404(client: AsyncClient) -> None:
     await _project(client)
     assert (await client.get("/api/projects/nope/changes")).status_code == 404
+
+
+async def test_change_history_resolves_currency_land_valuation_and_delivery_expense(
+    client: AsyncClient,
+) -> None:
+    project_id = await _project(client)
+    project_changes = (
+        await client.get("/api/changes", params={"entity": "project", "entity_id": project_id})
+    ).json()
+    project_fields = {f["name"]: f["after"] for f in project_changes["items"][0]["fields"]}
+    assert project_fields["currency_id"] == "Nigerian Naira"
+
+    land = await _post(client, "/lands", {"name": "Plot 9"})
+    valuation = await _post(
+        client,
+        f"/lands/{land['id']}/valuations",
+        {"amount": 5_000_000_00, "currency_code": "NGN", "valued_on": "2026-04-01"},
+    )
+    val_changes = (
+        await client.get(
+            "/api/changes", params={"entity": "land_valuation", "entity_id": valuation["id"]}
+        )
+    ).json()
+    assert val_changes["items"][0]["entity_name"] == "2026-04-01"
+
+    expense = await _post(
+        client, f"/projects/{project_id}/expenses", {"description": "Roof sheets", "amount": 500}
+    )
+    delivery = await _post(
+        client,
+        f"/projects/{project_id}/deliveries",
+        {"expense_id": expense["id"], "description": "Roof sheets delivery"},
+    )
+    delivery_changes = (
+        await client.get("/api/changes", params={"entity": "delivery", "entity_id": delivery["id"]})
+    ).json()
+    delivery_fields = {f["name"]: f["after"] for f in delivery_changes["items"][0]["fields"]}
+    assert delivery_fields["expense_id"] == "Roof sheets"
+
+
+async def test_deleting_vendor_cleans_agreement_files_and_logs_cleared_agreement_id(
+    client: AsyncClient, tmp_path: Path
+) -> None:
+    project_id = await _project(client)
+    vendor = await _post(client, "/vendors", {"name": "Acme Timber"})
+    agreement = await _post(
+        client,
+        f"/projects/{project_id}/agreements",
+        {"vendor_id": vendor["id"], "description": "Roofing timber", "agreed_amount": 100_000},
+    )
+    upload = await client.post(
+        f"/api/projects/{project_id}/agreements/{agreement['id']}/attachments",
+        files={"file": ("quote.pdf", b"%PDF-1.4\n%stub", "application/pdf")},
+    )
+    assert upload.status_code == 201, upload.text
+    att_row = await Attachment.get(id=upload.json()["id"])
+    storage = LocalStorage(tmp_path / "attachments")
+    assert await storage.exists(att_row.storage_key)
+
+    expense = await _post(
+        client,
+        f"/projects/{project_id}/expenses",
+        {
+            "description": "Timber deposit",
+            "amount": 50_000,
+            "vendor_id": vendor["id"],
+            "agreement_id": agreement["id"],
+        },
+    )
+
+    assert (await client.post(f"/api/vendors/{vendor['id']}/archive")).status_code == 204
+    assert (await client.delete(f"/api/vendors/{vendor['id']}")).status_code == 204
+
+    assert not await storage.exists(att_row.storage_key)
+    expense_changes = await _changes("expense", expense["id"])
+    assert any(
+        row.action is ChangeAction.UPDATE
+        and row.changed_fields.get("agreement_id") == [agreement["id"], None]
+        for row in expense_changes
+    )
+
+
+async def test_security_events_are_logged(
+    client: AsyncClient, caplog: pytest.LogCaptureFixture
+) -> None:
+    await _project(client)
+    with caplog.at_level(logging.INFO, logger="setout.security"):
+        changed = await client.post(
+            "/api/auth/passphrase",
+            json={"current_passphrase": "password123", "new_passphrase": "new-password-456"},
+        )
+        assert changed.status_code == 204, changed.text
+
+        exported = await client.post("/api/install/export", json={"passphrase": "new-password-456"})
+        assert exported.status_code == 200, exported.text
+        backup = exported.json()
+
+        restored = await client.post(
+            "/api/install/restore",
+            json={"passphrase": "new-password-456", "backup": backup},
+        )
+        assert restored.status_code == 200, restored.text
+
+        user = await User.first()
+        assert user is not None
+        user.failed_sign_ins = get_settings().sign_in_max_attempts
+        from datetime import UTC, datetime
+
+        user.last_failed_at = datetime.now(UTC)
+        await user.save()
+        locked = await client.post("/api/auth/sign-in", json={"passphrase": "wrong-passphrase"})
+        assert locked.status_code == 429
+
+    messages = "\n".join(record.getMessage() for record in caplog.records)
+    assert "Passphrase changed" in messages
+    assert "Backup exported" in messages
+    assert "Backup restored" in messages
+    assert "Sign-in locked out" in messages

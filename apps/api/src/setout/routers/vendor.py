@@ -15,6 +15,7 @@ from setout.schemas.vendor import (
     VendorRead,
     VendorUpdate,
 )
+from setout.services.storage import Storage, get_storage
 
 router = APIRouter(
     tags=["vendors"],
@@ -22,6 +23,7 @@ router = APIRouter(
 )
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+Store = Annotated[Storage, Depends(get_storage)]
 
 controller = VendorController()
 
@@ -96,8 +98,8 @@ async def restore_vendor(vendor_id: str, user: CurrentUser) -> VendorRead:
         },
     },
 )
-async def delete_vendor(vendor_id: str, user: CurrentUser) -> None:
-    await controller.delete(vendor_id)
+async def delete_vendor(vendor_id: str, user: CurrentUser, storage: Store) -> None:
+    await controller.delete(vendor_id, storage=storage)
 
 
 @router.get(

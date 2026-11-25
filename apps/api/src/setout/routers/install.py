@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -16,6 +17,7 @@ router = APIRouter(
     tags=["install"],
     responses={status.HTTP_401_UNAUTHORIZED: {"description": "Not authenticated"}},
 )
+security_logger = logging.getLogger("setout.security")
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
@@ -42,7 +44,9 @@ async def get_install(user: CurrentUser) -> Install:
 @router.post("/export", operation_id="exportBackup", responses=WRONG_PASSPHRASE)
 async def export_backup(req: ExportRequest, user: CurrentUser) -> Backup:
     await _require_passphrase(req.passphrase, user)
-    return await controller.export()
+    backup = await controller.export()
+    security_logger.info("Backup exported by user_id=%s (%d tables)", user.id, len(backup.tables))
+    return backup
 
 
 @router.post(
@@ -70,4 +74,7 @@ async def restore_backup(
     await _require_passphrase(req.passphrase, user)
     result = await controller.restore(req)
     clear_session_cookie(response)
+    security_logger.warning(
+        "Backup restored by user_id=%s (%d rows)", user.id, sum(result.row_counts.values())
+    )
     return result

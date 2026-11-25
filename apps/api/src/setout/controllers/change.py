@@ -25,6 +25,8 @@ NAME_FIELDS = {
     "item": "name",
     "land": "name",
     "land_document": "filename",
+    "land_valuation": "valued_on",
+    "currency": "name",
     "country": "name",
     "state": "name",
 }
@@ -37,9 +39,9 @@ def noun(table: str) -> str:
 
 
 def links_of(model: type[Model]) -> dict[str, type[Model]]:
-    """Each foreign key column of the model and the model it points to."""
+    """Each foreign-key or one-to-one column of the model and the model it points to."""
     links: dict[str, type[Model]] = {}
-    for name in model._meta.fk_fields:
+    for name in model._meta.fk_fields | model._meta.o2o_fields:
         field = model._meta.fields_map[name]
         if isinstance(field, ForeignKeyFieldInstance):
             links[field.source_field or f"{name}_id"] = field.related_model
