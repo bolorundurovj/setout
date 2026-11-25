@@ -2,6 +2,7 @@
 
 // On phones each row stacks as a card; cells are placed with order because columns differ per screen.
 // Variants are listed because their grid-template-columns have higher specificity than .row; include this mixin last.
+// Cell rules are scoped with :where(.row) so they skip same-named classes outside rows without gaining specificity.
 @mixin stacked-rows {
   @media (max-width: bp.$phone) {
     .row,
@@ -21,33 +22,31 @@
       order: 3;
     }
 
-    .main,
-    .name-cell,
-    .description {
+    :where(.row) :is(.main, .name-cell, .description) {
       grid-column: 1;
       order: 1;
       min-width: 0;
     }
 
-    .figure {
+    :where(.row) .figure {
       grid-column: 2;
       order: 2;
       text-align: right;
     }
 
-    .chip {
+    :where(.row) .chip {
       grid-column: 1;
       order: 4;
       justify-self: start;
     }
 
-    .muted {
+    :where(.row) .muted {
       grid-column: 2;
       order: 5;
       text-align: right;
     }
 
-    .row-actions {
+    :where(.row) .row-actions {
       grid-column: 1 / -1;
       order: 6;
       justify-content: flex-start;

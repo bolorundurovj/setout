@@ -346,13 +346,12 @@
         <p class="t-small">Record an advance, or select Paid By when recording an expense.</p>
       </div>
     } @else {
-      <div class="table">
+      <div class="table balances">
         <div class="row head">
           <span class="t-micro">Person</span>
           <span class="t-micro right">Advanced</span>
           <span class="t-micro right">Spent</span>
           <span class="t-micro right">Balance</span>
-          <span></span>
         </div>
         @for (balance of balanceRows(); track balance.person_id) {
           <div class="row">
@@ -372,7 +371,6 @@
             <span class="right t-mono cell-figure" [class.negative]="balance.balance_amount < 0">
               {{ money(balance.balance_amount) }}
             </span>
-            <span></span>
           </div>
         }
       </div>
@@ -386,59 +384,64 @@
     }
 
     @if (agreements.advances().length > 0) {
-      <div class="table">
+      <div class="table advances">
         <div class="row head">
           <span class="t-micro">Advance</span>
           <span class="t-micro right">Amount</span>
           <span class="t-micro right">Date Advanced</span>
           <span></span>
-          <span></span>
         </div>
         @for (advance of agreements.advances(); track advance.id) {
           <div class="row" [class.archived]="advance.archived_at">
-            <span class="main"
-              ><span class="vendor">{{ advance.person_name }}</span></span
-            >
+            <span class="main">
+              <span class="vendor">{{ advance.person_name }}</span>
+              @if (advance.archived_at) {
+                <span class="t-small">archived</span>
+              }
+            </span>
             @if (advance.archived_at) {
               <span class="right t-mono cell-figure">{{ money(advance.amount) }}</span>
               <span class="right t-mono muted">{{ advance.given_on }}</span>
-              <span class="t-small muted">archived</span>
-              @if (pendingDelete() === advance.id) {
-                <span class="confirm-inline">
-                  <input
-                    appDeleteConfirm
-                    class="input-field delete-input"
-                    [value]="deleteConfirmationText()"
-                    (input)="deleteConfirmationText.set(value($event))"
-                  />
+              <span class="row-actions">
+                @if (pendingDelete() === advance.id) {
+                  <span class="confirm-inline">
+                    <input
+                      appDeleteConfirm
+                      class="input-field delete-input"
+                      [value]="deleteConfirmationText()"
+                      (input)="deleteConfirmationText.set(value($event))"
+                    />
+                    <button
+                      type="button"
+                      class="link-action archive-action"
+                      [disabled]="!canConfirmDelete()"
+                      (click)="deleteAdvancePermanently(advance)"
+                    >
+                      Delete
+                    </button>
+                    <button type="button" class="link-action" (click)="cancelDelete()">
+                      Cancel
+                    </button>
+                  </span>
+                } @else {
+                  <button
+                    type="button"
+                    class="link-action"
+                    [attr.aria-label]="'Restore the advance to ' + advance.person_name"
+                    (click)="restoreAdvance(advance.id)"
+                  >
+                    Restore
+                  </button>
                   <button
                     type="button"
                     class="link-action archive-action"
-                    [disabled]="!canConfirmDelete()"
-                    (click)="deleteAdvancePermanently(advance)"
+                    [attr.aria-label]="'Delete the advance to ' + advance.person_name"
+                    (click)="requestDelete(advance.id)"
                   >
                     Delete
                   </button>
-                  <button type="button" class="link-action" (click)="cancelDelete()">Cancel</button>
-                </span>
-              } @else {
-                <button
-                  type="button"
-                  class="link-action"
-                  [attr.aria-label]="'Restore the advance to ' + advance.person_name"
-                  (click)="restoreAdvance(advance.id)"
-                >
-                  Restore
-                </button>
-                <button
-                  type="button"
-                  class="link-action archive-action"
-                  [attr.aria-label]="'Delete the advance to ' + advance.person_name"
-                  (click)="requestDelete(advance.id)"
-                >
-                  Delete
-                </button>
-              }
+                }
+              </span>
             } @else if (editingAdvance() === advance.id) {
               <span class="amount right">
                 <span class="amount-prefix t-mono">{{ symbol() }}</span>
@@ -454,31 +457,35 @@
                 />
               </span>
               <span class="right t-mono muted">{{ advance.given_on }}</span>
-              <button type="button" class="link-action" (click)="saveEditAdvance(advance)">
-                Save
-              </button>
-              <button type="button" class="link-action" (click)="cancelEditAdvance()">
-                Cancel
-              </button>
+              <span class="row-actions">
+                <button type="button" class="link-action" (click)="saveEditAdvance(advance)">
+                  Save
+                </button>
+                <button type="button" class="link-action" (click)="cancelEditAdvance()">
+                  Cancel
+                </button>
+              </span>
             } @else {
               <span class="right t-mono cell-figure">{{ money(advance.amount) }}</span>
               <span class="right t-mono muted">{{ advance.given_on }}</span>
-              <button
-                type="button"
-                class="link-action"
-                [attr.aria-label]="'Edit the advance to ' + advance.person_name"
-                (click)="startEditAdvance(advance)"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                class="link-action archive-action"
-                [attr.aria-label]="'Archive the advance to ' + advance.person_name"
-                (click)="archiveAdvance(advance.id)"
-              >
-                Archive
-              </button>
+              <span class="row-actions">
+                <button
+                  type="button"
+                  class="link-action"
+                  [attr.aria-label]="'Edit the advance to ' + advance.person_name"
+                  (click)="startEditAdvance(advance)"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  class="link-action archive-action"
+                  [attr.aria-label]="'Archive the advance to ' + advance.person_name"
+                  (click)="archiveAdvance(advance.id)"
+                >
+                  Archive
+                </button>
+              </span>
             }
           </div>
         }

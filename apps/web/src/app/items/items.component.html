@@ -122,55 +122,57 @@
             <span class="right t-small muted">{{ notSet }}</span>
           }
 
-          @if (item.archived_at) {
-            @if (pendingDelete() === item.id) {
-              <span class="confirm-inline">
-                <input
-                  appDeleteConfirm
-                  class="input-field delete-input"
-                  [value]="deleteConfirmationText()"
-                  (input)="deleteConfirmationText.set(value($event))"
-                />
+          <span class="row-actions">
+            @if (item.archived_at) {
+              @if (pendingDelete() === item.id) {
+                <span class="confirm-inline">
+                  <input
+                    appDeleteConfirm
+                    class="input-field delete-input"
+                    [value]="deleteConfirmationText()"
+                    (input)="deleteConfirmationText.set(value($event))"
+                  />
+                  <button
+                    type="button"
+                    class="link-action t-mono danger-link"
+                    [disabled]="!canConfirmDelete()"
+                    (click)="deletePermanently(item.id)"
+                  >
+                    Delete
+                  </button>
+                  <button type="button" class="link-action t-mono" (click)="cancelDelete()">
+                    Cancel
+                  </button>
+                </span>
+              } @else {
+                <button
+                  type="button"
+                  class="link-action t-mono"
+                  [attr.aria-label]="'Restore ' + item.name"
+                  (click)="restore(item.id)"
+                >
+                  Restore
+                </button>
                 <button
                   type="button"
                   class="link-action t-mono danger-link"
-                  [disabled]="!canConfirmDelete()"
-                  (click)="deletePermanently(item.id)"
+                  [attr.aria-label]="'Delete ' + item.name"
+                  (click)="requestDelete(item.id)"
                 >
                   Delete
                 </button>
-                <button type="button" class="link-action t-mono" (click)="cancelDelete()">
-                  Cancel
-                </button>
-              </span>
+              }
             } @else {
               <button
                 type="button"
                 class="link-action t-mono"
-                [attr.aria-label]="'Restore ' + item.name"
-                (click)="restore(item.id)"
+                [attr.aria-label]="'Archive ' + item.name"
+                (click)="archive(item.id)"
               >
-                Restore
-              </button>
-              <button
-                type="button"
-                class="link-action t-mono danger-link"
-                [attr.aria-label]="'Delete ' + item.name"
-                (click)="requestDelete(item.id)"
-              >
-                Delete
+                Archive
               </button>
             }
-          } @else {
-            <button
-              type="button"
-              class="link-action t-mono"
-              [attr.aria-label]="'Archive ' + item.name"
-              (click)="archive(item.id)"
-            >
-              Archive
-            </button>
-          }
+          </span>
         </div>
       }
     </div>

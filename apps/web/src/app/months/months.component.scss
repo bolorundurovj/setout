@@ -263,3 +263,21 @@
 }
 
 @include rows.stacked-rows;
+
+@media (max-width: bp.$phone) {
+  .row > .label {
+    grid-column: 1;
+    order: 1;
+  }
+
+  .row > .track {
+    grid-column: 1 / -1;
+    order: 4;
+  }
+
+  .row > .count {
+    grid-column: 1 / -1;
+    order: 5;
+    text-align: left;
+  }
+}

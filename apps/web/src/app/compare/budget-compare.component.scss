@@ -31,7 +31,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 1fr 150px 150px 150px 96px;
+  grid-template-columns: minmax(0, 1fr) repeat(3, 130px) 72px;
   align-items: center;
   gap: 10px;
 }
@@ -214,7 +214,7 @@
 
 @media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
   .row {
-    grid-template-columns: 1fr 110px 110px 80px;
+    grid-template-columns: minmax(0, 1fr) 110px 110px 72px;
   }
 
   .row > *:nth-child(4) {

@@ -34,7 +34,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 1fr 170px 130px 130px;
+  grid-template-columns: minmax(0, 1fr) 170px 130px 130px;
   align-items: center;
   gap: 10px;
   padding: 12px 18px;
@@ -69,6 +69,7 @@
   padding: 0;
   cursor: pointer;
   text-align: left;
+  min-width: 0;
 
   &:focus-visible {
     outline: none;
@@ -93,6 +94,7 @@
     400 13px/1.45 'DM Sans',
     sans-serif;
   color: var(--ink);
+  overflow-wrap: anywhere;
 }
 
 .amount {
@@ -149,7 +151,7 @@
 
 .item {
   display: grid;
-  grid-template-columns: 1fr 170px auto;
+  grid-template-columns: minmax(0, 1fr) 170px auto;
   align-items: center;
   gap: 10px;
 
@@ -158,9 +160,17 @@
   }
 }
 
+.item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px 12px;
+}
+
 .add-item {
   display: grid;
-  grid-template-columns: 1fr 170px auto;
+  grid-template-columns: minmax(0, 1fr) 170px auto;
   align-items: center;
   gap: 10px;
   padding-top: 4px;
@@ -182,6 +192,7 @@
 
 .confirm-inline {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
@@ -225,7 +236,7 @@
   .row,
   .row.head,
   .row.total {
-    grid-template-columns: 1fr 140px;
+    grid-template-columns: minmax(0, 1fr) 170px;
   }
 
   .row .right:nth-child(3),
@@ -259,6 +270,32 @@
 }
 
 @include rows.stacked-rows;
+
+@media (max-width: bp.$phone) {
+  .row > .category-cell {
+    grid-column: 1 / -1;
+    order: 1;
+  }
+
+  .row > .amount,
+  .row > .amount-readonly {
+    grid-column: 1 / -1;
+    order: 2;
+  }
+
+  .items {
+    padding: 0 14px 12px;
+  }
+
+  .item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .item-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
 
 .item-actions {
   display: inline-flex;

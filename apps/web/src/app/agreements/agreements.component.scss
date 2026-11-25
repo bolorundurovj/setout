@@ -12,6 +12,10 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+
+  > app-button {
+    flex: none;
+  }
 }
 
 .intro-text {
@@ -21,6 +25,7 @@
 }
 
 .intro-actions {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -112,6 +117,7 @@
 
 .agreement-name {
   margin: 0;
+  min-width: 0;
   font:
     500 16px/1.2 'DM Sans',
     sans-serif;
@@ -123,6 +129,9 @@
   font-size: 13px;
   color: var(--ink-3);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .figures {
@@ -167,7 +176,7 @@
 
 .expense {
   display: grid;
-  grid-template-columns: 130px 1fr 150px;
+  grid-template-columns: 130px minmax(0, 1fr) 150px;
   align-items: center;
   padding: 11px 18px;
   border-bottom: 1px solid var(--field);
@@ -265,7 +274,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 1fr 130px 130px 130px 110px;
+  grid-template-columns: minmax(0, 1fr) 130px 130px 130px;
   align-items: center;
   gap: 10px;
   padding: 12px 18px;
@@ -274,6 +283,18 @@
   &:last-child {
     border-bottom: none;
   }
+}
+
+.advances .row {
+  grid-template-columns: minmax(0, 1fr) 130px 130px 170px;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
 }
 
 .row.head {
@@ -346,14 +367,16 @@
 }
 
 @media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
-  .row,
-  .row.head {
-    grid-template-columns: 1fr 120px 110px;
+  .balances .row {
+    grid-template-columns: minmax(0, 1fr) 120px 120px;
   }
 
-  .row > *:nth-child(3),
-  .row.head > *:nth-child(3) {
+  .balances .row > *:nth-child(3) {
     display: none;
+  }
+
+  .advances .row {
+    grid-template-columns: minmax(0, 1fr) 120px 110px 150px;
   }
 }
 
@@ -363,6 +386,32 @@
 }
 
 @media (max-width: bp.$phone) {
+  .titles {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .expense {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 12px;
+  }
+
+  .expense > :empty {
+    display: none;
+  }
+
+  .expense > .date,
+  .expense > .description,
+  .expense > .balance-label {
+    grid-column: 1;
+  }
+
+  .expense > .paid {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
   .figures {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px 10px;
@@ -375,6 +424,8 @@
 
 .confirm-inline {
   display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   gap: 6px;
 
@@ -387,6 +438,22 @@
 }
 
 @include rows.stacked-rows;
+
+// Encapsulation makes `.row > *` in the mixin outrank its cell rules, so the order is set here.
+@media (max-width: bp.$phone) {
+  .advances .row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .row > .main {
+    order: 1;
+  }
+
+  .row > .cell-figure {
+    grid-column: 2;
+    order: 2;
+  }
+}
 
 .attachments {
   margin-block: 12px;

@@ -172,20 +172,36 @@
   }
 }
 
+.row.agreement {
+  grid-template-columns: minmax(0, 1fr) 130px 130px 130px;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.project {
+  color: var(--ink-3);
+}
+
 @media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
   .row,
   .row.head-row {
-    grid-template-columns: 1fr 130px;
+    grid-template-columns: minmax(0, 1fr) 130px;
+  }
+
+  .row.agreement,
+  .row.agreement.head-row {
+    grid-template-columns: minmax(0, 1fr) 130px 130px;
   }
 
   .row > *:nth-child(2),
   .row.head-row > *:nth-child(2) {
     display: none;
   }
-}
-
-.row.agreement {
-  grid-template-columns: 1fr 130px 130px 130px;
 }
 
 .figure.balance-due {
