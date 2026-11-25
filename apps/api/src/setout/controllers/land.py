@@ -20,6 +20,8 @@ from setout.schemas.land import (
     LandProject,
     LandRead,
     LandUpdate,
+    validate_coordinates,
+    validate_stated_area,
 )
 from setout.services import changes
 from setout.services.storage import Storage
@@ -90,6 +92,28 @@ class LandController:
     async def update(self, land_id: str, req: LandUpdate) -> LandRead:
         land = await self._land_or_404(land_id)
         changes = req.model_dump(exclude_unset=True)
+        if "size_value" in changes or "size_unit" in changes:
+            try:
+                validate_stated_area(
+                    changes.get("size_value", land.size_value),
+                    changes.get("size_unit", land.size_unit),
+                )
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail=str(exc),
+                ) from exc
+        if "latitude" in changes or "longitude" in changes:
+            try:
+                validate_coordinates(
+                    changes.get("latitude", land.latitude),
+                    changes.get("longitude", land.longitude),
+                )
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail=str(exc),
+                ) from exc
         if "boundary" in changes:
             changes["boundary"] = _as_text(req.boundary)
         name = changes.get("name")

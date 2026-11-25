@@ -515,3 +515,75 @@ async def test_a_plot_with_no_pin_has_nothing_the_map_calls_it(client: AsyncClie
     land = await _land(client, "Ewuru plot")
 
     assert land["geocoded_address"] is None
+
+
+async def test_partial_size_update_is_accepted_when_partner_field_is_set(
+    client: AsyncClient,
+) -> None:
+    await _setup(client)
+    land = await _land(client, "Ewuru plot", size_value="500", size_unit="sqm")
+
+    updated = await client.patch(f"/api/lands/{land['id']}", json={"size_value": 600})
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["size_value"] == "600"
+    assert updated.json()["size_unit"] == "sqm"
+
+    re_unit = await client.patch(f"/api/lands/{land['id']}", json={"size_unit": "acre"})
+    assert re_unit.status_code == 200, re_unit.text
+    assert re_unit.json()["size_value"] == "600"
+    assert re_unit.json()["size_unit"] == "acre"
+
+
+async def test_clearing_only_one_size_field_is_refused_and_clearing_both_succeeds(
+    client: AsyncClient,
+) -> None:
+    await _setup(client)
+    land = await _land(client, "Ewuru plot", size_value="500", size_unit="sqm")
+
+    clear_value = await client.patch(f"/api/lands/{land['id']}", json={"size_value": None})
+    assert clear_value.status_code == 422
+
+    clear_unit = await client.patch(f"/api/lands/{land['id']}", json={"size_unit": None})
+    assert clear_unit.status_code == 422
+
+    still_intact = (await client.get(f"/api/lands/{land['id']}")).json()
+    assert still_intact["size_value"] == "500"
+    assert still_intact["size_unit"] == "sqm"
+
+    clear_both = await client.patch(
+        f"/api/lands/{land['id']}", json={"size_value": None, "size_unit": None}
+    )
+    assert clear_both.status_code == 200, clear_both.text
+    assert clear_both.json()["size_value"] is None
+    assert clear_both.json()["size_unit"] is None
+
+    partial_without_unit = await client.patch(f"/api/lands/{land['id']}", json={"size_value": 600})
+    assert partial_without_unit.status_code == 422
+
+
+async def test_partial_coordinate_updates_are_validated_against_merged_state(
+    client: AsyncClient,
+) -> None:
+    await _setup(client)
+    land = await _land(client, "Ewuru plot", latitude="6.5244", longitude="3.3792")
+
+    move_lat = await client.patch(f"/api/lands/{land['id']}", json={"latitude": "6.6000"})
+    assert move_lat.status_code == 200, move_lat.text
+    assert move_lat.json()["latitude"] == "6.6"
+    assert move_lat.json()["longitude"] == "3.3792"
+
+    clear_lat = await client.patch(f"/api/lands/{land['id']}", json={"latitude": None})
+    assert clear_lat.status_code == 422
+
+    clear_lon = await client.patch(f"/api/lands/{land['id']}", json={"longitude": None})
+    assert clear_lon.status_code == 422
+
+    clear_both = await client.patch(
+        f"/api/lands/{land['id']}", json={"latitude": None, "longitude": None}
+    )
+    assert clear_both.status_code == 200, clear_both.text
+    assert clear_both.json()["latitude"] is None
+    assert clear_both.json()["longitude"] is None
+
+    half_coord = await client.patch(f"/api/lands/{land['id']}", json={"latitude": "6.5"})
+    assert half_coord.status_code == 422

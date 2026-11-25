@@ -17,27 +17,31 @@ Position = tuple[float, float]
 MAX_POSITIONS = 1000
 
 
+def validate_stated_area(value: Decimal | None, unit: LandSizeUnit | None) -> None:
+    if value is not None and unit is None:
+        raise ValueError("A stated area requires a unit")
+    if unit is not None and value is None:
+        raise ValueError("A unit requires a stated area")
+
+
+def validate_coordinates(latitude: Decimal | None, longitude: Decimal | None) -> None:
+    if latitude is not None and longitude is None:
+        raise ValueError("A latitude requires a longitude")
+    if longitude is not None and latitude is None:
+        raise ValueError("A longitude requires a latitude")
+
+
 class LandSize(BaseModel):
     @model_validator(mode="after")
     def validate_stated_area(self) -> LandSize:
-        value = getattr(self, "size_value", None)
-        unit = getattr(self, "size_unit", None)
-        if value is not None and unit is None:
-            raise ValueError("A stated area requires a unit")
-        if unit is not None and value is None:
-            raise ValueError("A unit requires a stated area")
+        validate_stated_area(getattr(self, "size_value", None), getattr(self, "size_unit", None))
         return self
 
 
 class LandPoint(BaseModel):
     @model_validator(mode="after")
     def validate_coordinates(self) -> LandPoint:
-        latitude = getattr(self, "latitude", None)
-        longitude = getattr(self, "longitude", None)
-        if latitude is not None and longitude is None:
-            raise ValueError("A latitude requires a longitude")
-        if longitude is not None and latitude is None:
-            raise ValueError("A longitude requires a latitude")
+        validate_coordinates(getattr(self, "latitude", None), getattr(self, "longitude", None))
         return self
 
 
@@ -89,7 +93,7 @@ class LandCreate(LandSize, LandPoint):
     notes: str | None = None
 
 
-class LandUpdate(LandSize, LandPoint, UpdateModel):
+class LandUpdate(UpdateModel):
     NOT_NULL: ClassVar[frozenset[str]] = frozenset({"name"})
 
     name: str | None = Field(None, min_length=1, max_length=255)
