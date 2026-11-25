@@ -47,6 +47,36 @@ export class BudgetComponent {
   readonly deleteConfirmationText = signal('');
   private readonly drafts = signal<Record<string, string>>({});
   readonly itemDescription = signal('');
+  readonly editingItem = signal<string | null>(null);
+  readonly editAmount = signal('');
+  readonly savingEdit = signal(false);
+
+  startEdit(item: BudgetItemRead): void {
+    this.editingItem.set(item.id);
+    this.editAmount.set(formatAmountInput(item.budgeted_amount, this.project().currency_exponent));
+  }
+
+  async saveEdit(item: BudgetItemRead): Promise<void> {
+    const amount = parseMoney(this.editAmount(), this.project().currency_exponent);
+    if (this.savingEdit() || amount === null || amount < 0) return;
+    this.savingEdit.set(true);
+    try {
+      await this.budget.updateItem(
+        this.project().id,
+        item.category_id,
+        item.id,
+        amount,
+        this.includeArchived(),
+      );
+      this.syncDrafts();
+      this.editingItem.set(null);
+    } catch {
+      this.toast.show('Could not update the budget item.', 'error');
+    } finally {
+      this.savingEdit.set(false);
+    }
+  }
+
   readonly itemAmount = signal('');
   readonly itemCostType = signal('');
 
@@ -199,7 +229,7 @@ export class BudgetComponent {
       return;
     }
     if (summary && summary.item_count > 1) {
-      this.toast.show('This category has several budget items. Open it to edit them.', 'info');
+      if (this.openCategory() !== category.id) await this.toggleCategory(category);
       this.syncDrafts();
       return;
     }

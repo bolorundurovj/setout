@@ -138,7 +138,7 @@ describe('BudgetComponent', () => {
 
     expect(added.length).toBe(0);
     expect(updated.length).toBe(0);
-    expect(toasts[0].message).toContain('several budget items');
+    expect(component.openCategory()).toBe(categories[0].id);
   });
 
   it('rejects a non-numeric amount', async () => {

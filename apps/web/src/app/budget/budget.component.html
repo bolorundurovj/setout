@@ -88,8 +88,38 @@
                       <span class="tag t-mono">archived</span>
                     }
                   </span>
-                  <span class="right t-mono muted">{{ money(item.budgeted_amount) }}</span>
+                  @if (editingItem() === item.id) {
+                    <label
+                      >Budgeted amount
+                      <input
+                        class="amount-input t-mono"
+                        inputmode="decimal"
+                        [value]="editAmount()"
+                        (input)="editAmount.set(asValue($event))"
+                        (keyup.enter)="saveEdit(item)"
+                    /></label>
+                  } @else {
+                    <span class="right t-mono muted">{{ money(item.budgeted_amount) }}</span>
+                  }
                   <span class="item-actions">
+                    @if (!item.archived_at) {
+                      @if (editingItem() === item.id) {
+                        <button type="button" [disabled]="savingEdit()" (click)="saveEdit(item)">
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          [disabled]="savingEdit()"
+                          (click)="editingItem.set(null)"
+                        >
+                          Cancel
+                        </button>
+                      } @else {
+                        <button type="button" class="link-action t-mono" (click)="startEdit(item)">
+                          Edit
+                        </button>
+                      }
+                    }
                     <button type="button" class="link-action t-mono" (click)="showChanges(item)">
                       Change History
                     </button>
