@@ -12,6 +12,9 @@ env:
   GHCR_IMAGE: ghcr.io/${{ github.repository }}
   DOCKERHUB_IMAGE: docker.io/bolorundurovj/setout
 
+permissions:
+  contents: read
+
 concurrency:
   group: backfill-dockerhub
   cancel-in-progress: false
