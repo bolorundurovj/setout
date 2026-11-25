@@ -38,6 +38,10 @@ export const api = {
     }),
   createVendor: (request: APIRequestContext, name = uniqueName('Vendor')) =>
     post<Seeded>(request, '/vendors', { name }),
+  createPerson: (request: APIRequestContext, name = uniqueName('Person')) =>
+    post<Seeded>(request, '/people', { name }),
+  createLand: (request: APIRequestContext, name = uniqueName('Land')) =>
+    post<Seeded>(request, '/lands', { name }),
   createExpense: (request: APIRequestContext, projectId: string, body: object) =>
     post<Seeded>(request, `/projects/${projectId}/expenses`, body),
   createAgreement: (request: APIRequestContext, projectId: string, body: object) =>
