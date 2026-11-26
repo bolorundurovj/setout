@@ -5,7 +5,7 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from setout.models.expense import CostType
 from setout.schemas.base import UpdateModel
@@ -41,7 +41,9 @@ class ExpenseCreate(BaseModel):
     cost_type: CostType | None = None
     notes: str | None = None
     auto_categorize: bool = Field(
-        True, description="Use past expenses to choose the category when none is given"
+        True,
+        validation_alias=AliasChoices("auto_categorize", "auto_categorise"),
+        description="Use past expenses to choose the category when none is given",
     )
 
 

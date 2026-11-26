@@ -1034,6 +1034,18 @@ async def test_auto_assign_can_be_disabled(client: AsyncClient) -> None:
     assert expense["category_id"] is None
 
 
+async def test_auto_assign_accepts_british_spelling(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    category = await _category(client, project_id, "Concrete foundation")
+    item = (await client.post("/api/items", json={"name": "Cement"})).json()
+
+    await _expense(client, project_id, item_id=item["id"], category_id=category["id"])
+    await _expense(client, project_id, item_id=item["id"], category_id=category["id"])
+
+    expense = await _expense(client, project_id, item_id=item["id"], auto_categorise=False)
+    assert expense["category_id"] is None
+
+
 async def test_bulk_categorises_uncategorised_expenses(client: AsyncClient) -> None:
     project_id = await _project(client)
     category = await _category(client, project_id, "Concrete foundation")

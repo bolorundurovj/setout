@@ -84,12 +84,6 @@
   --tint-uncategorised-ink: #8b939c;
 }
 
-:root {
-  // Remove once no stylesheet uses the old token names.
-  --tint-uncategorized: var(--tint-uncategorised);
-  --tint-uncategorized-ink: var(--tint-uncategorised-ink);
-}
-
 *,
 *::before,
 *::after {
