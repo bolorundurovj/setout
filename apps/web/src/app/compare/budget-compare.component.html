@@ -60,7 +60,9 @@
               <div class="row expense">
                 <span class="detail">
                   <span class="description">
-                    {{ expense.description }}
+                    <button type="button" class="link" (click)="openExpense(expense)">
+                      {{ expense.description }}
+                    </button>
                     @if (expense.attachment_count > 0) {
                       <span class="attachment-tag t-mono">attachment</span>
                     }

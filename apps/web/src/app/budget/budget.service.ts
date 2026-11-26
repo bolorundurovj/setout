@@ -117,9 +117,16 @@ export class BudgetService {
     }
   }
 
-  async addCategory(projectId: string, body: CategoryCreate): Promise<void> {
-    await this.api.invoke(createCategory, { project_id: projectId, body });
+  async addCategory(projectId: string, body: CategoryCreate): Promise<boolean> {
+    this.error.set(null);
+    try {
+      await this.api.invoke(createCategory, { project_id: projectId, body });
+    } catch (e: unknown) {
+      this.error.set(detailOf(e) ?? 'Could not add the category.');
+      return false;
+    }
     await this.load(projectId, false, true);
+    return true;
   }
 
   async renameCategory(projectId: string, categoryId: string, name: string): Promise<boolean> {

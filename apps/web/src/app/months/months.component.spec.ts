@@ -4,6 +4,7 @@ import { BudgetService } from '../budget/budget.service';
 import { ExpenseService } from '../expenses/expense.service';
 import type { RequestStatus } from '../ui/request-status';
 import { MonthsComponent, type MonthRow } from './months.component';
+import { Router } from '@angular/router';
 
 const project: ProjectRead = {
   id: 'p1',
@@ -135,6 +136,17 @@ describe('MonthsComponent', () => {
     fixture.detectChanges();
     return fixture.componentInstance;
   }
+
+  it('opens a clicked expense in the Expenses tab', () => {
+    const c = render();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    c.openExpense({ id: 'x1' } as ExpenseRead);
+
+    expect(navigate).toHaveBeenCalledWith(['/projects', 'p1', 'expenses'], {
+      queryParams: { expense: 'x1' },
+    });
+  });
 
   it('has no rows before the months load', () => {
     const c = render(null);

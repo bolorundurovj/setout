@@ -6,6 +6,7 @@ import { monthLabel } from '../shared/dates';
 import { ExpenseService, type ExpensePage } from '../expenses/expense.service';
 import { PaginationComponent } from '../ui/pagination.component';
 import type { RequestStatus } from '../ui/request-status';
+import { Router } from '@angular/router';
 
 /** Number of category tints in the stylesheet before they repeat. */
 const TINTS = 5;
@@ -38,6 +39,13 @@ export interface MonthRow {
 })
 export class MonthsComponent {
   readonly project = input.required<ProjectRead>();
+  private readonly router = inject(Router);
+
+  openExpense(expense: ExpenseRead): void {
+    void this.router.navigate(['/projects', this.project().id, 'expenses'], {
+      queryParams: { expense: expense.id },
+    });
+  }
 
   readonly expenses = inject(ExpenseService);
   private readonly budget = inject(BudgetService);

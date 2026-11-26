@@ -29,6 +29,9 @@ class ProjectController:
         self,
         *,
         search: str | None = None,
+        status: ProjectStatus | None = None,
+        currency_code: str | None = None,
+        land_id: str | None = None,
         include_archived: bool,
         limit: int,
         offset: int,
@@ -38,6 +41,12 @@ class ProjectController:
             query = query.filter(archived_at__isnull=True)
         if search:
             query = query.filter(name__icontains=search)
+        if status:
+            query = query.filter(status=status)
+        if currency_code:
+            query = query.filter(currency_id=currency_code.upper())
+        if land_id:
+            query = query.filter(land_id=land_id)
         total = await query.count()
         projects = (
             await query.order_by("-created_at")

@@ -59,11 +59,13 @@ function item(over: Partial<BudgetItemRead> = {}): BudgetItemRead {
 
 describe('BudgetComponent', () => {
   let added: unknown[];
+  let addedCategories: unknown[];
   let updated: unknown[];
   let toasts: { message: string; type: string }[];
 
   function render(categories: CategoryRead[], items: BudgetItemRead[]) {
     added = [];
+    addedCategories = [];
     updated = [];
     toasts = [];
     const budget = {
@@ -90,7 +92,10 @@ describe('BudgetComponent', () => {
       load: async () => undefined,
       loadItems: async () => undefined,
       loadPresets: async () => undefined,
-      addCategory: async () => undefined,
+      addCategory: async (...args: unknown[]) => {
+        addedCategories.push(args);
+        return true;
+      },
       addItem: async (...args: unknown[]) => void added.push(args),
       updateItem: async (...args: unknown[]) => void updated.push(args),
       archiveItem: async () => undefined,
@@ -111,6 +116,21 @@ describe('BudgetComponent', () => {
     fixture.detectChanges();
     return fixture.componentInstance;
   }
+
+  it('creates a subcategory under the chosen top-level category', async () => {
+    const component = render([category()], []);
+    expect(component.parentOptions().map((option) => option.label)).toEqual([
+      'Top level',
+      'Concrete foundation',
+    ]);
+
+    component.newCategoryName.set('Blinding');
+    component.newCategoryParent.set('s1');
+    await component.addCategory();
+
+    expect(addedCategories).toEqual([['p1', { name: 'Blinding', parent_id: 's1' }]]);
+    expect(toasts.at(-1)?.message).toBe('Blinding added under Concrete foundation.');
+  });
 
   it('creates the first item when a category has none', async () => {
     const component = render([category()], []);

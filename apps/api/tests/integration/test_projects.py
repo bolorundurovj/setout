@@ -191,6 +191,25 @@ async def test_summary_lists_every_currency_in_use(client: AsyncClient) -> None:
     assert body["currency_codes"] == ["JPY", "NGN"]
 
 
+async def test_the_list_filters_by_status_currency_and_land(client: AsyncClient) -> None:
+    await _sign_in(client)
+    land = (await client.post("/api/lands", json={"name": "Ewuru plot"})).json()
+    on_land = await _create(client, name="On the plot", land_id=land["id"])
+    on_hold = await _create(client, name="Paused", currency_code="JPY")
+    await client.patch(f"/api/projects/{on_hold['id']}", json={"status": "on_hold"})
+
+    async def names(**params: str) -> list[str]:
+        body = (await client.get("/api/projects", params=params)).json()
+        return sorted(row["name"] for row in body["items"])
+
+    assert await names(status="on_hold") == ["Paused"]
+    assert await names(currency_code="jpy") == ["Paused"]
+    assert await names(currency_code="NGN") == ["On the plot"]
+    assert await names(land_id=land["id"]) == [on_land["name"]]
+    assert await names(status="active", search="plot") == ["On the plot"]
+    assert (await client.get("/api/projects", params={"status": "nope"})).status_code == 422
+
+
 async def test_the_list_is_paginated(client: AsyncClient) -> None:
     await _sign_in(client)
     for index in range(5):

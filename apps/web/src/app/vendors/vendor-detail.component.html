@@ -119,7 +119,9 @@
             </div>
             @for (row of s.projects; track row.project_id) {
               <div class="row">
-                <span class="t-small">{{ row.project_name }}</span>
+                <a class="t-small link" [routerLink]="['/projects', row.project_id]">{{
+                  row.project_name
+                }}</a>
                 <span class="right t-mono muted">{{ row.expense_count }}</span>
                 <span class="right t-mono figure">{{ formatSpent(row) }}</span>
               </div>
@@ -165,7 +167,9 @@
             <div class="row agreement">
               <span class="main">
                 <span class="t-small">{{ a.description }}</span>
-                <span class="t-small project">{{ a.project_name }}</span>
+                <a class="t-small project link" [routerLink]="['/projects', a.project_id]">{{
+                  a.project_name
+                }}</a>
               </span>
               <span class="right t-mono figure">{{ agreementMoney(a, a.agreed_amount) }}</span>
               <span class="right t-mono muted">{{ agreementMoney(a, a.paid_amount) }}</span>

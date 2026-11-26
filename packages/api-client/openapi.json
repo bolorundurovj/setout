@@ -837,6 +837,62 @@
             "description": "Match part of the name"
           },
           {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ProjectStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only projects in this status",
+              "title": "Status"
+            },
+            "description": "Only projects in this status"
+          },
+          {
+            "name": "currency_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only projects in this currency",
+              "title": "Currency Code"
+            },
+            "description": "Only projects in this currency"
+          },
+          {
+            "name": "land_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only projects on this land record",
+              "title": "Land Id"
+            },
+            "description": "Only projects on this land record"
+          },
+          {
             "name": "include_archived",
             "in": "query",
             "required": false,

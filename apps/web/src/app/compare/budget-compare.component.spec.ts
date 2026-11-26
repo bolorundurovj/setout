@@ -5,6 +5,7 @@ import { BudgetService } from '../budget/budget.service';
 import { ExpenseService } from '../expenses/expense.service';
 import type { RequestStatus } from '../ui/request-status';
 import { BudgetCompareComponent, type CompareRow } from './budget-compare.component';
+import { Router } from '@angular/router';
 
 const project: ProjectRead = {
   id: 'p1',
@@ -127,6 +128,17 @@ describe('BudgetCompareComponent', () => {
     TestBed.tick();
     expect(component.expanded()).toBe('second');
     expect(loaded).toEqual(['first', 'second']);
+  });
+
+  it('opens a clicked expense in the Expenses tab', () => {
+    const c = render();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    c.openExpense({ id: 'x1' } as ExpenseRead);
+
+    expect(navigate).toHaveBeenCalledWith(['/projects', 'p1', 'expenses'], {
+      queryParams: { expense: 'x1' },
+    });
   });
 
   it('lists every category in budget order', () => {

@@ -167,6 +167,10 @@
 .description {
   font-size: 13px;
   color: var(--ink);
+
+  .link {
+    text-align: left;
+  }
 }
 
 .expense-meta {

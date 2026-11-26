@@ -395,6 +395,29 @@ describe('AddExpenseComponent', () => {
     expect(uploads).toEqual([{ expenseId: 'e9', file }]);
   });
 
+  it('uploads every selected file when editing an expense', async () => {
+    const existing = { id: 'e9', description: 'Cement', amount: 1100000, spent_on: '2026-08-14' };
+    const fixture = render(existing, [
+      { id: 'a1', filename: 'first.jpg', byte_size: 1, content_type: 'image/jpeg' },
+    ]);
+    const component = fixture.componentInstance;
+    const first = new File(['one'], 'one.jpg', { type: 'image/jpeg' });
+    const second = new File(['two'], 'two.pdf', { type: 'application/pdf' });
+
+    await component.onFileSelected({
+      target: { files: [first, second], value: 'x' },
+    } as unknown as Event);
+
+    expect(uploads).toEqual([
+      { expenseId: 'e9', file: first },
+      { expenseId: 'e9', file: second },
+    ]);
+    fixture.detectChanges();
+    const input = fixture.nativeElement.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input.multiple).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Attach More Files');
+  });
+
   it('archives an attachment without updating the expense', async () => {
     const existing = { id: 'e9', description: 'Cement', amount: 1100000, spent_on: '2026-08-14' };
     const file = { id: 'a1', filename: 'receipt.jpg', byte_size: 2048, content_type: 'image/jpeg' };

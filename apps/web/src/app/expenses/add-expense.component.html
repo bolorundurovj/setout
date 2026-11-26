@@ -404,11 +404,11 @@
           </button>
         </p>
       }
-      @if (expenseAttachments().length === 0) {
-        <button type="button" class="receipt-empty" (click)="openFilePicker()">
-          <span class="t-mono receipt-add">Attach Image or PDF</span>
-        </button>
-      }
+      <button type="button" class="receipt-empty" (click)="openFilePicker()">
+        <span class="t-mono receipt-add">
+          {{ expenseAttachments().length ? 'Attach More Files' : 'Attach Images or PDFs' }}
+        </span>
+      </button>
     } @else {
       <button type="button" class="receipt-tile" (click)="openFilePicker()">
         <span class="receipt-thumb blank"></span>
@@ -427,6 +427,7 @@
       type="file"
       class="offscreen"
       accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
+      [multiple]="isEditing()"
       (change)="onFileSelected($event)"
     />
   </div>

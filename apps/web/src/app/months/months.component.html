@@ -55,7 +55,9 @@
                 @for (expense of monthPage.rows; track expense.id) {
                   <div class="entry">
                     <span class="entry-text">
-                      <span class="description">{{ expense.description }}</span>
+                      <button type="button" class="description link" (click)="openExpense(expense)">
+                        {{ expense.description }}
+                      </button>
                       <span class="entry-category">{{ categoryName(expense) }}</span>
                     </span>
                     <span class="figure right">{{ plainAmount(expense.amount) }}</span>

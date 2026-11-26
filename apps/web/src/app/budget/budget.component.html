@@ -24,6 +24,15 @@
       (valueChange)="newCategoryName.set($event)"
       (submitted)="addCategory()"
     />
+    @if (parentOptions().length > 1) {
+      <app-option-picker
+        class="parent-picker"
+        label="Under"
+        [options]="parentOptions()"
+        [value]="newCategoryParent()"
+        (valueChange)="newCategoryParent.set($event)"
+      />
+    }
     <app-button [disabled]="!newCategoryName().trim()" (pressed)="addCategory()"
       >Save Category</app-button
     >

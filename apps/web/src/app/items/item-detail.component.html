@@ -95,8 +95,16 @@
           @for (point of pageNewestFirst(s); track point.expense_id) {
             <div class="row">
               <span class="t-mono muted">{{ point.spent_on }}</span>
-              <span class="t-small">{{ point.vendor_name ?? notSet }}</span>
-              <span class="t-small muted">{{ point.project_name }}</span>
+              @if (point.vendor_id) {
+                <a class="t-small link" [routerLink]="['/vendors', point.vendor_id]">{{
+                  point.vendor_name
+                }}</a>
+              } @else {
+                <span class="t-small">{{ point.vendor_name ?? notSet }}</span>
+              }
+              <a class="t-small muted link" [routerLink]="['/projects', point.project_id]">{{
+                point.project_name
+              }}</a>
               <span class="right t-mono muted">{{ quantityLabel(point) }}</span>
               <span class="right t-mono figure">{{ money(point.unit_rate, s) }}</span>
             </div>

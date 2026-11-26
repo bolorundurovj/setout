@@ -17,6 +17,7 @@ import { currencySymbol } from '../ui/currency-pill.component';
 import { PaginationComponent } from '../ui/pagination.component';
 import type { RequestStatus } from '../ui/request-status';
 import { tintFor } from '../ui/tints';
+import { Router } from '@angular/router';
 
 /** A category row, or the row for expenses without a category. */
 export interface CompareRow {
@@ -38,6 +39,13 @@ export interface CompareRow {
 })
 export class BudgetCompareComponent {
   readonly project = input.required<ProjectRead>();
+  private readonly router = inject(Router);
+
+  openExpense(expense: ExpenseRead): void {
+    void this.router.navigate(['/projects', this.project().id, 'expenses'], {
+      queryParams: { expense: expense.id },
+    });
+  }
   readonly openCategory = input('');
 
   readonly budget = inject(BudgetService);

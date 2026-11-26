@@ -16,6 +16,7 @@ import { BudgetService } from './budget.service';
 import { formatAmountInput, formatMoney, parseMoney } from './money';
 import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
 import { CountPipe } from '../ui/count.pipe';
+import { OptionPickerComponent, type Option } from '../ui/option-picker.component';
 
 @Component({
   selector: 'app-budget',
@@ -32,6 +33,7 @@ import { CountPipe } from '../ui/count.pipe';
     ComboboxComponent,
     DrawerComponent,
     MoneyHintComponent,
+    OptionPickerComponent,
     ToggleComponent,
   ],
   templateUrl: './budget.component.html',
@@ -266,15 +268,31 @@ export class BudgetComponent {
     }
   }
 
+  readonly newCategoryParent = signal('');
+
+  readonly parentOptions = computed<Option[]>(() => [
+    { value: '', label: 'Top level' },
+    ...this.budget
+      .categories()
+      .filter((category) => category.parent_id === null && !category.archived_at)
+      .map((category) => ({ value: category.id, label: category.name })),
+  ]);
+
   async addCategory(): Promise<void> {
     const name = this.newCategoryName().trim();
     if (!name) {
       return;
     }
-    await this.budget.addCategory(this.project().id, { name });
+    const parentId = this.newCategoryParent() || null;
+    const added = await this.budget.addCategory(this.project().id, { name, parent_id: parentId });
+    if (!added) {
+      this.toast.show(this.budget.error() ?? 'Could not add the category.', 'error');
+      return;
+    }
     this.newCategoryName.set('');
     this.syncDrafts();
-    this.toast.show(`${name} added.`);
+    const parent = this.parentOptions().find((option) => option.value === parentId);
+    this.toast.show(parent ? `${name} added under ${parent.label}.` : `${name} added.`);
   }
 
   async archiveItem(category: CategoryRead, itemId: string): Promise<void> {

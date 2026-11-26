@@ -441,22 +441,31 @@ export class AddExpenseComponent {
 
   async onFileSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
-    const file = input.files?.[0] ?? null;
-    if (!file) {
+    const files = Array.from(input.files ?? []);
+    if (!files.length) {
       return;
     }
     input.value = '';
     const existing = this.expenseToEdit();
     if (!existing) {
-      this.selectedFile.set(file);
+      this.selectedFile.set(files[0]);
       return;
     }
-    const added = await this.attachments.add(this.parentOf(existing.id), file);
-    if (!added) {
-      this.toast.show(this.attachments.error() ?? 'Could not attach that file.', 'error');
-      return;
+    const parent = this.parentOf(existing.id);
+    const attached: string[] = [];
+    for (const file of files) {
+      const added = await this.attachments.add(parent, file);
+      if (!added) {
+        this.toast.show(this.attachments.error() ?? `Could not attach ${file.name}.`, 'error');
+        continue;
+      }
+      attached.push(added.filename);
     }
-    this.toast.show(`${added.filename} attached.`);
+    if (attached.length === 1) {
+      this.toast.show(`${attached[0]} attached.`);
+    } else if (attached.length > 1) {
+      this.toast.show(`${attached.length} files attached.`);
+    }
   }
 
   async archiveAttachment(file: AttachmentRead): Promise<void> {

@@ -85,7 +85,9 @@
             </div>
             @for (row of s.projects; track row.project_id) {
               <div class="row">
-                <span class="t-small">{{ row.project_name }}</span>
+                <a class="t-small link" [routerLink]="['/projects', row.project_id]">{{
+                  row.project_name
+                }}</a>
                 <span class="right t-mono muted">{{ row.expense_count }}</span>
                 <span class="right t-mono figure">{{ formatSpent(row) }}</span>
               </div>
