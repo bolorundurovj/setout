@@ -36,11 +36,17 @@ ENV PYTHONUNBUFFERED=1 \
 	SETOUT_DATA_DIR=/var/lib/setout \
 	SETOUT_STATIC_DIR=/app/web
 
+# uv installs everything, so the base image's pip and the outdated packages it vendors go.
+RUN python -m pip uninstall --yes pip
+
 WORKDIR /app/api
 COPY apps/api/pyproject.toml apps/api/uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+# The uv cache is a build mount, so downloaded archives stay out of the image.
+RUN --mount=type=cache,target=/root/.cache/uv \
+	uv sync --frozen --no-dev --no-install-project
 COPY apps/api ./
-RUN uv sync --frozen --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv \
+	uv sync --frozen --no-dev
 
 COPY --from=web /build/apps/web/dist/*/browser /app/web
 
@@ -48,7 +54,7 @@ COPY --from=web /build/apps/web/dist/*/browser /app/web
 RUN useradd --system --create-home --uid 10001 setout \
 	&& mkdir -p "$SETOUT_DATA_DIR" \
 	&& chown setout:setout "$SETOUT_DATA_DIR"
-USER setout
+USER 10001
 
 VOLUME ["/var/lib/setout"]
 # The container always listens on 8474. SETOUT_PORT in docker/.env only picks the host port.
