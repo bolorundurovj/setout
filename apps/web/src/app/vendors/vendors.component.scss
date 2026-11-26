@@ -144,7 +144,7 @@ button.row {
   cursor: pointer;
 
   &:hover {
-    color: var(--over);
+    color: var(--danger);
   }
 }
 
@@ -154,10 +154,10 @@ button.row {
 }
 
 .error {
-  color: var(--over);
+  color: var(--danger);
 }
 
-@media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
+@media (min-width: bp.$phone-up) and (max-width: bp.$tablet) {
   .row,
   .row.head {
     grid-template-columns: 1fr 150px;

@@ -96,11 +96,11 @@ class ProjectController:
 
     async def update(self, project_id: str, req: ProjectUpdate) -> ProjectRead:
         project = await self._get_or_404(project_id)
-        changes = req.model_dump(exclude_unset=True)
-        if "land_id" in changes:
-            changes["land_id"] = await self._land_or_422(changes["land_id"])
-        if changes:
-            project.update_from_dict(changes)
+        updates = req.model_dump(exclude_unset=True)
+        if "land_id" in updates:
+            updates["land_id"] = await self._land_or_422(updates["land_id"])
+        if updates:
+            project.update_from_dict(updates)
             await project.save()
             await project.fetch_related("land")
         budgeted = await budgeted_by_project([project.id])

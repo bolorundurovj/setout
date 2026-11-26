@@ -202,8 +202,8 @@
   border-radius: 10px;
 
   &.blocking {
-    background: var(--over-surface);
-    border-color: var(--over-edge);
+    background: var(--danger-surface);
+    border-color: var(--danger-edge);
   }
 }
 

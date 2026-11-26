@@ -66,5 +66,3 @@ export function locationLabel(
   }
   return land.address ?? '';
 }
-
-export const whereLabel = locationLabel;

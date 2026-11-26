@@ -148,7 +148,7 @@ import { ToastService } from '../toast.service';
         color: var(--ink-2);
       }
       .error-msg {
-        color: var(--over);
+        color: var(--danger);
         text-align: center;
       }
       @media (max-width: 599px) {

@@ -20,7 +20,7 @@ import { CountsService } from '../counts.service';
 import { detailOf } from '../api-error';
 import { ChoiceStore } from '../ui/choice-store';
 import { LoadTracker } from '../ui/request-status';
-import { SCROLL_SIZE } from '../ui/paging';
+import { SCROLL_PAGE_SIZE } from '../ui/paging';
 
 @Injectable({
   providedIn: 'root',
@@ -71,7 +71,7 @@ export class ProjectService {
     try {
       const page = await this.api.invoke(listProjects, {
         include_archived: includeArchived,
-        limit: SCROLL_SIZE,
+        limit: SCROLL_PAGE_SIZE,
         offset: 0,
       });
       if (!this.tracker.settle(requestId, 'ready')) {
@@ -100,7 +100,7 @@ export class ProjectService {
     try {
       const page = await this.api.invoke(listProjects, {
         include_archived: this.includeArchivedState(),
-        limit: SCROLL_SIZE,
+        limit: SCROLL_PAGE_SIZE,
         offset: this.projectsState().length,
       });
       this.projectsState.update((projects) => [...projects, ...page.items]);

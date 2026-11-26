@@ -86,11 +86,6 @@
 
 :root {
   // Remove once no stylesheet uses the old token names.
-  --over: var(--danger);
-  --over-ink: var(--danger-ink);
-  --over-surface: var(--danger-surface);
-  --over-edge: var(--danger-edge);
-  --tile-ink: var(--positive-ink);
   --tint-uncategorized: var(--tint-uncategorised);
   --tint-uncategorized-ink: var(--tint-uncategorised-ink);
 }

@@ -102,12 +102,12 @@
   white-space: nowrap;
 
   &.over-budget {
-    color: var(--over-ink);
+    color: var(--danger-ink);
   }
 }
 
 .body.over-budget {
-  background: var(--over-surface);
+  background: var(--danger-surface);
 }
 
 .attachment-tag {
@@ -140,7 +140,7 @@
 }
 
 .figure.over-budget {
-  color: var(--over-ink);
+  color: var(--danger-ink);
 }
 
 .expenses {
@@ -212,7 +212,7 @@
   color: var(--ink-2);
 }
 
-@media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
+@media (min-width: bp.$phone-up) and (max-width: bp.$tablet) {
   .row {
     grid-template-columns: minmax(0, 1fr) 110px 110px 72px;
   }

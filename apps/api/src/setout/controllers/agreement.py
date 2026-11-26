@@ -68,9 +68,9 @@ class AgreementController:
 
     async def update(self, agreement_id: str, req: AgreementUpdate) -> AgreementRead:
         agreement = await self._agreement_or_404(agreement_id)
-        changes = req.model_dump(exclude_unset=True)
-        if changes:
-            agreement.update_from_dict(changes)
+        updates = req.model_dump(exclude_unset=True)
+        if updates:
+            agreement.update_from_dict(updates)
             await agreement.save()
         paid = await paid_by_agreement([agreement.id])
         return await self._read_one(agreement, paid.get(agreement.id, 0))
@@ -144,9 +144,9 @@ class AgreementController:
 
     async def update_advance(self, advance_id: str, req: AdvanceUpdate) -> AdvanceRead:
         advance = await self._advance_or_404(advance_id)
-        changes = req.model_dump(exclude_unset=True)
-        if changes:
-            advance.update_from_dict(changes)
+        updates = req.model_dump(exclude_unset=True)
+        if updates:
+            advance.update_from_dict(updates)
             await advance.save()
         return self._advance(advance)
 

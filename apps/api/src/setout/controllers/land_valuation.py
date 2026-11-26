@@ -67,14 +67,14 @@ class LandValuationController:
     async def update(self, valuation_id: str, req: LandValuationUpdate) -> LandValuationRead:
         async with in_transaction():
             row = await self._valuation_or_404(valuation_id)
-            changes = req.model_dump(exclude_unset=True)
-            kind = changes.get("kind")
+            updates = req.model_dump(exclude_unset=True)
+            kind = updates.get("kind")
             if kind is LandValuationKind.PURCHASE and await self._has_purchase(
                 row.land_id, exclude_id=row.id
             ):
                 raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=DUPLICATE_PURCHASE)
-            if changes:
-                row.update_from_dict(changes)
+            if updates:
+                row.update_from_dict(updates)
                 await row.save()
             return self._read(row, await self._exponents([row]))
 

@@ -111,10 +111,10 @@ async def get_me(user: Annotated[User, Depends(get_current_user)]) -> UserRespon
 async def update_account(
     req: AccountUpdate, user: Annotated[User, Depends(get_current_user)]
 ) -> UserResponse:
-    changes = req.model_dump(exclude_unset=True)
-    if "name" in changes and changes["name"] is None:
+    updates = req.model_dump(exclude_unset=True)
+    if "name" in updates and updates["name"] is None:
         raise HTTPException(status_code=422, detail="Account name cannot be null")
-    currency_code = changes.get("base_currency")
+    currency_code = updates.get("base_currency")
     if currency_code:
         currency_code = currency_code.upper()
         if await Currency.get_or_none(code=currency_code) is None:
@@ -122,9 +122,9 @@ async def update_account(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Unknown currency: {currency_code}",
             )
-        changes["base_currency"] = currency_code
-    if changes:
-        user.update_from_dict(changes)
+        updates["base_currency"] = currency_code
+    if updates:
+        user.update_from_dict(updates)
         await user.save()
     return UserResponse.model_validate(user)
 

@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { Router } from '@angular/router';
 import type { VendorRead } from '@setout/api-client';
-import { SEARCH_WAIT } from '../ui/debounce';
+import { SEARCH_DEBOUNCE_MS } from '../ui/debounce';
 import { VendorService } from './vendor.service';
 import { VendorsComponent } from './vendors.component';
 
@@ -87,7 +87,7 @@ describe('VendorsComponent', () => {
 
       expect(loads[1]).toEqual({ search: 'Ondo', archived: true });
 
-      vi.advanceTimersByTime(SEARCH_WAIT);
+      vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
 
       expect(loads.length).toBe(2);
     } finally {

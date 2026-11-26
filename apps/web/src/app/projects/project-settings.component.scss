@@ -200,7 +200,7 @@
 }
 
 .link-action.archive-action:hover {
-  color: var(--over);
+  color: var(--danger);
 }
 
 .tint-1 {
@@ -233,7 +233,7 @@
   border: 1px solid var(--tint-uncategorised-ink);
 }
 
-@media (max-width: bp.$lap) {
+@media (max-width: bp.$tablet) {
   .fields,
   .facts {
     grid-template-columns: 1fr 1fr;

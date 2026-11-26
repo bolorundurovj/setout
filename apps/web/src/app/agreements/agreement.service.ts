@@ -25,7 +25,7 @@ import {
   updateAdvance,
   updateAgreement,
 } from '@setout/api-client';
-import { CHOICE_LIMIT, PAGE_SIZE, SCROLL_SIZE, offsetOf } from '../ui/paging';
+import { PICKER_PAGE_SIZE, PAGE_SIZE, SCROLL_PAGE_SIZE, offsetOf } from '../ui/paging';
 import { LoadTracker } from '../ui/request-status';
 
 @Injectable({
@@ -108,7 +108,7 @@ export class AgreementService {
       const page = await this.api.invoke(listAgreements, {
         project_id: projectId,
         include_archived: this.includeArchivedState(),
-        limit: SCROLL_SIZE,
+        limit: SCROLL_PAGE_SIZE,
         offset: 0,
       });
       if (revision !== this.agreementRevision || !this.tracker.settle(requestId, 'ready')) return;
@@ -131,7 +131,7 @@ export class AgreementService {
       const page = await this.api.invoke(listAgreements, {
         project_id: projectId,
         include_archived: this.includeArchivedState(),
-        limit: SCROLL_SIZE,
+        limit: SCROLL_PAGE_SIZE,
         offset: this.agreementState().length,
       });
       if (revision !== this.agreementRevision) return;
@@ -153,7 +153,7 @@ export class AgreementService {
         const page = await this.api.invoke(listExpenses, {
           project_id: projectId,
           agreement_only: true,
-          limit: CHOICE_LIMIT,
+          limit: PICKER_PAGE_SIZE,
           offset,
         });
         for (const row of page.items) {

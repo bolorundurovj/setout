@@ -61,12 +61,12 @@ class VendorController:
 
     async def update(self, vendor_id: str, req: VendorUpdate) -> VendorRead:
         vendor = await self._vendor_or_404(vendor_id)
-        changes = req.model_dump(exclude_unset=True)
-        name = changes.get("name")
+        updates = req.model_dump(exclude_unset=True)
+        name = updates.get("name")
         if name is not None and name.casefold() != vendor.name.casefold():
             await self._reject_duplicate(name)
-        if changes:
-            vendor.update_from_dict(changes)
+        if updates:
+            vendor.update_from_dict(updates)
             await vendor.save()
         totals = await self._totals([vendor.id])
         return self._read(vendor, totals.get(vendor.id, []))

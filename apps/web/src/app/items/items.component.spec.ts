@@ -3,7 +3,7 @@ import { vi } from 'vitest';
 import { Router } from '@angular/router';
 import type { ItemPriceSummary, ItemRead } from '@setout/api-client';
 import { ToastService } from '../toast.service';
-import { SEARCH_WAIT } from '../ui/debounce';
+import { SEARCH_DEBOUNCE_MS } from '../ui/debounce';
 import { ItemService } from './item.service';
 import { ItemsComponent } from './items.component';
 
@@ -155,7 +155,7 @@ describe('ItemsComponent', () => {
       expect(component.search()).toBe('inch');
       expect(searches.length).toBe(1);
 
-      vi.advanceTimersByTime(SEARCH_WAIT);
+      vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
 
       expect(searches).toEqual([undefined, 'inch']);
     } finally {

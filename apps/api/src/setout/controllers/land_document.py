@@ -82,9 +82,9 @@ class LandDocumentController:
 
     async def update(self, document_id: str, req: LandDocumentUpdate) -> LandDocumentRead:
         row = await self._document_or_404(document_id)
-        changes = req.model_dump(exclude_unset=True)
-        if changes:
-            row.update_from_dict(changes)
+        updates = req.model_dump(exclude_unset=True)
+        if updates:
+            row.update_from_dict(updates)
             await row.save()
         return LandDocumentRead.model_validate(row, from_attributes=True)
 

@@ -154,7 +154,7 @@
 
 .figure-value.balance,
 .paid.balance {
-  color: var(--over-ink);
+  color: var(--danger-ink);
 }
 
 .meter {
@@ -231,9 +231,9 @@
   justify-self: end;
 
   &.archive-action:hover {
-    background: var(--over-surface);
-    border-color: var(--over-edge);
-    color: var(--over-ink);
+    background: var(--danger-surface);
+    border-color: var(--danger-edge);
+    color: var(--danger-ink);
   }
 }
 
@@ -317,7 +317,7 @@
 }
 
 .cell-figure.negative {
-  color: var(--over);
+  color: var(--danger);
 }
 
 .block {
@@ -329,20 +329,20 @@
 }
 
 .figure.balance {
-  color: var(--over);
+  color: var(--danger);
 }
 
 .error {
-  color: var(--over);
+  color: var(--danger);
 }
 
-@media (max-width: bp.$lap) {
+@media (max-width: bp.$tablet) {
   .intro {
     flex-direction: column;
   }
 }
 
-@media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
+@media (min-width: bp.$phone-up) and (max-width: bp.$tablet) {
   .balances .row {
     grid-template-columns: minmax(0, 1fr) 120px 120px;
   }

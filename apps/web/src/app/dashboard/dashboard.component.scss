@@ -67,7 +67,7 @@
   }
 
   &.over-budget {
-    background: var(--over-surface);
+    background: var(--danger-surface);
   }
 }
 
@@ -78,7 +78,7 @@
   color: var(--ink);
 
   &.over-budget-text {
-    color: var(--over-ink);
+    color: var(--danger-ink);
   }
 }
 
@@ -96,7 +96,7 @@
 }
 
 .meter-over {
-  background: var(--over);
+  background: var(--danger);
 }
 
 .caption {
@@ -189,7 +189,7 @@
 }
 
 .bar-over-budget {
-  background: var(--over);
+  background: var(--danger);
   border-radius: 0 3px 3px 0;
 }
 
@@ -275,8 +275,8 @@
   cursor: pointer;
 
   &.urgent {
-    background: var(--over-surface);
-    border-color: var(--over-edge);
+    background: var(--danger-surface);
+    border-color: var(--danger-edge);
   }
 
   &:hover {
@@ -319,7 +319,7 @@
 .alert.urgent .alert-title,
 .alert.urgent .alert-detail,
 .alert.urgent .alert-amount {
-  color: var(--over-ink);
+  color: var(--danger-ink);
 }
 
 .recent {
@@ -379,7 +379,7 @@
   gap: 12px;
 }
 
-@media (max-width: bp.$lap) {
+@media (max-width: bp.$tablet) {
   .stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

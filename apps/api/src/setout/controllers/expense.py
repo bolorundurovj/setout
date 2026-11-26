@@ -245,23 +245,23 @@ class ExpenseController:
 
     async def update(self, expense_id: str, req: ExpenseUpdate) -> ExpenseRead:
         expense = await self._expense_or_404(expense_id)
-        changes = req.model_dump(exclude_unset=True)
-        if changes.get("category_id") is not None:
-            await self._categorisable_category(changes["category_id"], expense.project_id)
+        updates = req.model_dump(exclude_unset=True)
+        if updates.get("category_id") is not None:
+            await self._categorisable_category(updates["category_id"], expense.project_id)
         await self._references_or_404(
-            changes.get("item_id"), changes.get("vendor_id"), changes.get("paid_by_id")
+            updates.get("item_id"), updates.get("vendor_id"), updates.get("paid_by_id")
         )
-        if "agreement_id" in changes or "vendor_id" in changes:
+        if "agreement_id" in updates or "vendor_id" in updates:
             await self._validate_agreement(
-                changes.get("agreement_id", expense.agreement_id),
+                updates.get("agreement_id", expense.agreement_id),
                 expense.project_id,
-                changes.get("vendor_id", expense.vendor_id),
+                updates.get("vendor_id", expense.vendor_id),
             )
-        if changes:
+        if updates:
             # Amount is derived below. The column is not nullable, and a request with
             # quantity and unit rate sends a null amount intentionally.
-            entered = changes.pop("amount", None)
-            expense.update_from_dict(changes)
+            entered = updates.pop("amount", None)
+            expense.update_from_dict(updates)
             derived = derived_amount(expense.quantity, expense.unit_rate)
             if derived is not None:
                 if entered is not None and entered != derived:

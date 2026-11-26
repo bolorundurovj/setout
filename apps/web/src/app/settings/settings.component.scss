@@ -122,14 +122,14 @@
   flex-direction: column;
   gap: 12px;
   padding: 15px 17px;
-  background: var(--over-surface);
-  border: 1px solid var(--over-edge);
+  background: var(--danger-surface);
+  border: 1px solid var(--danger-edge);
   border-radius: 12px;
 }
 
 .danger-file {
   font-size: 13px;
-  color: var(--over-ink);
+  color: var(--danger-ink);
   overflow-wrap: anywhere;
 }
 
@@ -138,7 +138,7 @@
   font:
     400 16px/1.45 'DM Sans',
     sans-serif;
-  color: var(--over-ink);
+  color: var(--danger-ink);
   max-width: 70ch;
 }
 
@@ -150,7 +150,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--over-ink);
+  color: var(--danger-ink);
   cursor: pointer;
 }
 

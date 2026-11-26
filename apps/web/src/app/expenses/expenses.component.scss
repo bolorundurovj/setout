@@ -29,7 +29,7 @@
 }
 
 .summary .over {
-  color: var(--over);
+  color: var(--danger);
 }
 
 .bulk-bar {
@@ -177,9 +177,9 @@
 
 // Matches the sidebar nav item styles so row actions do not render as bare text.
 .link-action.archive:hover {
-  background: var(--over-surface);
-  border-color: var(--over-edge);
-  color: var(--over-ink);
+  background: var(--danger-surface);
+  border-color: var(--danger-edge);
+  color: var(--danger-ink);
 }
 
 .sentinel {
@@ -188,10 +188,10 @@
 }
 
 .error {
-  color: var(--over);
+  color: var(--danger);
 }
 
-@media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
+@media (min-width: bp.$phone-up) and (max-width: bp.$tablet) {
   .row,
   .row.head {
     grid-template-columns: 1fr 120px 140px;

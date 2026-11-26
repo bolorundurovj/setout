@@ -26,7 +26,7 @@
   }
 
   &.over-budget {
-    background: var(--over-surface);
+    background: var(--danger-surface);
   }
 }
 
@@ -40,7 +40,7 @@
 }
 
 .stat-value.over-budget-text {
-  color: var(--over-ink);
+  color: var(--danger-ink);
 }
 
 .caption {
@@ -61,7 +61,7 @@
 }
 
 .meter-over-budget {
-  background: var(--over);
+  background: var(--danger);
 }
 
 .by-category {
@@ -157,7 +157,7 @@
   top: 0;
   bottom: 0;
   border-radius: 0 4px 4px 0;
-  background: var(--over);
+  background: var(--danger);
 }
 
 .bar-mark {
@@ -175,7 +175,7 @@
 }
 
 .category-figures.over-budget-text {
-  color: var(--over-ink);
+  color: var(--danger-ink);
 }
 
 .attention {
@@ -206,8 +206,8 @@
   border: 1px solid var(--hairline);
 
   &.urgent {
-    background: var(--over-surface);
-    border-color: var(--over-edge);
+    background: var(--danger-surface);
+    border-color: var(--danger-edge);
   }
 
   &:hover {
@@ -253,10 +253,10 @@
 
 .alert.urgent .alert-title,
 .alert.urgent .alert-amount {
-  color: var(--over-ink);
+  color: var(--danger-ink);
 }
 
-@media (max-width: bp.$lap) {
+@media (max-width: bp.$tablet) {
   .alerts {
     grid-template-columns: 1fr;
   }

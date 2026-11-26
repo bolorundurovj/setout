@@ -22,7 +22,7 @@ import { moneyInputHint } from '../budget/money';
     }
 
     .hint.invalid {
-      color: var(--over-ink);
+      color: var(--danger-ink);
     }
   `,
 })

@@ -74,7 +74,7 @@
 }
 
 .over {
-  color: var(--over);
+  color: var(--danger);
 }
 
 .table {
@@ -116,13 +116,13 @@
   color: var(--ink);
 }
 
-@media (max-width: bp.$lap) {
+@media (max-width: bp.$tablet) {
   .tiles {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
+@media (min-width: bp.$phone-up) and (max-width: bp.$tablet) {
   .row,
   .row.head-row {
     grid-template-columns: 100px 1fr 120px;

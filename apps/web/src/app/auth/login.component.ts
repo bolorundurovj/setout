@@ -99,7 +99,7 @@ import { LogoComponent } from '../ui/logo.component';
         gap: 7px;
       }
       .error-msg {
-        color: var(--over);
+        color: var(--danger);
         text-align: center;
       }
       .footer {

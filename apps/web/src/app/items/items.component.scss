@@ -83,7 +83,7 @@
 }
 
 .over {
-  color: var(--over);
+  color: var(--danger);
 }
 
 .name-cell {
@@ -124,7 +124,7 @@
   cursor: pointer;
 
   &:hover {
-    color: var(--over);
+    color: var(--danger);
   }
 }
 
@@ -134,7 +134,7 @@
 }
 
 .error {
-  color: var(--over);
+  color: var(--danger);
 }
 
 // Beside the sidebar there is no room for both price columns, so First Price is dropped.

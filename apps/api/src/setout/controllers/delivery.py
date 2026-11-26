@@ -126,9 +126,9 @@ class DeliveryController:
 
     async def update(self, delivery_id: str, req: DeliveryUpdate) -> DeliveryRead:
         delivery = await self._delivery_or_404(delivery_id)
-        changes = req.model_dump(exclude_unset=True)
-        if changes:
-            delivery.update_from_dict(changes)
+        updates = req.model_dump(exclude_unset=True)
+        if updates:
+            delivery.update_from_dict(updates)
             await delivery.save()
         return await self._read_one(delivery)
 

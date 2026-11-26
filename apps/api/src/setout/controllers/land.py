@@ -91,40 +91,40 @@ class LandController:
 
     async def update(self, land_id: str, req: LandUpdate) -> LandRead:
         land = await self._land_or_404(land_id)
-        changes = req.model_dump(exclude_unset=True)
-        if "size_value" in changes or "size_unit" in changes:
+        updates = req.model_dump(exclude_unset=True)
+        if "size_value" in updates or "size_unit" in updates:
             try:
                 validate_stated_area(
-                    changes.get("size_value", land.size_value),
-                    changes.get("size_unit", land.size_unit),
+                    updates.get("size_value", land.size_value),
+                    updates.get("size_unit", land.size_unit),
                 )
             except ValueError as exc:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail=str(exc),
                 ) from exc
-        if "latitude" in changes or "longitude" in changes:
+        if "latitude" in updates or "longitude" in updates:
             try:
                 validate_coordinates(
-                    changes.get("latitude", land.latitude),
-                    changes.get("longitude", land.longitude),
+                    updates.get("latitude", land.latitude),
+                    updates.get("longitude", land.longitude),
                 )
             except ValueError as exc:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail=str(exc),
                 ) from exc
-        if "boundary" in changes:
-            changes["boundary"] = _as_text(req.boundary)
-        name = changes.get("name")
+        if "boundary" in updates:
+            updates["boundary"] = _as_text(req.boundary)
+        name = updates.get("name")
         if name is not None and name.casefold() != land.name.casefold():
             await self._reject_duplicate(name)
-        if "country_code" in changes or "state" in changes:
-            code = changes.pop("country_code", land.country_id)
-            state = changes.get("state", land.state)
-            changes["country_id"], changes["state"] = await self._resolve_country_state(code, state)
-        if changes:
-            land.update_from_dict(changes)
+        if "country_code" in updates or "state" in updates:
+            code = updates.pop("country_code", land.country_id)
+            state = updates.get("state", land.state)
+            updates["country_id"], updates["state"] = await self._resolve_country_state(code, state)
+        if updates:
+            land.update_from_dict(updates)
             await land.save()
         return await self._one(land)
 

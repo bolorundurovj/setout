@@ -153,14 +153,14 @@
   color: var(--ink);
 }
 
-@media (max-width: bp.$lap) {
+@media (max-width: bp.$tablet) {
   .facts,
   .pair {
     grid-template-columns: 1fr;
   }
 }
 
-@media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
+@media (min-width: bp.$phone-up) and (max-width: bp.$tablet) {
   .row,
   .row.head-row {
     grid-template-columns: 1fr 130px;

@@ -150,7 +150,7 @@
   font-weight: 500;
 }
 
-@media (max-width: bp.$lap) {
+@media (max-width: bp.$tablet) {
   .facts,
   .pair {
     grid-template-columns: 1fr;
@@ -172,7 +172,7 @@
   color: var(--ink-3);
 }
 
-@media (min-width: bp.$phone-up) and (max-width: bp.$lap) {
+@media (min-width: bp.$phone-up) and (max-width: bp.$tablet) {
   .row,
   .row.head-row {
     grid-template-columns: minmax(0, 1fr) 130px;
@@ -190,7 +190,7 @@
 }
 
 .figure.balance-due {
-  color: var(--over-ink);
+  color: var(--danger-ink);
 }
 
 .outstanding {
@@ -199,8 +199,8 @@
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  border: 1px solid var(--over-edge);
-  background: var(--over-surface);
+  border: 1px solid var(--danger-edge);
+  background: var(--danger-surface);
   border-radius: 12px;
 }
 
@@ -214,12 +214,12 @@
 .outstanding-description {
   font-weight: 500;
   font-size: 13px;
-  color: var(--over-ink);
+  color: var(--danger-ink);
 }
 
 .outstanding-dates {
   font-size: 13px;
-  color: var(--over-ink);
+  color: var(--danger-ink);
 }
 
 .outstanding-actions {
@@ -234,7 +234,7 @@
   font-size: 16px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  color: var(--over-ink);
+  color: var(--danger-ink);
 }
 
 @media (max-width: bp.$phone) {

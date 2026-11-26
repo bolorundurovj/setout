@@ -59,12 +59,12 @@ class ItemController:
 
     async def update(self, item_id: str, req: ItemUpdate) -> ItemRead:
         item = await self._item_or_404(item_id)
-        changes = req.model_dump(exclude_unset=True)
-        name = changes.get("name")
+        updates = req.model_dump(exclude_unset=True)
+        name = updates.get("name")
         if name is not None and name.casefold() != item.name.casefold():
             await self._reject_duplicate(name)
-        if changes:
-            item.update_from_dict(changes)
+        if updates:
+            item.update_from_dict(updates)
             await item.save()
         return (await self._reads([item]))[0]
 

@@ -250,11 +250,11 @@ class CategoryController:
 
     async def update_item(self, item_id: str, req: BudgetItemUpdate) -> BudgetItemRead:
         item = await self._item_or_404(item_id)
-        changes = req.model_dump(exclude_unset=True)
-        if "budgeted_amount" in changes and changes["budgeted_amount"] != item.budgeted_amount:
-            changes["set_at"] = datetime.now(UTC)
-        if changes:
-            item.update_from_dict(changes)
+        updates = req.model_dump(exclude_unset=True)
+        if "budgeted_amount" in updates and updates["budgeted_amount"] != item.budgeted_amount:
+            updates["set_at"] = datetime.now(UTC)
+        if updates:
+            item.update_from_dict(updates)
             await item.save()
         return BudgetItemRead.model_validate(item)
 

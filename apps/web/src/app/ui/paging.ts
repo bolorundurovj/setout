@@ -5,10 +5,6 @@ export const SCROLL_PAGE_SIZE = 20;
 // Pickers load one page of at most 100 options, the API's maximum page size.
 export const PICKER_PAGE_SIZE = 100;
 
-// Remove once no module imports the old names.
-export const SCROLL_SIZE = SCROLL_PAGE_SIZE;
-export const CHOICE_LIMIT = PICKER_PAGE_SIZE;
-
 export function pageCount(total: number, size = PAGE_SIZE): number {
   return Math.max(1, Math.ceil(total / size));
 }

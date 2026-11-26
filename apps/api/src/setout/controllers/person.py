@@ -55,12 +55,12 @@ class PersonController:
 
     async def update(self, person_id: str, req: PersonUpdate) -> PersonRead:
         person = await self._person_or_404(person_id)
-        changes = req.model_dump(exclude_unset=True)
-        name = changes.get("name")
+        updates = req.model_dump(exclude_unset=True)
+        name = updates.get("name")
         if name is not None and name.casefold() != person.name.casefold():
             await self._reject_duplicate(name)
-        if changes:
-            person.update_from_dict(changes)
+        if updates:
+            person.update_from_dict(updates)
             await person.save()
         totals = await self._totals([person.id])
         return self._read(person, totals.get(person.id, []))

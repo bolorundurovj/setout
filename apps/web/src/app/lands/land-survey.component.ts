@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, output, signal } from '@angular/core';
 import type { LandBoundary } from '@setout/api-client';
 import { ButtonComponent } from '../ui/button.component';
 import { OptionPickerComponent, type Option } from '../ui/option-picker.component';
@@ -15,7 +15,6 @@ import { closureNote, isValidLeg, runTraverse, type Leg } from './land-traverse'
   styleUrl: './land-survey.component.scss',
 })
 export class LandSurveyComponent {
-  readonly boundary = input<LandBoundary | null>(null);
   readonly boundaryChange = output<LandBoundary | null>();
 
   readonly grid = signal('minna31');
@@ -28,7 +27,6 @@ export class LandSurveyComponent {
     emptyLeg(),
   ]);
   readonly areaSqm = signal<number | null>(null);
-  readonly projecting = signal(false);
 
   readonly gridOptions: Option[] = GRIDS.map((g) => ({ value: g.value, label: g.label }));
 
@@ -101,30 +99,24 @@ export class LandSurveyComponent {
     const start = this.firstBeacon();
     const legs = this.validLegs();
     if (!start || legs.length < 3) {
-      this.projecting.set(false);
       this.boundaryChange.emit(null);
       this.areaSqm.set(null);
       return;
     }
-    this.projecting.set(true);
-    try {
-      const grid = gridOf(this.grid());
-      // Centre a local metric projection on the geographic first beacon.
-      const local = !grid.definition;
-      const projection = local
-        ? {
-            ...grid,
-            definition: `+proj=aeqd +lat_0=${start.northing} +lon_0=${start.easting} +datum=WGS84 +units=m`,
-          }
-        : grid;
-      const origin = local ? { northing: 0, easting: 0 } : start;
-      const ring = await toPositions(projection, runTraverse(origin, legs).beacons);
-      if (revision !== this.revision) return;
-      this.areaSqm.set(polygonAreaSqm(ring));
-      this.boundaryChange.emit(boundaryOf(ring));
-    } finally {
-      if (revision === this.revision) this.projecting.set(false);
-    }
+    const grid = gridOf(this.grid());
+    // Centre a local metric projection on the geographic first beacon.
+    const local = !grid.definition;
+    const projection = local
+      ? {
+          ...grid,
+          definition: `+proj=aeqd +lat_0=${start.northing} +lon_0=${start.easting} +datum=WGS84 +units=m`,
+        }
+      : grid;
+    const origin = local ? { northing: 0, easting: 0 } : start;
+    const ring = await toPositions(projection, runTraverse(origin, legs).beacons);
+    if (revision !== this.revision) return;
+    this.areaSqm.set(polygonAreaSqm(ring));
+    this.boundaryChange.emit(boundaryOf(ring));
   }
 }
 
