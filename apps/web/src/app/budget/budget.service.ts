@@ -46,6 +46,9 @@ export class BudgetService {
   readonly error = signal<string | null>(null);
 
   readonly categories = computed<CategoryRead[]>(() => this.budgetState()?.categories ?? []);
+  readonly categoryNames = computed(
+    () => new Map(this.categories().map((category) => [category.id, category.name])),
+  );
   readonly budgetedTotal = computed(() => this.budgetState()?.budgeted_amount ?? 0);
 
   async load(projectId: string, includeArchived = false, quiet = false): Promise<void> {

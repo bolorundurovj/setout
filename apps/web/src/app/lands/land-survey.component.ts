@@ -1,6 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  output,
+  signal,
+} from '@angular/core';
 import type { LandBoundary } from '@setout/api-client';
 import { ButtonComponent } from '../ui/button.component';
+import { debounce } from '../ui/debounce';
 import { OptionPickerComponent, type Option } from '../ui/option-picker.component';
 import { boundaryOf, polygonAreaSqm } from './land-geo';
 import { GRIDS, gridOf, toPositions } from './land-grid';
@@ -27,6 +36,13 @@ export class LandSurveyComponent {
     emptyLeg(),
   ]);
   readonly areaSqm = signal<number | null>(null);
+
+  // Typing a leg reprojects through proj4, so wait for a pause in typing.
+  private readonly redrawSoon = debounce<void>(() => void this.redraw());
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.redrawSoon.cancel());
+  }
 
   readonly gridOptions: Option[] = GRIDS.map((g) => ({ value: g.value, label: g.label }));
 
@@ -71,7 +87,7 @@ export class LandSurveyComponent {
     const next = [...this.legs()];
     next[index] = { ...next[index], [field]: raw };
     this.legs.set(next);
-    void this.redraw();
+    this.redrawSoon.call();
   }
 
   addLeg(): void {
@@ -95,6 +111,7 @@ export class LandSurveyComponent {
   private revision = 0;
 
   async redraw(): Promise<void> {
+    this.redrawSoon.cancel();
     const revision = ++this.revision;
     const start = this.firstBeacon();
     const legs = this.validLegs();

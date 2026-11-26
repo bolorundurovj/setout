@@ -150,10 +150,19 @@ export class ProjectSettingsComponent {
     this.toast.show('Project saved.');
   }
 
+  private readonly rootIndex = computed(
+    () =>
+      new Map(
+        this.budget
+          .categories()
+          .filter((row) => row.parent_id === null)
+          .map((row, index) => [row.id, index]),
+      ),
+  );
+
   tint(category: CategoryRead): string {
-    const roots = this.budget.categories().filter((row) => row.parent_id === null);
-    const rootIndex = roots.findIndex((row) => row.id === (category.parent_id ?? category.id));
-    return rootIndex < 0 ? 'tint-uncategorised' : `tint-${(rootIndex % TINT_COUNT) + 1}`;
+    const rootIndex = this.rootIndex().get(category.parent_id ?? category.id);
+    return rootIndex === undefined ? 'tint-uncategorised' : `tint-${(rootIndex % TINT_COUNT) + 1}`;
   }
 
   countLabel(category: CategoryRead): string {

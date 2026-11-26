@@ -271,12 +271,8 @@ export class ExpensesComponent {
   }
 
   categoryName(expense: ExpenseRead): string {
-    if (!expense.category_id) {
-      return 'Uncategorised';
-    }
-    return (
-      this.budget.categories().find((s) => s.id === expense.category_id)?.name ?? 'Uncategorised'
-    );
+    const id = expense.category_id;
+    return (id && this.budget.categoryNames().get(id)) || 'Uncategorised';
   }
 
   detailLine(expense: ExpenseRead): string {

@@ -138,8 +138,13 @@ export class ItemDetailComponent {
 
   private readonly pages = signal<Record<string, number>>({});
 
+  private readonly newestFirst = computed(
+    () => new Map(this.series().map((s) => [s.currency_code, [...s.points].reverse()])),
+  );
+
   pageNewestFirst(series: ItemPriceSeries): ItemPricePoint[] {
-    return pageOf([...series.points].reverse(), this.pageOn(series));
+    const points = this.newestFirst().get(series.currency_code) ?? [...series.points].reverse();
+    return pageOf(points, this.pageOn(series));
   }
 
   pageOn(series: ItemPriceSeries): number {

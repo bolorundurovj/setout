@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import type { LandBoundary } from '@setout/api-client';
 import { ringOf } from './land-geo';
 import { LandSurveyComponent } from './land-survey.component';
+import { SEARCH_DEBOUNCE_MS } from '../ui/debounce';
 
 // Sample plan: one beacon, then a bearing and distance per side, closing to 20mm.
 const PLAN: [number, number, number][] = [
@@ -131,6 +132,24 @@ describe('LandSurveyComponent', () => {
 
     expect(ringOf(sent)[0][1]).not.toBeCloseTo(onMinna[1], 5);
   }, 30_000);
+
+  it('waits for a pause in typing before reprojecting', () => {
+    vi.useFakeTimers();
+    try {
+      const component = render();
+      const redraw = vi.spyOn(component, 'redraw').mockResolvedValue();
+
+      component.setLeg(0, 'degrees', '3');
+      component.setLeg(0, 'degrees', '30');
+      component.setLeg(0, 'distance', '40');
+      expect(redraw).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
+      expect(redraw).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
   it('adds and removes a leg', () => {
     const component = render();

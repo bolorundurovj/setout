@@ -124,49 +124,75 @@ export class LandMapComponent {
     this.tiles.addTo(this.map as L.Map);
   }
 
+  // Layers are updated in place, since draw() runs on every click, drag and input change.
   private draw(): void {
     const map = this.map;
     if (!map) {
       return;
     }
-    this.pin?.remove();
-    this.pin = null;
-    this.shape?.remove();
-    this.shape = null;
-    this.handles.forEach((handle) => handle.remove());
-    this.handles = [];
-
     const pinPoint = this.point();
-    if (pinPoint) {
-      this.pin = L.marker([pinPoint.lat, pinPoint.lon], {
-        draggable: this.editable() && this.mode() === 'pin',
-        icon: L.divIcon({ html: PIN, className: 'pin', iconSize: [24, 32], iconAnchor: [12, 32] }),
-      }).addTo(map);
-      this.pin.on('dragend', () => {
-        const moved = this.pin?.getLatLng();
-        if (moved) {
-          this.pointChange.emit({ lat: round(moved.lat), lon: round(moved.lng) });
-        }
-      });
-    }
-
+    this.drawPin(map, pinPoint);
     const ring = this.points();
-    if (ring.length >= 3) {
-      this.shape = L.polygon(
-        ring.map(([lon, lat]) => [lat, lon] as L.LatLngTuple),
-        { color: 'var(--accent, #b4530a)', weight: 2, fillOpacity: 0.12 },
-      ).addTo(map);
-    }
-    if (this.editable() && this.mode() === 'boundary') {
-      ring.forEach(([lon, lat], index) => this.handleAt(map, lat, lon, index));
-    }
+    this.drawShape(map, ring);
+    this.drawHandles(map, this.editable() && this.mode() === 'boundary' ? ring : []);
     if (!this.fitted && (this.shape || pinPoint)) {
       this.fitView();
       this.fitted = true;
     }
   }
 
-  private handleAt(map: L.Map, lat: number, lon: number, index: number): void {
+  private drawPin(map: L.Map, pinPoint: LandPoint | null): void {
+    if (!pinPoint) {
+      this.pin?.remove();
+      this.pin = null;
+      return;
+    }
+    if (this.pin) {
+      this.pin.setLatLng([pinPoint.lat, pinPoint.lon]);
+      return;
+    }
+    const pin = L.marker([pinPoint.lat, pinPoint.lon], {
+      draggable: this.editable() && this.mode() === 'pin',
+      icon: L.divIcon({ html: PIN, className: 'pin', iconSize: [24, 32], iconAnchor: [12, 32] }),
+    }).addTo(map);
+    pin.on('dragend', () => {
+      const moved = pin.getLatLng();
+      this.pointChange.emit({ lat: round(moved.lat), lon: round(moved.lng) });
+    });
+    this.pin = pin;
+  }
+
+  private drawShape(map: L.Map, ring: Position[]): void {
+    if (ring.length < 3) {
+      this.shape?.remove();
+      this.shape = null;
+      return;
+    }
+    const latLngs = ring.map(([lon, lat]) => [lat, lon] as L.LatLngTuple);
+    if (this.shape) {
+      this.shape.setLatLngs(latLngs);
+      return;
+    }
+    this.shape = L.polygon(latLngs, {
+      color: 'var(--accent, #b4530a)',
+      weight: 2,
+      fillOpacity: 0.12,
+    }).addTo(map);
+  }
+
+  private drawHandles(map: L.Map, ring: Position[]): void {
+    this.handles.splice(ring.length).forEach((handle) => handle.remove());
+    ring.forEach(([lon, lat], index) => {
+      const handle = this.handles[index];
+      if (handle) {
+        handle.setLatLng([lat, lon]);
+      } else {
+        this.handles.push(this.handleAt(map, lat, lon, index));
+      }
+    });
+  }
+
+  private handleAt(map: L.Map, lat: number, lon: number, index: number): L.Marker {
     const handle = L.marker([lat, lon], {
       draggable: true,
       icon: L.divIcon({ className: 'boundary-point', iconSize: [14, 14] }),
@@ -177,7 +203,7 @@ export class LandMapComponent {
       next[index] = [round(moved.lng), round(moved.lat)];
       this.commit(next);
     });
-    this.handles.push(handle);
+    return handle;
   }
 
   private fitView(): void {

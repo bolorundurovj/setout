@@ -108,7 +108,11 @@ describe('MonthsComponent', () => {
       providers: [
         {
           provide: BudgetService,
-          useValue: { categories: () => categories, load: async () => undefined },
+          useValue: {
+            categories: () => categories,
+            categoryNames: () => new Map(categories.map((c) => [c.id, c.name])),
+            load: async () => undefined,
+          },
         },
         {
           provide: ExpenseService,

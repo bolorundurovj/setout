@@ -117,10 +117,10 @@ export class LandValuationsComponent {
     }
   }
 
-  exponent(): number {
+  readonly exponent = computed(() => {
     const code = this.landCurrency() || this.currency();
     return this.projects.currencies().find((c) => c.code === code)?.exponent ?? 2;
-  }
+  });
 
   amountLabel(row: LandValuationRead): string {
     return formatMoney(row.amount, row.currency_code, row.currency_exponent);

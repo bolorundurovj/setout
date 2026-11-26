@@ -146,12 +146,7 @@ export class MonthsComponent {
   }
 
   categoryName(expense: ExpenseRead): string {
-    if (!expense.category_id) {
-      return 'Uncategorised';
-    }
-    return (
-      this.budget.categories().find((category) => category.id === expense.category_id)?.name ??
-      'Uncategorised'
-    );
+    const id = expense.category_id;
+    return (id && this.budget.categoryNames().get(id)) || 'Uncategorised';
   }
 }
