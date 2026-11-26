@@ -270,7 +270,7 @@ describe('BudgetCompareComponent', () => {
     const c = render([category({ id: 's1', budgeted_amount: 1000 })], summary(1000, 900, 400, 1));
     const [categorised, uncategorised] = c.rows();
 
-    expect(c.tint(categorised)).toMatch(/^#[0-9a-f]{6}$/);
+    expect(c.tint(categorised)).toMatch(/^var[(]--tint-[1-5][)]$/);
     expect(c.tint(uncategorised)).toBe('var(--warn-surface)');
   });
 

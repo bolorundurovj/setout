@@ -347,7 +347,7 @@ describe('ProjectDashboardComponent', () => {
     const row = c.rows()[0];
 
     expect(c.tint(row)).toBe(c.tint(row));
-    expect(c.tint(row)).toMatch(/^#[0-9a-f]{6}$/);
+    expect(c.tint(row)).toMatch(/^var[(]--tint-[1-5][)]$/);
     expect(c.tintEdge(row)).not.toBe(c.tint(row));
   });
 

@@ -3,13 +3,11 @@ export interface Tint {
   readonly ink: string;
 }
 
-const TINTS: Tint[] = [
-  { fill: '#dde2f2', ink: '#4e5a86' },
-  { fill: '#d8e5ef', ink: '#3d6480' },
-  { fill: '#dbe8de', ink: '#416b55' },
-  { fill: '#e7dff0', ink: '#6a5188' },
-  { fill: '#f0ded7', ink: '#8b503c' },
-];
+// CSS variables, so the tints follow the light and dark themes.
+const TINTS: Tint[] = [1, 3, 5, 2, 4].map((n) => ({
+  fill: `var(--tint-${n})`,
+  ink: `var(--tint-${n}-ink)`,
+}));
 
 /** Hashes the category id, so it differs from the budget-order --tint-* tokens in styles.scss. */
 export function tintFor(id: string): Tint {

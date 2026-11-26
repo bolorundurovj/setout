@@ -72,4 +72,42 @@ describe('ThemeService', () => {
     TestBed.resetTestingModule();
     expect(TestBed.inject(ThemeService).choice()).toBe('dark');
   });
+
+  describe('when the system theme changes', () => {
+    const original = window.matchMedia;
+    let dark = false;
+    let listener: (() => void) | undefined;
+
+    beforeEach(() => {
+      dark = false;
+      listener = undefined;
+      window.matchMedia = ((query: string) => ({
+        get matches() {
+          return dark;
+        },
+        media: query,
+        addEventListener: (_: string, callback: () => void) => (listener = callback),
+      })) as unknown as typeof window.matchMedia;
+    });
+
+    afterEach(() => {
+      window.matchMedia = original;
+    });
+
+    it('follows it without a reload', () => {
+      const service = TestBed.inject(ThemeService);
+      dark = true;
+      listener?.();
+      expect(service.theme()).toBe('dark');
+      expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    });
+
+    it('keeps an explicit choice', () => {
+      const service = TestBed.inject(ThemeService);
+      service.choose('light');
+      dark = true;
+      listener?.();
+      expect(service.theme()).toBe('light');
+    });
+  });
 });

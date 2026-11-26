@@ -19,12 +19,18 @@ function storedChoice(): ThemeChoice {
   }
 }
 
-function systemTheme(): Theme {
+const DARK_QUERY = '(prefers-color-scheme: dark)';
+
+function darkQuery(): MediaQueryList | null {
   try {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return window.matchMedia(DARK_QUERY);
   } catch {
-    return 'light';
+    return null;
   }
+}
+
+function systemTheme(): Theme {
+  return darkQuery()?.matches ? 'dark' : 'light';
 }
 
 @Injectable({
@@ -38,11 +44,17 @@ export class ThemeService {
   readonly choice = this.choiceState.asReadonly();
   readonly followsSystem = computed(() => this.choiceState() === 'system');
 
+  constructor() {
+    darkQuery()?.addEventListener('change', () => {
+      if (this.followsSystem()) {
+        this.apply(systemTheme());
+      }
+    });
+  }
+
   choose(choice: ThemeChoice): void {
-    const resolved = choice === 'system' ? systemTheme() : choice;
     this.choiceState.set(choice);
-    this.state.set(resolved);
-    document.documentElement.setAttribute('data-theme', resolved);
+    this.apply(choice === 'system' ? systemTheme() : choice);
     try {
       if (choice === 'system') {
         localStorage.removeItem(STORAGE_KEY);
@@ -56,5 +68,10 @@ export class ThemeService {
 
   toggle(): void {
     this.choose(this.state() === 'dark' ? 'light' : 'dark');
+  }
+
+  private apply(theme: Theme): void {
+    this.state.set(theme);
+    document.documentElement.setAttribute('data-theme', theme);
   }
 }
