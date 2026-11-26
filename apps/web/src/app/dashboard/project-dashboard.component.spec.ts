@@ -302,7 +302,7 @@ describe('ProjectDashboardComponent', () => {
     ).alerts();
 
     const tabFor = (title: string) => alerts.find((a) => a.title.startsWith(title))?.tab;
-    expect(tabFor('Uncategorised expenses')).toBe('table');
+    expect(tabFor('Uncategorised expenses')).toBe('compare');
     expect(tabFor('Agreement balance')).toBe('agreements');
     expect(tabFor('Outstanding deliveries')).toBe('deliveries');
     expect(tabFor('Owed to')).toBe('agreements');

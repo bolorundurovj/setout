@@ -238,7 +238,7 @@ describe('ProjectsComponent navigation', () => {
 
   it('opens a project on the expenses tab', () => {
     render().addExpense('p1');
-    expect(navigations[0][0]).toEqual(['/projects', 'p1', 'expense']);
+    expect(navigations[0][0]).toEqual(['/projects', 'p1', 'expenses']);
   });
 
   it('opens the import page with no project selected', () => {

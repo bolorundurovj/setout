@@ -51,6 +51,31 @@ async def test_attachments_require_authentication(client: AsyncClient) -> None:
     assert (await client.get("/api/expenses/nope/attachments")).status_code == 401
 
 
+async def test_expense_attachments_list_under_their_project(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    expense = await _expense(client, project_id)
+    await _attach(client, project_id, expense["id"])
+
+    scoped = await client.get(f"/api/projects/{project_id}/expenses/{expense['id']}/attachments")
+    legacy = await client.get(f"/api/expenses/{expense['id']}/attachments")
+
+    assert scoped.status_code == 200
+    assert scoped.json()["total"] == 1
+    assert scoped.json() == legacy.json()
+
+
+async def test_expense_attachments_404_under_another_project(client: AsyncClient) -> None:
+    project_id = await _project(client)
+    expense = await _expense(client, project_id)
+    other = await client.post("/api/projects", json={"name": "Palm Ridge", "currency_code": "NGN"})
+
+    resp = await client.get(
+        f"/api/projects/{other.json()['id']}/expenses/{expense['id']}/attachments"
+    )
+
+    assert resp.status_code == 404
+
+
 async def test_attachment_is_stored_on_its_expense(client: AsyncClient) -> None:
     project_id = await _project(client)
     expense = await _expense(client, project_id)

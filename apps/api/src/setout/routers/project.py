@@ -57,6 +57,7 @@ async def create_project(req: ProjectCreate, user: CurrentUser) -> ProjectRead:
     return await controller.create(req)
 
 
+# Not under /projects, where "summary" would be read as a project id.
 @router.get("/project-summary", operation_id="getProjectSummary")
 async def get_project_summary(user: CurrentUser) -> ProjectSummary:
     return await controller.summary()

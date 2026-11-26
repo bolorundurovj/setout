@@ -31,6 +31,13 @@ interface Tab {
   name: string;
 }
 
+// Tab keys used in links before they were renamed. Remove in the next major version.
+const LEGACY_TABS: Record<string, string> = {
+  expense: 'expenses',
+  table: 'compare',
+  psettings: 'settings',
+};
+
 @Component({
   selector: 'app-project-detail',
   standalone: true,
@@ -85,14 +92,14 @@ export class ProjectDetailComponent {
 
   readonly tabs: Tab[] = [
     { key: 'dashboard', name: 'Dashboard' },
-    { key: 'expense', name: 'Expenses' },
-    { key: 'table', name: 'Budget vs Spent' },
+    { key: 'expenses', name: 'Expenses' },
+    { key: 'compare', name: 'Budget vs Spent' },
     { key: 'months', name: 'Expenses by Month' },
     { key: 'budget', name: 'Budget' },
     { key: 'agreements', name: 'Agreements and Advances' },
     { key: 'deliveries', name: 'Deliveries' },
     { key: 'changes', name: 'Change History' },
-    { key: 'psettings', name: 'Project Settings' },
+    { key: 'settings', name: 'Project Settings' },
   ];
 
   readonly activeTabName = computed(
@@ -101,7 +108,7 @@ export class ProjectDetailComponent {
 
   constructor() {
     effect(() => {
-      const requested = this.tab();
+      const requested = LEGACY_TABS[this.tab()] ?? this.tab();
       const known = this.tabs.some((tab) => tab.key === requested);
       this.activeTab.set(known ? requested : 'dashboard');
     });
@@ -136,7 +143,7 @@ export class ProjectDetailComponent {
   }
 
   newExpense(): void {
-    void this.router.navigate(['/projects', this.id(), 'expense'], {
+    void this.router.navigate(['/projects', this.id(), 'expenses'], {
       queryParams: { expense: 'new' },
     });
   }
@@ -157,8 +164,8 @@ export class ProjectDetailComponent {
   }
 
   openCategory(categoryId: string): void {
-    this.activeTab.set('table');
-    void this.router.navigate(['/projects', this.id(), 'table'], {
+    this.activeTab.set('compare');
+    void this.router.navigate(['/projects', this.id(), 'compare'], {
       queryParams: { category: categoryId },
     });
   }

@@ -143,7 +143,7 @@ describe('SearchComponent', () => {
     expect(navigations).toEqual([
       [['/projects', 'x1']],
       [['/lands', 'x1']],
-      [['/projects', 'p1', 'expense'], { queryParams: { expense: 'x1' } }],
+      [['/projects', 'p1', 'expenses'], { queryParams: { expense: 'x1' } }],
       [['/vendors', 'x1']],
       [['/people', 'x1']],
       [['/items', 'x1']],

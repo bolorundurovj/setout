@@ -89,7 +89,34 @@ async def create_project_attachment(
 
 
 @router.get(
-    "/expenses/{expense_id}/attachments", operation_id="listAttachments", responses=NOT_FOUND
+    "/projects/{project_id}/expenses/{expense_id}/attachments",
+    operation_id="listExpenseAttachments",
+    responses=NOT_FOUND,
+)
+async def list_expense_attachments(
+    project_id: str,
+    expense_id: str,
+    user: CurrentUser,
+    include_archived: IncludeArchived = False,
+    limit: Limit = 20,
+    offset: Offset = 0,
+) -> AttachmentPage:
+    return await controller.list(
+        AttachedTo.EXPENSE,
+        expense_id,
+        limit=limit,
+        offset=offset,
+        include_archived=include_archived,
+        project_id=project_id,
+    )
+
+
+# Superseded by listExpenseAttachments. Remove in the next major version.
+@router.get(
+    "/expenses/{expense_id}/attachments",
+    operation_id="listAttachments",
+    responses=NOT_FOUND,
+    deprecated=True,
 )
 async def list_attachments(
     expense_id: str,

@@ -338,10 +338,11 @@ async def _imported_project(client: AsyncClient) -> dict:
     return await run_import(client, sample_workbook())
 
 
-async def test_project_exports_as_xlsx(client: AsyncClient) -> None:
+@pytest.mark.parametrize("route", ["export.xlsx", "export"])
+async def test_project_exports_as_xlsx(client: AsyncClient, route: str) -> None:
     imported = await _imported_project(client)
 
-    resp = await client.get(f"/api/projects/{imported['project_id']}/export")
+    resp = await client.get(f"/api/projects/{imported['project_id']}/{route}")
 
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith(XLSX)
@@ -352,6 +353,7 @@ async def test_project_exports_as_xlsx(client: AsyncClient) -> None:
 async def test_export_of_unknown_project_returns_404(client: AsyncClient) -> None:
     await set_up_admin(client)
     assert (await client.get("/api/projects/nope/export")).status_code == 404
+    assert (await client.get("/api/projects/nope/export.xlsx")).status_code == 404
 
 
 async def test_project_exports_each_sheet_as_csv(client: AsyncClient) -> None:

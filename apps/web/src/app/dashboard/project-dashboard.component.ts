@@ -118,7 +118,7 @@ export class ProjectDashboardComponent {
         detail: 'Not included in the category bars',
         amount: this.formatAmount(this.uncategorised()),
         urgent: true,
-        tab: 'table',
+        tab: 'compare',
       });
     }
 

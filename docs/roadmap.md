@@ -97,3 +97,18 @@ flow, and a small set of roles, with the budget as the dividing line: owner sets
 This is the largest item here and it affects nearly every endpoint. It shares its
 foundation with the OpenID Connect work above: both need identity to stop being
 `User.first()`. Whichever is built first should implement that part fully for the other.
+
+## Removals in the next major version
+
+These routes and values still work but are kept only for older clients. The
+next major version removes them.
+
+| Old                                                              | Use instead                                                                               |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `GET /projects/{project_id}/export` (`exportProject`)            | `GET /projects/{project_id}/export.xlsx` (`exportProjectXlsx`)                            |
+| `GET /expenses/{expense_id}/attachments` (`listAttachments`)     | `GET /projects/{project_id}/expenses/{expense_id}/attachments` (`listExpenseAttachments`) |
+| `kind=spending-csv` on `GET /import/sample`                      | `kind=expenses-csv`                                                                       |
+| Project tab links ending in `/expense`, `/table` or `/psettings` | `/expenses`, `/compare` and `/settings`                                                   |
+
+`GET /project-summary` stays as it is. Moving it under `/projects` would read
+`summary` as a project id.

@@ -104,7 +104,7 @@ export class SearchComponent {
         void this.router.navigate(['/lands', hit.id]);
         break;
       case 'expenses':
-        void this.router.navigate(['/projects', hit.project_id, 'expense'], {
+        void this.router.navigate(['/projects', hit.project_id, 'expenses'], {
           queryParams: { expense: hit.id },
         });
         break;

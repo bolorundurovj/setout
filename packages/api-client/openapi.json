@@ -9021,6 +9021,66 @@
         "summary": "Export Project",
         "description": "Export the project as a workbook in the import format.",
         "operationId": "exportProject",
+        "deprecated": true,
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The workbook",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "The file could not be read"
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/export.xlsx": {
+      "get": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Export Project",
+        "description": "Export the project as a workbook in the import format.",
+        "operationId": "exportProjectXlsx",
         "parameters": [
           {
             "name": "project_id",
@@ -9463,14 +9523,23 @@
         }
       }
     },
-    "/api/expenses/{expense_id}/attachments": {
+    "/api/projects/{project_id}/expenses/{expense_id}/attachments": {
       "get": {
         "tags": [
           "attachments"
         ],
-        "summary": "List Attachments",
-        "operationId": "listAttachments",
+        "summary": "List Expense Attachments",
+        "operationId": "listExpenseAttachments",
         "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
           {
             "name": "expense_id",
             "in": "path",
@@ -9564,9 +9633,7 @@
             }
           }
         }
-      }
-    },
-    "/api/projects/{project_id}/expenses/{expense_id}/attachments": {
+      },
       "post": {
         "tags": [
           "attachments"
@@ -9654,6 +9721,110 @@
           },
           "400": {
             "description": "Bad Request: the body could not be parsed"
+          }
+        }
+      }
+    },
+    "/api/expenses/{expense_id}/attachments": {
+      "get": {
+        "tags": [
+          "attachments"
+        ],
+        "summary": "List Attachments",
+        "operationId": "listAttachments",
+        "deprecated": true,
+        "parameters": [
+          {
+            "name": "expense_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Expense Id"
+            }
+          },
+          {
+            "name": "include_archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include archived attachments",
+              "default": false,
+              "title": "Include Archived"
+            },
+            "description": "Include archived attachments"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Rows per page",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Rows per page"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Rows to skip",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Rows to skip"
+          },
+          {
+            "name": "setout_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Setout Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       }

@@ -106,7 +106,7 @@ describe('AttachmentService', () => {
     expect(invocations.map((row) => row['call'])).toEqual([
       'listProjectAttachments',
       'createProjectAttachment',
-      'listAttachments',
+      'listExpenseAttachments',
       'createAttachment',
       'listAgreementAttachments',
       'createAgreementAttachment',
@@ -142,7 +142,7 @@ describe('AttachmentService', () => {
 
   it('takes an archived attachment out of the list', async () => {
     const service = configure((name) =>
-      name === 'listAttachments'
+      name === 'listExpenseAttachments'
         ? { items: [attachment('a'), attachment('b')], total: 2 }
         : undefined,
     );

@@ -127,7 +127,7 @@ describe('ProjectSettingsComponent', () => {
   }
 
   it('builds the export URL for this project', async () => {
-    expect((await ready()).exportUrl()).toBe('/api/projects/p1/export');
+    expect((await ready()).exportUrl()).toBe('/api/projects/p1/export.xlsx');
   });
 
   it('builds the CSV export URL for each sheet', async () => {

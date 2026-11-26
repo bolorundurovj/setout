@@ -53,8 +53,15 @@ class AttachmentController:
         limit: int,
         offset: int,
         include_archived: bool,
+        project_id: str | None = None,
     ) -> AttachmentPage:
-        await self._parent_or_404(attached_to, parent_id, include_archived=include_archived)
+        parent = await self._parent_or_404(
+            attached_to, parent_id, include_archived=include_archived
+        )
+        if project_id is not None and getattr(parent, "project_id", None) != project_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=PARENTS[attached_to][1]
+            )
         query = Attachment.filter(**self._parent_filter(attached_to, parent_id))
         if not include_archived:
             query = query.filter(archived_at__isnull=True)

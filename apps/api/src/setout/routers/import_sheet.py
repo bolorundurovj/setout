@@ -95,17 +95,28 @@ async def run_import(
         ) from exc
 
 
+WORKBOOK_RESPONSES: dict[int | str, dict[str, Any]] = {
+    **IMPORT_ERRORS,
+    status.HTTP_200_OK: {
+        "description": "The workbook",
+        "content": {XLSX_TYPE: {"schema": {"type": "string", "format": "binary"}}},
+    },
+}
+
+
+@router.get(
+    "/projects/{project_id}/export.xlsx",
+    operation_id="exportProjectXlsx",
+    responses=WORKBOOK_RESPONSES,
+    response_class=Response,
+)
+# Superseded by exportProjectXlsx. Remove in the next major version.
 @router.get(
     "/projects/{project_id}/export",
     operation_id="exportProject",
-    responses={
-        **IMPORT_ERRORS,
-        status.HTTP_200_OK: {
-            "description": "The workbook",
-            "content": {XLSX_TYPE: {"schema": {"type": "string", "format": "binary"}}},
-        },
-    },
+    responses=WORKBOOK_RESPONSES,
     response_class=Response,
+    deprecated=True,
 )
 async def export_project(project_id: str, user: CurrentUser) -> Response:
     """Export the project as a workbook in the import format."""

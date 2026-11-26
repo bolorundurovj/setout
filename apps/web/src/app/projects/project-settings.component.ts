@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { Api, exportProject, exportProjectCsv, exportProjectReport } from '@setout/api-client';
+import { Api, exportProjectCsv, exportProjectReport, exportProjectXlsx } from '@setout/api-client';
 import type { ProjectRead, ProjectStatus, CategoryRead } from '@setout/api-client';
 import { AttachmentParent } from '../attachments/attachment.service';
 import { AttachmentsComponent } from '../attachments/attachments.component';
@@ -202,7 +202,7 @@ export class ProjectSettingsComponent {
   }
 
   exportUrl(): string {
-    const path = exportProject.PATH.replace('{project_id}', this.project().id);
+    const path = exportProjectXlsx.PATH.replace('{project_id}', this.project().id);
     return `${this.api.rootUrl}${path}`;
   }
 

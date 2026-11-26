@@ -217,13 +217,13 @@ export class DashboardComponent {
   }
 
   newExpense(row: HomeProject): void {
-    void this.router.navigate(['/projects', row.id, 'expense'], {
+    void this.router.navigate(['/projects', row.id, 'expenses'], {
       queryParams: { expense: 'new' },
     });
   }
 
   openExpense(row: HomeExpenseSummary): void {
-    void this.router.navigate(['/projects', row.project_id, 'expense'], {
+    void this.router.navigate(['/projects', row.project_id, 'expenses'], {
       queryParams: { expense: row.id },
     });
   }
@@ -236,7 +236,7 @@ export class DashboardComponent {
     let tab: string;
     switch (alert.kind) {
       case 'uncategorised':
-        tab = 'table';
+        tab = 'compare';
         break;
       case 'deliveries':
         tab = 'deliveries';

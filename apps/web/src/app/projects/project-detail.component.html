@@ -37,11 +37,11 @@
     [id]="'project-' + activeTab() + '-panel'"
     [attr.aria-labelledby]="'project-' + activeTab() + '-tab'"
   >
-    @if (activeTab() === 'table') {
+    @if (activeTab() === 'compare') {
       <app-budget-compare [project]="p" [openCategory]="category()" />
     } @else if (activeTab() === 'budget') {
       <app-budget [project]="p" />
-    } @else if (activeTab() === 'expense') {
+    } @else if (activeTab() === 'expenses') {
       <app-expenses [project]="p" [filters]="expenseFilters()" [openExpenseId]="expense()" />
     } @else if (activeTab() === 'agreements') {
       <app-agreements [project]="p" />
@@ -53,7 +53,7 @@
       </div>
     } @else if (activeTab() === 'months') {
       <app-months [project]="p" />
-    } @else if (activeTab() === 'psettings') {
+    } @else if (activeTab() === 'settings') {
       <app-project-settings [project]="p" (changed)="load()" />
     } @else {
       <app-project-dashboard

@@ -112,7 +112,7 @@ describe('ProjectDetailComponent', () => {
   }
 
   it('reads the expense filters from the URL', () => {
-    const component = render('expense');
+    const component = render('expenses');
     fixture.componentRef.setInput('q', 'cement');
     fixture.componentRef.setInput('vendor', 'v1');
     fixture.componentRef.setInput('from', '2026-03-01');
@@ -131,7 +131,7 @@ describe('ProjectDetailComponent', () => {
   });
 
   it('sorts by most recent when the URL has no sort', () => {
-    const component = render('expense');
+    const component = render('expenses');
     expect(component.expenseFilters().sort).toBe('recent');
   });
 
@@ -140,7 +140,13 @@ describe('ProjectDetailComponent', () => {
   });
 
   it('opens the tab named in the URL', () => {
-    expect(render('expense').activeTab()).toBe('expense');
+    expect(render('expenses').activeTab()).toBe('expenses');
+  });
+
+  it('opens the renamed tab for links that use an old tab key', () => {
+    expect(render('expense').activeTab()).toBe('expenses');
+    expect(render('table').activeTab()).toBe('compare');
+    expect(render('psettings').activeTab()).toBe('settings');
   });
 
   it('opens the deliveries tab', () => {
@@ -153,11 +159,11 @@ describe('ProjectDetailComponent', () => {
 
   it('includes the expenses tab', () => {
     const component = render();
-    expect(component.tabs.some((tab) => tab.key === 'expense')).toBe(true);
+    expect(component.tabs.some((tab) => tab.key === 'expenses')).toBe(true);
   });
 
   it('names the open tab', () => {
-    expect(render('expense').activeTabName()).toBe('Expenses');
+    expect(render('expenses').activeTabName()).toBe('Expenses');
   });
 
   async function body(tab?: string): Promise<HTMLElement> {
@@ -197,12 +203,12 @@ describe('ProjectDetailComponent', () => {
 
     tabs()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
     fixture.detectChanges();
-    expect(fixture.componentInstance.activeTab()).toBe('expense');
+    expect(fixture.componentInstance.activeTab()).toBe('expenses');
     expect(document.activeElement).toBe(tabs()[1]);
 
     tabs()[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'End' }));
     fixture.detectChanges();
-    expect(fixture.componentInstance.activeTab()).toBe('psettings');
+    expect(fixture.componentInstance.activeTab()).toBe('settings');
   });
 
   it('writes the selected tab to the URL', () => {
@@ -214,14 +220,14 @@ describe('ProjectDetailComponent', () => {
       return true;
     };
 
-    component.selectTab('table');
+    component.selectTab('compare');
 
-    expect(component.activeTab()).toBe('table');
-    expect(navigations[0]).toEqual(['/projects', 'p1', 'table']);
+    expect(component.activeTab()).toBe('compare');
+    expect(navigations[0]).toEqual(['/projects', 'p1', 'compare']);
   });
 
   it('navigates to the dashboard tab path explicitly', () => {
-    const component = render('table');
+    const component = render('compare');
     const router = TestBed.inject(Router);
     const navigations: unknown[][] = [];
     router.navigate = async (commands: unknown[]) => {
@@ -235,7 +241,7 @@ describe('ProjectDetailComponent', () => {
   });
 
   it('shows the project and open tab in the page title', async () => {
-    const component = render('table');
+    const component = render('compare');
     await component.load();
     fixture.detectChanges();
 
@@ -269,8 +275,8 @@ describe('ProjectDetailComponent', () => {
 
     component.openCategory('s1');
 
-    expect(component.activeTab()).toBe('table');
-    expect(navigations[0][0]).toEqual(['/projects', 'p1', 'table']);
+    expect(component.activeTab()).toBe('compare');
+    expect(navigations[0][0]).toEqual(['/projects', 'p1', 'compare']);
     expect(navigations[0][1]).toEqual({ queryParams: { category: 's1' } });
   });
 });

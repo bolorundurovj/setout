@@ -12,7 +12,7 @@ import {
   deleteAttachment,
   downloadAttachment,
   listAgreementAttachments,
-  listAttachments,
+  listExpenseAttachments,
   listDeliveryAttachments,
   listProjectAttachments,
   restoreAttachment,
@@ -152,7 +152,8 @@ export class AttachmentService {
           include_archived,
         });
       case 'expense':
-        return this.api.invoke(listAttachments, {
+        return this.api.invoke(listExpenseAttachments, {
+          project_id: parent.projectId,
           expense_id: parent.id,
           limit,
           offset,

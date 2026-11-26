@@ -288,7 +288,7 @@ describe('DashboardComponent', () => {
 
     expect(navigations.map((call) => call[0])).toEqual([
       ['/projects', 'p1'],
-      ['/projects', 'p1', 'expense'],
+      ['/projects', 'p1', 'expenses'],
       ['/projects'],
     ]);
   });
@@ -329,7 +329,7 @@ describe('DashboardComponent', () => {
     });
 
     expect(navigations.map((call) => call[0])).toEqual([
-      ['/projects', 'p2', 'table'],
+      ['/projects', 'p2', 'compare'],
       ['/projects', 'p2', 'deliveries'],
       ['/projects', 'p2', 'dashboard'],
     ]);
@@ -350,7 +350,7 @@ describe('DashboardComponent', () => {
     });
 
     expect(navigations[0]).toEqual([
-      ['/projects', 'p2', 'expense'],
+      ['/projects', 'p2', 'expenses'],
       { queryParams: { expense: 'e42' } },
     ]);
   });
