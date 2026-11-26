@@ -77,6 +77,12 @@ ITEMS = [
     ("Cement", "bag", [3_800, 4_200, 4_600, 9_500]),
 ]
 
+# Expenses that bought an item, so each item has a price history.
+ITEM_PURCHASES = {
+    "480 six inch blocks at 260 each": "Six inch blocks",
+    "12 bags of cement plus delivery": "Cement",
+}
+
 # (months back, day of month), so the sample always covers the last three months.
 MonthOffset = tuple[int, int]
 
@@ -303,10 +309,12 @@ async def _load() -> None:
         for name, trade, contact, phone, notes in VENDORS
     }
 
-    for name, unit, prices in ITEMS:
-        await Item.create(
+    items = {
+        name: await Item.create(
             name=name, unit=unit, notes=f"Price range {prices[0]:,} to {prices[-1]:,}"
         )
+        for name, unit, prices in ITEMS
+    }
 
     agreement = await Agreement.create(
         project=project,
@@ -332,6 +340,7 @@ async def _load() -> None:
             project=project,
             category=categories[category_name] if category_name else None,
             vendor=vendors[vendor_name] if vendor_name else None,
+            item=items[ITEM_PURCHASES[description]] if description in ITEM_PURCHASES else None,
             spent_on=date_for(when),
             description=description,
             amount=naira * NGN,

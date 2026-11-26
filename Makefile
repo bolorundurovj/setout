@@ -230,5 +230,6 @@ clean: ## Remove build artefacts and caches.
 	rm -rf $(API_DIR)/dist $(API_DIR)/.venv $(API_DIR)/.pytest_cache \
 		$(API_DIR)/.mypy_cache $(API_DIR)/.ruff_cache $(API_DIR)/htmlcov \
 		$(API_DIR)/.coverage $(WEB_DIR)/dist $(WEB_DIR)/.angular \
-		$(WEB_DIR)/coverage $(WEB_DIR)/node_modules $(SDK_DIR)/src
+		$(WEB_DIR)/coverage $(WEB_DIR)/node_modules $(SDK_DIR)/src \
+		$(WEB_DIR)/playwright-report $(WEB_DIR)/test-results
 	find . -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
