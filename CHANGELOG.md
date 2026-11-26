@@ -1,5 +1,50 @@
 # Changelog
 
+## [2.6.0](https://github.com/bolorundurovj/setout/compare/v2.5.3...v2.6.0) (2026-11-26)
+
+
+### Features
+
+* **budget:** edit individual item amounts in expanded categories (SET-85) ([2e625da](https://github.com/bolorundurovj/setout/commit/2e625da20b071776b72093b923104a78ef95e296))
+* multi-file expense attachments, Budget tab subcategories, record cross-links, and project list filters (SET-88) ([8b5673c](https://github.com/bolorundurovj/setout/commit/8b5673c29cfa3d6fcab398c57b100b682bfd95a0))
+* **web:** add item and valuation edit UIs and show person phone (SET-86) ([1ca5f56](https://github.com/bolorundurovj/setout/commit/1ca5f56df66a5aa16692abd2de22d12bd0b6648c))
+* **web:** separate loading, error and empty states (SET-73) ([9399b3d](https://github.com/bolorundurovj/setout/commit/9399b3d66b15fd4b54cc7fa397e5aaa9beb913d9))
+* **web:** support archived attachments, documents, valuations and detail inspection (SET-87) ([fc05db2](https://github.com/bolorundurovj/setout/commit/fc05db23fd4119e7c6b61fc62afb0ff8af2cfb46))
+
+
+### Bug Fixes
+
+* **a11y:** announce and reveal the highlighted combobox option (SET-79) ([c854afc](https://github.com/bolorundurovj/setout/commit/c854afc0bb5ac06f89f83dafee63d741f0a9489a))
+* **a11y:** label unlabelled inputs and scan them with axe (SET-82) ([b690ab9](https://github.com/bolorundurovj/setout/commit/b690ab90230766f10125ee934a133281b59d3c29))
+* **a11y:** make the auth screens labelled forms (SET-80) ([deec7d9](https://github.com/bolorundurovj/setout/commit/deec7d908f870dd875b2dc8f6e142321d11539d6))
+* **a11y:** trap drawer focus and add keyboard tabs and map placement (SET-81) ([a192ac8](https://github.com/bolorundurovj/setout/commit/a192ac8d609b6d6c48d33790ae920425ead60706))
+* **api:** return archived records with archived_at on every GET /{id} endpoint (SET-89) ([2c95d09](https://github.com/bolorundurovj/setout/commit/2c95d098b0a8c095756650ff2fcfc004ab3ea27a))
+* **copy:** readable sizes and counts, neutral defaults, consistent titles, complete change labels, and account wording (SET-90) ([f2dc130](https://github.com/bolorundurovj/setout/commit/f2dc130602a099e3d115a2c562304efe7bcd21ba))
+* **docker:** drop base image pip and keep the uv cache out of the image ([bbafa47](https://github.com/bolorundurovj/setout/commit/bbafa4702d72ce3ced33344f34ffe03beeef31e9))
+* **expenses:** reset the entry form and preserve payment context (SET-75) ([07f58be](https://github.com/bolorundurovj/setout/commit/07f58be87e2c2bd8a048f5291512fd45b0ccf304))
+* **forms:** preserve input and reconcile restored and geocoded data (SET-76) ([6770c15](https://github.com/bolorundurovj/setout/commit/6770c15e3bdae8c4b66cab6567f8be71d9fd5236))
+* **responsive:** align row grids at phone, tablet and laptop widths (SET-83) ([38f094f](https://github.com/bolorundurovj/setout/commit/38f094faf0a7855aaa64670b2100993ec949ad6d))
+* **responsive:** use 100dvh drawers, scrollable tabs, wrapped actions, mobile pager gaps, and overdue border (SET-84) ([eb3fcdf](https://github.com/bolorundurovj/setout/commit/eb3fcdf044b0ca6ae34df665517744cd292385eb))
+* **web:** confirm archives and uploads, keep picker escape local, and fix map and export UX (SET-77) ([5608a99](https://github.com/bolorundurovj/setout/commit/5608a99e0772b6216bb21a9dcc5481dd47aaaad2))
+* **web:** read chart tints from theme variables and follow OS theme changes (SET-78) ([efea873](https://github.com/bolorundurovj/setout/commit/efea8730d1566bc9a980b9ebe9d74903e16653bc))
+
+
+### Performance
+
+* **web:** eliminate redundant refetching in agreements, valuations, expenses, and settings (SET-70) ([cc7e4b5](https://github.com/bolorundurovj/setout/commit/cc7e4b5f7bd8c715488470ea98a8600143912d99))
+* **web:** memoise lookups and reversed series, debounce survey reprojection, and diff Leaflet layers (SET-71) ([8f620a8](https://github.com/bolorundurovj/setout/commit/8f620a80961d04afb222250755104c62d99417b7))
+
+
+### Refactoring
+
+* add export.xlsx and project-scoped attachment list aliases and readable tab keys (SET-93) ([1235953](https://github.com/bolorundurovj/setout/commit/12359533cbc5c335ac830df692aa64cf11969a4a))
+* remove dead modules, deprecated aliases, and shadowing changes locals (SET-92) ([4d0650b](https://github.com/bolorundurovj/setout/commit/4d0650b8db5d5558a2cfa3d7867a62e352aad22d))
+
+
+### Documentation
+
+* fix quick start, permanent deletion, SDK, compose env vars, MinIO migration, and doc indexes (SET-94) ([0a11617](https://github.com/bolorundurovj/setout/commit/0a11617e44768667b13e6e7170e528879f49e233))
+
 ## [2.5.3](https://github.com/bolorundurovj/setout/compare/v2.5.2...v2.5.3) (2026-11-25)
 
 
