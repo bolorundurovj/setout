@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Setout API",
-    "version": "2.5.3"
+    "version": "2.6.0"
   },
   "paths": {
     "/healthz": {
