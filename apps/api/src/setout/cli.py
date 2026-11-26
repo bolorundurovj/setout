@@ -119,7 +119,7 @@ async def consume_recovery_file(custom_path: str | Path | None = None) -> bool:
             return False
 
         await apply_passphrase_reset(user, new_passphrase)
-        logger.warning("Admin passphrase reset for '%s' via %s", user.name, file_path)
+        logger.warning("Account passphrase reset for '%s' via %s", user.name, file_path)
         try:
             file_path.unlink()
             logger.info("Deleted recovery file %s", file_path)
@@ -191,7 +191,7 @@ async def reset_passphrase(
     try:
         user = await User.get_or_none(name=account_name) if account_name else await User.first()
         if not user:
-            target = f"account '{account_name}'" if account_name else "admin account"
+            target = f"account '{account_name}'" if account_name else "account"
             print(f"Error: No {target} found in the database.", file=sys.stderr)
             return 1
 
@@ -219,14 +219,14 @@ async def reset_passphrase(
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="setout",
-        description="Setout administrative CLI.",
+        description="Setout command line tools.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     reset_parser = subparsers.add_parser(
         "reset-passphrase",
-        help="Reset the admin passphrase.",
-        description="Reset the passphrase for an admin account.",
+        help="Reset the account passphrase.",
+        description="Reset the passphrase for an account.",
     )
     reset_parser.add_argument(
         "-f",
@@ -236,6 +236,8 @@ def build_parser() -> argparse.ArgumentParser:
         " If omitted, searches for 'reset-passphrase.txt'.",
     )
     reset_parser.add_argument(
+        "-a",
+        "--account",
         "-n",
         "--name",
         "-u",

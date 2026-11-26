@@ -10,7 +10,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import type { ProjectRead, ProjectStatus } from '@setout/api-client';
-import { formatMoney } from '../budget/money';
+import { formatMoney, DEFAULT_CURRENCY } from '../budget/money';
 import { ButtonComponent } from '../ui/button.component';
 import { budgetBar } from '../ui/budget-bar';
 import { ChipGroupComponent, type Chip } from '../ui/chip-group.component';
@@ -23,6 +23,8 @@ import { LandService } from '../lands/land.service';
 import { locationLabel } from '../lands/land-labels';
 import { ProjectService } from './project.service';
 import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
+import { CountPipe } from '../ui/count.pipe';
+import { AuthService } from '../auth/auth.service';
 
 const STATUS_LINES: Record<ProjectStatus, string> = {
   active: 'Active.',
@@ -36,6 +38,7 @@ const STATUS_LINES: Record<ProjectStatus, string> = {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    CountPipe,
     DeleteConfirmDirective,
     FormsModule,
     ButtonComponent,
@@ -55,8 +58,6 @@ export class ProjectsComponent {
   private readonly toast = inject(ToastService);
 
   readonly notSet = '—';
-
-  readonly subtitle = computed(() => 'No project open');
 
   readonly summaryLine = computed(() => {
     const summary = this.projects.summary();
@@ -88,7 +89,8 @@ export class ProjectsComponent {
   readonly showForm = signal(false);
   readonly includeArchived = signal(false);
   readonly name = signal('');
-  readonly currencyCode = signal('NGN');
+  private readonly auth = inject(AuthService);
+  readonly currencyCode = signal(this.auth.user()?.base_currency ?? DEFAULT_CURRENCY);
   readonly notes = signal('');
   readonly landId = signal('');
 

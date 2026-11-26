@@ -1,8 +1,8 @@
-<app-topbar title="Projects" [subtitle]="subtitle()">
+<app-topbar title="Projects">
   <app-toggle [checked]="includeArchived()" (toggled)="setIncludeArchived($event)">
     {{ archivedLabel() }}
   </app-toggle>
-  <app-button variant="secondary" (pressed)="importWorkbook()">Import Workbook</app-button>
+  <app-button variant="secondary" (pressed)="importWorkbook()">Import Spreadsheet</app-button>
   @if (!showForm()) {
     <app-button (pressed)="openForm()">New Project</app-button>
   }
@@ -182,7 +182,7 @@
       @if (projects.hasMore()) {
         <span class="t-small">Loading more…</span>
       } @else {
-        <span class="t-small">All {{ projects.total() }} projects shown.</span>
+        <span class="t-small">All {{ projects.total() | count: 'project' }} shown.</span>
       }
     </div>
   }

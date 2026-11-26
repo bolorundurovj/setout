@@ -17,7 +17,7 @@ import type {
   ProjectRead,
   SampleRow,
 } from '@setout/api-client';
-import { formatMoney } from '../budget/money';
+import { formatMoney, DEFAULT_CURRENCY } from '../budget/money';
 import { formatDay } from '../shared/dates';
 import { ProjectService } from '../projects/project.service';
 import { ToastService } from '../toast.service';
@@ -26,6 +26,9 @@ import { Chip, ChipGroupComponent } from '../ui/chip-group.component';
 import { Option, OptionPickerComponent } from '../ui/option-picker.component';
 import { TopbarComponent } from '../ui/topbar.component';
 import { ImportService, type ImportTarget } from './import.service';
+import { fileSize } from '../ui/file-size';
+import { CountPipe } from '../ui/count.pipe';
+import { AuthService } from '../auth/auth.service';
 
 interface Step {
   key: string;
@@ -36,7 +39,7 @@ interface Step {
   selector: 'app-import',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChipGroupComponent, OptionPickerComponent, TopbarComponent],
+  imports: [CountPipe, ButtonComponent, ChipGroupComponent, OptionPickerComponent, TopbarComponent],
   templateUrl: './import.component.html',
   styleUrl: './import.component.scss',
 })
@@ -60,7 +63,8 @@ export class ImportComponent {
   readonly file = signal<File | null>(null);
   readonly projectId = signal('');
   readonly name = signal('');
-  readonly currencyCode = signal('NGN');
+  private readonly auth = inject(AuthService);
+  readonly currencyCode = signal(this.auth.user()?.base_currency ?? DEFAULT_CURRENCY);
   readonly report = signal<ImportReport | null>(null);
   readonly result = signal<ImportResult | null>(null);
   private readonly resolvedProject = signal<ProjectRead | null>(null);
@@ -197,11 +201,7 @@ export class ImportComponent {
     if (!file) {
       return '';
     }
-    const size =
-      file.size < 1024 * 1024
-        ? `${Math.round(file.size / 1024)} KiB`
-        : `${(file.size / (1024 * 1024)).toFixed(1)} MiB`;
-    return `${size} · read by your Setout server only`;
+    return `${fileSize(file.size)} · read by your Setout server only`;
   }
 
   money(minor: number): string {

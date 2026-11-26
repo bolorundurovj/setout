@@ -119,7 +119,9 @@
               {{ changeLabel(item.prices[0]) }}
             </span>
           } @else {
-            <span class="right t-small muted">{{ item.prices.length }} currencies</span>
+            <span class="right t-small muted">{{
+              item.prices.length | count: 'currency' : 'currencies'
+            }}</span>
             <button type="button" class="link-action right t-small" (click)="openItem(item.id)">
               View details
             </button>

@@ -29,7 +29,7 @@ test('a workbook exported and imported as a new project has the same totals', as
 
   const name = uniqueName('Round trip');
   await page.goto('/import');
-  await page.getByPlaceholder('Jacaranda Close, Ewuru').fill(name);
+  await page.getByLabel('New Project Name').fill(name);
   await page.locator('input[type="file"]').setInputFiles({
     name: 'export.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

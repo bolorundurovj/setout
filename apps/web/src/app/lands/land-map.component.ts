@@ -33,6 +33,10 @@ const PIN = `<svg viewBox="0 0 24 32" width="24" height="32" aria-hidden="true">
   <circle cx="12" cy="12" r="4.5" fill="white"/>
 </svg>`;
 
+// A world view until a pin or boundary gives the map somewhere to fit.
+const WORLD_CENTRE: L.LatLngTuple = [20, 0];
+const WORLD_ZOOM = 2;
+
 let nextMapId = 0;
 
 @Component({
@@ -111,7 +115,7 @@ export class LandMapComponent {
   private tiles: L.TileLayer = L.tileLayer('');
 
   private build(element: HTMLElement): L.Map {
-    const map = L.map(element, { attributionControl: true }).setView([9, 8], 5);
+    const map = L.map(element, { attributionControl: true }).setView(WORLD_CENTRE, WORLD_ZOOM);
     if (this.editable()) {
       map.on('click', (event: L.LeafletMouseEvent) => this.onClick(event.latlng));
     }

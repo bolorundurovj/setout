@@ -26,6 +26,7 @@ import { ToggleComponent } from '../ui/toggle.component';
 import { formatAreaIn, pointInRing, ringOf } from './land-geo';
 import { DOCUMENT_KINDS, kindName, statedAreaLabel, unitName, valuationLabel } from './land-labels';
 import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
+import { fileSize } from '../ui/file-size';
 
 @Component({
   selector: 'app-land-detail',
@@ -275,13 +276,7 @@ export class LandDetailComponent {
   }
 
   formatFileSize(size: number): string {
-    if (size < 1024) {
-      return `${size} B`;
-    }
-    if (size < 1024 * 1024) {
-      return `${Math.round(size / 1024)} KiB`;
-    }
-    return `${(size / (1024 * 1024)).toFixed(1)} MiB`;
+    return fileSize(size);
   }
 
   missingDocumentsLabel(): string {

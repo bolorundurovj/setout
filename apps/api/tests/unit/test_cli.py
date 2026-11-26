@@ -29,6 +29,9 @@ def test_build_parser_options() -> None:
     assert args.generate is False
     assert args.use_stdin is False
 
+    args = parser.parse_args(["reset-passphrase", "--account", "Bola"])
+    assert args.account_name == "Bola"
+
     assert parser.parse_args(["reset-passphrase", "--name", "Bola"]).account_name == "Bola"
 
     args_gen = parser.parse_args(["reset-passphrase", "-g", "--stdin"])

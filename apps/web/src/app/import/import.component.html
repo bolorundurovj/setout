@@ -52,7 +52,6 @@
               class="input-field"
               type="text"
               autocomplete="off"
-              placeholder="Jacaranda Close, Ewuru"
               [value]="name()"
               (input)="name.set(value($event))"
             />
@@ -151,14 +150,14 @@
           <span class="t-micro">Budget to add</span>
           <span class="count-value t-mono">{{ money(report.budgeted_amount) }}</span>
           <span class="t-small muted">
-            {{ report.budgeted_lines }} budget items across
-            {{ report.categories.length }} categories
+            {{ report.budgeted_lines | count: 'budget item' }} across
+            {{ report.categories.length | count: 'category' : 'categories' }}
           </span>
         </div>
         <div class="count">
           <span class="t-micro">Expenses</span>
           <span class="count-value t-mono">{{ money(report.spent_amount) }}</span>
-          <span class="t-small muted">{{ report.expense_rows }} rows</span>
+          <span class="t-small muted">{{ report.expense_rows | count: 'row' }}</span>
         </div>
         <div class="count">
           <span class="t-micro">Vendors</span>
@@ -286,29 +285,38 @@
           <span class="t-micro">Budgeted</span>
           <span class="count-value t-mono">{{ money(result.budgeted_amount) }}</span>
           <span class="t-small muted">
-            {{ result.budget_item_count }} budget items across
-            {{ result.category_count }} categories
+            {{ result.budget_item_count | count: 'budget item' }} across
+            {{ result.category_count | count: 'category' : 'categories' }}
           </span>
         </div>
         <div class="count">
           <span class="t-micro">Expenses</span>
           <span class="count-value t-mono">{{ money(result.spent_amount) }}</span>
-          <span class="t-small muted">{{ result.expense_count }} expenses</span>
+          <span class="t-small muted">{{ result.expense_count | count: 'expense' }}</span>
         </div>
         <div class="count">
           <span class="t-micro">Vendors and People</span>
           <span class="count-value t-mono">{{ result.vendor_count }}</span>
-          <span class="t-small muted">vendors and {{ result.person_count }} people</span>
+          <span class="t-small muted"
+            >{{ result.vendor_count === 1 ? 'vendor' : 'vendors' }} and
+            {{ result.person_count | count: 'person' : 'people' }}</span
+          >
         </div>
       </div>
 
       @if (result.skipped_file_duplicates) {
-        <p>{{ result.skipped_file_duplicates }} repeated rows in the file were skipped.</p>
+        <p>
+          {{ result.skipped_file_duplicates | count: 'repeated row' }} in the file
+          {{ result.skipped_file_duplicates === 1 ? 'was' : 'were' }} skipped.
+        </p>
       }
       @if (result.skipped_duplicates > (result.skipped_file_duplicates ?? 0)) {
         <p class="t-small note">
-          {{ result.skipped_duplicates - (result.skipped_file_duplicates ?? 0) }} rows were already
-          in the project and were skipped.
+          {{ result.skipped_duplicates - (result.skipped_file_duplicates ?? 0) | count: 'row' }}
+          {{
+            result.skipped_duplicates - (result.skipped_file_duplicates ?? 0) === 1 ? 'was' : 'were'
+          }}
+          already in the project and skipped.
         </p>
       }
 

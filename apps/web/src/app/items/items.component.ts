@@ -11,12 +11,14 @@ import { ToggleComponent } from '../ui/toggle.component';
 import { TopbarComponent } from '../ui/topbar.component';
 import { ItemService } from './item.service';
 import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
+import { CountPipe } from '../ui/count.pipe';
 
 @Component({
   selector: 'app-items',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    CountPipe,
     ArchiveConfirmComponent,
     DeleteConfirmDirective,
     ButtonComponent,

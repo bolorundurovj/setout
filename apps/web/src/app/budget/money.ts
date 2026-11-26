@@ -1,3 +1,6 @@
+/** Used when the account has no base currency set. */
+export const DEFAULT_CURRENCY = 'USD';
+
 /** Amounts are stored as integers in minor units; convert to major units only through this module. */
 export function toMajor(minor: number, exponent: number): number {
   return minor / 10 ** exponent;

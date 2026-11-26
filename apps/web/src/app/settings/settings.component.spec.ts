@@ -272,10 +272,10 @@ describe('SettingsComponent', () => {
     expect(toasts[0].type).toBe('error');
   });
 
-  it('formats the data size in binary units', async () => {
-    expect((await ready(install({ data_bytes: 512 }))).dataSize()).toBe('512 B');
-    expect((await ready(install({ data_bytes: 2048 }))).dataSize()).toBe('2.0 KiB');
-    expect((await ready(install({ data_bytes: 2_306_867 }))).dataSize()).toBe('2.2 MiB');
+  it('formats the data size in readable units', async () => {
+    expect((await ready(install({ data_bytes: 512 }))).dataSize()).toBe('512 bytes');
+    expect((await ready(install({ data_bytes: 2048 }))).dataSize()).toBe('2 KB');
+    expect((await ready(install({ data_bytes: 2_306_867 }))).dataSize()).toBe('2.3 MB');
     expect((await ready(null)).dataSize()).toBe('—');
   });
 
@@ -347,7 +347,8 @@ describe('SettingsComponent', () => {
       backup: backup({ app_version: '0.2.0' }),
     });
     expect(component.versionChanged()).toBe(true);
-    expect(component.versionWarning()).toContain('may fail if the schema has changed');
+    expect(component.versionWarning()).toContain('may fail if the database has changed');
+    expect(component.versionWarning()).not.toContain('_');
 
     component.selectedBackup.set({
       name: 'backup.json',
@@ -355,7 +356,7 @@ describe('SettingsComponent', () => {
       backup: backup({ migration: '0001_initial' }),
     });
     expect(component.versionChanged()).toBe(true);
-    expect(component.versionWarning()).toContain('0001_initial');
+    expect(component.versionWarning()).toContain('database version 0001');
   });
 
   it('does not restore a backup from another version until the change is accepted', async () => {
@@ -417,10 +418,10 @@ describe('SettingsComponent', () => {
     component.selectedBackup.set({ name: 'backup.json', bytes: 2048, backup: backup() });
 
     expect(component.selectedBackupSummary()).toContain('backup.json');
-    expect(component.selectedBackupSummary()).toContain('2.0 KiB');
+    expect(component.selectedBackupSummary()).toContain('2 KB');
     expect(component.selectedBackupRowCount()).toBe('0 rows across 2 tables');
     expect(component.selectedBackupOrigin()).toBe(
-      'Created by Setout 0.4.0 on schema 0003_agreements_and_advances',
+      'Created by Setout 0.4.0 with database version 0003',
     );
   });
 

@@ -24,7 +24,7 @@ make downgrade    roll back one migration
 make seed         load the sample data
 make backup       write the database and uploaded files into one dated server backup file
 make restore      restore a server backup after confirmation (file=<backup>)
-make reset-passphrase  reset the admin passphrase (prompts or reads reset-passphrase.txt)
+make reset-passphrase  reset the account passphrase (prompts or reads reset-passphrase.txt)
 make check        lint, typecheck, all tests, coverage floor
 make check-parallel  the same gate, with the backend suite spread across the cores
 make build        production build of both apps

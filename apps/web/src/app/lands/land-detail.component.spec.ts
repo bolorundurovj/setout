@@ -191,11 +191,11 @@ describe('LandDetailComponent', () => {
     expect(component.href(landDocument())).toBe('http://api/api/land-documents/d1/file');
   });
 
-  it('formats file sizes in B, KiB and MiB', async () => {
+  it('formats file sizes in readable units', async () => {
     const { component } = await render();
-    expect(component.formatFileSize(512)).toBe('512 B');
-    expect(component.formatFileSize(2048)).toBe('2 KiB');
-    expect(component.formatFileSize(3 * 1024 * 1024)).toBe('3.0 MiB');
+    expect(component.formatFileSize(512)).toBe('512 bytes');
+    expect(component.formatFileSize(2048)).toBe('2 KB');
+    expect(component.formatFileSize(3_000_000)).toBe('3 MB');
   });
 
   it('lists the projects that reference the land record', async () => {

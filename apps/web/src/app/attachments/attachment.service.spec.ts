@@ -169,11 +169,11 @@ describe('AttachmentService', () => {
     expect(service.fileUrl('a1')).toBe('/api/attachments/a1/file');
   });
 
-  it('formats byte sizes as B, KiB and MiB', () => {
+  it('formats byte sizes in readable units', () => {
     const service = configure(() => undefined);
-    expect(service.formatSize(900)).toBe('900 B');
-    expect(service.formatSize(2048)).toBe('2 KiB');
-    expect(service.formatSize(1_258_291)).toBe('1.2 MiB');
+    expect(service.formatSize(900)).toBe('900 bytes');
+    expect(service.formatSize(2048)).toBe('2 KB');
+    expect(service.formatSize(1_258_291)).toBe('1.3 MB');
   });
 
   it('tracks the load status per parent', async () => {

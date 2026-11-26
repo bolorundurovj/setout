@@ -152,7 +152,7 @@ describe('LandMapComponent', () => {
     const event = pressEnter(fixture);
 
     expect(event.defaultPrevented).toBe(true);
-    expect(sent).toEqual({ lat: 9, lon: 8 });
+    expect(sent).toEqual({ lat: 20, lon: 0 });
   });
 
   it('adds a boundary point at the map centre when Enter is pressed on the map', () => {
@@ -162,8 +162,8 @@ describe('LandMapComponent', () => {
     component.addPointAtCentre();
 
     expect(component.points()).toEqual([
-      [8, 9],
-      [8, 9],
+      [0, 20],
+      [0, 20],
     ]);
   });
 

@@ -11,7 +11,7 @@ Setout ships as one image: the API serves the built frontend, applies migrations
 | Change `SETOUT_S3_SECRET_ACCESS_KEY`, `RUSTFS_SECRET_KEY`, `SETOUT_DB_PASSWORD`, and `POSTGRES_PASSWORD` | The compose defaults exist for local evaluation only. They are not suitable for production |
 | Put it behind HTTPS | See below |
 | Set `SETOUT_CORS_ORIGINS` to the origin you serve from | It defaults to the local dev server |
-| No action needed for passphrase guessing | Repeated wrong passphrases are already delayed and then refused with `429`. There is no account lockout, and the settings that control the delay are in [configuration](configuration.md). If you lose the passphrase, reset it with the recovery command in [troubleshooting](troubleshooting.md#i-forgot-the-admin-passphrase) |
+| No action needed for passphrase guessing | Repeated wrong passphrases are already delayed and then refused with `429`. There is no account lockout, and the settings that control the delay are in [configuration](configuration.md). If you lose the passphrase, reset it with the recovery command in [troubleshooting](troubleshooting.md#i-forgot-the-account-passphrase) |
 
 ## Behind a reverse proxy
 

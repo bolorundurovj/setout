@@ -18,6 +18,7 @@ import { ButtonComponent } from '../ui/button.component';
 import { Chip, ChipGroupComponent } from '../ui/chip-group.component';
 import { TopbarComponent } from '../ui/topbar.component';
 import { InstallService } from './install.service';
+import { fileSize } from '../ui/file-size';
 
 @Component({
   selector: 'app-settings',
@@ -104,9 +105,10 @@ export class SettingsComponent {
       return null;
     }
     return (
-      `This backup was created by Setout ${selected.backup.app_version} on schema ` +
-      `${selected.backup.migration ?? 'unknown'}. This server runs ${installed.version} on schema ` +
-      `${installed.migration ?? 'unknown'}. Restoring may fail if the schema has changed. ` +
+      `This backup was created by Setout ${selected.backup.app_version} with database version ` +
+      `${databaseVersion(selected.backup.migration)}. This server runs ${installed.version} with ` +
+      `database version ${databaseVersion(installed.migration)}. Restoring may fail if the ` +
+      'database has changed. ' +
       'No data is changed unless every row is restored.'
     );
   });
@@ -291,7 +293,7 @@ export class SettingsComponent {
     if (!backup) {
       return '';
     }
-    return `Created by Setout ${backup.app_version} on schema ${backup.migration ?? 'unknown'}`;
+    return `Created by Setout ${backup.app_version} with database version ${databaseVersion(backup.migration)}`;
   }
 
   async restoreBackup(): Promise<void> {
@@ -336,20 +338,15 @@ export class SettingsComponent {
   }
 
   private formatBytes(size: number): string {
-    if (size < 1024) {
-      return `${size} B`;
-    }
-    const units = ['KiB', 'MiB', 'GiB'];
-    let value = size / 1024;
-    let unit = 0;
-    while (value >= 1024 && unit < units.length - 1) {
-      value /= 1024;
-      unit += 1;
-    }
-    return `${value.toFixed(1)} ${units[unit]}`;
+    return fileSize(size);
   }
 
   private formatDate(at: string): string {
     return formatStampDay(at);
   }
+}
+
+/** Migration names such as 0003_agreements_and_advances read as version 0003. */
+function databaseVersion(migration: string | null | undefined): string {
+  return migration?.split('_')[0] || 'unknown';
 }

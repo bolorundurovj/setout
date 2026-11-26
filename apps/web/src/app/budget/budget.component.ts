@@ -15,12 +15,14 @@ import { formatStampDay } from '../shared/dates';
 import { BudgetService } from './budget.service';
 import { formatAmountInput, formatMoney, parseMoney } from './money';
 import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
+import { CountPipe } from '../ui/count.pipe';
 
 @Component({
   selector: 'app-budget',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    CountPipe,
     ArchiveConfirmComponent,
     DeleteConfirmDirective,
     FormsModule,

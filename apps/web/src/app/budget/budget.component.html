@@ -231,7 +231,9 @@
       <div class="row total">
         <span class="total-label">Budgeted Total</span>
         <span class="right t-mono total-figure">{{ budgetedTotal() }}</span>
-        <span class="right t-mono muted">{{ budget.categories().length }} categories</span>
+        <span class="right t-mono muted">{{
+          budget.categories().length | count: 'category' : 'categories'
+        }}</span>
       </div>
     </div>
   }

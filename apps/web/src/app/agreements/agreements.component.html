@@ -291,7 +291,9 @@
       @if (agreements.hasMore()) {
         <span class="t-small muted">Loading more…</span>
       } @else {
-        <span class="t-small muted">All {{ agreements.agreementTotal() }} agreements shown.</span>
+        <span class="t-small muted"
+          >All {{ agreements.agreementTotal() | count: 'agreement' }} shown.</span
+        >
       }
     </div>
   }

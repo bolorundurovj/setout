@@ -19,6 +19,7 @@ import {
 } from '@setout/api-client';
 import { PICKER_PAGE_SIZE } from '../ui/paging';
 import { KeyedLoadTracker, type RequestStatus } from '../ui/request-status';
+import { fileSize } from '../ui/file-size';
 
 export type AttachedTo = 'project' | 'expense' | 'agreement' | 'delivery';
 
@@ -132,13 +133,7 @@ export class AttachmentService {
   }
 
   formatSize(bytes: number): string {
-    if (bytes < 1024) {
-      return `${bytes} B`;
-    }
-    if (bytes < 1024 * 1024) {
-      return `${Math.round(bytes / 1024)} KiB`;
-    }
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+    return fileSize(bytes);
   }
 
   private list(

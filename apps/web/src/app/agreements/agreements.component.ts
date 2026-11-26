@@ -25,12 +25,14 @@ import { PersonService } from '../people/person.service';
 import { VendorService } from '../vendors/vendor.service';
 import { AgreementService } from './agreement.service';
 import { DeleteConfirmDirective, isDeleteConfirmed } from '../ui/delete-confirm.directive';
+import { CountPipe } from '../ui/count.pipe';
 
 @Component({
   selector: 'app-agreements',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    CountPipe,
     ArchiveConfirmComponent,
     DeleteConfirmDirective,
     AttachmentsComponent,

@@ -186,9 +186,7 @@
           </label>
           <div class="form-actions">
             <app-button variant="secondary" (pressed)="editingPoints.set(false)">Done</app-button>
-            <button type="button" class="link t-mono" (click)="showGeoJson()">
-              Show as GeoJSON
-            </button>
+            <button type="button" class="link t-mono" (click)="showGeoJson()">Show as Text</button>
           </div>
         } @else {
           <button type="button" class="link t-mono" (click)="openPointsEditor()">
