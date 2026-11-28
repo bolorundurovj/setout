@@ -29,7 +29,7 @@ dependencies = [
     "boto3==1.43.90",
     "httpx==0.28.1",
     "openpyxl==3.1.5",
-    "reportlab==5.0.1",
+    "reportlab==5.1.1",
 ]
 
 [dependency-groups]
